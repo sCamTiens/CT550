@@ -1,0 +1,531 @@
+/* header */
+.a {
+    color: #6e6c6c;
+}
+
+.navbar {
+    background-color: #ffd154;
+}
+
+.logo {
+    max-width: 50%;
+    transition: transform 0.5s ease;
+}
+
+.logo:hover {
+    transform: scale(1.1);
+}
+
+/* Tìm kiếm */
+.searchinput {
+    border-right: none;
+    border-radius: 0;
+    height: 40px;
+    border: none;
+    -webkit-box-shadow: none;
+    box-shadow: none;
+    width: 300px;
+}
+
+.lightbutton,
+.searchbutton {
+    padding: 2px;
+    margin-left: 5px;
+    height: 40px;
+    width: 50px;
+}
+
+.lightbutton i,
+.searchbutton i {
+    font-size: 22px;
+}
+
+/* Tài khoản */
+header .dropdown {
+    position: relative;
+    /* Để menu dropdown hiển thị đúng vị trí */
+}
+
+/* Ẩn menu dropdown ban đầu */
+header .dropdown-menu {
+    display: none;
+    position: absolute;
+    background-color: #fff;
+    min-width: 150px;
+    box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+}
+
+/* Hiển thị menu dropdown khi rê chuột vào .dropdown */
+header .dropdown:hover .dropdown-menu {
+    display: block;
+}
+
+/* Đảm bảo menu không bị biến mất khi rê chuột vào menu */
+header .dropdown-menu:hover {
+    display: block;
+}
+
+/* Styling cho các mục trong dropdown */
+header .dropdown-menu li {
+    padding: 8px 12px;
+}
+
+header .dropdown-menu li a {
+    text-decoration: none;
+    color: #333;
+}
+
+header .dropdown-menu li a:hover {
+    background-color: #002795;
+    color: white;
+    border-radius: 5px;
+}
+
+/* top.php */
+/* Tạo padding, nền sáng và bo góc cho cột bên phải
+/* Căn chỉnh tổng thể cho phần hiển thị */
+.comic-wrap {
+    padding: 15px;
+    border-radius: 10px;
+    background-color: #fff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.right-side {
+    min-width: 400px;
+    max-width: 400px;
+}
+
+/* Căn chỉnh thứ hạng, ảnh và nội dung thông tin truyện */
+ul.list-unstyled li {
+    padding: 15px 0;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #ddd;
+}
+
+ul.list-unstyled li:last-child {
+    border-bottom: none;
+}
+
+/* Style cho ảnh truyện */
+.thumb img {
+    width: 80px;
+    height: auto;
+    border-radius: 5px;
+    margin-right: 15px;
+    object-fit: cover;
+}
+
+/* Nội dung thông tin truyện nằm bên cạnh ảnh */
+.content-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+/* Thứ hạng của truyện */
+.txt-rank {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #ff6b6b;
+    margin-right: 10px;
+}
+
+/* Style cho tiêu đề và chương */
+.title {
+    font-size: 1.1em;
+    margin: 0;
+    font-weight: bold;
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.title a {
+    text-decoration: none;
+    color: #333;
+    transition: color 0.3s ease;
+}
+
+.title a:hover {
+    color: #002795;
+}
+
+/* Style cho chương */
+.chapter.top {
+    font-size: 0.9em;
+    color: #555;
+}
+
+.chapter.top a {
+    text-decoration: none;
+    color: #002795;
+}
+
+.chapter.top .view {
+    margin-left: 60px;
+    color: #999;
+}
+
+.chapter.top .view i {
+    margin-right: 3px;
+}
+
+/* Chi tiết truyện */
+.content1 {
+    border: solid #002795;
+    border-radius: 30px;
+    margin-top: 10px;
+    background-color: rgb(255, 255, 255);
+}
+
+.content {
+    border-radius: 30px;
+    margin-top: 10px;
+    background-color: rgb(255, 255, 255);
+}
+
+.position-relative {
+    position: relative;
+}
+
+.iconheart {
+    position: absolute;
+    padding: 10px;
+    text-align: center;
+    z-index: 100;
+    top: 120px;
+    right: 70px;
+}
+
+.content1 p {
+    margin-left: 20px;
+}
+
+/* index */
+h2 {
+    color: #002795;
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.comic-item {
+    background-color: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    width: 25%;
+    min-width: 210px;
+    max-width: 200px;
+}
+
+.comic-item img {
+    width: 100%;
+    height: auto;
+}
+
+.comic-info {
+    padding: 10px;
+}
+
+.comic-title {
+    font-size: 16px;
+    font-weight: bold;
+    margin: 5px 0;
+    color: #333;
+}
+
+.comic-chapter {
+    font-size: 14px;
+    color: #666;
+}
+
+.no-chapter {
+    color: #888;
+    /* Màu chữ của "Chưa có chương" */
+}
+
+.comic-time {
+    color: #888;
+    /* Màu chữ của thời gian đăng */
+}
+
+.comic-views {
+    font-size: 14px;
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    /* Căn giữa theo chiều dọc */
+    gap: 5px;
+    color: #999;
+    /* Đặt màu chữ thành #333 */
+}
+
+/* ----------------admin-------------- */
+.potta-one-regular {
+    font-size: clamp(20px, 3vw, 30px); /* Tối thiểu 20px, tối đa 48px */
+    font-family: "Potta One", system-ui;
+    font-weight: 600;
+    font-style: normal;
+    color: #fff;
+}
+
+.gradient-bar1 {
+    width: auto;
+    white-space: nowrap;
+    padding: 5px 20px;
+    height: 45px;
+    background: linear-gradient(to bottom, #a0b2da 0%, #6b88c3 15%, #002795 50%, #6b88c3 85%, #a0b2da 100%);
+    border-radius: 30px;
+}
+
+/* VIP */
+/* Khung bên ngoài có border LED chạy quanh */
+.led-run-border {
+    position: relative;
+    /* Cho phép tạo lớp giả (pseudo-element) như ::before */
+    border-radius: 12px;
+    /* Bo góc nhẹ */
+    padding: 10px;
+    /* Khoảng cách nội dung bên trong */
+    overflow: hidden;
+    /* Ẩn phần viền chạy ra ngoài */
+    background: white;
+    /* Nền trắng cho nội dung */
+    z-index: 1;
+    /* Đảm bảo nằm trên viền LED */
+}
+
+/* Viền LED chạy quanh (element ảo ::before) */
+.led-run-border::before {
+    content: '';
+    /* Tạo nội dung rỗng để dùng làm lớp giả */
+    position: absolute;
+    /* Định vị tuyệt đối so với .led-run-border */
+    top: -1px;
+    left: -1px;
+    right: -1px;
+    bottom: -1px;
+
+    /* Gradient 7 màu chạy ngang */
+    background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet, red);
+    background-size: 400%;
+    /* Kích thước gradient lớn để tạo hiệu ứng chạy */
+
+    border-radius: 14px;
+    /* Bo góc cho lớp giả */
+    z-index: -1;
+    /* Đặt phía sau nội dung chính */
+
+    animation: led-border-move 10s linear infinite;
+    /* Tốc độ chậm lại (10s) */
+    padding: 3px;
+    /* Tăng độ dày viền LED */
+
+    /* Tạo viền rỗng xung quanh bằng mask */
+    mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    -webkit-mask-composite: destination-out;
+
+    box-sizing: border-box;
+    /* Đảm bảo padding không làm phình lớp giả */
+}
+
+/* Keyframe để chạy gradient qua trái-phải */
+@keyframes led-border-move {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    100% {
+        background-position: 400% 50%;
+    }
+}
+
+/* Header */
+/* Khung bên ngoài có border LED chạy quanh */
+.led-run-border1 {
+    position: relative;
+    z-index: 1;
+    background-color: #ffffff;
+    overflow: visible !important;
+}
+
+.led-run-border1::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet, red);
+    background-size: 400%;
+    border-radius: 6px;
+    z-index: -1;
+    animation: led-border-move 5s linear infinite;
+
+    /* Tạo khung rỗng - chỉ giữ viền LED, không đè nội dung */
+    padding: 3px;
+    box-sizing: border-box;
+    mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    -webkit-mask-composite: destination-out;
+}
+
+@keyframes led-border-move {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    100% {
+        background-position: 400% 50%;
+    }
+}
+
+
+
+/* Khung bên ngoài có border LED chạy quanh */
+.led-run-border2 {
+    position: relative;
+    /* Cho phép tạo lớp giả (pseudo-element) như ::before */
+    border-radius: 12px;
+    /* Bo góc nhẹ */
+    padding: 10px;
+    /* Khoảng cách nội dung bên trong */
+    overflow: hidden;
+    /* Ẩn phần viền chạy ra ngoài */
+    background: white;
+    /* Nền trắng cho nội dung */
+    z-index: 1;
+    /* Đảm bảo nằm trên viền LED */
+}
+
+/* Viền LED chạy quanh (element ảo ::before) */
+.led-run-border2::before {
+    content: '';
+    /* Tạo nội dung rỗng để dùng làm lớp giả */
+    position: absolute;
+    /* Định vị tuyệt đối so với .led-run-border */
+    top: -1px;
+    left: -1px;
+    right: -1px;
+    bottom: -1px;
+
+    /* Gradient 7 màu chạy ngang */
+    background: linear-gradient(90deg, red, orange, yellow, green, blue, indigo, violet, red);
+    background-size: 400%;
+    /* Kích thước gradient lớn để tạo hiệu ứng chạy */
+
+    border-radius: 14px;
+    /* Bo góc cho lớp giả */
+    z-index: -1;
+    /* Đặt phía sau nội dung chính */
+
+    animation: led-border-move 10s linear infinite;
+    /* Tốc độ chậm lại (10s) */
+    padding: 3px;
+    /* Tăng độ dày viền LED */
+
+    /* Tạo viền rỗng xung quanh bằng mask */
+    mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    -webkit-mask-composite: destination-out;
+
+    box-sizing: border-box;
+    /* Đảm bảo padding không làm phình lớp giả */
+}
+
+/* Keyframe để chạy gradient qua trái-phải */
+@keyframes led-border-move {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    100% {
+        background-position: 400% 50%;
+    }
+}
+
+/* Swiper slider ở tầng thấp nhất */
+.swiper,
+.swiper-wrapper,
+.swiper-slide,
+.swiper-slide img {
+    z-index: 0 !important;
+}
+
+/* Navbar nằm trên slider */
+.navbar {
+    z-index: 1000 !important;
+    position: relative;
+}
+
+/* Các thành phần trong navbar vẫn giữ relative */
+.navbar * {
+    position: relative;
+}
+
+/* Dropdown luôn nằm trên tất cả */
+.nav-account .dropdown-menu,
+.dropdown-menu,
+.megamenu,
+.megamenu1,
+.sub_menu {
+    z-index: 1200 !important;
+    position: absolute !important;
+}
+
+/* Ép phần dropdown của avatar ra khỏi ảnh hưởng của .navbar */
+header {
+    position: relative;
+    z-index: 2002; /* Cao hơn navbar */
+}
+
+.navbar {
+    position: relative;
+    z-index: 1000 !important; /* Cao hơn slider nhưng thấp hơn header */
+}
+
+.nav-account {
+    position: relative;
+    z-index: 2003; /* Cao hơn header */
+}
+
+.nav-account .dropdown-menu {
+    z-index: 2004 !important; /* Trên tất cả */
+}
+
+/* Nếu có LED border */
+.led-run-border1,
+.led-run-border2 {
+    overflow: visible !important;
+    position: relative;
+}
+
+/* LED border glow ở dưới nội dung */
+.led-run-border1::before,
+.led-run-border2::before {
+    z-index: 0 !important;
+}
+
+/* Nếu menu nằm trong LED thì đảm bảo nó vẫn nổi lên */
+.led-run-border1 .dropdown-menu,
+.led-run-border2 .dropdown-menu {
+    z-index: 1100 !important;
+}
