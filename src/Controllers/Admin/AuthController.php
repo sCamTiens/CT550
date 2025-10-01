@@ -17,15 +17,13 @@ class AuthController extends Controller
 
     public function login()
     {
-        // Nhận dữ liệu: hỗ trợ cả JSON lẫn form-urlencoded
         $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
         if (stripos($contentType, 'application/json') !== false) {
             $raw = file_get_contents('php://input');
             $data = json_decode($raw, true) ?: [];
-            
             if ($data && empty($_POST)) {
-            $_POST = $data;   // fallback cho code cũ
-        }
+                $_POST = $data;
+            }
         } else {
             $data = $_POST;
         }
@@ -34,14 +32,12 @@ class AuthController extends Controller
         $password = $data['password'] ?? '';
         $remember = !empty($data['remember']);
 
-        // Validate rỗng
         $errors = [];
         if ($username === '')
             $errors['username'] = 'Tài khoản không được bỏ trống';
         if ($password === '')
             $errors['password'] = 'Mật khẩu không được bỏ trống';
 
-        // Helper trả JSON nếu là request JSON, ngược lại redirect như cũ
         $isJsonReq = stripos($contentType, 'application/json') !== false;
 
         if ($errors) {
@@ -56,19 +52,15 @@ class AuthController extends Controller
             exit;
         }
 
-        // Query user
-        $pdo = \App\Core\DB::pdo();
-        $st = $pdo->prepare(
-            "SELECT u.*, r.name AS role_name
-         FROM users u
-         LEFT JOIN roles r ON r.id = u.role_id
-         WHERE u.username = ?
-         LIMIT 1"
-        );
+        $pdo = DB::pdo();
+        $st = $pdo->prepare("SELECT u.*, r.name AS role_name
+                             FROM users u
+                             LEFT JOIN roles r ON r.id = u.role_id
+                             WHERE u.username = ?
+                             LIMIT 1");
         $st->execute([$username]);
         $user = $st->fetch(\PDO::FETCH_ASSOC);
 
-        // Các nhánh lỗi
         $fail = function (string $msg) use ($isJsonReq) {
             if ($isJsonReq) {
                 http_response_code(401);
@@ -86,20 +78,21 @@ class AuthController extends Controller
         if (isset($user['is_active']) && (int) $user['is_active'] === 0)
             return $fail('Tài khoản đã bị vô hiệu hóa.');
         if (!in_array($user['role_name'] ?? '', ['Nhân viên', 'Admin'], true))
-            return $fail('Tài khoản không có quyền truy cập khu vực quản trị.');
+            return $fail('Không có quyền vào khu vực quản trị.');
 
-        // Kiểm tra mật khẩu (lưu ý: nên dùng hash do PHP tạo, prefix $2y$)
         if (!password_verify($password, $user['password_hash'] ?? ''))
             return $fail('Tài khoản hoặc mật khẩu sai.');
 
-        // OK
-        $_SESSION['admin_user'] = [
+        // Lưu session cả cho admin_user và user
+        $sessData = [
             'id' => (int) $user['id'],
             'username' => $user['username'],
             'email' => $user['email'] ?? null,
             'full_name' => $user['full_name'] ?? null,
             'role' => $user['role_name'],
         ];
+        $_SESSION['admin_user'] = $sessData;
+        $_SESSION['user'] = $sessData; // để CategoryController dùng
 
         if ($remember) {
             setcookie('admin_remember', $user['username'], time() + 60 * 60 * 24 * 30, '/', '', false, true);
@@ -113,9 +106,10 @@ class AuthController extends Controller
         header('Location: /admin');
         exit;
     }
+
     public function logout()
     {
-        unset($_SESSION['admin_user']);
+        unset($_SESSION['admin_user'], $_SESSION['user']);
         header('Location: /admin/login');
         exit;
     }

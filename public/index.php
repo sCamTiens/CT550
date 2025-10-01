@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require __DIR__.'/../vendor/autoload.php';
+require __DIR__ . '/../vendor/autoload.php';
 
 use Dotenv\Dotenv;
 use App\Core\Router;
@@ -30,38 +30,46 @@ if (session_status() === PHP_SESSION_NONE) {
 $router = new Router();
 
 /* routes người dùng */
-$router->get('/',                [HomeController::class, 'index']);
-$router->get('/login',           [AuthController::class, 'showLogin']);
-$router->post('/login',          [AuthController::class, 'login']);
-$router->get('/logout',          [AuthController::class, 'logout']);
+$router->get('/', [HomeController::class, 'index']);
+$router->get('/login', [AuthController::class, 'showLogin']);
+$router->post('/login', [AuthController::class, 'login']);
+$router->get('/logout', [AuthController::class, 'logout']);
 
-$router->get('/products',        [ProductController::class, 'index']);
+$router->get('/products', [ProductController::class, 'index']);
 $router->get('/products/{slug}', [ProductController::class, 'show']);
-$router->post('/cart',           [CartController::class, 'add']);
+$router->post('/cart', [CartController::class, 'add']);
 
 /* routes admin */
 $router->group('/admin', function (Router $r): void {
-    $r->get('/',                 [AdminDashboard::class, 'index']);
-    $r->get('/login',           [AdminController::class, 'showLogin']);
-    $r->post('/login',          [AdminController::class, 'login']);
-    $r->get('/logout',          [AdminController::class, 'logout']);
+    $r->get('/', [AdminDashboard::class, 'index']);
+    $r->get('/login', [AdminController::class, 'showLogin']);
+    $r->post('/login', [AdminController::class, 'login']);
+    $r->get('/logout', [AdminController::class, 'logout']);
 
     // Products
-    $r->get('/products',         [AdminProduct::class, 'index']);
-    $r->get('/products/create',  [AdminProduct::class, 'create']);
-    $r->post('/products',        [AdminProduct::class, 'store']);
+    $r->get('/products', [AdminProduct::class, 'index']);
+    $r->get('/products/create', [AdminProduct::class, 'create']);
+    $r->post('/products', [AdminProduct::class, 'store']);
+    $r->get('/products/{id}/edit', [AdminProduct::class, 'edit']);
+    $r->put('/products/{id}', [AdminProduct::class, 'update']);
+    $r->delete('/products/{id}', [AdminProduct::class, 'destroy']);
 
     // Categories
-    $r->get (uri: '/categories',             action: [AdminCategory::class, 'index']);
-    $r->get (uri: '/api/categories',         action: [AdminCategory::class, 'apiIndex']);
-    $r->post(uri: '/categories',             action: [AdminCategory::class, 'store']);
+    $r->get('/categories', [AdminCategory::class, 'index']);
+    $r->get('/api/categories', [AdminCategory::class, 'apiIndex']);
+    $r->post('/categories', [AdminCategory::class, 'store']);
+    $r->get('/categories/{id}/edit', [AdminCategory::class, 'edit']);
+    $r->put('/categories/{id}', [AdminCategory::class, 'update']);
+    $r->delete('/categories/{id}', [AdminCategory::class, 'destroy']);
 
     // Brands
-    $r->get (uri: '/brands',             action: [AdminBrand::class, 'index']);
-    $r->get (uri: '/api/brands',         action: [AdminBrand::class, 'apiIndex']);
-    $r->post(uri: '/brands',             action: [AdminBrand::class, 'store']);
-    $r->post(uri: '/brands/{id}',        action: [AdminBrand::class, 'update']);
-    $r->post(uri: '/brands/{id}/delete', action: [AdminBrand::class, 'destroy']);
+    $r->get('/brands', [AdminBrand::class, 'index']);
+    $r->get('/api/brands', [AdminBrand::class, 'apiIndex']);
+    $r->post('/brands', [AdminBrand::class, 'store']);
+    $r->get('/brands/{id}/edit', [AdminBrand::class, 'edit']);
+    $r->put('/brands/{id}', [AdminBrand::class, 'update']);
+    $r->delete('/brands/{id}', [AdminBrand::class, 'destroy']);
+
 });
 
 

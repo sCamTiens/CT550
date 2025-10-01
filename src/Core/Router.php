@@ -15,6 +15,14 @@ final class Router
     {
         return $this->map('POST', $uri, $action);
     }
+    public function put(string $uri, callable|array $action): self
+    {
+        return $this->map('PUT', $uri, $action);
+    }
+    public function delete(string $uri, callable|array $action): self
+    {
+        return $this->map('DELETE', $uri, $action);
+    }
 
     public function group(string $prefix, \Closure $cb): self
     {
@@ -27,7 +35,7 @@ final class Router
         return $this;
     }
 
-    // Gắn middleware: nếu vừa gọi group() thì áp cho toàn bộ routes trong group đó
+    // Gắn middleware
     public function middleware(string $name): self
     {
         if ($this->lastGroupRange) {
@@ -48,7 +56,7 @@ final class Router
         $prefix = implode('', $this->groupStack);
         $uri = (str_starts_with($uri, '/') ? $uri : '/' . $uri);
         $this->routes[] = [
-            'method' => $method,
+            'method' => strtoupper($method),
             'uri' => $prefix . $uri,
             'action' => $action,
             'mw' => [],
@@ -59,7 +67,7 @@ final class Router
     public function dispatch(Request $req): void
     {
         $path = rtrim($req->path(), '/') ?: '/';
-        $method = $req->method();
+        $method = strtoupper($req->method());
 
         foreach ($this->routes as $r) {
             $routePath = rtrim($r['uri'], '/') ?: '/';
@@ -71,8 +79,6 @@ final class Router
             if ($methodMatch && preg_match($pattern, $path, $m)) {
                 $params = array_filter($m, 'is_string', ARRAY_FILTER_USE_KEY);
 
-                // TODO: chạy middleware nếu có trong $r['mw']
-
                 $h = $r['action'];
                 $out = null;
 
@@ -80,7 +86,7 @@ final class Router
                     [$cls, $fn] = $h;
                     $obj = new $cls;
 
-                    // Tự inject Request + map tham số route theo tên
+                    // Auto inject Request
                     $rm = new \ReflectionMethod($obj, $fn);
                     $args = [];
                     foreach ($rm->getParameters() as $p) {
@@ -100,7 +106,6 @@ final class Router
 
                     $out = $rm->invokeArgs($obj, $args);
                 } else {
-                    // callable thuần (closure...)
                     $out = $h(...array_values($params));
                 }
 
@@ -114,5 +119,4 @@ final class Router
         http_response_code(404);
         echo '404 Not Found';
     }
-
 }

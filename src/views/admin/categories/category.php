@@ -1,5 +1,5 @@
 <?php
-// views/admin/brands/brand.php
+// views/admin/categories/category.php
 $items = $items ?? [];
 ?>
 
@@ -7,15 +7,15 @@ $items = $items ?? [];
 
 <!-- Breadcrumb + Title -->
 <nav class="text-sm text-slate-500 mb-4">
-  Admin / Danh mục sản phẩm / <span class="text-slate-800 font-medium">Thương hiệu</span>
+  Admin / Danh mục sản phẩm / <span class="text-slate-800 font-medium">Loại sản phẩm</span>
 </nav>
 
-<div x-data="brandPage()" x-init="init()">
+<div x-data="categoryPage()" x-init="init()">
   <div class="flex items-center justify-between mb-4">
-    <h1 class="text-3xl font-bold text-[#002975]">Quản lý thương hiệu</h1>
+    <h1 class="text-3xl font-bold text-[#002975]">Quản lý loại sản phẩm</h1>
     <button
       class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
-      @click="openCreate()">+ Thêm thương hiệu</button>
+      @click="openCreate()">+ Thêm loại sản phẩm</button>
   </div>
 
   <!-- Table -->
@@ -24,8 +24,16 @@ $items = $items ?? [];
       <thead>
         <tr class="bg-gray-50 text-left text-slate-600">
           <th class="py-2 px-4 text-left">Thao tác</th>
+
           <?= textFilterPopover('name', 'Tên') ?>
           <?= textFilterPopover('slug', 'Slug') ?>
+          <?= textFilterPopover('parent', 'Cấp cha') ?>
+          <?= numberFilterPopover('sort', 'Thứ tự') ?>
+          <?= selectFilterPopover('status', 'Trạng thái', [
+            '' => '-- Tất cả --',
+            '1' => 'Hiển thị',
+            '0' => 'Ẩn'
+          ]) ?>
           <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
           <?= textFilterPopover('created_by', 'Người tạo') ?>
           <?= dateFilterPopover('updated_at', 'Thời gian cập nhật') ?>
@@ -34,11 +42,11 @@ $items = $items ?? [];
       </thead>
 
       <tbody>
-        <template x-for="b in paginated()" :key="b.id">
+        <template x-for="c in paginated()" :key="c.id">
           <tr class="border-t">
             <td class="py-2 px-4 text-left space-x-2">
               <!-- Sửa -->
-              <button @click="openEditModal(b)"
+              <button @click="openEditModal(c)"
                 class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
                 title="Sửa">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
@@ -49,8 +57,9 @@ $items = $items ?? [];
               </button>
 
               <!-- Xóa -->
-              <button @click="remove(b.id)"
-                class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]" title="Xóa">
+              <button @click="remove(c.id)"
+                class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                title="Xóa">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
                   stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round"
@@ -59,18 +68,26 @@ $items = $items ?? [];
               </button>
             </td>
 
-            <td class="py-2 px-4" x-text="b.name"></td>
-            <td class="py-2 px-4" x-text="b.slug || ''"></td>
-            <td class="py-2 px-4" x-text="b.created_at || '—'"></td>
-            <td class="py-2 px-4" x-text="b.created_by_name || '—'"></td>
-            <td class="py-2 px-4" x-text="b.updated_at || '—'"></td>
-            <td class="py-2 px-4" x-text="b.updated_by_name || '—'"></td>
+            <td class="py-2 px-4" x-text="c.name"></td>
+            <td class="py-2 px-4" x-text="c.slug || ''"></td>
+            <td class="py-2 px-4" x-text="parentName(c.parent_id)"></td>
+            <td class="py-2 px-4" x-text="c.sort_order ?? 0"></td>
+            <td class="py-2 px-4">
+              <span class="px-2 py-0.5 rounded text-xs"
+                :class="c.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+                x-text="c.is_active ? 'Hiển thị' : 'Ẩn'"></span>
+            </td>
+            <td class="py-2 px-4" x-text="c.created_at || '—'"></td>
+            <td class="py-2 px-4" x-text="c.created_by_name || '—'"></td>
+            <td class="py-2 px-4" x-text="c.updated_at || '—'"></td>
+            <td class="py-2 px-4" x-text="c.updated_by_name || '—'"></td>
           </tr>
         </template>
 
         <tr x-show="!loading && filtered().length===0">
-          <td colspan="7" class="py-12 text-center text-slate-500">
+          <td colspan="10" class="py-12 text-center text-slate-500">
             <div class="flex flex-col items-center justify-center">
+              <!-- Icon hộp trống -->
               <img src="/assets/images/Null.png" alt="Trống" class="w-40 h-24 mb-3 opacity-80">
               <div class="text-lg text-slate-300">Trống</div>
             </div>
@@ -85,14 +102,14 @@ $items = $items ?? [];
     style="display:none">
     <div class="bg-white w-full max-w-3xl rounded-xl shadow" @click.outside="openAdd=false">
       <div class="px-5 py-3 border-b flex justify-center items-center relative">
-        <h3 class="font-semibold text-2xl text-[#002975]">Thêm thương hiệu</h3>
+        <h3 class="font-semibold text-2xl text-[#002975]">Thêm loại sản phẩm</h3>
         <button class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
       </div>
       <form class="p-5 space-y-4" @submit.prevent="submitCreate()">
         <?php require __DIR__ . '/form.php'; ?>
         <div class="pt-2 flex justify-end gap-3">
           <button type="button" class="px-4 py-2 rounded-md text-red-600 border border-red-600 
-                hover:bg-red-600 hover:text-white transition-colors" @click="openAdd=false">Hủy</button>
+                  hover:bg-red-600 hover:text-white transition-colors" @click="openAdd=false">Hủy</button>
           <button
             class="px-4 py-2 rounded-md text-[#002975] hover:bg-[#002975] hover:text-white border border-[#002975]"
             :disabled="submitting" x-text="submitting?'Đang lưu...':'Lưu'"></button>
@@ -106,7 +123,7 @@ $items = $items ?? [];
     x-transition.opacity style="display:none">
     <div class="bg-white w-full max-w-3xl rounded-xl shadow" @click.outside="openEdit=false">
       <div class="px-5 py-3 border-b flex justify-center items-center relative">
-        <h3 class="font-semibold text-2xl text-[#002975]">Sửa thương hiệu</h3>
+        <h3 class="font-semibold text-2xl text-[#002975]">Sửa loại sản phẩm</h3>
         <button class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>
       </div>
       <form class="p-5 space-y-4" @submit.prevent="submitUpdate()">
@@ -124,17 +141,26 @@ $items = $items ?? [];
   <!-- Toast lỗi nổi -->
   <div id="toast-container" class="z-[60]"></div>
 
-  <!-- Pagination -->
+
+
   <div class="flex items-center justify-center mt-4 px-4 gap-6">
     <div class="text-sm text-slate-600">
       Tổng cộng <span x-text="filtered().length"></span> bản ghi
     </div>
+
     <div class="flex items-center gap-2">
+      <!-- Nút Prev -->
       <button @click="goToPage(currentPage-1)" :disabled="currentPage===1"
         class="px-2 py-1 border rounded disabled:opacity-50">&lt;</button>
+
+      <!-- Hiển thị số trang -->
       <span>Trang <span x-text="currentPage"></span> / <span x-text="totalPages()"></span></span>
+
+      <!-- Nút Next -->
       <button @click="goToPage(currentPage+1)" :disabled="currentPage===totalPages()"
         class="px-2 py-1 border rounded disabled:opacity-50">&gt;</button>
+
+      <!-- Chọn số bản ghi -->
       <div x-data="{ open: false }" class="relative">
         <button @click="open=!open" class="border rounded px-2 py-1 w-28 flex justify-between items-center">
           <span x-text="perPage + ' / trang'"></span>
@@ -142,11 +168,14 @@ $items = $items ?? [];
             <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
         </button>
+
+        <!-- Dropdown -->
         <div x-show="open" @click.outside="open=false"
           class="absolute right-0 mt-1 bg-white border rounded shadow w-28 z-50">
           <template x-for="opt in perPageOptions" :key="opt">
             <div @click="perPage=opt;open=false" class="px-3 py-2 cursor-pointer hover:bg-[#002975] hover:text-white"
-              x-text="opt + ' / trang'"></div>
+              x-text="opt + ' / trang'">
+            </div>
           </template>
         </div>
       </div>
@@ -155,93 +184,147 @@ $items = $items ?? [];
 </div>
 
 <script>
-  function brandPage() {
+  function categoryPage() {
     const api = {
-      list: '/admin/api/brands',
-      create: '/admin/brands',
-      update: (id) => `/admin/brands/${id}`,
-      remove: (id) => `/admin/brands/${id}/delete`,
+      list: '/admin/api/categories',
+      create: '/admin/categories',
+      update: (id) => `/admin/categories/${id}`,
+      remove: (id) => `/admin/categories/${id}/delete`,
     };
 
     return {
-      loading: true, submitting: false,
-      openAdd: false, openEdit: false,
+      // ===== state =====
+      loading: true,
+      submitting: false,
+      openAdd: false,
+      openEdit: false,
+
       items: <?= json_encode($items, JSON_UNESCAPED_UNICODE) ?>,
 
+      // ===== pagination =====
       currentPage: 1,
       perPage: 20,
       perPageOptions: [5, 10, 20, 50, 100],
 
-      form: { id: null, name: '', slug: '' },
+      paginated() {
+        if (!Array.isArray(this.items)) return [];
+        const start = (this.currentPage - 1) * this.perPage;
+        return this.filtered().slice(start, start + this.perPage);
+      },
+      totalPages() {
+        const total = this.filtered().length;
+        return total > 0 ? Math.ceil(total / this.perPage) : 1;
+      },
+      goToPage(page) {
+        if (page < 1) page = 1;
+        if (page > this.totalPages()) page = this.totalPages();
+        this.currentPage = page;
+      },
+
+      // form
+      form: { id: null, name: '', slug: '', parent_id: '', sort_order: 0, is_active: 1 },
+
+      // validate (cho form thêm/sửa)
       errors: { name: '', slug: '' },
       touched: { name: false, slug: false },
 
+      clearError(field) { this.errors[field] = ''; },
+
+      // filters trên từng cột
       filters: {
-        name: '', slug: '',
+        name: '',
+        slug: '',
+        parent: '',
+        sort: '',
+        status: '',
         created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
         updated_at_type: '', updated_at_value: '', updated_at_from: '', updated_at_to: '',
       },
+
       openFilter: {
-        name: false, slug: false,
+        name: false, slug: false, parent: false, sort: false, status: false,
         created_at: false, created_by: false, updated_at: false, updated_by: false,
       },
 
       async init() { await this.fetchAll(); },
 
-      // ===== pagination =====
-      paginated() {
-        const start = (this.currentPage - 1) * this.perPage;
-        return this.filtered().slice(start, start + this.perPage);
+      // ===== filtering helpers =====
+      toggleFilter(key) {
+        Object.keys(this.openFilter).forEach(k => this.openFilter[k] = (k === key ? !this.openFilter[k] : false));
       },
-      totalPages() {
-        return Math.max(1, Math.ceil(this.filtered().length / this.perPage));
-      },
-      goToPage(p) {
-        if (p < 1) p = 1;
-        if (p > this.totalPages()) p = this.totalPages();
-        this.currentPage = p;
+      applyFilter(key) { this.openFilter[key] = false; },
+      resetFilter(key) {
+        if (['created_at', 'updated_at'].includes(key)) {
+          this.filters[`${key}_type`] = '';
+          this.filters[`${key}_value`] = '';
+          this.filters[`${key}_from`] = '';
+          this.filters[`${key}_to`] = '';
+        } else {
+          this.filters[key] = '';
+        }
+        this.openFilter[key] = false;
       },
 
       // ===== utilities =====
       slugify(s) {
-        return (s || '').toLowerCase()
+        return (s || '')
+          .toLowerCase()
           .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/^-+|-+$/g, '')
           .slice(0, 190);
       },
-      onNameInput() { if (!this.form.id) this.form.slug = this.slugify(this.form.name); },
+      onNameInput() {
+        if (!this.form.id) this.form.slug = this.slugify(this.form.name);
+      },
 
       // ===== validate =====
-      validateField(f) {
-        if (f === 'name') {
-          if (!this.form.name?.trim()) this.errors.name = 'Tên không được bỏ trống';
-          else if (this.form.name.length > 255) this.errors.name = 'Tên không vượt quá 255 ký tự';
-          else this.errors.name = '';
+      validateField(field) {
+        if (field === 'name') {
+          if (!this.form.name?.trim()) {
+            this.errors.name = 'Tên không được bỏ trống';
+          } else if (this.form.name.length > 255) {
+            this.errors.name = 'Tên không vượt quá 255 ký tự';
+          } else {
+            this.errors.name = '';
+          }
         }
-        if (f === 'slug') {
-          if (!this.form.slug?.trim()) this.errors.slug = 'Slug không được bỏ trống';
-          else if (this.form.slug.length > 255) this.errors.slug = 'Slug không vượt quá 255 ký tự';
-          else this.errors.slug = '';
+        if (field === 'slug') {
+          if (!this.form.slug?.trim()) {
+            this.errors.slug = 'Slug không được bỏ trống';
+          } else if (this.form.slug && this.form.slug.length > 255) {
+            this.errors.slug = 'Slug không vượt quá 255 ký tự';
+          } else {
+            this.errors.slug = '';
+          }
         }
       },
       validateForm() {
-        this.validateField('name'); this.validateField('slug');
-        if (this.errors.name) { this.showToast(this.errors.name); return false; }
-        if (this.errors.slug) { this.showToast(this.errors.slug); return false; }
+        this.validateField('name');
+        this.validateField('slug');
+        if (this.errors.name) {
+          this.showToast(this.errors.name);
+          return false;
+        }
+        if (this.errors.slug) {
+          this.showToast(this.errors.slug);
+          return false;
+        }
+        if (String(this.form.parent_id) === String(this.form.id)) {
+          this.showToast('Loại cha không thể là chính nó');
+          return false;
+        }
         if (!this.form.slug) this.form.slug = this.slugify(this.form.name);
         return true;
       },
 
-      // ===== filters =====
-      toggleFilter(k) { Object.keys(this.openFilter).forEach(x => this.openFilter[x] = (x === k ? !this.openFilter[x] : false)); },
-      applyFilter(k) { this.openFilter[k] = false },
-      resetFilter(k) {
-        if (['created_at', 'updated_at'].includes(k)) {
-          this.filters[`${k}_type`] = ''; this.filters[`${k}_value`] = ''; this.filters[`${k}_from`] = ''; this.filters[`${k}_to`] = '';
-        } else { this.filters[k] = ''; }
-        this.openFilter[k] = false;
+      parentName(pid) {
+        if (!pid) return '—';
+        const p = this.items.find(x => String(x.id) === String(pid));
+        return p ? p.name : '—';
       },
+
+      // ===== helper riêng cho date filter =====
       applyDateFilter(val, type, value, from, to) {
         if (!val) return true;
         const d = new Date(val);
@@ -253,33 +336,48 @@ $items = $items ?? [];
         if (type === 'gte' && value) return d >= new Date(value);
         return true;
       },
+
       filtered() {
-        const fn = v => (v ?? '').toString().toLowerCase();
+        const fn = (v) => (v ?? '').toString().toLowerCase();
         const f = this.filters;
-        return this.items.filter(b => {
-          if (f.name && !fn(b.name).includes(fn(f.name))) return false;
-          if (f.slug && !fn(b.slug).includes(fn(f.slug))) return false;
-          if (!this.applyDateFilter(b.created_at, f.created_at_type, f.created_at_value, f.created_at_from, f.created_at_to)) return false;
-          if (!this.applyDateFilter(b.updated_at, f.updated_at_type, f.updated_at_value, f.updated_at_from, f.updated_at_to)) return false;
+        return this.items.filter(c => {
+          if (f.name && !fn(c.name).includes(fn(f.name))) return false;
+          if (f.slug && !fn(c.slug).includes(fn(f.slug))) return false;
+          if (f.parent) {
+            const pn = fn(this.parentName(c.parent_id));
+            if (!pn.includes(fn(f.parent))) return false;
+          }
+          if (f.sort !== '' && f.sort !== null) {
+            if (Number(c.sort_order ?? 0) !== Number(f.sort)) return false;
+          }
+          if (f.status !== '') {
+            if (Boolean(c.is_active) !== (f.status === '1')) return false;
+          }
+          if (!this.applyDateFilter(c.created_at, f.created_at_type, f.created_at_value, f.created_at_from, f.created_at_to)) return false;
+          if (!this.applyDateFilter(c.updated_at, f.updated_at_type, f.updated_at_value, f.updated_at_from, f.updated_at_to)) return false;
           return true;
         });
       },
 
-      resetForm() { this.form = { id: null, name: '', slug: '' }; this.errors = { name: '', slug: '' }; this.touched = { name: false, slug: false }; },
+      resetForm() {
+        this.form = { id: null, name: '', slug: '', parent_id: '', sort_order: 0, is_active: 1 };
+        this.errors = { name: '', slug: '' };
+        this.touched = { name: false, slug: false };
+      },
 
       // ===== toast =====
       showToast(msg) {
         const box = document.getElementById('toast-container');
         if (!box) return;
         box.innerHTML = `
-        <div class="fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 mb-4 text-base font-semibold text-red-700 bg-white rounded-xl shadow-lg border-2 border-red-400">
-          <svg class="flex-shrink-0 w-6 h-6 text-red-600 me-3" xmlns="http://www.w3.org/2000/svg" fill="none"
-              viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />
-          </svg>
-          <div class="flex-1">${msg}</div>
-        </div>`;
+          <div class="fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 mb-4 text-base font-semibold text-red-700 bg-white rounded-xl shadow-lg border-2 border-red-400">
+            <svg class="flex-shrink-0 w-6 h-6 text-red-600 me-3" xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />
+            </svg>
+            <div class="flex-1">${msg}</div>
+          </div>`;
         setTimeout(() => { box.innerHTML = '' }, 3000);
       },
 
@@ -288,13 +386,20 @@ $items = $items ?? [];
         this.loading = true;
         try {
           const r = await fetch(api.list);
-          if (r.ok) { const d = await r.json(); this.items = Array.isArray(d) ? d : (d.items || []); }
+          if (r.ok) {
+            const data = await r.json();
+            this.items = Array.isArray(data) ? data : (data.items || []);
+          }
         } finally { this.loading = false; }
       },
 
       // ===== ui =====
       openCreate() { this.resetForm(); this.openAdd = true; },
-      openEditModal(b) { this.resetForm(); this.form = { ...b }; this.openEdit = true; },
+      openEditModal(c) {
+        this.resetForm();
+        this.form = { ...c, parent_id: c.parent_id || '' };
+        this.openEdit = true;
+      },
 
       // ===== CRUD =====
       async submitCreate() {
@@ -302,11 +407,18 @@ $items = $items ?? [];
         if (!this.validateForm()) return;
         this.submitting = true;
         try {
-          const r = await fetch(api.create, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.form) });
-          const res = await r.json(); if (!r.ok) throw new Error(res.error || 'Lỗi máy chủ');
-          this.items.unshift(res); this.openAdd = false;
-        } catch (e) { this.showToast(e.message || 'Không thể thêm thương hiệu'); }
-        finally { this.submitting = false; }
+          const r = await fetch(api.create, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.form)
+          });
+          const res = await r.json();
+          if (!r.ok) throw new Error(res.error || 'Lỗi máy chủ');
+          this.items.unshift(res);
+          this.openAdd = false;
+        } catch (e) {
+          this.showToast(e.message || 'Không thể thêm loại');
+        } finally { this.submitting = false; }
       },
 
       async submitUpdate() {
@@ -314,24 +426,33 @@ $items = $items ?? [];
         if (!this.form.id || !this.validateForm()) return;
         this.submitting = true;
         try {
-          const r = await fetch(api.update(this.form.id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.form) });
-          const res = await r.json(); if (!r.ok) throw new Error(res.error || 'Lỗi máy chủ');
+          const r = await fetch(api.update(this.form.id), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.form)
+          });
+          const res = await r.json();
+          if (!r.ok) throw new Error(res.error || 'Lỗi máy chủ');
+
           const i = this.items.findIndex(x => x.id == res.id);
-          if (i > -1) this.items[i] = res; else this.items.unshift(res);
+          if (i > -1) this.items[i] = res;
+          else this.items.unshift(res);
+
           this.openEdit = false;
-        } catch (e) { this.showToast(e.message || 'Không thể cập nhật thương hiệu'); }
-        finally { this.submitting = false; }
+        } catch (e) {
+          this.showToast(e.message || 'Không thể cập nhật loại');
+        } finally { this.submitting = false; }
       },
 
       async remove(id) {
         if (!confirm('Xóa loại này?')) return;
         try {
-          const r = await fetch(`/admin/brands/${id}`, { method: 'DELETE' });
+          const r = await fetch(`/admin/categories/${id}`, { method: 'DELETE' });
           const res = await r.json();
           if (!r.ok) throw new Error(res.error || 'Lỗi máy chủ khi xóa');
           this.items = this.items.filter(x => x.id != id);
         } catch (e) {
-          this.showToast(e.message || 'Không thể xóa thương hiệu');
+          this.showToast(e.message || 'Không thể xóa loại');
         }
       },
     }

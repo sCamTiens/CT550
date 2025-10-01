@@ -1,19 +1,28 @@
-<!-- Brand form partial -->
-<div class="space-y-1">
-  <label class="text-sm text-slate-600">Tên thương hiệu <span class="text-red-500">*</span></label>
-  <input class="w-full border rounded px-3 py-2"
-         x-model.trim="form.name"
-         @input="autoSlug()"
-         placeholder="VD: Vinamilk"
-         required>
+<!-- Tên thương hiệu -->
+<div>
+  <label class="block text-sm mb-1">Tên thương hiệu <span class="text-red-500">*</span></label>
+  <input x-model="form.name" @input="onNameInput(); touched.name && validateField('name')"
+    @blur="touched.name = true; validateField('name')" :class="['w-full border rounded px-3 py-2',
+             (touched.name && errors.name) ? 'border-red-500' : '']" placeholder="Nhập tên thương hiệu" required>
+  <p class="text-red-600 text-xs mt-1" x-show="touched.name && errors.name" x-text="errors.name"></p>
 </div>
 
-<div class="space-y-1">
-  <label class="text-sm text-slate-600">Slug</label>
-  <input class="w-full border rounded px-3 py-2"
-         x-model.trim="form.slug"
-         placeholder="vinamilk">
-  <p class="text-xs text-slate-500 mt-1">
-    Slug sẽ tự tạo theo tên; bạn có thể sửa lại nếu muốn.
-  </p>
+<!-- Slug -->
+<div>
+  <label class="block text-sm mb-1 flex items-center gap-1">
+    Slug <span class="text-red-500">*</span>
+    <span title="Hệ thống sẽ tự tạo slug khi thêm mới; Bạn có thể bấm 'Tạo' để ghi đè"
+      class="inline-flex items-center justify-center w-4 h-4 rounded-full border border-gray-300 text-gray-400 text-xs font-bold cursor-help">?</span>
+  </label>
+  <div class="flex gap-2">
+    <input x-model="form.slug" @input="touched.slug && validateField('slug')"
+      @blur="touched.slug = true; validateField('slug')" :class="['w-full border rounded px-3 py-2',
+               (touched.slug && errors.slug) ? 'border-red-500' : '']" placeholder="Slug sẽ được tạo tự động từ tên">
+    <button type="button"
+      class="px-3 py-2 rounded border text-[#002975] border-[#002975] hover:bg-[#002975] hover:text-white"
+      @click="form.slug = slugify(form.name); validateField('slug')">
+      Tạo
+    </button>
+  </div>
+  <p class="text-red-600 text-xs mt-1" x-show="touched.slug && errors.slug" x-text="errors.slug"></p>
 </div>

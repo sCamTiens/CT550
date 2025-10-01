@@ -20,24 +20,34 @@ CREATE TABLE users (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   username VARCHAR(50) NOT NULL UNIQUE,          -- <- tên tài khoản để đăng nhập
   role_id TINYINT NOT NULL DEFAULT 2,
-  email VARCHAR(190) UNIQUE,                     -- có thể NULL; vẫn giữ UNIQUE
+  email VARCHAR(250) UNIQUE,                     -- có thể NULL; vẫn giữ UNIQUE
   phone VARCHAR(32),
   password_hash VARCHAR(255),
-  full_name VARCHAR(190),
+  full_name VARCHAR(250),
   avatar_url VARCHAR(255),
   gender ENUM('Nam','Nữ') NULL,
   date_of_birth DATE NULL,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT fk_users_role FOREIGN KEY(role_id) REFERENCES roles(id)
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_users_role FOREIGN KEY(role_id) REFERENCES roles(id),
+  CONSTRAINT fk_users_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_users_updated_by FOREIGN KEY(updated_by) REFERENCES users(id)
 ) ENGINE=InnoDB;
 
 -- Danh mục TỈNH
 CREATE TABLE provinces (
   code VARCHAR(10) PRIMARY KEY,         -- mã tỉnh 
   name VARCHAR(120) NOT NULL,
-  is_active BOOLEAN NOT NULL DEFAULT TRUE
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_provinces_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_provinces_updated_by FOREIGN KEY(updated_by) REFERENCES users(id)
 ) ENGINE=InnoDB;
 
 -- Danh mục XÃ (mỗi xã thuộc một tỉnh)
@@ -46,6 +56,12 @@ CREATE TABLE communes (
   province_code VARCHAR(10) NOT NULL,   -- FK -> provinces
   name VARCHAR(120) NOT NULL,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_communes_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_communes_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
   CONSTRAINT fk_commune_prov FOREIGN KEY (province_code)
     REFERENCES provinces(code)
 ) ENGINE=InnoDB;
@@ -54,7 +70,7 @@ CREATE TABLE communes (
 CREATE TABLE user_addresses (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   user_id BIGINT NOT NULL,               -- FK -> users(id)
-  receiver_name VARCHAR(190),            -- Tên người nhận
+  receiver_name VARCHAR(250),            -- Tên người nhận
   receiver_phone VARCHAR(32),            -- SĐT người nhận
   line1 VARCHAR(255),                    -- Số nhà / Tên đường
   commune_code VARCHAR(15) NULL,         -- FK -> communes(code)
@@ -62,6 +78,10 @@ CREATE TABLE user_addresses (
   is_default BOOLEAN NOT NULL DEFAULT FALSE, -- Mặc định
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_addr_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_addr_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
 
   CONSTRAINT fk_addr_user     FOREIGN KEY(user_id)       REFERENCES users(id)      ON DELETE CASCADE,
   CONSTRAINT fk_addr_commune  FOREIGN KEY(commune_code)  REFERENCES communes(code),
@@ -87,28 +107,44 @@ CREATE TABLE staff_profiles (
 -- Thương hiệu
 CREATE TABLE brands (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  name VARCHAR(190) NOT NULL UNIQUE,
-  slug VARCHAR(190) UNIQUE, -- chuỗi URL thân thiện
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  name VARCHAR(250) NOT NULL UNIQUE,
+  slug VARCHAR(250) UNIQUE, -- chuỗi URL thân thiện
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_brands_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_brands_updated_by FOREIGN KEY(updated_by) REFERENCES users(id)
 ) ENGINE=InnoDB;
 
 -- Loại sản phẩm
 CREATE TABLE categories (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   parent_id BIGINT NULL,
-  name VARCHAR(190) NOT NULL,
-  slug VARCHAR(190) UNIQUE,
+  name VARCHAR(250) NOT NULL,
+  slug VARCHAR(250) UNIQUE,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,  -- Đang hoạt động
   sort_order INT DEFAULT 0, -- Thứ tự hiển thị
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_cat_parent FOREIGN KEY(parent_id) REFERENCES categories(id) ON DELETE SET NULL
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_cat_parent FOREIGN KEY(parent_id) REFERENCES categories(id) ON DELETE SET NULL,
+  CONSTRAINT fk_cat_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_cat_updated_by FOREIGN KEY(updated_by) REFERENCES users(id)
 ) ENGINE=InnoDB;
 
 -- Đơn vị tính
 CREATE TABLE units (
   id TINYINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(32) NOT NULL UNIQUE,
-  slug VARCHAR(32) NOT NULL UNIQUE
+  slug VARCHAR(32) NOT NULL UNIQUE,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_units_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_units_updated_by FOREIGN KEY(updated_by) REFERENCES users(id)
 ) ENGINE=InnoDB;
 
 -- Sản phẩm
@@ -129,6 +165,10 @@ CREATE TABLE products (
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_prod_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_prod_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
   CONSTRAINT fk_prod_brand FOREIGN KEY(brand_id)   REFERENCES brands(id)      ON DELETE SET NULL,
   CONSTRAINT fk_prod_cat   FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE SET NULL,
   CONSTRAINT fk_prod_unit  FOREIGN KEY(unit_id)     REFERENCES units(id)      ON DELETE SET NULL
@@ -140,6 +180,12 @@ CREATE TABLE product_images (
   product_id BIGINT NOT NULL,
   image_url VARCHAR(255) NOT NULL,
   is_primary BOOLEAN NOT NULL DEFAULT FALSE, -- Hình ảnh chính
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_pimg_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_pimg_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
   CONSTRAINT fk_pimg_prod FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -150,7 +196,7 @@ CREATE TABLE product_images (
 -- Chương trình khuyến mãi (Tự động áp dụng giảm giá khi thỏa điều kiện)
 CREATE TABLE promotions (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  name VARCHAR(190) NOT NULL,
+  name VARCHAR(250) NOT NULL,
   promo_type ENUM('Phần trăm','Số tiền','Mua kèm','Quà tặng') NOT NULL,  
   value DECIMAL(12,2) NOT NULL DEFAULT 0,   -- percent hoặc amount
   starts_at DATETIME NOT NULL, -- Ngày bắt đầu áp dụng
@@ -158,7 +204,12 @@ CREATE TABLE promotions (
   min_order_value DECIMAL(12,2) DEFAULT 0, -- Giá trị đơn hàng tối thiểu để áp dụng
   max_discount DECIMAL(12,2) DEFAULT NULL, -- Giá trị giảm tối đa
   is_active BOOLEAN NOT NULL DEFAULT TRUE, -- Đang hoạt động
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_promotions_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_promotions_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
   CHECK (ends_at > starts_at)
 ) ENGINE=InnoDB;
 
@@ -167,6 +218,12 @@ CREATE TABLE promotion_products (
   promotion_id BIGINT NOT NULL, -- Mã khuyến mãi
   product_id BIGINT NOT NULL, -- Mã sản phẩm
   PRIMARY KEY (promotion_id, product_id),
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_ppromo_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_ppromo_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
   CONSTRAINT fk_ppromo_p FOREIGN KEY(promotion_id) REFERENCES promotions(id) ON DELETE CASCADE,
   CONSTRAINT fk_ppromo_prod FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -183,6 +240,11 @@ CREATE TABLE promotion_bundle_rules (
   bundle_price DECIMAL(12,2) NOT NULL CHECK (bundle_price >= 0),
   max_cycles_per_order INT NULL,  -- giới hạn số lần lặp bundle/đơn (NULL = không giới hạn)
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_pbr_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_pbr_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
   CONSTRAINT fk_pbr_promo  FOREIGN KEY(promotion_id) REFERENCES promotions(id) ON DELETE CASCADE,
   CONSTRAINT fk_pbr_prod   FOREIGN KEY(product_id)   REFERENCES products(id)   ON DELETE CASCADE,
   UNIQUE KEY uniq_pbr (promotion_id, product_id, required_qty)
@@ -202,6 +264,11 @@ CREATE TABLE promotion_gift_rules (
   max_gifts_per_order INT NULL,                -- giới hạn số "bộ quà" trong 1 đơn (NULL = không giới hạn)
   auto_add BOOLEAN NOT NULL DEFAULT TRUE,      -- tự động thêm quà vào giỏ/đơn khi đủ điều kiện
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_pgr_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_pgr_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
   CONSTRAINT fk_pgr_promo   FOREIGN KEY(promotion_id)      REFERENCES promotions(id) ON DELETE CASCADE,
   CONSTRAINT fk_pgr_trigger FOREIGN KEY(trigger_product_id) REFERENCES products(id)   ON DELETE CASCADE,
   CONSTRAINT fk_pgr_gift    FOREIGN KEY(gift_product_id)   REFERENCES products(id)   ON DELETE CASCADE,
@@ -218,7 +285,7 @@ CREATE TABLE promotion_gift_rules (
 CREATE TABLE coupons (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   code VARCHAR(64) NOT NULL UNIQUE, 
-  name VARCHAR(190),
+  name VARCHAR(250),
   discount_type ENUM('Phần trăm','Số tiền') NOT NULL,
   discount_value DECIMAL(12,2) NOT NULL, -- Giá trị giảm
   max_uses INT DEFAULT 0,           -- 0 = không giới hạn
@@ -227,7 +294,12 @@ CREATE TABLE coupons (
   ends_at DATETIME NOT NULL, -- Ngày kết thúc áp dụng
   min_order_value DECIMAL(12,2) DEFAULT 0, -- Giá trị đơn hàng tối thiểu để áp dụng
   is_active BOOLEAN NOT NULL DEFAULT TRUE, -- Đang hoạt động
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_coupons_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_coupons_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
   CHECK (ends_at > starts_at)
 ) ENGINE=InnoDB;
 
@@ -241,6 +313,12 @@ CREATE TABLE user_coupons (
   assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   used_at DATETIME NULL,
   expires_at DATETIME NULL,  -- hạn dùng riêng theo người (tuỳ chọn)
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_uc_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_uc_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
   CONSTRAINT fk_uc_user   FOREIGN KEY(user_id)   REFERENCES users(id)   ON DELETE CASCADE,
   CONSTRAINT fk_uc_coupon FOREIGN KEY(coupon_id) REFERENCES coupons(id) ON DELETE CASCADE,
   UNIQUE KEY uniq_user_coupon (user_id, coupon_id),   -- 1 mã chỉ xuất hiện 1 lần trên 1 user
@@ -257,6 +335,10 @@ CREATE TABLE carts (
   user_id BIGINT NOT NULL,              
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_cart_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_cart_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
   CONSTRAINT fk_cart_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
   UNIQUE KEY uniq_cart_user (user_id) -- mỗi user 1 giỏ mở
 ) ENGINE=InnoDB;
@@ -270,6 +352,10 @@ CREATE TABLE cart_items (
   price DECIMAL(12,2) NOT NULL CHECK (price >= 0),  -- snapshot giá lúc thêm
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_citem_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_citem_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
   CONSTRAINT fk_citem_cart FOREIGN KEY(cart_id) REFERENCES carts(id) ON DELETE CASCADE,
   CONSTRAINT fk_citem_prod FOREIGN KEY(product_id) REFERENCES products(id),
   UNIQUE KEY uniq_cartitem (cart_id, product_id)
@@ -290,7 +376,7 @@ CREATE TABLE payments (
     'PayPal','Thanh toán khi nhận hàng (COD)'
   ) NOT NULL,
 
-  txn_ref VARCHAR(190),      -- mã giao dịch từ cổng/nhà cung cấp (nếu có)
+  txn_ref VARCHAR(250),      -- mã giao dịch từ cổng/nhà cung cấp (nếu có)
   paid_at DATETIME NULL,     -- thời gian thanh toán (nếu có)
   meta JSON,                 -- lưu trữ thông tin bổ sung
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -334,6 +420,10 @@ CREATE TABLE orders (
   note VARCHAR(255),
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_order_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_order_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
 
   CONSTRAINT fk_order_user     FOREIGN KEY(user_id)            REFERENCES users(id)           ON DELETE SET NULL,
   CONSTRAINT fk_order_shipaddr FOREIGN KEY(shipping_address_id) REFERENCES user_addresses(id) ON DELETE SET NULL,
@@ -383,6 +473,11 @@ CREATE TABLE coupon_redemptions (
   order_id  BIGINT NOT NULL,
   discount_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_cr_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_cr_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
   CONSTRAINT fk_cr_coupon FOREIGN KEY(coupon_id) REFERENCES coupons(id) ON DELETE CASCADE,
   CONSTRAINT fk_cr_user   FOREIGN KEY(user_id)   REFERENCES users(id),
   CONSTRAINT fk_cr_order  FOREIGN KEY(order_id)  REFERENCES orders(id) ON DELETE CASCADE,
@@ -399,9 +494,11 @@ CREATE TABLE product_reviews (
   product_id BIGINT NOT NULL,
   user_id BIGINT NOT NULL,
   rating TINYINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
-  title VARCHAR(190),
+  title VARCHAR(250),
   content TEXT,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  CONSTRAINT fk_prev_created_by FOREIGN KEY(created_by) REFERENCES users(id),
   CONSTRAINT fk_prev_prod FOREIGN KEY(product_id) REFERENCES products(id),
   CONSTRAINT fk_prev_user FOREIGN KEY(user_id) REFERENCES users(id),
   CONSTRAINT fk_prev_order FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE SET NULL,
@@ -415,7 +512,7 @@ CREATE TABLE receipt_vouchers (
   order_id BIGINT NULL,              -- đơn hàng liên quan (nếu có)
   payment_id BIGINT NULL,            -- bản ghi thanh toán (nếu đã tạo payment)
   payer_user_id BIGINT NULL,         -- KH nội bộ (nếu có user)
-  payer_name VARCHAR(190) NULL,      -- tên người nộp (nếu không có user)
+  payer_name VARCHAR(250) NULL,      -- tên người nộp (nếu không có user)
   
   method ENUM(
     'Tiền mặt','Chuyển khoản','Quẹt thẻ',
@@ -428,6 +525,11 @@ CREATE TABLE receipt_vouchers (
   received_at DATETIME NULL,         -- thời điểm nhận
   note VARCHAR(255) NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_rv_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_rv_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
 
   CONSTRAINT fk_rv_order     FOREIGN KEY(order_id)     REFERENCES orders(id)    ON DELETE SET NULL,
   CONSTRAINT fk_rv_payment   FOREIGN KEY(payment_id)   REFERENCES payments(id)  ON DELETE SET NULL,
@@ -450,6 +552,8 @@ CREATE TABLE stocks (
   qty INT NOT NULL DEFAULT 0,                 -- tồn hiện tại
   safety_stock INT NOT NULL DEFAULT 0,        -- tồn an toàn
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_st_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
   CONSTRAINT fk_st_prod FOREIGN KEY(product_id) REFERENCES products(id)
 ) ENGINE=InnoDB;
 
@@ -480,14 +584,16 @@ CREATE TABLE stock_movements (
 -- Nhà cung cấp
 CREATE TABLE suppliers (
   id BIGINT PRIMARY KEY AUTO_INCREMENT, -- Mã nhà cung cấp
-  name VARCHAR(190) NOT NULL, -- Tên nhà cung cấp
+  name VARCHAR(250) NOT NULL, -- Tên nhà cung cấp
   phone VARCHAR(32),
-  email VARCHAR(190),
+  email VARCHAR(250),
   address VARCHAR(255),
   payment_term_days INT NOT NULL DEFAULT 0,   -- số ngày được nợ (0 = trả ngay)
   credit_limit DECIMAL(14,2) NOT NULL DEFAULT 0, -- hạn mức công nợ (0 = không giới hạn)
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  CONSTRAINT fk_sp_created_by FOREIGN KEY(created_by) REFERENCES users(id)
 ) ENGINE=InnoDB;
 
 -- Liên kết Nhà cung cấp <-> Sản phẩm (nhiều-nhiều)
@@ -503,14 +609,18 @@ CREATE TABLE supplier_products (
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
               ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+
+  CONSTRAINT fk_supplier_products_created_by FOREIGN KEY(created_by) REFERENCES users(id),
 
   PRIMARY KEY (supplier_id, product_id),
-  CONSTRAINT fk_sp_sup  FOREIGN KEY(supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE,
-  CONSTRAINT fk_sp_prod FOREIGN KEY(product_id)  REFERENCES products(id)  ON DELETE CASCADE,
+  CONSTRAINT fk_supplier_products_supplier FOREIGN KEY(supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE,
+  CONSTRAINT fk_supplier_products_product  FOREIGN KEY(product_id)  REFERENCES products(id)  ON DELETE CASCADE,
 
   INDEX idx_sp_prod_pref (product_id, preference_score),
   INDEX idx_sp_supplier  (supplier_id)
 ) ENGINE=InnoDB;
+
 
 -- Phiếu nhập kho
 CREATE TABLE purchase_orders (
@@ -570,6 +680,9 @@ CREATE TABLE expense_vouchers (
   paid_at DATETIME NULL,                 -- thời điểm chi
   note VARCHAR(255) NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  CONSTRAINT fk_ev_created_by FOREIGN KEY(created_by) REFERENCES users(id),
 
   CONSTRAINT fk_ev_po      FOREIGN KEY(purchase_order_id) REFERENCES purchase_orders(id) ON DELETE RESTRICT,
   CONSTRAINT fk_ev_sup     FOREIGN KEY(supplier_id)       REFERENCES suppliers(id)       ON DELETE SET NULL,
@@ -590,6 +703,9 @@ CREATE TABLE ap_ledger (
   credit DECIMAL(14,2) NOT NULL DEFAULT 0,  -- giảm công nợ
   note VARCHAR(255) NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  CONSTRAINT fk_ap_created_by FOREIGN KEY(created_by) REFERENCES users(id),
   CONSTRAINT fk_ap_sup FOREIGN KEY(supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE,
   INDEX idx_ap_sup   (supplier_id),
   INDEX idx_ap_reft  (ref_type),
@@ -616,8 +732,12 @@ CREATE TABLE stocktake_items (
   system_qty INT NOT NULL, -- Tồn kho hiện tại
   counted_qty INT NOT NULL, -- Tồn kho kiểm kê
   difference INT NOT NULL, -- Số lượng khác biệt = system_qty - counted_qty
-  CONSTRAINT fk_stti_stt  FOREIGN KEY(stocktake_id) REFERENCES stocktakes(id) ON DELETE CASCADE,
-  CONSTRAINT fk_stti_prod FOREIGN KEY(product_id)   REFERENCES products(id)
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  CONSTRAINT fk_stti_stt FOREIGN KEY(stocktake_id) REFERENCES stocktakes(id) ON DELETE CASCADE,
+  CONSTRAINT fk_stti_prod FOREIGN KEY(product_id)   REFERENCES products(id),
+  CONSTRAINT fk_stti_created_by FOREIGN KEY(created_by) REFERENCES users(id)
 ) ENGINE=InnoDB;
 
 -- Phiếu xuất kho
@@ -633,6 +753,8 @@ CREATE TABLE goods_issues (
   packed_by BIGINT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  CONSTRAINT fk_gi_created_by FOREIGN KEY(created_by) REFERENCES users(id),
   CONSTRAINT fk_gi_order FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE,
   CONSTRAINT fk_gi_user  FOREIGN KEY(packed_by) REFERENCES users(id) ON DELETE SET NULL,
   INDEX idx_gi_order(order_id),
@@ -691,6 +813,8 @@ CREATE TABLE shipments (
   meta JSON,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  CONSTRAINT fk_ship_created_by FOREIGN KEY(created_by) REFERENCES users(id),
   UNIQUE KEY uniq_ship (order_id, package_no),
   UNIQUE KEY uniq_tracking (tracking_code),     -- cho nhanh tra cứu; cho phép NULL
   INDEX idx_ship_order   (order_id),
@@ -722,13 +846,16 @@ CREATE TABLE shipment_events (
   ) NULL,
 
   detail VARCHAR(255),          -- mô tả ngắn
-  location VARCHAR(190) NULL,   -- kiện hàng đang ở đâu (tên + mã)
+  location VARCHAR(250) NULL,   -- kiện hàng đang ở đâu (tên + mã)
   hub_code VARCHAR(64) NULL,    -- mã hub
 
   event_time DATETIME NOT NULL, -- thời điểm sự kiện
   raw_payload JSON,             -- chứng cứ gốc đầy đủ từ carrier để kiểm tra/bắt lỗi/bổ sung mapping sau này
 
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, 
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  CONSTRAINT fk_sev_created_by FOREIGN KEY(created_by) REFERENCES users(id),
 
   INDEX idx_sev_shipment (shipment_id),
   INDEX idx_sev_track    (tracking_code),
@@ -764,6 +891,8 @@ CREATE TABLE aftersales_requests (
 
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  CONSTRAINT fk_afs_created_by FOREIGN KEY(created_by) REFERENCES users(id),
 
   CONSTRAINT fk_afs_order     FOREIGN KEY(order_id)  REFERENCES orders(id) ON DELETE CASCADE,
   CONSTRAINT fk_afs_user      FOREIGN KEY(user_id)   REFERENCES users(id),
@@ -885,7 +1014,7 @@ VALUES (
     'admin',              -- ĐĂNG NHẬP BẰNG CÁI NÀY
     'thicamtien2003@gmail.com',
     '0909000000',
-    '$2b$10$BJl6SqKmEKtLgvJFBo.PJeC8Kh9wuYGx0dmKxjMEVjgSz5buW0JCK',
+    '$2b$10$b0.RGLmD391S.468j6b5FuoaBSv7OZKVT9/hqDR75Qlf2OzR/egxC',
     'Administrator',
     TRUE
 );
