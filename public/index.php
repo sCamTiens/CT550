@@ -16,6 +16,8 @@ use App\Controllers\Admin\ProductController as AdminProduct;
 use App\Controllers\Admin\BrandController as AdminBrand;
 use App\Controllers\Admin\AuthController as AdminController;
 use App\Controllers\Admin\CategoryController as AdminCategory;
+use App\Controllers\Admin\SupplierController as AdminSupplier;
+use App\Controllers\Admin\UnitController as AdminUnit;
 
 
 /* --- load biến môi trường từ .env (đặt ở thư mục gốc dự án) --- */
@@ -50,7 +52,6 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/products', [AdminProduct::class, 'index']);
     $r->get('/products/create', [AdminProduct::class, 'create']);
     $r->post('/products', [AdminProduct::class, 'store']);
-    $r->get('/products/{id}/edit', [AdminProduct::class, 'edit']);
     $r->put('/products/{id}', [AdminProduct::class, 'update']);
     $r->delete('/products/{id}', [AdminProduct::class, 'destroy']);
 
@@ -58,7 +59,6 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/categories', [AdminCategory::class, 'index']);
     $r->get('/api/categories', [AdminCategory::class, 'apiIndex']);
     $r->post('/categories', [AdminCategory::class, 'store']);
-    $r->get('/categories/{id}/edit', [AdminCategory::class, 'edit']);
     $r->put('/categories/{id}', [AdminCategory::class, 'update']);
     $r->delete('/categories/{id}', [AdminCategory::class, 'destroy']);
 
@@ -66,9 +66,22 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/brands', [AdminBrand::class, 'index']);
     $r->get('/api/brands', [AdminBrand::class, 'apiIndex']);
     $r->post('/brands', [AdminBrand::class, 'store']);
-    $r->get('/brands/{id}/edit', [AdminBrand::class, 'edit']);
     $r->put('/brands/{id}', [AdminBrand::class, 'update']);
     $r->delete('/brands/{id}', [AdminBrand::class, 'destroy']);
+
+    // Suppliers
+    $r->get('/suppliers', [AdminSupplier::class, 'index']);
+    $r->get('/api/suppliers', [AdminSupplier::class, 'apiIndex']);
+    $r->post('/suppliers', [AdminSupplier::class, 'store']);
+    $r->put('/suppliers/{id}', [AdminSupplier::class, 'update']);
+    $r->delete('/suppliers/{id}', [AdminSupplier::class, 'destroy']);
+
+    // Units
+    $r->get('/units', [AdminUnit::class, 'index']);
+    $r->get('/api/units', [AdminUnit::class, 'apiIndex']);
+    $r->post('/units', [AdminUnit::class, 'store']);
+    $r->put('/units/{id}', [AdminUnit::class, 'update']);
+    $r->delete('/units/{id}', [AdminUnit::class, 'destroy']);
 
 });
 

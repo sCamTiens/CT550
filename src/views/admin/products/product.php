@@ -179,7 +179,7 @@ $items = $items ?? [];
       brands: [],
       categories: [],
 
-      // pagination
+      // phân trang
       currentPage: 1,
       perPage: 20,
       perPageOptions: [5, 10, 20, 50, 100],
@@ -234,14 +234,75 @@ $items = $items ?? [];
         try { return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n || 0) }
         catch { return n }
       },
+
+      // filters
+      openFilter: {},    // trạng thái mở filter popup
+      filters: {},       // dữ liệu filter
+
+      // lọc client-side
       filtered() {
-        if (!this.search) return this.items;
-        const q = this.search.toLowerCase();
-        return this.items.filter(p =>
-          (p.name || '').toLowerCase().includes(q) ||
-          (p.sku || '').toLowerCase().includes(q)
-        );
+        let data = this.items;
+
+        if (this.filters.sku) {
+          data = data.filter(p => (p.sku || '').toLowerCase().includes(this.filters.sku.toLowerCase()));
+        }
+        if (this.filters.name) {
+          data = data.filter(p => (p.name || '').toLowerCase().includes(this.filters.name.toLowerCase()));
+        }
+        if (this.filters.brand) {
+          data = data.filter(p => (p.brand_name || '').toLowerCase().includes(this.filters.brand.toLowerCase()));
+        }
+        if (this.filters.category) {
+          data = data.filter(p => (p.category_name || '').toLowerCase().includes(this.filters.category.toLowerCase()));
+        }
+        if (this.filters.price) {
+          const val = Number(this.filters.price);
+          if (!isNaN(val)) data = data.filter(p => Number(p.sale_price) === val);
+        }
+        if (this.filters.status !== undefined && this.filters.status !== '') {
+          data = data.filter(p => String(p.is_active) === String(this.filters.status));
+        }
+        if (this.filters.created_by) {
+          data = data.filter(p => (p.created_by_name || '').toLowerCase().includes(this.filters.created_by.toLowerCase()));
+        }
+        if (this.filters.updated_by) {
+          data = data.filter(p => (p.updated_by_name || '').toLowerCase().includes(this.filters.updated_by.toLowerCase()));
+        }
+
+        // lọc ngày tạo
+        if (this.filters.created_at_value && this.filters.created_at_type === 'eq') {
+          data = data.filter(p => (p.created_at || '').startsWith(this.filters.created_at_value));
+        }
+        if (this.filters.created_at_from && this.filters.created_at_to && this.filters.created_at_type === 'between') {
+          data = data.filter(p => p.created_at >= this.filters.created_at_from && p.created_at <= this.filters.created_at_to);
+        }
+
+        // lọc ngày cập nhật
+        if (this.filters.updated_at_value && this.filters.updated_at_type === 'eq') {
+          data = data.filter(p => (p.updated_at || '').startsWith(this.filters.updated_at_value));
+        }
+        if (this.filters.updated_at_from && this.filters.updated_at_to && this.filters.updated_at_type === 'between') {
+          data = data.filter(p => p.updated_at >= this.filters.updated_at_from && p.updated_at <= this.filters.updated_at_to);
+        }
+
+        return data;
       },
+
+      // toggle popup filter
+      toggleFilter(key) {
+        for (const k in this.openFilter) this.openFilter[k] = false;
+        this.openFilter[key] = true;
+      },
+      applyFilter(key) { this.openFilter[key] = false; },
+      resetFilter(key) {
+        this.filters[key] = '';
+        this.filters[key + '_type'] = '';
+        this.filters[key + '_value'] = '';
+        this.filters[key + '_from'] = '';
+        this.filters[key + '_to'] = '';
+        this.openFilter[key] = false;
+      },
+
       resetForm() {
         this.form = {
           id: null, name: '', sku: '', price: 0, unit: '',
@@ -269,6 +330,7 @@ $items = $items ?? [];
         const mod = sum % 10;
         return (10 - mod) % 10;
       },
+
       generateEAN13() {
         const prefix = '893';
         const core9 = this.randomDigits(9);
@@ -276,6 +338,7 @@ $items = $items ?? [];
         const cd = this.ean13CheckDigit12(d12);
         return d12 + cd;
       },
+
       // ===== SKU helpers =====
       generateSKU() {
         const date = new Date();
@@ -283,7 +346,6 @@ $items = $items ?? [];
         const rand = Math.random().toString(36).substring(2, 5).toUpperCase(); // 3 ký tự random
         return `SP-${ymd}-${rand}`;
       },
-
 
       // toast
       showToast(msg) {
@@ -387,7 +449,7 @@ $items = $items ?? [];
           const r = await fetch(api.brands);
           if (r.ok) {
             const data = await r.json();
-            this.brands = data.items || [];   // ✅ lấy đúng mảng
+            this.brands = data.items || [];
           }
         } catch (e) { console.error(e); }
 
@@ -395,7 +457,7 @@ $items = $items ?? [];
           const r = await fetch(api.categories);
           if (r.ok) {
             const data = await r.json();
-            this.categories = data.items || [];  // ✅ lấy đúng mảng
+            this.categories = data.items || [];
           }
         } catch (e) { console.error(e); }
       },
@@ -418,6 +480,7 @@ $items = $items ?? [];
         this.form.sku = this.generateSKU();
         this.openAdd = true;
       },
+
       openEditModal(p) {
         this.resetForm();
         this.form = { ...p };
@@ -443,8 +506,9 @@ $items = $items ?? [];
             throw new Error(msg);
           }
           const item = await r.json();
-          this.items.unshift(item);
+          this.items.unshift(res);
           this.openAdd = false;
+          this.showToast('Thêm sản phẩm thành công!', 'success');
         } catch (e) {
           this.showToast(e.message || 'Không thể thêm sản phẩm');
         } finally { this.submitting = false; }
@@ -472,6 +536,7 @@ $items = $items ?? [];
           }
 
           this.openEdit = false;
+          this.showToast('Cập nhật sản phẩm thành công!', 'success');
         } catch (e) {
           this.showToast(e.message || 'Không thể cập nhật sản phẩm');
         } finally {
@@ -486,10 +551,41 @@ $items = $items ?? [];
           const res = await r.json();
           if (!r.ok) throw new Error(res.error || 'Lỗi máy chủ khi xóa');
           this.items = this.items.filter(x => x.id != id);
+          this.showToast('Xóa sản phẩm thành công!', 'success');
         } catch (e) {
           this.showToast(e.message || 'Không thể xóa sản phẩm');
         }
       },
+
+      showToast(msg, type = 'error') {
+        const box = document.getElementById('toast-container');
+        if (!box) return;
+        box.innerHTML = '';
+
+        const toast = document.createElement('div');
+        toast.className =
+          `fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 mb-4 text-base font-semibold
+            ${type === 'success'
+            ? 'text-green-700 border-green-400'
+            : 'text-red-700 border-red-400'}
+            bg-white rounded-xl shadow-lg border-2`;
+
+        toast.innerHTML = `
+            <svg class="flex-shrink-0 w-6 h-6 ${type === 'success' ? 'text-green-600' : 'text-red-600'} mr-3" 
+                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              ${type === 'success'
+            ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M5 13l4 4L19 7" />`
+            : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`}
+            </svg>
+            <div class="flex-1">${msg}</div>
+          `;
+
+        box.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+      }
+
     }
   }
 </script>

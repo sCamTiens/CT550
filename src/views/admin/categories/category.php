@@ -365,22 +365,6 @@ $items = $items ?? [];
         this.touched = { name: false, slug: false };
       },
 
-      // ===== toast =====
-      showToast(msg) {
-        const box = document.getElementById('toast-container');
-        if (!box) return;
-        box.innerHTML = `
-          <div class="fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 mb-4 text-base font-semibold text-red-700 bg-white rounded-xl shadow-lg border-2 border-red-400">
-            <svg class="flex-shrink-0 w-6 h-6 text-red-600 me-3" xmlns="http://www.w3.org/2000/svg" fill="none"
-                viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />
-            </svg>
-            <div class="flex-1">${msg}</div>
-          </div>`;
-        setTimeout(() => { box.innerHTML = '' }, 3000);
-      },
-
       // ===== data =====
       async fetchAll() {
         this.loading = true;
@@ -416,6 +400,7 @@ $items = $items ?? [];
           if (!r.ok) throw new Error(res.error || 'Lỗi máy chủ');
           this.items.unshift(res);
           this.openAdd = false;
+          this.showToast('Thêm loại sản phẩm thành công!', 'success');
         } catch (e) {
           this.showToast(e.message || 'Không thể thêm loại');
         } finally { this.submitting = false; }
@@ -439,6 +424,7 @@ $items = $items ?? [];
           else this.items.unshift(res);
 
           this.openEdit = false;
+          this.showToast('Cập nhật loại sản phẩm thành công!', 'success');
         } catch (e) {
           this.showToast(e.message || 'Không thể cập nhật loại');
         } finally { this.submitting = false; }
@@ -451,10 +437,42 @@ $items = $items ?? [];
           const res = await r.json();
           if (!r.ok) throw new Error(res.error || 'Lỗi máy chủ khi xóa');
           this.items = this.items.filter(x => x.id != id);
+          this.showToast('Xóa loại sản phẩm thành công!', 'success');
         } catch (e) {
           this.showToast(e.message || 'Không thể xóa loại');
         }
       },
+
+      // ===== toast =====
+      showToast(msg, type = 'error') {
+        const box = document.getElementById('toast-container');
+        if (!box) return;
+        box.innerHTML = '';
+
+        const toast = document.createElement('div');
+        toast.className =
+          `fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 mb-4 text-base font-semibold
+            ${type === 'success'
+            ? 'text-green-700 border-green-400'
+            : 'text-red-700 border-red-400'}
+            bg-white rounded-xl shadow-lg border-2`;
+
+        toast.innerHTML = `
+            <svg class="flex-shrink-0 w-6 h-6 ${type === 'success' ? 'text-green-600' : 'text-red-600'} mr-3" 
+                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              ${type === 'success'
+            ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M5 13l4 4L19 7" />`
+            : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`}
+            </svg>
+            <div class="flex-1">${msg}</div>
+          `;
+
+        box.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+      },
+
     }
   }
 </script>

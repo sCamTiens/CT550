@@ -30,6 +30,7 @@
                     phẩm</a>
                 <a href="/admin/suppliers" class="block px-3 py-2 rounded hover:bg-[#002975] hover:text-white">Nhà cung
                     cấp</a>
+                <a href="/admin/units" class="block px-3 py-2 rounded hover:bg-[#002975] hover:text-white">Đơn vị tính</a>
             </div>
         </div>
 

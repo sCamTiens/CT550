@@ -588,11 +588,11 @@ CREATE TABLE suppliers (
   phone VARCHAR(32),
   email VARCHAR(250),
   address VARCHAR(255),
-  payment_term_days INT NOT NULL DEFAULT 0,   -- số ngày được nợ (0 = trả ngay)
-  credit_limit DECIMAL(14,2) NOT NULL DEFAULT 0, -- hạn mức công nợ (0 = không giới hạn)
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_sp_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
   CONSTRAINT fk_sp_created_by FOREIGN KEY(created_by) REFERENCES users(id)
 ) ENGINE=InnoDB;
 
