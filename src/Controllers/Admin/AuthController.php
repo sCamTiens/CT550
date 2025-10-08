@@ -2,7 +2,7 @@
 namespace App\Controllers\Admin;
 
 use App\Core\Controller;
-use App\Core\DB;
+use App\Models\Repositories\UserRepository;
 
 class AuthController extends Controller
 {
@@ -52,14 +52,7 @@ class AuthController extends Controller
             exit;
         }
 
-        $pdo = DB::pdo();
-        $st = $pdo->prepare("SELECT u.*, r.name AS role_name
-                             FROM users u
-                             LEFT JOIN roles r ON r.id = u.role_id
-                             WHERE u.username = ?
-                             LIMIT 1");
-        $st->execute([$username]);
-        $user = $st->fetch(\PDO::FETCH_ASSOC);
+    $user = UserRepository::findByUsername($username);
 
         $fail = function (string $msg) use ($isJsonReq) {
             if ($isJsonReq) {
@@ -75,31 +68,31 @@ class AuthController extends Controller
 
         if (!$user)
             return $fail('Tài khoản hoặc mật khẩu sai.');
-        if (isset($user['is_active']) && (int) $user['is_active'] === 0)
+        if (isset($user->is_active) && (int) $user->is_active === 0)
             return $fail('Tài khoản đã bị vô hiệu hóa.');
-        if (!in_array($user['role_name'] ?? '', ['Nhân viên', 'Admin'], true))
+        if (!in_array($user->role_name ?? '', ['Nhân viên', 'Admin'], true))
             return $fail('Không có quyền vào khu vực quản trị.');
 
-        if (!password_verify($password, $user['password_hash'] ?? ''))
+        if (!password_verify($password, $user->password_hash ?? ''))
             return $fail('Tài khoản hoặc mật khẩu sai.');
 
         // Lưu session cả cho admin_user và user
         $sessData = [
-            'id' => (int) $user['id'],
-            'username' => $user['username'],
-            'email' => $user['email'] ?? null,
-            'full_name' => $user['full_name'] ?? null,
-            'role' => $user['role_name'],
-            'avatar_url' => $user['avatar_url'] ?? null,
-            'date_of_birth' => $user['date_of_birth'] ?? null,
-            'phone' => $user['phone'] ?? null,
-            'gender' => $user['gender'] ?? null,
+            'id' => (int) $user->id,
+            'username' => $user->username,
+            'email' => $user->email ?? null,
+            'full_name' => $user->full_name ?? null,
+            'role' => $user->role_name,
+            'avatar_url' => $user->avatar_url ?? null,
+            'date_of_birth' => $user->date_of_birth ?? null,
+            'phone' => $user->phone ?? null,
+            'gender' => $user->gender ?? null,
         ];
         $_SESSION['admin_user'] = $sessData;
         $_SESSION['user'] = $sessData; // để CategoryController dùng
 
         if ($remember) {
-            setcookie('admin_remember', $user['username'], time() + 60 * 60 * 24 * 30, '/', '', false, true);
+            setcookie('admin_remember', $user->username, time() + 60 * 60 * 24 * 30, '/', '', false, true);
         }
 
         if ($isJsonReq) {
@@ -165,9 +158,7 @@ class AuthController extends Controller
         }
         // Cập nhật DB
         $avatarPath = '' . $currentUserId . '.png';
-        $pdo = DB::pdo();
-        $stmt = $pdo->prepare('UPDATE users SET avatar_url = ? WHERE id = ?');
-        $stmt->execute([$avatarPath, $currentUserId]);
+    UserRepository::updateAvatar($currentUserId, $avatarPath);
         // Cập nhật lại session
         if (isset($_SESSION['user'])) {
             $_SESSION['user']['avatar_url'] = $avatarPath;
@@ -210,9 +201,7 @@ class AuthController extends Controller
                 $date_of_birth = '';
             }
         }
-        $pdo = DB::pdo();
-        $stmt = $pdo->prepare('UPDATE users SET full_name = ?, email = ?, phone = ?, gender = ?, date_of_birth = ? WHERE id = ?');
-        $stmt->execute([$fullname, $email, $phone, $gender, $date_of_birth, $currentUserId]);
+    UserRepository::updateProfile($currentUserId, $fullname, $email, $phone, $gender, $date_of_birth);
         // Cập nhật lại session
         if (isset($_SESSION['user'])) {
             $_SESSION['user']['full_name'] = $fullname;
@@ -249,22 +238,18 @@ class AuthController extends Controller
             header('Location: /admin/profile?tab=password&error=confirm');
             exit;
         }
-        $pdo = DB::pdo();
-        $stmt = $pdo->prepare('SELECT password_hash FROM users WHERE id = ?');
-        $stmt->execute([$currentUserId]);
-        $user = $stmt->fetch();
-        if (!$user || !password_verify($oldPassword, $user['password_hash'])) {
+        $user = UserRepository::findById($currentUserId);
+        if (!$user || !password_verify($oldPassword, $user->password_hash)) {
             header('Location: /admin/profile?tab=password&error=old');
             exit;
         }
         // Check if new password is the same as old password
-        if (password_verify($newPassword, $user['password_hash'])) {
+        if (password_verify($newPassword, $user->password_hash)) {
             header('Location: /admin/profile?tab=password&error=same');
             exit;
         }
         $newHash = password_hash($newPassword, PASSWORD_DEFAULT);
-        $stmt = $pdo->prepare('UPDATE users SET password_hash = ? WHERE id = ?');
-        $stmt->execute([$newHash, $currentUserId]);
+        UserRepository::updatePassword($currentUserId, $newHash);
         header('Location: /admin/profile?tab=password&success=1');
         exit;
     }

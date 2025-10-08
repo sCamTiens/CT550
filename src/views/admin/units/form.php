@@ -4,7 +4,7 @@
         <label class="block text-sm text-black font-semibold mb-1">
             Tên đơn vị <span class="text-red-500">*</span>
         </label>
-        <input x-model="form.name" @input="clearError('name'); validateField('name')"
+        <input x-model="form.name" @input="onNameInput(); clearError('name'); validateField('name')"
             @blur="touched.name = true; validateField('name')" class="border rounded px-3 py-2 w-full"
             placeholder="Nhập tên đơn vị tính" required maxlength="250">
         <p x-show="touched.name && errors.name" x-text="errors.name" class="text-red-500 text-xs mt-1"></p>

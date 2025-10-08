@@ -1,13 +1,11 @@
 <?php
 namespace App\Models\Entities;
 
-class Supplier
+class Unit
 {
     public $id;
     public $name;
-    public $phone;
-    public $email;
-    public $address;
+    public $slug;
     public $created_at;
     public $updated_at;
     public $created_by;

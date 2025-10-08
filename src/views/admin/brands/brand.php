@@ -322,22 +322,22 @@ $items = $items ?? [];
           else this.items.unshift(res);
 
           this.openEdit = false;
-          this.showToast('Cập nhật loại sản phẩm thành công!', 'success');
+          this.showToast('Cập nhật thương hiệu thành công!', 'success');
         } catch (e) {
-          this.showToast(e.message || 'Không thể cập nhật loại', 'error');
+          this.showToast(e.message || 'Không thể cập nhật thương hiệu', 'error');
         } finally { this.submitting = false; }
       },
 
       async remove(id) {
-        if (!confirm('Xóa loại này?')) return;
+        if (!confirm('Xóa thương hiệu này?')) return;
         try {
-          const r = await fetch(`/admin/categories/${id}`, { method: 'DELETE' });
+          const r = await fetch(`/admin/brands/${id}`, { method: 'DELETE' });
           const res = await r.json();
           if (!r.ok) throw new Error(res.error || 'Lỗi máy chủ khi xóa');
           this.items = this.items.filter(x => x.id != id);
-          this.showToast('Xóa loại sản phẩm thành công!', 'success');
+          this.showToast('Xóa thương hiệu thành công!', 'success');
         } catch (e) {
-          this.showToast(e.message || 'Không thể xóa loại', 'error');
+          this.showToast(e.message || 'Không thể xóa thương hiệu', 'error');
         }
       },
 

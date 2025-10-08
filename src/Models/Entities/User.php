@@ -18,4 +18,5 @@ class User
 	public $updated_at;
 	public $created_by;
 	public $updated_by;
+	public $role_name; // for joined role name
 }

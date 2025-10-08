@@ -163,7 +163,7 @@ $items = $items ?? [];
             list: '/admin/api/suppliers',
             create: '/admin/suppliers',
             update: id => `/admin/suppliers/${id}`,
-            remove: id => `/admin/suppliers/${id}/delete`,
+            remove: id => `/admin/suppliers/${id}`,
         };
 
         return {
@@ -248,8 +248,8 @@ $items = $items ?? [];
                     this.errors[field] = 'Tên nhà cung cấp là bắt buộc';
                 }
 
-                if (field === 'phone' && val && !/^[0-9]{9,11}$/.test(val)) {
-                    this.errors[field] = 'Số điện thoại không hợp lệ (9–11 chữ số)';
+                if (field === 'phone' && val && !/^0\d{9}$/.test(val)) {
+                    this.errors[field] = 'Số điện thoại không hợp lệ. Số điện thoại phải gồm 10 số và bắt đầu bằng 0.';
                 }
 
                 if (field === 'email' && val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {

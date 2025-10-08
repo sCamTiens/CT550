@@ -262,6 +262,8 @@ $items = $items ?? [];
                 } finally { this.loading = false; }
             },
 
+            onNameInput() { if (!this.form.id) this.form.slug = this.slugify(this.form.name); },
+
             // Filter logic
             filtered() {
                 let data = this.items;

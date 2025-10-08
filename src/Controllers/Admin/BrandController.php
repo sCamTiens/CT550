@@ -2,6 +2,7 @@
 namespace App\Controllers\Admin;
 
 use App\Core\Controller;
+use App\Models\Repositories\BrandRepository;
 
 class BrandController extends Controller
 {
@@ -14,16 +15,7 @@ class BrandController extends Controller
     /** GET /admin/api/brands (list JSON) */
     public function apiIndex()
     {
-        $pdo = \App\Core\DB::pdo();
-        $rows = $pdo->query("SELECT b.id, b.name, b.slug, b.created_at, b.updated_at,
-                            b.created_by, b.updated_by,
-                            u1.full_name AS created_by_name,
-                            u2.full_name AS updated_by_name
-                     FROM brands b
-                     LEFT JOIN users u1 ON u1.id = b.created_by
-                     LEFT JOIN users u2 ON u2.id = b.updated_by
-                     ORDER BY b.id DESC")
-            ->fetchAll(\PDO::FETCH_ASSOC);
+        $rows = BrandRepository::all();
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['items' => $rows], JSON_UNESCAPED_UNICODE);
         exit;
@@ -32,22 +24,22 @@ class BrandController extends Controller
     /** POST /admin/brands (create) */
     public function store()
     {
-        $pdo = \App\Core\DB::pdo();
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
-
         $name = trim($data['name'] ?? '');
         $slug = trim($data['slug'] ?? '');
         $currentUser = $this->currentUserId();
 
-        // Validate
+        // Validate dữ liệu
         if ($name === '' || mb_strlen($name) > 190) {
             http_response_code(422);
             echo json_encode(['error' => 'Tên là bắt buộc và ≤ 190 ký tự']);
             exit;
         }
+
         if ($slug === '') {
             $slug = $this->slugify($name);
         }
+
         if ($slug !== null && mb_strlen($slug) > 190) {
             http_response_code(422);
             echo json_encode(['error' => 'Slug không vượt quá 190 ký tự']);
@@ -55,98 +47,102 @@ class BrandController extends Controller
         }
 
         try {
-            $stmt = $pdo->prepare("INSERT INTO brands(name,slug,created_by,updated_by)
-                                   VALUES(:name,:slug,:created_by,:updated_by)");
-            $stmt->execute([
-                ':name' => $name,
-                ':slug' => $slug ?: null,
-                ':created_by' => $currentUser,
-                ':updated_by' => $currentUser
-            ]);
-            $id = $pdo->lastInsertId();
-            echo json_encode($this->findOne($id), JSON_UNESCAPED_UNICODE);
+            $brand = BrandRepository::create($name, $slug, $currentUser);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode($this->entityToArray($brand), JSON_UNESCAPED_UNICODE);
             exit;
         } catch (\PDOException $e) {
             if ($e->getCode() === '23000') {
                 http_response_code(409);
                 echo json_encode(['error' => 'Tên hoặc slug đã tồn tại']);
-                exit;
+            } else {
+                http_response_code(500);
+                echo json_encode(['error' => 'Lỗi máy chủ khi tạo thương hiệu']);
             }
-            http_response_code(500);
-            echo json_encode(['error' => 'Lỗi máy chủ khi tạo thương hiệu']);
             exit;
         }
     }
 
-    /** POST /admin/brands/{id} (update) */
+    /** PUT /admin/brands/{id} (update) */
     public function update($id)
     {
-        $pdo = \App\Core\DB::pdo();
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
-
         $name = trim($data['name'] ?? '');
         $slug = trim($data['slug'] ?? '');
         $currentUser = $this->currentUserId();
 
+        // Validate dữ liệu
         if ($name === '' || mb_strlen($name) > 190) {
             http_response_code(422);
             echo json_encode(['error' => 'Tên là bắt buộc và ≤ 190 ký tự']);
             exit;
         }
+
         if ($slug === '') {
             $slug = $this->slugify($name);
         }
 
         try {
-            $stmt = $pdo->prepare("UPDATE brands 
-                                   SET name=:name, slug=:slug, updated_by=:updated_by
-                                   WHERE id=:id");
-            $stmt->execute([
-                ':id' => $id,
-                ':name' => $name,
-                ':slug' => $slug ?: null,
-                ':updated_by' => $currentUser
-            ]);
-            echo json_encode($this->findOne($id), JSON_UNESCAPED_UNICODE);
+            $brand = BrandRepository::update($id, $name, $slug, $currentUser);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode($this->entityToArray($brand), JSON_UNESCAPED_UNICODE);
             exit;
         } catch (\PDOException $e) {
             if ($e->getCode() === '23000') {
                 http_response_code(409);
                 echo json_encode(['error' => 'Tên hoặc slug đã tồn tại']);
-                exit;
+            } else {
+                http_response_code(500);
+                echo json_encode(['error' => 'Lỗi máy chủ khi cập nhật thương hiệu']);
             }
-            http_response_code(500);
-            echo json_encode(['error' => 'Lỗi máy chủ khi cập nhật thương hiệu']);
             exit;
         }
     }
 
-    /** POST /admin/brands/{id}/delete (delete) */
     /** DELETE /admin/brands/{id} */
     public function destroy($id)
     {
-        $pdo = \App\Core\DB::pdo();
-        $pdo->prepare("DELETE FROM brands WHERE id=?")->execute([$id]);
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
+        // Kiểm tra ràng buộc: nếu thương hiệu đã có sản phẩm thì không cho xóa
+        if (method_exists(BrandRepository::class, 'canDelete') ? !BrandRepository::canDelete($id) : $this->brandHasProducts($id)) {
+            http_response_code(409);
+            echo json_encode(['error' => 'Không thể xóa, thương hiệu đang bị ràng buộc với sản phẩm.']);
+            exit;
+        }
+        try {
+            BrandRepository::delete($id);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
+        } catch (\PDOException $e) {
+            http_response_code(500);
+            echo json_encode(['error' => 'Lỗi máy chủ khi xóa thương hiệu']);
+        }
         exit;
     }
 
-    private function findOne($id)
+    // Helper: fallback nếu chưa có canDelete trong BrandRepository
+    private function brandHasProducts($id)
     {
         $pdo = \App\Core\DB::pdo();
-        $st = $pdo->prepare("SELECT b.id, b.name, b.slug, b.created_at, b.updated_at,
-                            b.created_by, b.updated_by,
-                            u1.full_name AS created_by_name,
-                            u2.full_name AS updated_by_name
-                     FROM brands b
-                     LEFT JOIN users u1 ON u1.id = b.created_by
-                     LEFT JOIN users u2 ON u2.id = b.updated_by
-                     WHERE b.id=?");
-        $st->execute([$id]);
-        return $st->fetch(\PDO::FETCH_ASSOC);
+        $count = $pdo->prepare("SELECT COUNT(*) FROM products WHERE brand_id = ?");
+        $count->execute([$id]);
+        return $count->fetchColumn() > 0;
     }
 
+    // ====== Helper Methods ======
+
+    /** Convert Brand entity or array to plain array */
+    private function entityToArray($brand)
+    {
+        if (is_array($brand)) {
+            return array_map([$this, 'entityToArray'], $brand);
+        }
+        if (!is_object($brand)) {
+            return $brand;
+        }
+        return get_object_vars($brand);
+    }
+
+    /** Chuyển text thành slug */
     private function slugify($text)
     {
         $text = mb_strtolower($text, 'UTF-8');
@@ -158,9 +154,9 @@ class BrandController extends Controller
         return mb_substr($text, 0, 190) ?: null;
     }
 
+    /** Lấy ID user hiện tại từ session */
     private function currentUserId(): ?int
     {
         return $_SESSION['user']['id'] ?? null;
     }
 }
-

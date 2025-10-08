@@ -21,4 +21,19 @@ class Product
 	public $updated_at;
 	public $created_by;
 	public $updated_by;
+	public $brand_name;
+	public $category_name;
+	public $unit_name;
+	public $stock_qty;
+	public $created_by_name;
+	public $updated_by_name;
+
+	public function __construct(array $data)
+	{
+		foreach ($data as $k => $v) {
+			if (property_exists($this, $k)) {
+				$this->$k = $v;
+			}
+		}
+	}
 }

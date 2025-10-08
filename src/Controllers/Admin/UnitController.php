@@ -1,10 +1,17 @@
 <?php
 namespace App\Controllers\Admin;
 
-use App\Core\Controller;
 
-class UnitController extends Controller
+use App\Models\Repositories\UnitRepository;
+
+class UnitController extends \App\Core\Controller
 {
+    private $unitRepo;
+
+    public function __construct()
+    {
+        $this->unitRepo = new UnitRepository();
+    }
     /** GET /admin/units (view) */
     public function index()
     {
@@ -15,18 +22,8 @@ class UnitController extends Controller
     public function apiIndex()
     {
         header('Content-Type: application/json; charset=utf-8');
-        $pdo = \App\Core\DB::pdo();
-
-        $sql = "SELECT u.id, u.name, u.slug,
-                       u.created_at, u.updated_at,
-                       u.created_by, cu.full_name AS created_by_name,
-                       u.updated_by, uu.full_name AS updated_by_name
-                FROM units u
-                LEFT JOIN users cu ON cu.id = u.created_by
-                LEFT JOIN users uu ON uu.id = u.updated_by
-                ORDER BY u.id DESC";
-        $rows = $pdo->query($sql)->fetchAll(\PDO::FETCH_ASSOC);
-        echo json_encode(['items' => $rows], JSON_UNESCAPED_UNICODE);
+        $items = $this->unitRepo->all();
+        echo json_encode(['items' => $items], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -34,7 +31,6 @@ class UnitController extends Controller
     public function store()
     {
         header('Content-Type: application/json; charset=utf-8');
-        $pdo = \App\Core\DB::pdo();
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
 
         $name = trim($data['name'] ?? '');
@@ -59,21 +55,10 @@ class UnitController extends Controller
         }
 
         try {
-            $stmt = $pdo->prepare("INSERT INTO units
-                (name, slug, created_by, updated_by, created_at, updated_at)
-                VALUES (:name, :slug, :created_by, :updated_by, NOW(), NOW())");
-            $stmt->execute([
-                ':name' => $name,
-                ':slug' => $slug ?: null,
-                ':created_by' => $currentUserId,
-                ':updated_by' => $currentUserId,
-            ]);
-            $id = $pdo->lastInsertId();
-
-            $row = $this->findOne($id);
-            $row['created_by_name'] = $currentUserName;
-            $row['updated_by_name'] = $currentUserName;
-
+            $id = $this->unitRepo->create($name, $slug, $currentUserId);
+            $row = $this->unitRepo->findOne($id);
+            $row->created_by_name = $currentUserName;
+            $row->updated_by_name = $currentUserName;
             echo json_encode($row, JSON_UNESCAPED_UNICODE);
             exit;
         } catch (\PDOException $e) {
@@ -92,7 +77,6 @@ class UnitController extends Controller
     public function update($id)
     {
         header('Content-Type: application/json; charset=utf-8');
-        $pdo = \App\Core\DB::pdo();
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
 
         $name = trim($data['name'] ?? '');
@@ -111,20 +95,9 @@ class UnitController extends Controller
         }
 
         try {
-            $stmt = $pdo->prepare("UPDATE units
-                SET name=:name, slug=:slug, 
-                    updated_by=:updated_by, updated_at=NOW()
-                WHERE id=:id");
-            $stmt->execute([
-                ':id' => $id,
-                ':name' => $name,
-                ':slug' => $slug ?: null,
-                ':updated_by' => $currentUserId,
-            ]);
-
-            $row = $this->findOne($id);
-            $row['updated_by_name'] = $currentUserName;
-
+            $this->unitRepo->update($id, $name, $slug, $currentUserId);
+            $row = $this->unitRepo->findOne($id);
+            $row->updated_by_name = $currentUserName;
             echo json_encode($row, JSON_UNESCAPED_UNICODE);
             exit;
         } catch (\PDOException $e) {
@@ -143,12 +116,12 @@ class UnitController extends Controller
     public function destroy($id)
     {
         header('Content-Type: application/json; charset=utf-8');
-        $pdo = \App\Core\DB::pdo();
-
         try {
-            $st = $pdo->prepare("DELETE FROM units WHERE id=?");
-            $st->execute([$id]);
+            $this->unitRepo->delete($id);
             echo json_encode(['ok' => true]);
+        } catch (\RuntimeException $e) {
+            http_response_code(409);
+            echo json_encode(['error' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
         } catch (\PDOException $e) {
             http_response_code(500);
             echo json_encode([
@@ -160,21 +133,7 @@ class UnitController extends Controller
         exit;
     }
 
-    /** Helper: lấy 1 bản ghi */
-    private function findOne($id)
-    {
-        $pdo = \App\Core\DB::pdo();
-        $st = $pdo->prepare("SELECT u.id, u.name, u.slug,
-                                    u.created_at, u.updated_at,
-                                    u.created_by, cu.full_name AS created_by_name,
-                                    u.updated_by, uu.full_name AS updated_by_name
-                             FROM units u
-                             LEFT JOIN users cu ON cu.id = u.created_by
-                             LEFT JOIN users uu ON uu.id = u.updated_by
-                             WHERE u.id=?");
-        $st->execute([$id]);
-        return $st->fetch(\PDO::FETCH_ASSOC);
-    }
+    // findOne đã chuyển sang UnitRepository
 
     private function slugify($text)
     {
