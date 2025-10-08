@@ -19,84 +19,85 @@ $items = $items ?? [];
   </div>
 
   <!-- Table -->
-  <div class="bg-white rounded-xl shadow overflow-x-auto pb-40">
-    <table class="min-w-full text-sm">
-      <thead>
-        <tr class="bg-gray-50 text-left text-slate-600">
-          <th class="py-2 px-4 text-left">Thao tác</th>
+  <div class="bg-white rounded-xl shadow pb-4">
+    <div style="overflow-x:auto; max-width:100%;">
+      <table style="width:130%; min-width:1200px; border-collapse:collapse;">
+        <thead>
+          <tr class="bg-gray-50 text-left text-slate-600">
+            <th class="py-2 px-4 text-left">Thao tác</th>
 
-          <?= textFilterPopover('name', 'Tên') ?>
-          <?= textFilterPopover('slug', 'Slug') ?>
-          <?= textFilterPopover('parent', 'Cấp cha') ?>
-          <?= numberFilterPopover('sort', 'Thứ tự') ?>
-          <?= selectFilterPopover('status', 'Trạng thái', [
-            '' => '-- Tất cả --',
-            '1' => 'Hiển thị',
-            '0' => 'Ẩn'
-          ]) ?>
-          <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
-          <?= textFilterPopover('created_by', 'Người tạo') ?>
-          <?= dateFilterPopover('updated_at', 'Thời gian cập nhật') ?>
-          <?= textFilterPopover('updated_by', 'Người cập nhật') ?>
-        </tr>
-      </thead>
-
-      <tbody>
-        <template x-for="c in paginated()" :key="c.id">
-          <tr class="border-t">
-            <td class="py-2 px-4 text-left space-x-2">
-              <!-- Sửa -->
-              <button @click="openEditModal(c)"
-                class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
-                title="Sửa">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
-                  stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M16.862 4.487l1.65-1.65a1.875 1.875 0 112.652 2.652l-1.65 1.65M18.513 6.138L7.5 17.25H4.5v-3l11.013-11.112z" />
-                </svg>
-              </button>
-
-              <!-- Xóa -->
-              <button @click="remove(c.id)"
-                class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
-                title="Xóa">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
-                  stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M6 7h12M9 7V4h6v3m-7 4v7m4-7v7m4-7v7M4 7h16v13a2 2 0 01-2 2H6a2 2 0 01-2-2V7z" />
-                </svg>
-              </button>
-            </td>
-
-            <td class="py-2 px-4" x-text="c.name"></td>
-            <td class="py-2 px-4" x-text="c.slug || ''"></td>
-            <td class="py-2 px-4" x-text="parentName(c.parent_id)"></td>
-            <td class="py-2 px-4" x-text="c.sort_order ?? 0"></td>
-            <td class="py-2 px-4">
-              <span class="px-2 py-0.5 rounded text-xs"
-                :class="c.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
-                x-text="c.is_active ? 'Hiển thị' : 'Ẩn'"></span>
-            </td>
-            <td class="py-2 px-4" x-text="c.created_at || '—'"></td>
-            <td class="py-2 px-4" x-text="c.created_by_name || '—'"></td>
-            <td class="py-2 px-4" x-text="c.updated_at || '—'"></td>
-            <td class="py-2 px-4" x-text="c.updated_by_name || '—'"></td>
+            <?= textFilterPopover('name', 'Tên') ?>
+            <?= textFilterPopover('slug', 'Slug') ?>
+            <?= textFilterPopover('parent', 'Cấp cha') ?>
+            <?= numberFilterPopover('sort', 'Thứ tự') ?>
+            <?= selectFilterPopover('status', 'Trạng thái', [
+              '' => '-- Tất cả --',
+              '1' => 'Hiển thị',
+              '0' => 'Ẩn'
+            ]) ?>
+            <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
+            <?= textFilterPopover('created_by', 'Người tạo') ?>
+            <?= dateFilterPopover('updated_at', 'Thời gian cập nhật') ?>
+            <?= textFilterPopover('updated_by', 'Người cập nhật') ?>
           </tr>
-        </template>
+        </thead>
 
-        <tr x-show="!loading && filtered().length===0">
-          <td colspan="10" class="py-12 text-center text-slate-500">
-            <div class="flex flex-col items-center justify-center">
-              <!-- Icon hộp trống -->
-              <img src="/assets/images/Null.png" alt="Trống" class="w-40 h-24 mb-3 opacity-80">
-              <div class="text-lg text-slate-300">Trống</div>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+        <tbody>
+          <template x-for="c in paginated()" :key="c.id">
+            <tr class="border-t">
+              <td class="py-2 px-4 text-left space-x-2">
+                <!-- Sửa -->
+                <button @click="openEditModal(c)"
+                  class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                  title="Sửa">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M16.862 4.487l1.65-1.65a1.875 1.875 0 112.652 2.652l-1.65 1.65M18.513 6.138L7.5 17.25H4.5v-3l11.013-11.112z" />
+                  </svg>
+                </button>
+
+                <!-- Xóa -->
+                <button @click="remove(c.id)"
+                  class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                  title="Xóa">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M6 7h12M9 7V4h6v3m-7 4v7m4-7v7m4-7v7M4 7h16v13a2 2 0 01-2 2H6a2 2 0 01-2-2V7z" />
+                  </svg>
+                </button>
+              </td>
+
+              <td class="py-2 px-4" x-text="c.name"></td>
+              <td class="py-2 px-4" x-text="c.slug || ''"></td>
+              <td class="py-2 px-4" x-text="parentName(c.parent_id)"></td>
+              <td class="py-2 px-4" x-text="c.sort_order ?? 0"></td>
+              <td class="py-2 px-4">
+                <span class="px-2 py-0.5 rounded text-xs"
+                  :class="c.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+                  x-text="c.is_active ? 'Hiển thị' : 'Ẩn'"></span>
+              </td>
+              <td class="py-2 px-4" x-text="c.created_at || '—'"></td>
+              <td class="py-2 px-4" x-text="c.created_by_name || '—'"></td>
+              <td class="py-2 px-4" x-text="c.updated_at || '—'"></td>
+              <td class="py-2 px-4" x-text="c.updated_by_name || '—'"></td>
+            </tr>
+          </template>
+
+          <tr x-show="!loading && filtered().length===0">
+            <td colspan="10" class="py-12 text-center text-slate-500">
+              <div class="flex flex-col items-center justify-center">
+                <!-- Icon hộp trống -->
+                <img src="/assets/images/Null.png" alt="Trống" class="w-40 h-24 mb-3 opacity-80">
+                <div class="text-lg text-slate-300">Trống</div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
-
   <!-- MODAL: Create -->
   <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openAdd" x-transition.opacity
     style="display:none">

@@ -3,10 +3,36 @@
   <div>
     <label class="block text-sm mb-1">Tên sản phẩm <span class="text-red-500">*</span></label>
     <input x-model="form.name" @blur="touched.name = true; validateField('name')"
-      @input="touched.name && validateField('name')" <?= input_attr_maxlength() ?>
+      @input="onNameInput(); touched.name && validateField('name')" <?= input_attr_maxlength() ?>
       :class="['w-full border rounded px-3 py-2', (touched.name && errors.name) ? 'border-red-500' : '']"
       placeholder="Nhập tên sản phẩm" required>
     <p class="text-red-600 text-xs mt-1" x-show="touched.name && errors.name" x-text="errors.name"></p>
+  </div>
+
+  <!-- Slug -->
+  <div>
+    <label class="block text-sm text-black font-semibold mb-1 flex items-center gap-1">
+      Slug <span class="text-red-500">*</span>
+      <span title="Hệ thống sẽ tự tạo slug từ Tên; Bạn có thể bấm 'Tạo' để ghi đè"
+        class="inline-flex items-center justify-center w-4 h-4 rounded-full border border-gray-300 text-gray-400 text-xs font-bold cursor-help">?</span>
+    </label>
+    <div class="flex gap-2">
+      <!-- Input slug -->
+      <input x-model="form.slug" @input="touched.slug && validateField('slug')"
+        @blur="touched.slug = true; validateField('slug')"
+        :class="['border rounded px-3 py-2 w-full', (touched.slug && errors.slug) ? 'border-red-500' : '']"
+        placeholder="Tự tạo từ tên hoặc bấm nút Tạo" maxlength="250">
+
+      <!-- Nút tạo slug từ name -->
+      <button type="button"
+        class="px-3 py-2 rounded border text-[#002975] border-[#002975] hover:bg-[#002975] hover:text-white"
+        @click="form.slug = slugify(form.name); validateField('slug')">
+        Tạo
+      </button>
+    </div>
+
+    <!-- Hiện lỗi -->
+    <p x-show="touched.slug && errors.slug" x-text="errors.slug" class="text-red-500 text-xs mt-1"></p>
   </div>
 
   <!-- SKU -->
@@ -30,21 +56,45 @@
     <p class="text-red-600 text-xs mt-1" x-show="touched.sku && errors.sku" x-text="errors.sku"></p>
   </div>
 
-  <!-- Giá bán -->
+  <!-- Giá bán (sale_price) -->
   <div>
     <label class="block text-sm mb-1">Giá bán <span class="text-red-500">*</span></label>
-    <input x-model="form.priceFormatted" @input="onPriceInput($event); touched.price && validateField('price')"
-      @blur="touched.price = true; validateField('price')"
-      :class="['w-full border rounded px-3 py-2', (touched.price && errors.price) ? 'border-red-500' : '']"
-      placeholder="Nhập giá sản phẩm" required>
-    <p class="text-red-600 text-xs mt-1" x-show="touched.price && errors.price" x-text="errors.price"></p>
+    <input x-model="form.sale_priceFormatted"
+      @input="onSalePriceInput($event); touched.sale_price && validateField('sale_price')"
+      @blur="touched.sale_price = true; validateField('sale_price')"
+      :class="['w-full border rounded px-3 py-2', (touched.sale_price && errors.sale_price) ? 'border-red-500' : '']"
+      placeholder="Nhập giá bán" required>
+    <p class="text-red-600 text-xs mt-1" x-show="touched.sale_price && errors.sale_price" x-text="errors.sale_price">
+    </p>
+  </div>
+
+  <!-- Giá nhập (cost_price) -->
+  <div>
+    <label class="block text-sm mb-1">Giá nhập</label>
+    <input x-model="form.cost_priceFormatted"
+      @input="onCostPriceInput($event); touched.cost_price && validateField('cost_price')"
+      @blur="touched.cost_price = true; validateField('cost_price')"
+      :class="['w-full border rounded px-3 py-2', (touched.cost_price && errors.cost_price) ? 'border-red-500' : '']"
+      placeholder="Nhập giá nhập (mặc định = 0)">
+    <p class="text-red-600 text-xs mt-1" x-show="touched.cost_price && errors.cost_price" x-text="errors.cost_price">
+    </p>
   </div>
 
   <!-- Đơn vị -->
   <div>
-    <label class="block text-sm mb-1">Đơn vị</label>
-    <input x-model="form.unit" <?= input_attr_maxlength() ?> class="w-full border rounded px-3 py-2"
-      placeholder="Nhập đơn vị (chai, bịch, kg...)">
+    <label class="block text-sm mb-1">Đơn vị <span class="text-red-500">*</span></label>
+    <select x-model="form.unit_id" required @blur="touched.unit_id = true; validateField('unit_id')"
+      @change="touched.unit_id && validateField('unit_id')" :class="[
+        'w-full border rounded px-3 py-2',
+        (touched.unit_id && errors.unit_id) ? 'border-red-500' : '',
+        form.unit_id === '' ? 'text-slate-400' : 'text-slate-900'
+      ]">
+      <option value="">-- Chọn đơn vị --</option>
+      <template x-for="u in units" :key="u.id">
+        <option :value="String(u.id)" x-text="u.name"></option>
+      </template>
+    </select>
+    <p class="text-red-600 text-xs mt-1" x-show="touched.unit_id && errors.unit_id" x-text="errors.unit_id"></p>
   </div>
 
   <!-- Thương hiệu -->

@@ -189,6 +189,32 @@ CREATE TABLE product_images (
   CONSTRAINT fk_pimg_prod FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+-- Bảng quản lý lô sản phẩm và hạn sử dụng
+CREATE TABLE product_batches (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  product_id BIGINT NOT NULL,              -- FK -> products.id
+  batch_code VARCHAR(64) NOT NULL,         -- mã lô (từ NCC hoặc tự tạo)
+  mfg_date DATE NULL,                      -- ngày sản xuất (tùy chọn)
+  exp_date DATE NOT NULL,                  -- ngày hết hạn
+  initial_qty INT NOT NULL CHECK (initial_qty >= 0),  -- SL nhập ban đầu
+  current_qty INT NOT NULL DEFAULT 0,                  -- SL còn lại
+  purchase_order_id BIGINT NULL,           -- phiếu nhập liên quan
+  note VARCHAR(255) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+
+  CONSTRAINT fk_pb_prod FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE,
+  CONSTRAINT fk_pb_po   FOREIGN KEY(purchase_order_id) REFERENCES purchase_orders(id) ON DELETE SET NULL,
+  CONSTRAINT fk_pb_user FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL,
+  CONSTRAINT fk_pb_user_updated FOREIGN KEY(updated_by) REFERENCES users(id) ON DELETE SET NULL,
+
+  UNIQUE KEY uniq_prod_batch (product_id, batch_code),
+  INDEX idx_pb_prod (product_id),
+  INDEX idx_pb_exp  (exp_date)
+) ENGINE=InnoDB;
+
 -- =====================================================================
 -- 3) PROMOTIONS / VOUCHERS
 -- =====================================================================

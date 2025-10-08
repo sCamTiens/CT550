@@ -7,10 +7,19 @@
 
     <!-- Bên phải: dropdown user -->
     <div class="relative">
-        <button id="user-menu-btn" class="flex items-center gap-2 px-3 py-2 bg-white rounded-lg focus:outline-none 
+        <?php
+        $user = $_SESSION['admin_user'] ?? [];
+        $avatar = !empty($user['avatar_url']) ? '/assets/images/avatar/' . $user['avatar_url'] : '/assets/images/default.png';
+        $fullName = htmlspecialchars($user['full_name'] ?? 'Admin');
+        ?>
+        <button id="user-menu-btn" class="flex items-center gap-2 px-3 py-2 bg-white rounded-lg focus:outline-none
            text-[#002975] hover:bg-[#002975] hover:text-white transition-colors border border-[#002975]">
-            <i class="fa-solid fa-user"></i>
-            <span><?= htmlspecialchars($_SESSION['admin_user']['full_name'] ?? 'Admin') ?></span>
+
+            <!-- Avatar -->
+            <img src="<?= $avatar ?>" alt="avatar" class="w-8 h-8 rounded-full object-cover border border-gray-300" />
+
+            <!-- Tên -->
+            <span><?= $fullName ?></span>
             <i class="fa-solid fa-caret-down ml-1"></i>
         </button>
 
@@ -21,7 +30,6 @@
                 <i class="fa-solid fa-user mr-2 group-hover:text-white text-[#002975]"></i>
                 Hồ sơ cá nhân
             </a>
-
             <div class="border-t"></div>
             <a href="/admin/logout"
                 class="group block px-4 py-2 text-sm text-red-600 hover:bg-[#002975] hover:text-white rounded-b-lg">

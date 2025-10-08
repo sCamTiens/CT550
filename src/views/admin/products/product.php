@@ -19,110 +19,134 @@ $items = $items ?? [];
   </div>
 
   <!-- Table -->
-  <div class="bg-white rounded-xl shadow overflow-x-auto pb-40">
-    <table class="min-w-max text-sm"> <!-- đổi từ min-w-full => min-w-max -->
-      <thead>
-        <tr class="bg-gray-50 text-left text-slate-600">
-          <th class="py-2 px-4 whitespace-nowrap">Thao tác</th>
-          <?= textFilterPopover('sku', 'SKU') ?>
-          <?= textFilterPopover('name', 'Tên') ?>
-          <?= textFilterPopover('brand', 'Thương hiệu') ?>
-          <?= textFilterPopover('category', 'Loại') ?>
-          <?= numberFilterPopover('price', 'Giá') ?>
-          <?= selectFilterPopover('status', 'Trạng thái', [
-            '' => '-- Tất cả --',
-            '1' => 'Bán',
-            '0' => 'Ẩn'
-          ]) ?>
-          <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
-          <?= textFilterPopover('created_by', 'Người tạo') ?>
-          <?= dateFilterPopover('updated_at', 'Thời gian cập nhật') ?>
-          <?= textFilterPopover('updated_by', 'Người cập nhật') ?>
-        </tr>
-      </thead>
-
-      <tbody>
-        <template x-for="p in paginated()" :key="p.id">
-          <tr class="border-t">
-            <td class="py-2 px-4 space-x-2">
-              <button @click="openEditModal(p)" class="p-2 rounded hover:bg-gray-100 text-[#002975]"
-                title="Sửa">✎</button>
-              <button @click="remove(p.id)" class="p-2 rounded hover:bg-gray-100 text-red-600" title="Xóa">🗑</button>
-            </td>
-            <td class="py-2 px-4" x-text="p.sku"></td>
-            <td class="py-2 px-4" x-text="p.name"></td>
-            <td class="py-2 px-4" x-text="p.brand_name || ''"></td>
-            <td class="py-2 px-4" x-text="p.category_name || ''"></td>
-            <td class="py-2 px-4" x-text="formatCurrency(p.sale_price)"></td>
-            <td class="py-2 px-4">
-              <span class="px-2 py-0.5 rounded text-xs"
-                :class="p.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
-                x-text="p.is_active ? 'Bán' : 'Ẩn'"></span>
-            </td>
-            <td class="py-2 px-4" x-text="p.created_at || '—'"></td>
-            <td class="py-2 px-4" x-text="p.created_by_name || '—'"></td>
-            <td class="py-2 px-4" x-text="p.updated_at || '—'"></td>
-            <td class="py-2 px-4" x-text="p.updated_by_name || '—'"></td>
+  <div class="bg-white rounded-xl shadow pb-4">
+    <div style="overflow-x:auto; max-width:100%;">
+      <table style="width:200%; min-width:1200px; border-collapse:collapse;">
+        <thead>
+          <tr class="bg-gray-50 text-left text-slate-600">
+            <th class="py-2 px-4 whitespace-nowrap">Thao tác</th>
+            <?= textFilterPopover('sku', 'SKU') ?>
+            <?= textFilterPopover('barcode', 'Mã vạch') ?>
+            <?= textFilterPopover('name', 'Tên') ?>
+            <?= textFilterPopover('slug', 'Slug') ?>
+            <?= textFilterPopover('brand', 'Thương hiệu') ?>
+            <?= textFilterPopover('category', 'Loại') ?>
+            <?= numberFilterPopover('stock_qty', 'Tồn kho') ?>
+            <?= numberFilterPopover('sale_price', 'Giá bán') ?>
+            <?= numberFilterPopover('cost_price', 'Giá nhập') ?>
+            <?= textFilterPopover('unit', 'Đơn vị tính') ?>
+            <?= selectFilterPopover('status', 'Trạng thái', [
+              '' => '-- Tất cả --',
+              '1' => 'Bán',
+              '0' => 'Ẩn'
+            ]) ?>
+            <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
+            <?= textFilterPopover('created_by', 'Người tạo') ?>
+            <?= dateFilterPopover('updated_at', 'Thời gian cập nhật') ?>
+            <?= textFilterPopover('updated_by', 'Người cập nhật') ?>
           </tr>
-        </template>
+        </thead>
 
-        <tr x-show="!loading && filtered().length===0">
-          <td colspan="11" class="py-12 text-center text-slate-500">
-            <div class="flex flex-col items-center justify-center">
-              <img src="/assets/images/Null.png" alt="Trống" class="w-40 h-24 mb-3 opacity-80">
-              <div class="text-lg text-slate-300">Trống</div>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+        <tbody>
+          <template x-for="p in paginated()" :key="p.id">
+            <tr class="border-t">
+              <td class="py-2 px-4 space-x-2">
+                <button @click="openEditModal(p)" class="p-2 rounded hover:bg-gray-100 text-[#002975]" title="Sửa">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+                <button @click="remove(p.id)" class="p-2 rounded hover:bg-gray-100 text-[#002975]" title="Xóa">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </td>
+              <td class="py-2 px-4" x-text="p.sku"></td>
+              <td class="py-2 px-4" x-text="p.barcode"></td>
+              <td class="py-2 px-4" x-text="p.name"></td>
+              <td class="py-2 px-4" x-text="p.slug"></td>
+              <td class="py-2 px-4" x-text="p.brand_name || ''"></td>
+              <td class="py-2 px-4" x-text="p.category_name || ''"></td>
+              <td class="py-2 px-4" x-text="p.stock_qty || '0'"></td>
+              <td class="py-2 px-4" x-text="formatCurrency(p.sale_price)"></td>
+              <td class="py-2 px-4" x-text="formatCurrency(p.cost_price)"></td>
+              <td class="py-2 px-4" x-text="p.unit_name || ''"></td>
+              <td class="py-2 px-4">
+                <span class="px-2 py-0.5 rounded text-xs"
+                  :class="p.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+                  x-text="p.is_active ? 'Bán' : 'Ẩn'"></span>
+              </td>
+              <td class="py-2 px-4" x-text="p.created_at || '—'"></td>
+              <td class="py-2 px-4" x-text="p.created_by_name || '—'"></td>
+              <td class="py-2 px-4" x-text="p.updated_at || '—'"></td>
+              <td class="py-2 px-4" x-text="p.updated_by_name || '—'"></td>
+            </tr>
+          </template>
 
-  <!-- MODAL: Create -->
-  <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openAdd" x-transition.opacity
-    style="display:none">
-    <div class="bg-white w-full max-w-3xl rounded-xl shadow" @click.outside="openAdd=false">
-      <div class="px-5 py-3 border-b flex justify-center items-center relative">
-        <h3 class="font-semibold text-2xl text-[#002975]">Thêm sản phẩm</h3>
-        <button class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
-      </div>
-      <form class="p-5 space-y-4" @submit.prevent="submitCreate()">
-        <?php require __DIR__ . '/form.php'; ?>
-        <div class="pt-2 flex justify-end gap-3">
-          <button type="button"
-            class="px-4 py-2 rounded-md text-red-600 border border-red-600 hover:bg-red-600 hover:text-white"
-            @click="openAdd=false">Hủy</button>
-          <button
-            class="px-4 py-2 rounded-md text-[#002975] hover:bg-[#002975] hover:text-white border border-[#002975]"
-            :disabled="submitting" x-text="submitting?'Đang lưu...':'Lưu'"></button>
-        </div>
-      </form>
+          <tr x-show="!loading && filtered().length===0">
+            <td colspan="11" class="py-12 text-center text-slate-500">
+              <div class="flex flex-col items-center justify-center">
+                <img src="/assets/images/Null.png" alt="Trống" class="w-40 h-24 mb-3 opacity-80">
+                <div class="text-lg text-slate-300">Trống</div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-  </div>
 
-  <!-- MODAL: Edit -->
-  <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openEdit"
-    x-transition.opacity style="display:none">
-    <div class="bg-white w-full max-w-3xl rounded-xl shadow" @click.outside="openEdit=false">
-      <div class="px-5 py-3 border-b flex justify-between items-center">
-        <h3 class="font-semibold">Sửa sản phẩm</h3>
-        <button class="text-slate-500" @click="openEdit=false">✕</button>
-      </div>
-      <form class="p-5 space-y-4" @submit.prevent="submitUpdate()">
-        <?php require __DIR__ . '/form.php'; ?>
-        <div class="pt-2 flex justify-end gap-3">
-          <button type="button" class="px-4 py-2 rounded-md border" @click="openEdit=false">Đóng</button>
-          <button
-            class="px-4 py-2 rounded-md text-[#002975] hover:bg-[#002975] hover:text-white border border-[#002975]"
-            :disabled="submitting" x-text="submitting?'Đang lưu...':'Cập nhật'"></button>
+    <!-- MODAL: Create -->
+    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openAdd"
+      x-transition.opacity style="display:none">
+      <div class="bg-white w-full max-w-3xl rounded-xl shadow" @click.outside="openAdd=false">
+        <div class="px-5 py-3 border-b flex justify-center items-center relative">
+          <h3 class="font-semibold text-2xl text-[#002975]">Thêm sản phẩm</h3>
+          <button class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
         </div>
-      </form>
+        <form class="p-5 space-y-4" @submit.prevent="submitCreate()">
+          <?php require __DIR__ . '/form.php'; ?>
+          <div class="pt-2 flex justify-end gap-3">
+            <button type="button"
+              class="px-4 py-2 rounded-md text-red-600 border border-red-600 hover:bg-red-600 hover:text-white"
+              @click="openAdd=false">Hủy</button>
+            <button
+              class="px-4 py-2 rounded-md text-[#002975] hover:bg-[#002975] hover:text-white border border-[#002975]"
+              :disabled="submitting" x-text="submitting?'Đang lưu...':'Lưu'"></button>
+          </div>
+        </form>
+      </div>
     </div>
+
+    <!-- MODAL: Edit -->
+    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openEdit"
+      x-transition.opacity style="display:none">
+      <div class="bg-white w-full max-w-3xl rounded-xl shadow" @click.outside="openEdit=false">
+        <div class="px-5 py-3 border-b flex justify-center items-center relative">
+          <h3 class="font-semibold text-2xl text-[#002975]">Sửa sản phẩm</h3>
+          <button class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>
+        </div>
+        <form class="p-5 space-y-4" @submit.prevent="submitUpdate()">
+          <?php require __DIR__ . '/form.php'; ?>
+          <div class="pt-2 flex justify-end gap-3">
+            <button type="button" class="px-4 py-2 rounded-md border" @click="openEdit=false">Đóng</button>
+            <button
+              class="px-4 py-2 rounded-md text-[#002975] hover:bg-[#002975] hover:text-white border border-[#002975]"
+              :disabled="submitting" x-text="submitting?'Đang lưu...':'Cập nhật'"></button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Toast lỗi nổi -->
+    <div id="toast-container" class="z-[60]"></div>
+
+
   </div>
-
-  <!-- Toast lỗi nổi -->
-  <div id="toast-container" class="z-[60]"></div>
-
   <!-- Pagination -->
   <div class="flex items-center justify-center mt-4 px-4 gap-6">
     <div class="text-sm text-slate-600">
@@ -159,9 +183,10 @@ $items = $items ?? [];
       list: '/admin/api/products',
       create: '/admin/products',
       update: (id) => `/admin/products/${id}`,
-      remove: (id) => `/admin/products/${id}/delete`,
+      remove: (id) => `/admin/products/${id}`,
       brands: '/admin/api/brands',
       categories: '/admin/api/categories',
+      units: '/admin/api/units',
     };
 
     const MAX_PRICE = 1_000_000_000;
@@ -178,6 +203,7 @@ $items = $items ?? [];
       items: <?= json_encode($items, JSON_UNESCAPED_UNICODE) ?>,
       brands: [],
       categories: [],
+      units: [],
 
       // phân trang
       currentPage: 1,
@@ -198,29 +224,31 @@ $items = $items ?? [];
       },
 
       form: {
-        id: null, name: '', sku: '', price: 0, priceFormatted: '', // thêm priceFormatted
-        unit: '', brand_id: '', category_id: '', pack_size: '', barcode: '',
-        description: '', is_active: 1
+        id: null,
+        name: '',
+        slug: '',
+        sku: '',
+        sale_price: 0,
+        sale_priceFormatted: '',
+        cost_price: 0,
+        cost_priceFormatted: '',
+        unit_id: '',
+        brand_id: '',
+        category_id: '',
+        pack_size: '',
+        barcode: '',
+        description: '',
+        is_active: 1
       },
 
-      // Khi gõ vào ô input giá
-      onPriceInput(e) {
-        let raw = e.target.value.replace(/,/g, '');     // bỏ dấu phẩy
-        let val = Number(raw);
-        if (Number.isNaN(val)) val = 0;
-        this.form.price = val;                          // giá trị gốc (dùng để lưu DB)
-        this.form.priceFormatted = val.toLocaleString('en-US'); // hiển thị: 100,000
-      },
-
-      // inline errors + touched (để hiện lỗi khi blur)
       errors: {
-        name: '', sku: '', price: '', brand_id: '', category_id: '',
-        unit: '', pack_size: '', description: ''
+        name: '', sku: '', slug: '', sale_price: '', cost_price: '', brand_id: '', category_id: '',
+        unit_id: '', pack_size: '', description: ''
       },
 
       touched: {
-        name: false, sku: false, price: false, brand_id: false, category_id: false,
-        unit: false, pack_size: false, description: false
+        name: false, sku: false, sale_price: false, cost_price: false, brand_id: false, category_id: false,
+        unit_id: false, pack_size: false, description: ''
       },
 
       // lifecycle
@@ -229,7 +257,6 @@ $items = $items ?? [];
         await this.fetchAll();
       },
 
-      // helpers
       formatCurrency(n) {
         try { return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n || 0) }
         catch { return n }
@@ -249,15 +276,22 @@ $items = $items ?? [];
         if (this.filters.name) {
           data = data.filter(p => (p.name || '').toLowerCase().includes(this.filters.name.toLowerCase()));
         }
+        if (this.filters.unit) {
+          data = data.filter(p => (p.unit_name || '').toLowerCase().includes(this.filters.unit.toLowerCase()));
+        }
         if (this.filters.brand) {
           data = data.filter(p => (p.brand_name || '').toLowerCase().includes(this.filters.brand.toLowerCase()));
         }
         if (this.filters.category) {
           data = data.filter(p => (p.category_name || '').toLowerCase().includes(this.filters.category.toLowerCase()));
         }
-        if (this.filters.price) {
-          const val = Number(this.filters.price);
+        if (this.filters.sale_price) {
+          const val = Number(this.filters.sale_price);
           if (!isNaN(val)) data = data.filter(p => Number(p.sale_price) === val);
+        }
+        if (this.filters.cost_price) {
+          const val = Number(this.filters.cost_price);
+          if (!isNaN(val)) data = data.filter(p => Number(p.cost_price) === val);
         }
         if (this.filters.status !== undefined && this.filters.status !== '') {
           data = data.filter(p => String(p.is_active) === String(this.filters.status));
@@ -267,6 +301,10 @@ $items = $items ?? [];
         }
         if (this.filters.updated_by) {
           data = data.filter(p => (p.updated_by_name || '').toLowerCase().includes(this.filters.updated_by.toLowerCase()));
+        }
+        if (this.filters.stock_qty) {
+          const val = Number(this.filters.stock_qty);
+          if (!isNaN(val)) data = data.filter(p => Number(p.stock_qty) === val);
         }
 
         // lọc ngày tạo
@@ -305,18 +343,28 @@ $items = $items ?? [];
 
       resetForm() {
         this.form = {
-          id: null, name: '', sku: '', price: 0, unit: '',
-          brand_id: '', category_id: '', pack_size: '', barcode: '',
-          description: '', is_active: 1
+          id: null, name: '', slug: '', sku: '',
+          sale_price: 0, sale_priceFormatted: '',
+          cost_price: 0, cost_priceFormatted: '',
+          unit_id: '', brand_id: '', category_id: '',
+          pack_size: '', barcode: '', description: '',
+          is_active: 1
         };
-        this.errors = {
-          name: '', sku: '', price: '', brand_id: '', category_id: '',
-          unit: '', pack_size: '', description: ''
-        };
-        this.touched = {
-          name: false, sku: false, price: false, brand_id: false, category_id: false,
-          unit: false, pack_size: false, description: false
-        };
+        this.errors = { name: '', sku: '', slug: '', sale_price: '', cost_price: '', brand_id: '', category_id: '', unit_id: '', pack_size: '', description: '' };
+        this.touched = { name: false, sku: false, slug: false, sale_price: false, cost_price: false, brand_id: false, category_id: false, unit_id: false, pack_size: false, description: false };
+      },
+
+      // ===== utilities =====
+      slugify(s) {
+        return (s || '')
+          .toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 190);
+      },
+      onNameInput() {
+        if (!this.form.id) this.form.slug = this.slugify(this.form.name);
       },
 
       // ===== Barcode helpers (EAN-13, prefix 893) =====
@@ -347,26 +395,31 @@ $items = $items ?? [];
         return `SP-${ymd}-${rand}`;
       },
 
-      // toast
-      showToast(msg) {
-        const box = document.getElementById('toast-container');
-        if (!box) return;
-        box.innerHTML = `
-          <div class="fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 mb-4 text-base font-semibold text-red-700 bg-white rounded-xl shadow-lg border-2 border-red-400">
-            <svg class="flex-shrink-0 w-6 h-6 text-red-600 me-3" xmlns="http://www.w3.org/2000/svg" fill="none"
-                viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />
-            </svg>
-            <div class="flex-1">${msg}</div>
-          </div>`;
-        setTimeout(() => { box.innerHTML = '' }, 3000);
-      },
-
       // chặn giá âm (dùng khi cần ép về 0)
       clampPriceValue() {
-        const v = Number(this.form.price);
-        if (!Number.isFinite(v) || v < 0) this.form.price = 0;
+        let v1 = Number(this.form.sale_price);
+        if (!Number.isFinite(v1) || v1 < 0) this.form.sale_price = 0;
+
+        let v2 = Number(this.form.cost_price);
+        if (!Number.isFinite(v2) || v2 < 0) this.form.cost_price = 0;
+      },
+
+      // Khi gõ vào ô input giá bán
+      onSalePriceInput(e) {
+        let raw = e.target.value.replace(/,/g, '');     // bỏ dấu phẩy
+        let val = Number(raw);
+        if (Number.isNaN(val)) val = 0;
+        this.form.sale_price = val;                          // giá trị gốc (dùng để lưu DB)
+        this.form.sale_priceFormatted = val.toLocaleString('en-US'); // hiển thị: 100,000
+      },
+
+      // Khi gõ vào ô input giá nhập
+      onCostPriceInput(e) {
+        let raw = e.target.value.replace(/,/g, '');     // bỏ dấu phẩy
+        let val = Number(raw);
+        if (Number.isNaN(val)) val = 0;
+        this.form.cost_price = val;                          // giá trị gốc (dùng để lưu DB)
+        this.form.cost_priceFormatted = val.toLocaleString('en-US'); // hiển thị: 100,000
       },
 
       // ===== validate 1 field (gọi khi blur / input) =====
@@ -383,8 +436,13 @@ $items = $items ?? [];
           else if ((this.form.sku || '').length > MAXLEN) this.errors.sku = `Không vượt quá ${MAXLEN} ký tự`;
         }
 
-        if (field === 'unit') {
-          if ((this.form.unit || '').length > MAXLEN) this.errors.unit = `Không vượt quá ${MAXLEN} ký tự`;
+        if (field === 'slug') {
+          if (!this.form.slug?.trim()) this.errors.slug = 'Slug không được bỏ trống';
+          else if ((this.form.slug || '').length > MAXLEN) this.errors.slug = `Không vượt quá ${MAXLEN} ký tự`;
+        }
+
+        if (field === 'unit_id') {
+          if ((this.form.unit_id || '').length > MAXLEN) this.errors.unit_id = `Không vượt quá ${MAXLEN} ký tự`;
         }
 
         if (field === 'pack_size') {
@@ -395,20 +453,39 @@ $items = $items ?? [];
           if ((this.form.description || '').length > MAXDESC) this.errors.description = `Không vượt quá ${MAXDESC} ký tự`;
         }
 
-        if (field === 'price') {
-          const raw = (this.form.priceFormatted || '').replace(/,/g, '').trim();
+        if (field === 'sale_price') {
+          const raw = (this.form.sale_priceFormatted || '').replace(/,/g, '').trim();
           const val = Number(raw);
 
           if (!raw) {
-            this.errors.price = 'Giá bán không được bỏ trống';
+            this.errors.sale_price = 'Giá bán không được bỏ trống';
           } else if (Number.isNaN(val)) {
-            this.errors.price = 'Giá bán phải là số';
+            this.errors.sale_price = 'Giá bán phải là số';
           } else if (val < 0) {
-            this.errors.price = 'Giá bán phải là số không âm';
+            this.errors.sale_price = 'Giá bán phải >= 0';
           } else if (val > MAX_PRICE) {
-            this.errors.price = 'Giá bán không vượt quá 1.000.000.000';
+            this.errors.sale_price = 'Giá bán không vượt quá 1.000.000.000';
           } else {
-            this.errors.price = '';
+            this.errors.sale_price = '';
+            this.form.sale_price = val;
+          }
+        }
+
+        if (field === 'cost_price') {
+          const raw = (this.form.cost_priceFormatted || '').replace(/,/g, '').trim();
+          const val = Number(raw);
+
+          if (!raw) {
+            this.errors.cost_price = 'Giá nhập không được bỏ trống';
+          } else if (Number.isNaN(val)) {
+            this.errors.cost_price = 'Giá nhập phải là số';
+          } else if (val < 0) {
+            this.errors.cost_price = 'Giá nhập phải >= 0';
+          } else if (val > MAX_PRICE) {
+            this.errors.cost_price = 'Giá nhập không vượt quá 1.000.000.000';
+          } else {
+            this.errors.cost_price = '';
+            this.form.cost_price = val;
           }
         }
 
@@ -419,18 +496,22 @@ $items = $items ?? [];
         if (field === 'category_id') {
           if (!String(this.form.category_id || '').trim()) this.errors.category_id = 'Vui lòng chọn loại sản phẩm';
         }
+
+        if (field === 'unit_id') {
+          if (!String(this.form.unit_id || '').trim()) this.errors.unit_id = 'Vui lòng chọn đơn vị tính';
+        }
       },
 
       // ===== validate khi submit =====
       validateForm() {
         this.errors = {
-          name: '', sku: '', price: '', brand_id: '', category_id: '',
-          unit: '', pack_size: '', description: ''
+          name: '', sku: '', slug: '', sale_price: '', cost_price: '', brand_id: '', category_id: '',
+          unit_id: '', pack_size: '', description: ''
         };
         let ok = true;
 
         // gọi validateField cho tất cả fields
-        ['name', 'sku', 'price', 'brand_id', 'category_id', 'unit', 'pack_size', 'description'].forEach(f => {
+        ['name', 'sku', 'slug', 'sale_price', 'cost_price', 'brand_id', 'category_id', 'unit_id', 'pack_size', 'description'].forEach(f => {
           this.touched[f] = true;
           this.validateField(f);
           if (this.errors[f]) ok = false;
@@ -449,7 +530,7 @@ $items = $items ?? [];
           const r = await fetch(api.brands);
           if (r.ok) {
             const data = await r.json();
-            this.brands = data.items || [];
+            this.brands = data.items;
           }
         } catch (e) { console.error(e); }
 
@@ -457,7 +538,15 @@ $items = $items ?? [];
           const r = await fetch(api.categories);
           if (r.ok) {
             const data = await r.json();
-            this.categories = data.items || [];
+            this.categories = data.items;
+          }
+        } catch (e) { console.error(e); }
+
+        try {
+          const r = await fetch(api.units);
+          if (r.ok) {
+            const data = await r.json();
+            this.units = data.items;
           }
         } catch (e) { console.error(e); }
       },
@@ -483,7 +572,23 @@ $items = $items ?? [];
 
       openEditModal(p) {
         this.resetForm();
-        this.form = { ...p };
+        this.form = {
+          id: p.id,
+          name: p.name || '',
+          slug: p.slug || '',
+          sku: p.sku || '',
+          sale_price: p.sale_price || 0,
+          sale_priceFormatted: (p.sale_price || 0).toLocaleString('en-US'),
+          cost_price: p.cost_price || 0,
+          cost_priceFormatted: (p.cost_price || 0).toLocaleString('en-US'),
+          unit_id: p.unit_id || '',
+          brand_id: p.brand_id || '',
+          category_id: p.category_id || '',
+          pack_size: p.pack_size || '',
+          barcode: p.barcode || '',
+          description: p.description || '',
+          is_active: p.is_active ? 1 : 0
+        };
         this.openEdit = true;
       },
 
@@ -500,12 +605,8 @@ $items = $items ?? [];
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(this.form)
           });
-          if (!r.ok) {
-            let msg = 'Không thể thêm sản phẩm';
-            try { const data = await r.json(); if (data?.message) msg = data.message; } catch { }
-            throw new Error(msg);
-          }
-          const item = await r.json();
+          if (!r.ok) throw new Error((await r.json()).error || 'Không thể thêm sản phẩm');
+          const res = await r.json();
           this.items.unshift(res);
           this.openAdd = false;
           this.showToast('Thêm sản phẩm thành công!', 'success');
@@ -520,36 +621,30 @@ $items = $items ?? [];
         this.submitting = true;
         try {
           const r = await fetch(api.update(this.form.id), {
-            method: 'PUT', // đổi thành PUT
+            method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(this.form)
           });
-
           const res = await r.json();
           if (!r.ok) throw new Error(res.error || 'Lỗi máy chủ');
-
           const i = this.items.findIndex(x => x.id == res.id);
-          if (i > -1) {
-            this.items[i] = res;
-          } else {
-            this.items.unshift(res);
-          }
-
+          if (i > -1) this.items[i] = res; else this.items.unshift(res);
           this.openEdit = false;
           this.showToast('Cập nhật sản phẩm thành công!', 'success');
         } catch (e) {
           this.showToast(e.message || 'Không thể cập nhật sản phẩm');
-        } finally {
-          this.submitting = false;
-        }
+        } finally { this.submitting = false; }
       },
 
       async remove(id) {
         if (!confirm('Xóa sản phẩm này?')) return;
         try {
-          const r = await fetch(api.remove(id), { method: 'DELETE' }); // đổi thành DELETE
+          const r = await fetch(api.remove(id), { method: 'DELETE' });
+          if (!r.ok) {
+            const txt = await r.text();   // đọc thô để debug
+            throw new Error(`Server error: ${txt}`);
+          }
           const res = await r.json();
-          if (!r.ok) throw new Error(res.error || 'Lỗi máy chủ khi xóa');
           this.items = this.items.filter(x => x.id != id);
           this.showToast('Xóa sản phẩm thành công!', 'success');
         } catch (e) {

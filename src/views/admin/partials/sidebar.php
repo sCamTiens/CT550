@@ -30,7 +30,8 @@
                     phẩm</a>
                 <a href="/admin/suppliers" class="block px-3 py-2 rounded hover:bg-[#002975] hover:text-white">Nhà cung
                     cấp</a>
-                <a href="/admin/units" class="block px-3 py-2 rounded hover:bg-[#002975] hover:text-white">Đơn vị tính</a>
+                <a href="/admin/units" class="block px-3 py-2 rounded hover:bg-[#002975] hover:text-white">Đơn vị
+                    tính</a>
             </div>
         </div>
 
@@ -51,6 +52,26 @@
                     xuất kho</a>
                 <a href="/admin/stocktakes" class="block px-3 py-2 rounded hover:bg-[#002975] hover:text-white">Kiểm kê
                     kho</a>
+
+                <a href="/admin/product-batches" class="block px-3 py-2 rounded hover:bg-[#002975] hover:text-white">Lô
+                    sản phẩm</a>
+            </div>
+        </div>
+
+        <!-- Thu chi -->
+        <div class="mt-2">
+            <button @click="groups.expense=!groups.expense"
+                class="w-full flex justify-between items-center px-3 py-2 rounded hover:bg-[#002975] hover:text-white">
+                <span>Quản lý thu chi</span>
+                <svg class="w-4 h-4 transition-transform" :class="groups.expense?'rotate-90':''" viewBox="0 0 20 20">
+                    <path d="M6 6l4 4 4-4" fill="currentColor" />
+                </svg>
+            </button>
+            <div class="pl-4 space-y-1 mt-1" x-show="groups.expense" x-collapse>
+                <a href="/admin/receipt_vouchers"
+                    class="block px-3 py-2 rounded hover:bg-[#002975] hover:text-white">Phiếu thu</a>
+                <a href="/admin/expense_vouchers"
+                    class="block px-3 py-2 rounded hover:bg-[#002975] hover:text-white">Phiếu chi</a>
             </div>
         </div>
 

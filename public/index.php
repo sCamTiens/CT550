@@ -48,12 +48,19 @@ $router->group('/admin', function (Router $r): void {
     $r->post('/login', [AdminController::class, 'login']);
     $r->get('/logout', [AdminController::class, 'logout']);
 
+    // Profile
+    $r->get('/profile', [AdminController::class, 'profile']);
+    $r->post('/profile/upload-avatar', [AdminController::class, 'uploadAvatar']);
+    $r->post('/profile/update-profile', [AdminController::class, 'updateProfile']);
+    $r->post('/profile/change-password', [AdminController::class, 'changePassword']);
+
     // Products
     $r->get('/products', [AdminProduct::class, 'index']);
-    $r->get('/products/create', [AdminProduct::class, 'create']);
+    $r->get('/api/products', [AdminProduct::class, 'apiIndex']);
     $r->post('/products', [AdminProduct::class, 'store']);
     $r->put('/products/{id}', [AdminProduct::class, 'update']);
     $r->delete('/products/{id}', [AdminProduct::class, 'destroy']);
+
 
     // Categories
     $r->get('/categories', [AdminCategory::class, 'index']);
