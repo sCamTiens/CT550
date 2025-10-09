@@ -30,11 +30,16 @@ class StaffRepository
                     u.is_active,
                     u.created_at,
                     u.updated_at,
+                    cu.full_name AS created_by_name,
+                    uu.full_name AS updated_by_name,
                     s.staff_role,
                     s.hired_at,
                     s.note
                 FROM {$this->userTable} u
                 INNER JOIN {$this->staffTable} s ON u.id = s.user_id
+                LEFT JOIN {$this->userTable} cu ON cu.id = u.created_by
+                LEFT JOIN {$this->userTable} uu ON uu.id = u.updated_by
+                WHERE u.role_id = 2
                 ORDER BY u.id DESC";
         return DB::pdo()->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -51,12 +56,16 @@ class StaffRepository
                     u.is_active,
                     u.created_at,
                     u.updated_at,
+                    cu.full_name AS created_by_name,
+                    uu.full_name AS updated_by_name,
                     s.staff_role,
                     s.hired_at,
                     s.note
                 FROM {$this->userTable} u
                 INNER JOIN {$this->staffTable} s ON u.id = s.user_id
-                WHERE u.id = ?";
+                LEFT JOIN {$this->userTable} cu ON cu.id = u.created_by
+                LEFT JOIN {$this->userTable} uu ON uu.id = u.updated_by
+                WHERE u.id = ? AND u.role_id = 2";
         $stmt = DB::pdo()->prepare($sql);
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
@@ -78,9 +87,10 @@ class StaffRepository
             $passwordHash = password_hash('123456', PASSWORD_BCRYPT);
 
             // Insert vào bảng users (set force_change_password = 1)
+            // Ghi created_by nếu controller truyền vào
             $sqlUser = "INSERT INTO {$this->userTable}
-                        (username, full_name, email, phone, password_hash, role_id, is_active, force_change_password)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                        (username, full_name, email, phone, password_hash, role_id, is_active, created_by, force_change_password)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmtUser = DB::pdo()->prepare($sqlUser);
             $stmtUser->execute([
                 $username,
@@ -88,8 +98,9 @@ class StaffRepository
                 $email,
                 $phone,
                 $passwordHash,
-                3,  // role_id = 3 (Nhân viên)
-                1,  // is_active = true
+                2,  // role_id = 2 (Nhân viên)
+                $data['is_active'] ?? 1,  // is_active (use provided value or default to 1)
+                $data['created_by'] ?? null,
                 1   // force_change_password = true
             ]);
             $userId = DB::pdo()->lastInsertId();
@@ -130,8 +141,8 @@ class StaffRepository
             DB::pdo()->beginTransaction();
 
             $sqlUser = "UPDATE {$this->userTable}
-                        SET username=?, full_name=?, email=?, phone=?, is_active=?
-                        WHERE id=?";
+                        SET username=?, full_name=?, email=?, phone=?, is_active=?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
+                        WHERE id=? AND role_id = 2";
             $stmtUser = DB::pdo()->prepare($sqlUser);
             $stmtUser->execute([
                 $data['username'] ?? null,
@@ -139,6 +150,7 @@ class StaffRepository
                 $data['email'] ?? null,
                 $data['phone'] ?? null,
                 $data['is_active'] ?? 1,
+                $data['updated_by'] ?? null,
                 $id
             ]);
 
@@ -169,7 +181,7 @@ class StaffRepository
     /** Xóa nhân viên (user → staff_profiles bị xóa theo cascade) */
     public function delete(int|string $id): bool
     {
-        $stmt = DB::pdo()->prepare("DELETE FROM {$this->userTable} WHERE id = ?");
+    $stmt = DB::pdo()->prepare("DELETE FROM {$this->userTable} WHERE id = ? AND role_id = 2");
         return $stmt->execute([$id]);
     }
 }

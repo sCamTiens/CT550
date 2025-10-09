@@ -97,6 +97,7 @@ class StaffController extends Controller
         }
 
         try {
+            $data['created_by'] = $this->currentUserId();
             $result = $this->repo->create($data);
             $this->json($result);
         } catch (\PDOException $e) {
@@ -124,6 +125,7 @@ class StaffController extends Controller
         }
 
         try {
+            $data['updated_by'] = $this->currentUserId();
             $result = $this->repo->update($id, $data);
             $this->json($result);
         } catch (\PDOException $e) {

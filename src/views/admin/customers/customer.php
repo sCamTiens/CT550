@@ -137,10 +137,11 @@ $items = $items ?? [];
 function customerPage() {
   const api = {
     list: '/admin/api/customers',
-    create: '/admin/customers',
-    update: (id) => `/admin/customers/${id}`,
-    remove: (id) => `/admin/customers/${id}`
+    create: '/admin/api/customers',
+    update: (id) => `/admin/api/customers/${id}`,
+    remove: (id) => `/admin/api/customers/${id}`
   };
+
   return {
     form: {
       id: null,
@@ -160,8 +161,38 @@ function customerPage() {
     currentPage: 1,
     perPage: 20,
     perPageOptions: [5, 10, 20, 50, 100],
-    openFilter: {},
-    filters: {},
+    openFilter: {
+      username: false,
+      full_name: false,
+      email: false,
+      phone: false,
+      gender: false,
+      date_of_birth: false,
+      is_active: false,
+      created_at: false,
+      created_by_name: false,
+      updated_at: false,
+      updated_by_name: false
+    },
+    filters: {
+      username: '',
+      full_name: '',
+      email: '',
+      phone: '',
+      gender: '',
+      date_of_birth: '',
+      is_active: '',
+      created_at_type: '',
+      created_at_value: '',
+      created_at_from: '',
+      created_at_to: '',
+      created_by_name: '',
+      updated_at_type: '',
+      updated_at_value: '',
+      updated_at_from: '',
+      updated_at_to: '',
+      updated_by_name: ''
+    },
     paginated() {
       const start = (this.currentPage - 1) * this.perPage;
       return this.filtered().slice(start, start + this.perPage);
@@ -174,8 +205,6 @@ function customerPage() {
       if (page > this.totalPages()) page = this.totalPages();
       this.currentPage = page;
     },
-    openFilter: {},
-    filters: {},
     filtered() {
       let data = this.items;
       if (this.filters.username) data = data.filter(x => (x.username || '').toLowerCase().includes(this.filters.username.toLowerCase()));
@@ -184,17 +213,17 @@ function customerPage() {
       if (this.filters.phone) data = data.filter(x => (x.phone || '').toLowerCase().includes(this.filters.phone.toLowerCase()));
       if (this.filters.gender) data = data.filter(x => (x.gender || '').toLowerCase().includes(this.filters.gender.toLowerCase()));
       if (this.filters.date_of_birth) data = data.filter(x => (x.date_of_birth || '').includes(this.filters.date_of_birth));
-      if (this.filters.is_active !== undefined && this.filters.is_active !== '') data = data.filter(x => String(x.is_active) === String(this.filters.is_active));
+      if (this.filters.is_active !== '' && this.filters.is_active !== undefined) {
+        data = data.filter(x => String(x.is_active) === String(this.filters.is_active));
+      }
       if (this.filters.created_by_name) data = data.filter(x => (x.created_by_name || '').toLowerCase().includes(this.filters.created_by_name.toLowerCase()));
       if (this.filters.updated_by_name) data = data.filter(x => (x.updated_by_name || '').toLowerCase().includes(this.filters.updated_by_name.toLowerCase()));
-      // Lọc ngày tạo
       if (this.filters.created_at_value && this.filters.created_at_type === 'eq') {
         data = data.filter(x => (x.created_at || '').startsWith(this.filters.created_at_value));
       }
       if (this.filters.created_at_from && this.filters.created_at_to && this.filters.created_at_type === 'between') {
         data = data.filter(x => x.created_at >= this.filters.created_at_from && x.created_at <= this.filters.created_at_to);
       }
-      // Lọc ngày cập nhật
       if (this.filters.updated_at_value && this.filters.updated_at_type === 'eq') {
         data = data.filter(x => (x.updated_at || '').startsWith(this.filters.updated_at_value));
       }
@@ -204,17 +233,21 @@ function customerPage() {
       return data;
     },
     toggleFilter(key) {
-      for (const k in this.openFilter) this.openFilter[k] = false;
+      Object.keys(this.openFilter).forEach(k => this.openFilter[k] = false);
       this.openFilter[key] = true;
     },
-    applyFilter(key) { this.openFilter[key] = false; },
-    resetFilter(key) {
-      this.filters[key] = '';
-      this.filters[key + '_type'] = '';
-      this.filters[key + '_value'] = '';
-      this.filters[key + '_from'] = '';
-      this.filters[key + '_to'] = '';
+    applyFilter(key) {
       this.openFilter[key] = false;
+    },
+    resetFilter(key) {
+      if (key in this.filters) {
+        this.filters[key] = '';
+      }
+      ['_type', '_value', '_from', '_to'].forEach(suffix => {
+        const composed = `${key}${suffix}`;
+        if (composed in this.filters) this.filters[composed] = '';
+      });
+      if (key in this.openFilter) this.openFilter[key] = false;
     },
     async init() {
       await this.fetchAll();
@@ -222,35 +255,199 @@ function customerPage() {
     async fetchAll() {
       this.loading = true;
       try {
-        const r = await fetch(api.list);
-        if (r.ok) {
-          const data = await r.json();
-          this.items = Array.isArray(data) ? data : (data.items || []);
-        }
-      } finally { this.loading = false; }
+        const resp = await fetch(api.list);
+        if (!resp.ok) throw new Error('fetch_failed');
+        const data = await resp.json();
+        this.items = Array.isArray(data) ? data : (data.items || []);
+      } catch (e) {
+        console.error('Failed to load customers', e);
+        this.showToast('Không thể tải danh sách khách hàng');
+      } finally {
+        this.loading = false;
+      }
     },
     openCreate() {
       this.resetForm();
       this.openAdd = true;
     },
-    openEditModal(c) {
+    openEditModal(customer) {
       this.resetForm();
-      this.form = { ...c };
+      this.form = {
+        ...customer,
+        is_active: Number(customer.is_active ?? 1)
+      };
       this.openEdit = true;
     },
+    // reset validation/password state is handled in resetForm()
+    // helper to clear a single field error
+    clearError(field) { this.errors[field] = ''; },
+    validateField(field) {
+      const value = (this.form[field] || '').toString().trim();
+      let msg = '';
+      switch (field) {
+        case 'username':
+          if (!value) msg = 'Tài khoản không được để trống';
+          else if (value.length > 50) msg = 'Tài khoản tối đa 50 ký tự';
+          break;
+        case 'full_name':
+          if (!value) msg = 'Họ tên không được để trống';
+          break;
+        case 'email':
+          if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) msg = 'Email không hợp lệ';
+          break;
+        case 'phone':
+          if (value && !/^0\d{9,10}$/.test(value)) msg = 'Số điện thoại phải bắt đầu bằng số 0 và có 10-11 chữ số';
+          break;
+        case 'password':
+          if (!this.form.id && !value) msg = 'Mật khẩu không được để trống';
+          else if (value && value.length < 6) msg = 'Mật khẩu phải ít nhất 6 ký tự';
+          break;
+        case 'password_confirm':
+          if (!this.form.id && (!value || value !== (this.form.password || ''))) msg = 'Mật khẩu không khớp';
+          break;
+      }
+      this.errors[field] = msg;
+      return msg === '';
+    },
+    generatePassword() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+      let len = Math.floor(Math.random() * 5) + 8; // 8-12
+      let pw = Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+      this.form.password = pw;
+      this.form.password_confirm = pw;
+      this.showPassword = true;
+      this.showPasswordConfirm = true;
+      this.touched.password = true;
+      this.touched.password_confirm = true;
+      this.clearError('password');
+      this.clearError('password_confirm');
+      this.validateField('password');
+      this.validateField('password_confirm');
+    },
+    serializeForm() {
+      const out = {
+        username: (this.form.username || '').trim(),
+        full_name: (this.form.full_name || '').trim(),
+        email: (this.form.email || '').trim(),
+        phone: (this.form.phone || '').trim(),
+        gender: this.form.gender || '',
+        date_of_birth: this.form.date_of_birth || '',
+        is_active: Number(this.form.is_active ?? 1)
+      };
+      if (!this.form.id && this.form.password) out.password = this.form.password;
+      return out;
+    },
+    validateForm(isCreate = false) {
+      const payload = this.serializeForm();
+      if (isCreate && payload.username === '') return 'Tài khoản không được để trống';
+      if (payload.full_name === '') return 'Họ tên không được để trống';
+      if (payload.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) return 'Email không hợp lệ';
+      if (payload.phone && !/^0\d{9,10}$/.test(payload.phone)) return 'Số điện thoại phải bắt đầu bằng số 0 và có 10-11 chữ số';
+      if (isCreate) {
+        const pw = (this.form.password || '').trim();
+        const pw2 = (this.form.password_confirm || '').trim();
+        if (!pw) return 'Mật khẩu không được để trống';
+        if (pw.length < 6) return 'Mật khẩu phải ít nhất 6 ký tự';
+        if (!pw2) return 'Vui lòng nhập lại mật khẩu';
+        if (pw !== pw2) return 'Mật khẩu không khớp';
+      }
+      return '';
+    },
     async submitCreate() {
-      // Thêm logic submit tạo mới nếu cần
+      const error = this.validateForm(true);
+      if (error) {
+        this.showToast(error);
+        return;
+      }
+
+      this.submitting = true;
+      try {
+        const resp = await fetch(api.create, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.serializeForm())
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (resp.ok) {
+          await this.fetchAll();
+          this.openAdd = false;
+          this.showToast('Thêm khách hàng thành công', 'success');
+        } else {
+          this.showToast(data.error || 'Không thể thêm khách hàng');
+        }
+      } catch (e) {
+        console.error(e);
+        this.showToast('Không thể thêm khách hàng');
+      } finally {
+        this.submitting = false;
+      }
     },
     async submitUpdate() {
-      // Thêm logic submit cập nhật nếu cần
+      const error = this.validateForm(false);
+      if (error) {
+        this.showToast(error);
+        return;
+      }
+
+      const id = this.form.id;
+      if (!id) {
+        this.showToast('Không xác định được khách hàng cần cập nhật');
+        return;
+      }
+
+      this.submitting = true;
+      try {
+        const resp = await fetch(api.update(id), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.serializeForm())
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (resp.ok) {
+          const idx = this.items.findIndex(item => Number(item.id) === Number(id));
+          if (idx !== -1 && data) {
+            this.items.splice(idx, 1, data);
+          } else {
+            await this.fetchAll();
+          }
+          this.openEdit = false;
+          this.showToast('Cập nhật khách hàng thành công', 'success');
+        } else {
+          this.showToast(data.error || 'Không thể cập nhật khách hàng');
+        }
+      } catch (e) {
+        console.error(e);
+        this.showToast('Không thể cập nhật khách hàng');
+      } finally {
+        this.submitting = false;
+      }
     },
     async remove(id) {
       if (!confirm('Xóa khách hàng này?')) return;
-      // Thêm logic xóa nếu cần
+      try {
+        const resp = await fetch(api.remove(id), { method: 'DELETE' });
+        const data = await resp.json().catch(() => ({}));
+        if (resp.ok) {
+          this.items = this.items.filter(item => Number(item.id) !== Number(id));
+          this.showToast('Đã xoá khách hàng', 'success');
+        } else {
+          this.showToast(data.error || 'Không thể xoá khách hàng');
+        }
+      } catch (e) {
+        console.error(e);
+        this.showToast('Không thể xoá khách hàng');
+      }
     },
     resetForm() {
       this.form = {
-        id: null, username: '', full_name: '', email: '', phone: '', gender: '', date_of_birth: '', is_active: 1
+        id: null,
+        username: '',
+        full_name: '',
+        email: '',
+        phone: '',
+        gender: '',
+        date_of_birth: '',
+        is_active: 1
       };
     },
     showToast(msg, type = 'error') {

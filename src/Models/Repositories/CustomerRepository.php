@@ -2,89 +2,170 @@
 namespace App\Models\Repositories;
 
 use App\Core\DB;
-use App\Models\Entities\Customer;
+use PDO;
+use PDOException;
 
 class CustomerRepository
 {
-    public static function all()
+    protected string $userTable = 'users';
+
+    /**
+     * Lấy danh sách khách hàng
+     */
+    public function all(): array
     {
-        $pdo = DB::pdo();
         $sql = "SELECT 
-            u.id, u.username, u.full_name, u.email, u.phone, u.gender, u.date_of_birth, u.is_active,
-            u.created_at, u.updated_at,
-            cu.full_name AS created_by_name,
-            uu.full_name AS updated_by_name
-        FROM users u
-        LEFT JOIN users cu ON cu.id = u.created_by
-        LEFT JOIN users uu ON uu.id = u.updated_by
-        WHERE u.role_id IN (1,2)
-        ORDER BY u.created_at DESC, u.id DESC LIMIT 500";
-        $rows = $pdo->query($sql)->fetchAll(\PDO::FETCH_ASSOC);
-        return array_map(fn($row) => new Customer($row), $rows);
+                    u.id,
+                    u.username,
+                    u.full_name,
+                    u.email,
+                    u.phone,
+                    u.gender,
+                    u.date_of_birth,
+                    u.is_active,
+                    u.created_at,
+                    u.updated_at,
+                    cu.full_name AS created_by_name,
+                    uu.full_name AS updated_by_name
+                FROM {$this->userTable} u
+                LEFT JOIN {$this->userTable} cu ON cu.id = u.created_by
+                LEFT JOIN {$this->userTable} uu ON uu.id = u.updated_by
+                WHERE u.role_id = 1
+                ORDER BY u.created_at DESC, u.id DESC";
+
+        return DB::pdo()->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function create($data)
+    /**
+     * Tìm khách hàng theo ID
+     *
+     * @return array|false
+     */
+    public function find(int|string $id): array|false
     {
-        $pdo = DB::pdo();
-        $sql = "INSERT INTO users (role_id, username, full_name, email, phone, gender, date_of_birth, is_active, created_by)
-                VALUES (2, :username, :full_name, :email, :phone, :gender, :date_of_birth, :is_active, :created_by)";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([
-            ':username' => $data['username'],
-            ':full_name' => $data['full_name'],
-            ':email' => $data['email'],
-            ':phone' => $data['phone'],
-            ':gender' => $data['gender'],
-            ':date_of_birth' => $data['date_of_birth'],
-            ':is_active' => $data['is_active'] ?? 1,
-            ':created_by' => $data['created_by'] ?? null
-        ]);
-        $id = $pdo->lastInsertId();
-        return self::find($id);
-    }
-
-    public static function update($id, $data)
-    {
-        $pdo = DB::pdo();
-        $sql = "UPDATE users SET username=:username, full_name=:full_name, email=:email, phone=:phone, gender=:gender, date_of_birth=:date_of_birth, is_active=:is_active, updated_by=:updated_by WHERE id=:id AND role_id IN (1,2)";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([
-            ':username' => $data['username'],
-            ':full_name' => $data['full_name'],
-            ':email' => $data['email'],
-            ':phone' => $data['phone'],
-            ':gender' => $data['gender'],
-            ':date_of_birth' => $data['date_of_birth'],
-            ':is_active' => $data['is_active'] ?? 1,
-            ':updated_by' => $data['updated_by'] ?? null,
-            ':id' => $id
-        ]);
-        return self::find($id);
-    }
-
-    public static function delete($id)
-    {
-        $pdo = DB::pdo();
-        $sql = "DELETE FROM users WHERE id=:id AND role_id IN (1,2)";
-        $stmt = $pdo->prepare($sql);
-        return $stmt->execute([':id' => $id]);
-    }
-
-    public static function find($id)
-    {
-        $pdo = DB::pdo();
         $sql = "SELECT 
-            u.id, u.username, u.full_name, u.email, u.phone, u.gender, u.date_of_birth, u.is_active,
-            u.created_at, u.updated_at,
-            cu.full_name AS created_by_name,
-            uu.full_name AS updated_by_name
-        FROM users u
-        LEFT JOIN users cu ON cu.id = u.created_by
-        LEFT JOIN users uu ON uu.id = u.updated_by
-        WHERE u.id = :id AND u.role_id IN (1,2)";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([':id' => $id]);
-        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
-        return $row ? new Customer($row) : null;
+                    u.id,
+                    u.username,
+                    u.full_name,
+                    u.email,
+                    u.phone,
+                    u.gender,
+                    u.date_of_birth,
+                    u.is_active,
+                    u.created_at,
+                    u.updated_at,
+                    cu.full_name AS created_by_name,
+                    uu.full_name AS updated_by_name
+                FROM {$this->userTable} u
+                LEFT JOIN {$this->userTable} cu ON cu.id = u.created_by
+                LEFT JOIN {$this->userTable} uu ON uu.id = u.updated_by
+                WHERE u.id = ? AND u.role_id = 1";
+        $stmt = DB::pdo()->prepare($sql);
+        $stmt->execute([$id]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ?: false;
+    }
+
+    /**
+     * Tạo khách hàng mới
+     *
+     * @return array|false
+     */
+    public function create(array $data): array|false
+    {
+        try {
+            $pdo = DB::pdo();
+            $pdo->beginTransaction();
+
+            $sql = "INSERT INTO {$this->userTable}
+                        (username, password_hash, full_name, email, phone, gender, date_of_birth, is_active, role_id, created_by, force_change_password)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 0)";
+
+            $stmt = $pdo->prepare($sql);
+            $passwordRaw = trim($data['password'] ?? '') ?: '123456';
+            $passwordHash = password_hash($passwordRaw, PASSWORD_BCRYPT);
+
+            $stmt->execute([
+                trim($data['username'] ?? ''),
+                $passwordHash,
+                trim($data['full_name'] ?? ''),
+                ($data['email'] ?? '') !== '' ? $data['email'] : null,
+                ($data['phone'] ?? '') !== '' ? $data['phone'] : null,
+                ($data['gender'] ?? '') !== '' ? $data['gender'] : null,
+                ($data['date_of_birth'] ?? '') !== '' ? $data['date_of_birth'] : null,
+                isset($data['is_active']) ? (int)$data['is_active'] : 1,
+                $data['created_by'] ?? null
+            ]);
+
+            $id = (int)$pdo->lastInsertId();
+            $pdo->commit();
+
+            $created = $this->find($id);
+
+            return is_array($created) ? $created : false;
+        } catch (PDOException $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Cập nhật thông tin khách hàng
+     *
+     * @return array|false
+     */
+    public function update(int|string $id, array $data): array|false
+    {
+        $sql = "UPDATE {$this->userTable}
+                SET username = ?,
+                    full_name = ?,
+                    email = ?,
+                    phone = ?,
+                    gender = ?,
+                    date_of_birth = ?,
+                    is_active = ?,
+                    updated_by = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND role_id = 1";
+
+        $stmt = DB::pdo()->prepare($sql);
+        $stmt->execute([
+            trim($data['username'] ?? ''),
+            trim($data['full_name'] ?? ''),
+            ($data['email'] ?? '') !== '' ? $data['email'] : null,
+            ($data['phone'] ?? '') !== '' ? $data['phone'] : null,
+            ($data['gender'] ?? '') !== '' ? $data['gender'] : null,
+            ($data['date_of_birth'] ?? '') !== '' ? $data['date_of_birth'] : null,
+            isset($data['is_active']) ? (int)$data['is_active'] : 1,
+            $data['updated_by'] ?? null,
+            $id
+        ]);
+
+    $updated = $this->find($id);
+
+    return is_array($updated) ? $updated : false;
+    }
+
+    /**
+     * Xoá khách hàng
+     */
+    public function delete(int|string $id): bool
+    {
+        $stmt = DB::pdo()->prepare("DELETE FROM {$this->userTable} WHERE id = ? AND role_id = 1");
+        return $stmt->execute([$id]);
+    }
+
+    /**
+     * Đổi mật khẩu khách hàng
+     */
+    public function changePassword(int|string $id, string $password): bool
+    {
+        $hash = password_hash($password, PASSWORD_BCRYPT);
+        $stmt = DB::pdo()->prepare("UPDATE {$this->userTable} SET password_hash = ?, force_change_password = 0 WHERE id = ? AND role_id = 1");
+        return $stmt->execute([$hash, $id]);
     }
 }

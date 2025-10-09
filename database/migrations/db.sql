@@ -11,14 +11,13 @@ CREATE TABLE roles (
 ) ENGINE=InnoDB;
 
 INSERT IGNORE INTO roles (id, name) VALUES
- (1,'Khách hàng thành viên'),
- (2,'Nhân viên'),
- (3,'Admin');
+ (1,'Khách hàng'),
+ (2,'Quản trị viên'),
 
 CREATE TABLE users (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   username VARCHAR(50) NOT NULL UNIQUE,          -- tên tài khoản để đăng nhập
-  role_id TINYINT NOT NULL DEFAULT 2,
+  role_id TINYINT NOT NULL DEFAULT 1,
   email VARCHAR(250) UNIQUE,                     -- có thể NULL; vẫn giữ UNIQUE
   phone VARCHAR(32),
   password_hash VARCHAR(255),

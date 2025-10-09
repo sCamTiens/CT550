@@ -117,9 +117,9 @@ $router->group('/admin', function (Router $r): void {
     // Customers
     $r->get('/customers', [AdminCustomer::class, 'index']);
     $r->get('/api/customers', [AdminCustomer::class, 'apiIndex']);
-    $r->post('/customers', [AdminCustomer::class, 'store']);
-    $r->put('/customers/{id}', [AdminCustomer::class, 'update']);
-    $r->delete('/customers/{id}', [AdminCustomer::class, 'destroy']);
+    $r->post('/api/customers', [AdminCustomer::class, 'store']);
+    $r->put('/api/customers/{id}', [AdminCustomer::class, 'update']);
+    $r->delete('/api/customers/{id}', [AdminCustomer::class, 'destroy']);
 
 
 

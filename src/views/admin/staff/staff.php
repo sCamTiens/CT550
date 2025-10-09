@@ -30,6 +30,7 @@ $items = $items ?? [];
                         <?= textFilterPopover('staff_role', 'Vai trò') ?>
                         <?= textFilterPopover('email', 'Email') ?>
                         <?= textFilterPopover('phone', 'Số điện thoại') ?>
+                        <?= selectFilterPopover('is_active', 'Trạng thái', ['' => '-- Tất cả --', '1' => 'Hoạt động', '0' => 'Khóa']) ?>
                         <?= dateFilterPopover('hired_at', 'Ngày vào làm') ?>
                         <?= textFilterPopover('note', 'Ghi chú') ?>
                         <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
@@ -41,12 +42,44 @@ $items = $items ?? [];
                 <tbody>
                     <template x-for="s in paginated()" :key="s.user_id">
                         <tr class="border-t">
-                            
+                            <td class="py-2 px-4 text-center space-x-2">
+                                <button @click="openEditModal(s)"
+                                    class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                                    title="Sửa">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M16.862 4.487l1.65-1.65a1.875 1.875 0 112.652 2.652l-1.65 1.65M18.513 6.138L7.5 17.25H4.5v-3l11.013-11.112z" />
+                                    </svg>
+                                </button>
+                                <button @click="openChangePasswordModal(s)"
+                                    class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                                    title="Đổi mật khẩu">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                        stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M16 10V7a4 4 0 00-8 0v3M5 10h14a1 1 0 011 1v8a1 1 0 01-1 1H5a1 1 0 01-1-1v-8a1 1 0 011-1z" />
+                                    </svg>
+                                </button>
+                                <button @click="remove(s.user_id)"
+                                    class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                                    title="Xóa">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M6 7h12M9 7V4h6v3m-7 4v7m4-7v7m4-7v7M4 7h16v13a2 2 0 01-2 2H6a2 2 0 01-2-2V7z" />
+                                    </svg>
+                                </button>
+                            </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.username"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.full_name"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.staff_role"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.email"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.phone"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-center">
+                                <span x-text="s.is_active ? 'Hoạt động' : 'Khóa'"
+                                    :class="s.is_active ? 'text-green-600' : 'text-red-600'"></span>
+                            </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.hired_at"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.note"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line text-right"
@@ -60,7 +93,7 @@ $items = $items ?? [];
                         </tr>
                     </template>
                     <tr x-show="!loading && filtered().length===0">
-                        <td colspan="13" class="py-12 text-center text-slate-500">
+                        <td colspan="14" class="py-12 text-center text-slate-500">
                             <div class="flex flex-col items-center justify-center">
                                 <img src="/assets/images/Null.png" alt="Trống" class="w-40 h-24 mb-3 opacity-80">
                                 <div class="text-lg text-slate-300">Không có dữ liệu nhân viên</div>
@@ -122,13 +155,16 @@ $items = $items ?? [];
             </div>
             <form class="p-5 space-y-4" @submit.prevent="submitChangePassword()">
                 <div>
-                    <label class="block text-sm text-black font-semibold mb-1">Mật khẩu mới <span class="text-red-500">*</span></label>
+                    <label class="block text-sm text-black font-semibold mb-1">Mật khẩu mới <span
+                            class="text-red-500">*</span></label>
                     <div class="flex gap-2 items-center">
                         <div class="relative flex-1 min-w-0">
-                            <input :type="showChangePassword ? 'text' : 'password'" x-model="formChangePassword.password"
-                                class="border rounded px-3 py-2 w-full pr-10"
-                                placeholder="Nhập mật khẩu mới" minlength="6" maxlength="50" autocomplete="new-password" required>
-                            <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900"
+                            <input :type="showChangePassword ? 'text' : 'password'"
+                                x-model="formChangePassword.password" class="border rounded px-3 py-2 w-full pr-10"
+                                placeholder="Nhập mật khẩu mới" minlength="6" maxlength="50" autocomplete="new-password"
+                                required>
+                            <button type="button"
+                                class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900"
                                 @click="showChangePassword = !showChangePassword" tabindex="-1">
                                 <i :class="showChangePassword ? 'fa-regular fa-eye' : 'fa-regular fa-eye-slash'"></i>
                             </button>
@@ -137,24 +173,32 @@ $items = $items ?? [];
                             class="px-4 py-2 border rounded text-sm font-semibold text-[#002975] border-[#002975] hover:bg-[#002975] hover:text-white flex-shrink-0"
                             style="min-width:64px;" @click="generateChangePassword()">Tạo</button>
                     </div>
-                    <p x-show="changePasswordTouched && changePasswordErrors.password" x-text="changePasswordErrors.password" class="text-red-500 text-xs mt-1"></p>
+                    <p x-show="changePasswordTouched && changePasswordErrors.password"
+                        x-text="changePasswordErrors.password" class="text-red-500 text-xs mt-1"></p>
                 </div>
                 <div>
-                    <label class="block text-sm text-black font-semibold mb-1">Xác nhận mật khẩu <span class="text-red-500">*</span></label>
+                    <label class="block text-sm text-black font-semibold mb-1">Xác nhận mật khẩu <span
+                            class="text-red-500">*</span></label>
                     <div class="relative flex-1 min-w-0">
-                        <input :type="showChangePasswordConfirm ? 'text' : 'password'" x-model="formChangePassword.password_confirm"
-                            class="border rounded px-3 py-2 w-full pr-10"
-                            placeholder="Nhập lại mật khẩu" minlength="6" maxlength="50" autocomplete="new-password" required>
-                        <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900"
+                        <input :type="showChangePasswordConfirm ? 'text' : 'password'"
+                            x-model="formChangePassword.password_confirm" class="border rounded px-3 py-2 w-full pr-10"
+                            placeholder="Nhập lại mật khẩu" minlength="6" maxlength="50" autocomplete="new-password"
+                            required>
+                        <button type="button"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900"
                             @click="showChangePasswordConfirm = !showChangePasswordConfirm" tabindex="-1">
                             <i :class="showChangePasswordConfirm ? 'fa-regular fa-eye' : 'fa-regular fa-eye-slash'"></i>
                         </button>
                     </div>
-                    <p x-show="changePasswordTouched && changePasswordErrors.password_confirm" x-text="changePasswordErrors.password_confirm" class="text-red-500 text-xs mt-1"></p>
+                    <p x-show="changePasswordTouched && changePasswordErrors.password_confirm"
+                        x-text="changePasswordErrors.password_confirm" class="text-red-500 text-xs mt-1"></p>
                 </div>
                 <div class="pt-2 flex justify-end gap-3">
-                    <button type="button" class="px-4 py-2 rounded-md border" @click="openChangePassword=false">Đóng</button>
-                    <button class="px-4 py-2 rounded-md text-[#002975] hover:bg-[#002975] hover:text-white border border-[#002975]" :disabled="submitting" x-text="submitting?'Đang lưu...':'Đổi mật khẩu'"></button>
+                    <button type="button" class="px-4 py-2 rounded-md border"
+                        @click="openChangePassword=false">Đóng</button>
+                    <button
+                        class="px-4 py-2 rounded-md text-[#002975] hover:bg-[#002975] hover:text-white border border-[#002975]"
+                        :disabled="submitting" x-text="submitting?'Đang lưu...':'Đổi mật khẩu'"></button>
                 </div>
             </form>
         </div>
@@ -261,7 +305,7 @@ $items = $items ?? [];
             items: [],
             staffRoles: [
                 { name: 'Kho' },
-                { name: 'Thu ngân' },
+                { name: 'Nhân viên bán hàng' },
                 { name: 'Hỗ trợ trực tuyến' },
                 { name: 'Admin' }
             ],
@@ -317,7 +361,7 @@ $items = $items ?? [];
 
             // Filter popover state
             openFilter: {
-                username: false, full_name: false, staff_role: false, email: false, phone: false, hired_at: false, note: false,
+                username: false, full_name: false, staff_role: false, email: false, phone: false, is_active: false, hired_at: false, note: false,
                 created_at: false, created_by_name: false, updated_at: false, updated_by_name: false
             },
             // Filter values
@@ -327,6 +371,7 @@ $items = $items ?? [];
                 staff_role: '',
                 email: '',
                 phone: '',
+                is_active: '',
                 hired_at_type: '', hired_at_value: '', hired_at_from: '', hired_at_to: '',
                 note: '',
                 created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
@@ -409,6 +454,7 @@ $items = $items ?? [];
                 if (f.staff_role) data = data.filter(s => fn(s.staff_role).includes(fn(f.staff_role)));
                 if (f.email) data = data.filter(s => fn(s.email).includes(fn(f.email)));
                 if (f.phone) data = data.filter(s => fn(s.phone).includes(fn(f.phone)));
+                if (f.is_active !== '' && f.is_active !== undefined) data = data.filter(s => String(s.is_active) === String(f.is_active));
                 if (f.note) data = data.filter(s => fn(s.note).includes(fn(f.note)));
                 if (f.created_by_name) data = data.filter(s => fn(s.created_by_name).includes(fn(f.created_by_name)));
                 if (f.updated_by_name) data = data.filter(s => fn(s.updated_by_name).includes(fn(f.updated_by_name)));
@@ -419,6 +465,19 @@ $items = $items ?? [];
                 if (f.hired_at_type === 'between' && f.hired_at_from && f.hired_at_to) {
                     data = data.filter(s => s.hired_at >= f.hired_at_from && s.hired_at <= f.hired_at_to);
                 }
+                if (f.hired_at_type === 'lt' && f.hired_at_value) {
+                    data = data.filter(s => s.hired_at < f.hired_at_value);
+                }
+                if (f.hired_at_type === 'gt' && f.hired_at_value) {
+                    data = data.filter(s => s.hired_at > f.hired_at_value);
+                }
+                if (f.hired_at_type === 'lte' && f.hired_at_value) {
+                    data = data.filter(s => s.hired_at <= f.hired_at_value);
+                }
+                if (f.hired_at_type === 'gte' && f.hired_at_value) {
+                    data = data.filter(s => s.hired_at >= f.hired_at_value);
+                }
+
                 // Date filter: created_at
                 if (f.created_at_type === 'eq' && f.created_at_value) {
                     data = data.filter(s => (s.created_at || '').startsWith(f.created_at_value));
@@ -426,12 +485,37 @@ $items = $items ?? [];
                 if (f.created_at_type === 'between' && f.created_at_from && f.created_at_to) {
                     data = data.filter(s => s.created_at >= f.created_at_from && s.created_at <= f.created_at_to);
                 }
+                if (f.created_at_type === 'lt' && f.created_at_value) {
+                    data = data.filter(s => s.created_at < f.created_at_value);
+                }
+                if (f.created_at_type === 'gt' && f.created_at_value) {
+                    data = data.filter(s => s.created_at > f.created_at_value);
+                }
+                if (f.created_at_type === 'lte' && f.created_at_value) {
+                    data = data.filter(s => s.created_at <= f.created_at_value);
+                }
+                if (f.created_at_type === 'gte' && f.created_at_value) {
+                    data = data.filter(s => s.created_at >= f.created_at_value);
+                }
+
                 // Date filter: updated_at
                 if (f.updated_at_type === 'eq' && f.updated_at_value) {
                     data = data.filter(s => (s.updated_at || '').startsWith(f.updated_at_value));
                 }
                 if (f.updated_at_type === 'between' && f.updated_at_from && f.updated_at_to) {
                     data = data.filter(s => s.updated_at >= f.updated_at_from && s.updated_at <= f.updated_at_to);
+                }
+                if (f.updated_at_type === 'lt' && f.updated_at_value) {
+                    data = data.filter(s => s.updated_at < f.updated_at_value);
+                }
+                if (f.updated_at_type === 'gt' && f.updated_at_value) {
+                    data = data.filter(s => s.updated_at > f.updated_at_value);
+                }
+                if (f.updated_at_type === 'lte' && f.updated_at_value) {
+                    data = data.filter(s => s.updated_at <= f.updated_at_value);
+                }
+                if (f.updated_at_type === 'gte' && f.updated_at_value) {
+                    data = data.filter(s => s.updated_at >= f.updated_at_value);
                 }
                 return data;
             },

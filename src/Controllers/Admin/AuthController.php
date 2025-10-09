@@ -110,8 +110,8 @@ class AuthController extends Controller
             return $fail('Tài khoản hoặc mật khẩu sai.');
         if (isset($user->is_active) && (int) $user->is_active === 0)
             return $fail('Tài khoản đã bị vô hiệu hóa.');
-        if (!in_array($user->role_name ?? '', ['Nhân viên', 'Admin'], true))
-            return $fail('Không có quyền vào khu vực quản trị.');
+        if (($user->role_id ?? null) !== 2)
+            return $fail('Tài khoản này không có quyền truy cập khu vực quản trị.');
 
         if (!password_verify($password, $user->password_hash ?? ''))
             return $fail('Tài khoản hoặc mật khẩu sai.');

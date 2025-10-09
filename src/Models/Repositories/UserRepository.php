@@ -14,6 +14,7 @@ class UserRepository
 				u.id, u.username, u.password_hash, 
 				u.full_name, u.email, u.phone, u.gender, u.date_of_birth, 
 				u.avatar_url, u.is_active, u.force_change_password,
+				u.role_id,
 				r.name AS role_name
 			FROM users u
 			LEFT JOIN roles r ON r.id = u.role_id
@@ -29,6 +30,7 @@ class UserRepository
 			if (property_exists($user, $k))
 				$user->$k = $v;
 		}
+		$user->role_id = $data['role_id'] ?? null;
 		$user->role_name = $data['role_name'] ?? null;
 		return $user;
 	}
