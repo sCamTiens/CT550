@@ -18,6 +18,12 @@ use App\Controllers\Admin\AuthController as AdminController;
 use App\Controllers\Admin\CategoryController as AdminCategory;
 use App\Controllers\Admin\SupplierController as AdminSupplier;
 use App\Controllers\Admin\UnitController as AdminUnit;
+use App\Controllers\Admin\StockController as AdminStock;
+use App\Controllers\Admin\StocktakeController as AdminStocktake;
+use App\Controllers\Admin\StaffController as AdminStaff;
+use App\Controllers\Admin\CustomerController as AdminCustomer;
+use App\Controllers\Admin\RoleController as AdminRole;
+
 
 
 /* --- load biến môi trường từ .env (đặt ở thư mục gốc dự án) --- */
@@ -43,10 +49,15 @@ $router->post('/cart', [CartController::class, 'add']);
 
 /* routes admin */
 $router->group('/admin', function (Router $r): void {
+    // Force change password (bắt buộc đổi mật khẩu lần đầu)
+    $r->get('/force-change-password', [\App\Controllers\Admin\ForceChangePasswordController::class, 'show']);
+    $r->post('/force-change-password', [\App\Controllers\Admin\ForceChangePasswordController::class, 'update']);
+    $r->get('/logout-force', [\App\Controllers\Admin\ForceChangePasswordController::class, 'logoutForce']);
     $r->get('/', [AdminDashboard::class, 'index']);
     $r->get('/login', [AdminController::class, 'showLogin']);
     $r->post('/login', [AdminController::class, 'login']);
     $r->get('/logout', [AdminController::class, 'logout']);
+    
 
     // Profile
     $r->get('/profile', [AdminController::class, 'profile']);
@@ -89,6 +100,28 @@ $router->group('/admin', function (Router $r): void {
     $r->post('/units', [AdminUnit::class, 'store']);
     $r->put('/units/{id}', [AdminUnit::class, 'update']);
     $r->delete('/units/{id}', [AdminUnit::class, 'destroy']);
+
+    // Stocks
+    $r->get('/stocks', [AdminStock::class, 'index']);
+    $r->get('/stocktakes', [AdminStocktake::class, 'index']);
+
+    // Staffs
+    $r->get('/staff', [AdminStaff::class, 'index']);
+    $r->get('/api/staff', [AdminStaff::class, 'apiIndex']);
+    $r->get('/api/staff/roles', [AdminStaff::class, 'apiRoles']);
+    $r->post('/api/staff', [AdminStaff::class, 'store']);
+    $r->put('/api/staff/{id}', [AdminStaff::class, 'update']);
+    $r->put('/api/staff/{id}/password', [AdminStaff::class, 'changePassword']);
+    $r->delete('/api/staff/{id}', [AdminStaff::class, 'delete']);
+
+    // Customers
+    $r->get('/customers', [AdminCustomer::class, 'index']);
+    $r->get('/api/customers', [AdminCustomer::class, 'apiIndex']);
+    $r->post('/customers', [AdminCustomer::class, 'store']);
+    $r->put('/customers/{id}', [AdminCustomer::class, 'update']);
+    $r->delete('/customers/{id}', [AdminCustomer::class, 'destroy']);
+
+
 
 });
 

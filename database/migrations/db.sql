@@ -11,14 +11,13 @@ CREATE TABLE roles (
 ) ENGINE=InnoDB;
 
 INSERT IGNORE INTO roles (id, name) VALUES
- (1,'Khách vãng lai'),
- (2,'Khách hàng thành viên'),
- (3,'Nhân viên'),
- (4,'Admin');
+ (1,'Khách hàng thành viên'),
+ (2,'Nhân viên'),
+ (3,'Admin');
 
 CREATE TABLE users (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  username VARCHAR(50) NOT NULL UNIQUE,          -- <- tên tài khoản để đăng nhập
+  username VARCHAR(50) NOT NULL UNIQUE,          -- tên tài khoản để đăng nhập
   role_id TINYINT NOT NULL DEFAULT 2,
   email VARCHAR(250) UNIQUE,                     -- có thể NULL; vẫn giữ UNIQUE
   phone VARCHAR(32),
@@ -187,32 +186,6 @@ CREATE TABLE product_images (
   CONSTRAINT fk_pimg_created_by FOREIGN KEY(created_by) REFERENCES users(id),
   CONSTRAINT fk_pimg_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
   CONSTRAINT fk_pimg_prod FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
--- Bảng quản lý lô sản phẩm và hạn sử dụng
-CREATE TABLE product_batches (
-  id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  product_id BIGINT NOT NULL,              -- FK -> products.id
-  batch_code VARCHAR(64) NOT NULL,         -- mã lô (từ NCC hoặc tự tạo)
-  mfg_date DATE NULL,                      -- ngày sản xuất (tùy chọn)
-  exp_date DATE NOT NULL,                  -- ngày hết hạn
-  initial_qty INT NOT NULL CHECK (initial_qty >= 0),  -- SL nhập ban đầu
-  current_qty INT NOT NULL DEFAULT 0,                  -- SL còn lại
-  purchase_order_id BIGINT NULL,           -- phiếu nhập liên quan
-  note VARCHAR(255) NULL,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  created_by BIGINT NULL,
-  updated_by BIGINT NULL,
-
-  CONSTRAINT fk_pb_prod FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE,
-  CONSTRAINT fk_pb_po   FOREIGN KEY(purchase_order_id) REFERENCES purchase_orders(id) ON DELETE SET NULL,
-  CONSTRAINT fk_pb_user FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL,
-  CONSTRAINT fk_pb_user_updated FOREIGN KEY(updated_by) REFERENCES users(id) ON DELETE SET NULL,
-
-  UNIQUE KEY uniq_prod_batch (product_id, batch_code),
-  INDEX idx_pb_prod (product_id),
-  INDEX idx_pb_exp  (exp_date)
 ) ENGINE=InnoDB;
 
 -- =====================================================================
@@ -678,6 +651,33 @@ CREATE TABLE purchase_orders (
   INDEX idx_po_due        (due_date)
 ) ENGINE=InnoDB;
 
+
+-- Bảng quản lý lô sản phẩm và hạn sử dụng
+CREATE TABLE product_batches (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  product_id BIGINT NOT NULL,              -- FK -> products.id
+  batch_code VARCHAR(64) NOT NULL,         -- mã lô (từ NCC hoặc tự tạo)
+  mfg_date DATE NULL,                      -- ngày sản xuất (tùy chọn)
+  exp_date DATE NOT NULL,                  -- ngày hết hạn
+  initial_qty INT NOT NULL CHECK (initial_qty >= 0),  -- SL nhập ban đầu
+  current_qty INT NOT NULL DEFAULT 0,                  -- SL còn lại
+  purchase_order_id BIGINT NULL,           -- phiếu nhập liên quan
+  note VARCHAR(255) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+
+  CONSTRAINT fk_pb_prod FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE,
+  CONSTRAINT fk_pb_po   FOREIGN KEY(purchase_order_id) REFERENCES purchase_orders(id) ON DELETE SET NULL,
+  CONSTRAINT fk_pb_user FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL,
+  CONSTRAINT fk_pb_user_updated FOREIGN KEY(updated_by) REFERENCES users(id) ON DELETE SET NULL,
+
+  UNIQUE KEY uniq_prod_batch (product_id, batch_code),
+  INDEX idx_pb_prod (product_id),
+  INDEX idx_pb_exp  (exp_date)
+) ENGINE=InnoDB;
+
 -- Chi tiết phiếu nhập kho
 CREATE TABLE purchase_order_items (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -1045,3 +1045,8 @@ VALUES (
     TRUE
 );
 
+INSERT INTO staff_profiles (user_id, staff_role, hired_at, note)
+SELECT id, 'Admin', CURDATE(), 'Tài khoản admin mặc định'
+FROM users WHERE username = 'admin';
+
+ALTER TABLE users ADD COLUMN force_change_password BOOLEAN NOT NULL DEFAULT TRUE AFTER password_hash;

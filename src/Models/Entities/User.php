@@ -19,4 +19,5 @@ class User
 	public $created_by;
 	public $updated_by;
 	public $role_name; // for joined role name
+	public $force_change_password; // thêm dòng này
 }

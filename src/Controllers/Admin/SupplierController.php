@@ -1,16 +1,16 @@
 <?php
 namespace App\Controllers\Admin;
 
-
 use App\Models\Repositories\SupplierRepository;
 
+use App\Controllers\Admin\AuthController;
 class SupplierController extends BaseAdminController
 {
     private $supplierRepo;
 
     public function __construct()
     {
-        parent::__construct();
+        AuthController::requirePasswordChanged();
         $this->supplierRepo = new SupplierRepository();
     }
     public function index()

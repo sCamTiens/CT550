@@ -23,8 +23,8 @@ $items = $items ?? [];
     <div style="overflow-x:auto; max-width:100%;">
       <table style="width:100%; min-width:1200px; border-collapse:collapse;">
         <thead>
-          <tr class="bg-gray-50 text-left text-slate-600">
-            <th class="py-2 px-4 text-left">Thao tác</th>
+          <tr class="bg-gray-50 text-slate-600">
+            <th class="py-2 px-4 text-center">Thao tác</th>
             <?= textFilterPopover('name', 'Tên') ?>
             <?= textFilterPopover('slug', 'Slug') ?>
             <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
@@ -37,7 +37,7 @@ $items = $items ?? [];
         <tbody>
           <template x-for="b in paginated()" :key="b.id">
             <tr class="border-t">
-              <td class="py-2 px-4 text-left space-x-2">
+              <td class="py-2 px-4 text-center space-x-2">
                 <!-- Sửa -->
                 <button @click="openEditModal(b)"
                   class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
@@ -61,12 +61,12 @@ $items = $items ?? [];
                 </button>
               </td>
 
-              <td class="py-2 px-4" x-text="b.name"></td>
-              <td class="py-2 px-4" x-text="b.slug || ''"></td>
-              <td class="py-2 px-4" x-text="b.created_at || '—'"></td>
-              <td class="py-2 px-4" x-text="b.created_by_name || '—'"></td>
-              <td class="py-2 px-4" x-text="b.updated_at || '—'"></td>
-              <td class="py-2 px-4" x-text="b.updated_by_name || '—'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="b.name"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="b.slug || ''"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="b.created_at || '—'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="b.created_by_name || '—'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="b.updated_at || '—'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="b.updated_by_name || '—'"></td>
             </tr>
           </template>
 

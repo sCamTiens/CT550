@@ -1,7 +1,24 @@
 <!-- SIDEBAR -->
-<!-- SIDEBAR -->
-<aside class="w-72 shrink-0 transition-all duration-200 bg-blue-50 text-slate-800"
-    :class="openSidebar ? 'translate-x-0' : '-translate-x-full'" style="border-radius: 8px; color: #002795;">
+<aside class="w-72 shrink-0 transition-all duration-200 bg-blue-50 text-slate-800" x-data="{
+    openSidebar: true,
+    groups: { catalog:false, inventory:false, expense:false, promo:false },
+    init() {
+      const path = window.location.pathname;
+      if (path.includes('/admin/categories') || path.includes('/admin/brands') || path.includes('/admin/products') || path.includes('/admin/suppliers') || path.includes('/admin/units')) {
+        this.groups.catalog = true;
+      }
+      if (path.includes('/admin/stocks') || path.includes('/admin/purchase-orders') || path.includes('/admin/stock-exports') || path.includes('/admin/stocktakes') || path.includes('/admin/product-batches')) {
+        this.groups.inventory = true;
+      }
+      if (path.includes('/admin/receipt_vouchers') || path.includes('/admin/expense_vouchers')) {
+        this.groups.expense = true;
+      }
+      if (path.includes('/admin/coupons') || path.includes('/admin/promotions')) {
+        this.groups.promo = true;
+      }
+    }
+  }" x-init="init()" :class="openSidebar ? 'translate-x-0' : '-translate-x-full'"
+    style="border-radius:8px; color:#002795;">
     <nav class="px-2 pb-6 text-sm">
         <a href="/admin" class="flex items-center gap-2 px-3 py-2 rounded hover:bg-[#002975] hover:text-white">
             <span>Dashboard</span>
@@ -39,7 +56,7 @@
         <div class="mt-2">
             <button @click="groups.inventory=!groups.inventory"
                 class="w-full flex justify-between items-center px-3 py-2 rounded hover:bg-[#002975] hover:text-white">
-                <span>Kho</span>
+                <span>Quản lý kho</span>
                 <svg class="w-4 h-4 transition-transform" :class="groups.inventory?'rotate-90':''" viewBox="0 0 20 20">
                     <path d="M6 6l4 4 4-4" fill="currentColor" />
                 </svg>

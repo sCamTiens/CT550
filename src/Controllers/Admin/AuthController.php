@@ -6,12 +6,50 @@ use App\Models\Repositories\UserRepository;
 
 class AuthController extends Controller
 {
+    /**
+     * Hàm static để chặn truy cập admin khi chưa đổi mật khẩu lần đầu
+     */
+    public static function requirePasswordChanged() {
+        // Chỉ redirect nếu đã đăng nhập (có user id) và force_change_password = 1
+        if (!empty($_SESSION['user']['id']) && !empty($_SESSION['user']['force_change_password']) && (int)$_SESSION['user']['force_change_password'] === 1) {
+            header('Location: /admin/force-change-password');
+            exit;
+        }
+    }
     public function showLogin()
     {
+        // Tự động đăng nhập lại nếu có cookie admin_remember và chưa có session
+        if (empty($_SESSION['user']) && !empty($_COOKIE['admin_remember'])) {
+            $username = $_COOKIE['admin_remember'];
+            $user = UserRepository::findByUsername($username);
+            if ($user && (int)$user->force_change_password === 0) {
+                $_SESSION['admin_user'] = [
+                    'id' => (int)$user->id,
+                    'username' => $user->username,
+                    'email' => $user->email ?? null,
+                    'full_name' => $user->full_name ?? null,
+                    'role' => $user->role_name,
+                    'avatar_url' => $user->avatar_url ?? null,
+                    'force_change_password' => (int)$user->force_change_password,
+                ];
+                $_SESSION['user'] = $_SESSION['admin_user'];
+            } else {
+                // Xoá cookie ghi nhớ nếu user phải đổi mật khẩu
+                setcookie('admin_remember', '', time() - 3600, '/', '', false, true);
+                unset($_COOKIE['admin_remember']);
+            }
+        }
+        // Chỉ redirect nếu đã đăng nhập (có user id) và force_change_password = 1
+        if (!empty($_SESSION['user']['id']) && !empty($_SESSION['user']['force_change_password']) && (int)$_SESSION['user']['force_change_password'] === 1) {
+            header('Location: /admin/force-change-password');
+            exit;
+        }
+        // Nếu đã đăng nhập admin_user thì vào trang admin
         if (!empty($_SESSION['admin_user'])) {
             header('Location: /admin');
             exit;
         }
+        // Nếu chưa đăng nhập thì cho phép vào trang login
         return $this->view('admin/auth/login');
     }
 
@@ -52,9 +90,10 @@ class AuthController extends Controller
             exit;
         }
 
+
     $user = UserRepository::findByUsername($username);
 
-        $fail = function (string $msg) use ($isJsonReq) {
+    $fail = function (string $msg) use ($isJsonReq) {
             if ($isJsonReq) {
                 http_response_code(401);
                 header('Content-Type: application/json; charset=utf-8');
@@ -66,6 +105,7 @@ class AuthController extends Controller
             exit;
         };
 
+
         if (!$user)
             return $fail('Tài khoản hoặc mật khẩu sai.');
         if (isset($user->is_active) && (int) $user->is_active === 0)
@@ -75,6 +115,7 @@ class AuthController extends Controller
 
         if (!password_verify($password, $user->password_hash ?? ''))
             return $fail('Tài khoản hoặc mật khẩu sai.');
+
 
         // Lưu session cả cho admin_user và user
         $sessData = [
@@ -87,12 +128,25 @@ class AuthController extends Controller
             'date_of_birth' => $user->date_of_birth ?? null,
             'phone' => $user->phone ?? null,
             'gender' => $user->gender ?? null,
+            // force_change_password sẽ được lấy từ DB, nếu có
+            'force_change_password' => isset($user->force_change_password) ? (int)$user->force_change_password : 0,
         ];
         $_SESSION['admin_user'] = $sessData;
         $_SESSION['user'] = $sessData; // để CategoryController dùng
 
         if ($remember) {
             setcookie('admin_remember', $user->username, time() + 60 * 60 * 24 * 30, '/', '', false, true);
+        }
+
+        // Nếu user cần đổi mật khẩu lần đầu, chuyển hướng sang trang đổi mật khẩu
+        if (!empty($sessData['force_change_password'])) {
+            if ($isJsonReq) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['ok' => false, 'force_change_password' => true, 'redirect' => '/admin/force-change-password']);
+                return;
+            }
+            header('Location: /admin/force-change-password');
+            exit;
         }
 
         if ($isJsonReq) {
@@ -158,7 +212,7 @@ class AuthController extends Controller
         }
         // Cập nhật DB
         $avatarPath = '' . $currentUserId . '.png';
-    UserRepository::updateAvatar($currentUserId, $avatarPath);
+        UserRepository::updateAvatar($currentUserId, $avatarPath);
         // Cập nhật lại session
         if (isset($_SESSION['user'])) {
             $_SESSION['user']['avatar_url'] = $avatarPath;
@@ -166,8 +220,9 @@ class AuthController extends Controller
         if (isset($_SESSION['admin_user'])) {
             $_SESSION['admin_user']['avatar_url'] = $avatarPath;
         }
-        header('Location: /admin/profile?tab=info&success=avatar');
+        header('Location: /admin/profile?tab=info&avatar-updated=1');
         exit;
+
     }
 
     // Xử lý cập nhật thông tin cá nhân
@@ -201,7 +256,7 @@ class AuthController extends Controller
                 $date_of_birth = '';
             }
         }
-    UserRepository::updateProfile($currentUserId, $fullname, $email, $phone, $gender, $date_of_birth);
+        UserRepository::updateProfile($currentUserId, $fullname, $email, $phone, $gender, $date_of_birth);
         // Cập nhật lại session
         if (isset($_SESSION['user'])) {
             $_SESSION['user']['full_name'] = $fullname;

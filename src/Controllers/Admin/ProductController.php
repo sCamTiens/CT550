@@ -1,16 +1,16 @@
 <?php
 namespace App\Controllers\Admin;
 
-
 use App\Models\Repositories\ProductRepository;
 
+use App\Controllers\Admin\AuthController;
 class ProductController extends BaseAdminController
 {
     private $productRepo;
 
     public function __construct()
     {
-        parent::__construct();
+        AuthController::requirePasswordChanged();
         $this->productRepo = new ProductRepository();
     }
     /** GET /admin/products (trả về view) */

@@ -118,7 +118,6 @@ unset($_SESSION['errors'], $_SESSION['flash_error']);
         <a href="/forgot-password" class="text-sky-600 hover:underline">Quên mật khẩu?</a>
       </div>
 
-
       <!-- Nút đăng nhập -->
       <button id="login-btn" class="w-full bg-sky-500 hover:bg-sky-600 text-white rounded-lg px-4 py-2 font-medium">
         Đăng nhập
@@ -240,6 +239,11 @@ unset($_SESSION['errors'], $_SESSION['flash_error']);
             const data = await res.json().catch(() => ({}));
             if (res.ok && (data.ok || data.success)) {
               window.location.href = '/admin';
+              return;
+            }
+            // Nếu server trả về force_change_password thì chuyển hướng
+            if (data.force_change_password && data.redirect) {
+              window.location.href = data.redirect;
               return;
             }
             showToast(data.message || 'Tài khoản hoặc mật khẩu sai');

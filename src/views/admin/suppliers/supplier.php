@@ -21,10 +21,10 @@ $items = $items ?? [];
     <!-- Table -->
     <div class="bg-white rounded-xl shadow pb-4">
         <div style="overflow-x:auto; max-width:100%;">
-            <table style="width:160%; min-width:1200px; border-collapse:collapse;">
+            <table style="width:120%; min-width:1200px; border-collapse:collapse;">
                 <thead>
-                    <tr class="bg-gray-50 text-left text-slate-600">
-                        <th class="py-2 px-4">Thao tác</th>
+                    <tr class="bg-gray-50 text-slate-600">
+                        <th class="py-2 px-4 text-center">Thao tác</th> 
                         <?= textFilterPopover('name', 'Tên') ?>
                         <?= textFilterPopover('phone', 'SĐT') ?>
                         <?= textFilterPopover('email', 'Email') ?>
@@ -39,7 +39,7 @@ $items = $items ?? [];
                 <tbody>
                     <template x-for="s in paginated()" :key="s.id">
                         <tr class="border-t">
-                            <td class="py-2 px-4 space-x-2">
+                            <td class="py-2 px-4 space-x-2 text-center">
                                 <button @click="openEditModal(s)" class="p-2 rounded hover:bg-gray-100 text-[#002975]"
                                     title="Sửa">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
@@ -57,14 +57,14 @@ $items = $items ?? [];
                                     </svg>
                                 </button>
                             </td>
-                            <td class="py-2 px-4" x-text="s.name"></td>
-                            <td class="py-2 px-4" x-text="s.phone || ''"></td>
-                            <td class="py-2 px-4" x-text="s.email || ''"></td>
-                            <td class="py-2 px-4" x-text="s.address || ''"></td>
-                            <td class="py-2 px-4" x-text="s.created_at || '—'"></td>
-                            <td class="py-2 px-4" x-text="s.created_by_name || '—'"></td>
-                            <td class="py-2 px-4" x-text="s.updated_at || '—'"></td>
-                            <td class="py-2 px-4" x-text="s.updated_by_name || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.name"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.phone || ''"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.email || ''"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.address || ''"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.created_at || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.created_by_name || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.updated_at || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.updated_by_name || '—'"></td>
                         </tr>
                     </template>
 
@@ -115,7 +115,7 @@ $items = $items ?? [];
                 <?php require __DIR__ . '/form.php'; ?>
                 <div class="pt-2 flex justify-end gap-3">
                     <button type="button" class="px-4 py-2 rounded-md border" @click="openEdit=false">Đóng</button>
-                    <button
+                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.name"></td>
                         class="px-4 py-2 rounded-md text-[#002975] hover:bg-[#002975] hover:text-white border border-[#002975]"
                         :disabled="submitting" x-text="submitting?'Đang lưu...':'Cập nhật'"></button>
                 </div>

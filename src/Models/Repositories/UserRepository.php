@@ -9,13 +9,25 @@ class UserRepository
 	public static function findByUsername($username)
 	{
 		$pdo = DB::pdo();
-		$stmt = $pdo->prepare("SELECT u.*, r.name AS role_name FROM users u LEFT JOIN roles r ON r.id = u.role_id WHERE u.username = ? LIMIT 1");
+		$stmt = $pdo->prepare("
+			SELECT 
+				u.id, u.username, u.password_hash, 
+				u.full_name, u.email, u.phone, u.gender, u.date_of_birth, 
+				u.avatar_url, u.is_active, u.force_change_password,
+				r.name AS role_name
+			FROM users u
+			LEFT JOIN roles r ON r.id = u.role_id
+			WHERE u.username = ?
+			LIMIT 1
+		");
 		$stmt->execute([$username]);
 		$data = $stmt->fetch(\PDO::FETCH_ASSOC);
-		if (!$data) return null;
+		if (!$data)
+			return null;
 		$user = new User();
 		foreach ($data as $k => $v) {
-			if (property_exists($user, $k)) $user->$k = $v;
+			if (property_exists($user, $k))
+				$user->$k = $v;
 		}
 		$user->role_name = $data['role_name'] ?? null;
 		return $user;
@@ -27,10 +39,12 @@ class UserRepository
 		$stmt = $pdo->prepare("SELECT * FROM users WHERE id = ? LIMIT 1");
 		$stmt->execute([$id]);
 		$data = $stmt->fetch(\PDO::FETCH_ASSOC);
-		if (!$data) return null;
+		if (!$data)
+			return null;
 		$user = new User();
 		foreach ($data as $k => $v) {
-			if (property_exists($user, $k)) $user->$k = $v;
+			if (property_exists($user, $k))
+				$user->$k = $v;
 		}
 		return $user;
 	}

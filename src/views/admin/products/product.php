@@ -23,8 +23,8 @@ $items = $items ?? [];
     <div style="overflow-x:auto; max-width:100%;">
       <table style="width:200%; min-width:1200px; border-collapse:collapse;">
         <thead>
-          <tr class="bg-gray-50 text-left text-slate-600">
-            <th class="py-2 px-4 whitespace-nowrap">Thao tác</th>
+          <tr class="bg-gray-50 text-slate-600">
+            <th class="py-2 px-4 whitespace-nowrap text-center">Thao tác</th>
             <?= textFilterPopover('sku', 'SKU') ?>
             <?= textFilterPopover('barcode', 'Mã vạch') ?>
             <?= textFilterPopover('name', 'Tên') ?>
@@ -50,7 +50,7 @@ $items = $items ?? [];
         <tbody>
           <template x-for="p in paginated()" :key="p.id">
             <tr class="border-t">
-              <td class="py-2 px-4 space-x-2">
+              <td class="py-2 px-4 space-x-2 text-center">
                 <button @click="openEditModal(p)" class="p-2 rounded hover:bg-gray-100 text-[#002975]" title="Sửa">
                   <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor" stroke-width="2">
@@ -66,25 +66,25 @@ $items = $items ?? [];
                   </svg>
                 </button>
               </td>
-              <td class="py-2 px-4" x-text="p.sku"></td>
-              <td class="py-2 px-4" x-text="p.barcode"></td>
-              <td class="py-2 px-4" x-text="p.name"></td>
-              <td class="py-2 px-4" x-text="p.slug"></td>
-              <td class="py-2 px-4" x-text="p.brand_name || ''"></td>
-              <td class="py-2 px-4" x-text="p.category_name || ''"></td>
-              <td class="py-2 px-4" x-text="p.stock_qty || '0'"></td>
-              <td class="py-2 px-4" x-text="formatCurrency(p.sale_price)"></td>
-              <td class="py-2 px-4" x-text="formatCurrency(p.cost_price)"></td>
-              <td class="py-2 px-4" x-text="p.unit_name || ''"></td>
-              <td class="py-2 px-4">
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.sku"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.barcode"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.name"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.slug"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.brand_name || ''"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.category_name || ''"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="p.stock_qty || '0'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="formatCurrency(p.sale_price)"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="formatCurrency(p.cost_price)"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.unit_name || ''"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line">
                 <span class="px-2 py-0.5 rounded text-xs"
                   :class="p.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
                   x-text="p.is_active ? 'Bán' : 'Ẩn'"></span>
               </td>
-              <td class="py-2 px-4" x-text="p.created_at || '—'"></td>
-              <td class="py-2 px-4" x-text="p.created_by_name || '—'"></td>
-              <td class="py-2 px-4" x-text="p.updated_at || '—'"></td>
-              <td class="py-2 px-4" x-text="p.updated_by_name || '—'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="p.created_at || '—'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.created_by_name || '—'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="p.updated_at || '—'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.updated_by_name || '—'"></td>
             </tr>
           </template>
 

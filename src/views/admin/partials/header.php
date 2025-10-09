@@ -53,4 +53,12 @@
             dropdown.classList.add('hidden');
         }
     });
+
+    // Listen for avatar update event and update the header avatar
+    window.addEventListener('avatar-updated', function(e) {
+        const img = document.querySelector('#user-menu-btn img');
+        if (img && e.detail && e.detail.url) {
+            img.src = e.detail.url + '?t=' + Date.now(); // cache bust
+        }
+    });
 </script>

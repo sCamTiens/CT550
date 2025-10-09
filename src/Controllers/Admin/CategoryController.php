@@ -4,8 +4,13 @@ namespace App\Controllers\Admin;
 use App\Core\Controller;
 use App\Models\Repositories\CategoryRepository;
 
+use App\Controllers\Admin\AuthController;
 class CategoryController extends Controller
 {
+    public function __construct()
+    {
+        AuthController::requirePasswordChanged();
+    }
     /** GET /admin/categories (view) */
     public function index()
     {

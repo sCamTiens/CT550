@@ -220,21 +220,21 @@ $avatarPath = !empty($user['avatar_url'])
                     });
                 </script>
             <?php endif; ?>
-                <?php if (isset($_GET['error']) && $_GET['error'] === 'same'): ?>
-                    <script>
-                        document.addEventListener("DOMContentLoaded", function () {
-                            const box = document.getElementById('toast-container');
-                            if (box) {
-                                const toast = document.createElement('div');
-                                toast.className = "fixed top-5 right-5 z-[60] flex items-center w-[400px] p-4 mb-4 text-base font-semibold text-red-700 border-red-400 bg-white border-2 rounded-lg shadow";
-                                toast.innerHTML = `<svg class=\"flex-shrink-0 w-6 h-6 text-red-600 mr-3\"
+            <?php if (isset($_GET['error']) && $_GET['error'] === 'same'): ?>
+                <script>
+                    document.addEventListener("DOMContentLoaded", function () {
+                        const box = document.getElementById('toast-container');
+                        if (box) {
+                            const toast = document.createElement('div');
+                            toast.className = "fixed top-5 right-5 z-[60] flex items-center w-[400px] p-4 mb-4 text-base font-semibold text-red-700 border-red-400 bg-white border-2 rounded-lg shadow";
+                            toast.innerHTML = `<svg class=\"flex-shrink-0 w-6 h-6 text-red-600 mr-3\"
                                     xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z\" /></svg><div class=\"flex-1\">Mật khẩu mới không được trùng với mật khẩu hiện tại.</div>`;
-                                box.appendChild(toast);
-                                setTimeout(() => toast.remove(), 3000);
-                            }
-                        });
-                    </script>
-                <?php endif; ?>
+                            box.appendChild(toast);
+                            setTimeout(() => toast.remove(), 3000);
+                        }
+                    });
+                </script>
+            <?php endif; ?>
 
             <?php if (isset($_GET['error']) && $_GET['error'] === 'confirm'): ?>
                 <script>
@@ -489,6 +489,21 @@ $avatarPath = !empty($user['avatar_url'])
             }
         }
     }
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('avatar-updated')) {
+            const imgPath = <?= json_encode("/assets/images/avatar/" . ($_SESSION['admin_user']['avatar_url'] ?? $_SESSION['user']['avatar_url'] ?? 'default.png')) ?>;
+            window.dispatchEvent(new CustomEvent('avatar-updated', {
+                detail: { url: imgPath }
+            }));
+            params.delete('avatar-updated');
+            const cleanUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+            window.history.replaceState({}, '', cleanUrl);
+        }
+    });
 </script>
 
 <?php require __DIR__ . '/../partials/layout-end.php'; ?>

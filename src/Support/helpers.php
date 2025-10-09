@@ -42,23 +42,21 @@ if (!function_exists('textFilterPopover')) {
   function textFilterPopover(string $key, string $label): string
   {
     return <<<HTML
-<th class="py-2 px-4 relative min-w-[150px]">
-  <div class="flex items-center gap-2">
+<th class="py-2 px-4 relative min-w-[150px] text-center align-middle">
+  <div class="flex items-center justify-center gap-2">
     <span>{$label}</span>
     <button @click.stop="toggleFilter('{$key}')" class="p-1 rounded hover:bg-gray-100" title="Tìm theo {$label}">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
-        stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round"
-              d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" />
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" />
       </svg>
     </button>
   </div>
 
   <div x-show="openFilter.{$key}" x-transition @click.outside="openFilter.{$key}=false"
-       class="absolute z-40 mt-2 w-64 bg-white rounded-lg shadow border p-3" style="position: fixed;">
+       class="absolute z-40 mt-2 w-64 bg-white rounded-lg shadow border p-3 text-left" style="position: fixed;">
     <div class="font-semibold mb-2">Tìm kiếm theo "{$label}"</div>
     <input x-model.trim="filters.{$key}" class="w-full border rounded px-3 py-2" placeholder="Nhập {$label}">
-    <div class="mt-3 flex gap-2">
+    <div class="mt-3 flex gap-2 justify-end">
       <button @click="applyFilter('{$key}')" class="px-3 py-1 rounded bg-[#002975] text-white hover:opacity-90">Tìm</button>
       <button @click="resetFilter('{$key}')" class="px-3 py-1 rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Làm mới</button>
       <button @click="openFilter.{$key}=false" class="px-3 py-1 rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Đóng</button>
@@ -76,23 +74,21 @@ if (!function_exists('numberFilterPopover')) {
   function numberFilterPopover(string $key, string $label): string
   {
     return <<<HTML
-<th class="py-2 px-4 relative min-w-[150px]">
-  <div class="flex items-center gap-2">
+<th class="py-2 px-4 relative min-w-[150px] text-center align-middle">
+  <div class="flex items-center justify-center gap-2">
     <span>{$label}</span>
     <button @click.stop="toggleFilter('{$key}')" class="p-1 rounded hover:bg-gray-100" title="Tìm theo {$label}">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
-        stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round"
-              d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" />
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" />
       </svg>
     </button>
   </div>
 
   <div x-show="openFilter.{$key}" x-transition @click.outside="openFilter.{$key}=false"
-       class="absolute z-40 mt-2 w-64 bg-white rounded-lg shadow border p-3" style="position: fixed;">
+       class="absolute z-40 mt-2 w-64 bg-white rounded-lg shadow border p-3 text-left" style="position: fixed;">
     <div class="font-semibold mb-2">Tìm kiếm theo "{$label}"</div>
     <input type="number" x-model.number="filters.{$key}" class="w-full border rounded px-3 py-2" placeholder="Nhập số">
-    <div class="mt-3 flex gap-2">
+    <div class="mt-3 flex gap-2 justify-end">
       <button @click="applyFilter('{$key}')" class="px-3 py-1 rounded bg-[#002975] text-white hover:opacity-90">Tìm</button>
       <button @click="resetFilter('{$key}')" class="px-3 py-1 rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Làm mới</button>
       <button @click="openFilter.{$key}=false" class="px-3 py-1 rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Đóng</button>
@@ -180,42 +176,34 @@ if (!function_exists('selectFilterPopover')) {
    */
   function selectFilterPopover(string $key, string $label, array $options): string
   {
-    // build options html
     $optHtml = '';
     foreach ($options as $val => $text) {
       $optHtml .= "<option value=\"{$val}\">{$text}</option>";
     }
 
     return <<<HTML
-<th class="py-2 px-4 relative min-w-[150px]">
-  <div class="flex items-center gap-2">
-    <span>{$label}</span>
-    <button @click.stop="toggleFilter('{$key}')"
-            class="p-1 rounded hover:bg-gray-100" title="Lọc theo {$label}">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
-        stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round"
-              d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" />
-      </svg>
-    </button>
-  </div>
+    <th class="py-2 px-4 relative min-w-[150px] text-center align-middle">
+      <div class="flex items-center justify-center gap-2">
+        <span>{$label}</span>
+        <button @click.stop="toggleFilter('{$key}')" class="p-1 rounded hover:bg-gray-100" title="Lọc theo {$label}">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" />
+          </svg>
+        </button>
+      </div>
 
-  <div x-show="openFilter.{$key}" x-transition @click.outside="openFilter.{$key}=false"
-       class="absolute z-40 mt-2 w-64 bg-white rounded-lg shadow border p-3 space-y-3" style="position: fixed;">
-    <div class="font-semibold mb-1">Tìm theo "{$label}"</div>
-
-    <select x-model="filters.{$key}" class="w-full border rounded px-3 py-2">
-      {$optHtml}
-    </select>
-
-    <div class="flex gap-2 justify-end">
-      <button @click="applyFilter('{$key}')" class="px-3 py-1 rounded bg-[#002975] text-white hover:opacity-90">Tìm</button>
-      <button @click="resetFilter('{$key}')" class="px-3 py-1 rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Làm mới</button>
-      <button @click="openFilter.{$key}=false" class="px-3 py-1 rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Đóng</button>
-    </div>
-  </div>
-</th>
-HTML;
+      <div x-show="openFilter.{$key}" x-transition @click.outside="openFilter.{$key}=false"
+          class="absolute z-40 mt-2 w-64 bg-white rounded-lg shadow border p-3 space-y-3 text-left" style="position: fixed;">
+        <div class="font-semibold mb-1">Tìm theo "{$label}"</div>
+        <select x-model="filters.{$key}" class="w-full border rounded px-3 py-2">{$optHtml}</select>
+        <div class="flex gap-2 justify-end">
+          <button @click="applyFilter('{$key}')" class="px-3 py-1 rounded bg-[#002975] text-white hover:opacity-90">Tìm</button>
+          <button @click="resetFilter('{$key}')" class="px-3 py-1 rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Làm mới</button>
+          <button @click="openFilter.{$key}=false" class="px-3 py-1 rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Đóng</button>
+        </div>
+      </div>
+    </th>
+    HTML;
   }
 }
 

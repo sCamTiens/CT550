@@ -1,7 +1,7 @@
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
   <!-- Tên -->
   <div>
-    <label class="block text-sm mb-1">Tên sản phẩm <span class="text-red-500">*</span></label>
+    <label class="block text-sm text-black font-semibold mb-1">Tên sản phẩm <span class="text-red-500">*</span></label>
     <input x-model="form.name" @blur="touched.name = true; validateField('name')"
       @input="onNameInput(); touched.name && validateField('name')" <?= input_attr_maxlength() ?>
       :class="['w-full border rounded px-3 py-2', (touched.name && errors.name) ? 'border-red-500' : '']"
@@ -37,7 +37,7 @@
 
   <!-- SKU -->
   <div>
-    <label class="block text-sm mb-1 flex items-center gap-1">
+    <label class="block text-sm text-black font-semibold mb-1 flex items-center gap-1">
       SKU <span class="text-red-500">*</span>
       <span title="Hệ thống sẽ tự tạo SKU khi thêm mới; Bạn có thể bấm 'Tạo' để ghi đè"
         class="inline-flex items-center justify-center w-4 h-4 rounded-full border border-gray-300 text-gray-400 text-xs font-bold cursor-help">?</span>
@@ -58,7 +58,7 @@
 
   <!-- Giá bán (sale_price) -->
   <div>
-    <label class="block text-sm mb-1">Giá bán <span class="text-red-500">*</span></label>
+    <label class="block text-sm text-black font-semibold mb-1">Giá bán <span class="text-red-500">*</span></label>
     <input x-model="form.sale_priceFormatted"
       @input="onSalePriceInput($event); touched.sale_price && validateField('sale_price')"
       @blur="touched.sale_price = true; validateField('sale_price')"
@@ -70,7 +70,7 @@
 
   <!-- Giá nhập (cost_price) -->
   <div>
-    <label class="block text-sm mb-1">Giá nhập</label>
+    <label class="block text-sm text-black font-semibold mb-1">Giá nhập</label>
     <input x-model="form.cost_priceFormatted"
       @input="onCostPriceInput($event); touched.cost_price && validateField('cost_price')"
       @blur="touched.cost_price = true; validateField('cost_price')"
@@ -82,7 +82,7 @@
 
   <!-- Đơn vị -->
   <div>
-    <label class="block text-sm mb-1">Đơn vị <span class="text-red-500">*</span></label>
+    <label class="block text-sm text-black font-semibold mb-1">Đơn vị <span class="text-red-500">*</span></label>
     <select x-model="form.unit_id" required @blur="touched.unit_id = true; validateField('unit_id')"
       @change="touched.unit_id && validateField('unit_id')" :class="[
         'w-full border rounded px-3 py-2',
@@ -99,7 +99,7 @@
 
   <!-- Thương hiệu -->
   <div>
-    <label class="block text-sm mb-1">Thương hiệu <span class="text-red-500">*</span></label>
+    <label class="block text-sm text-black font-semibold mb-1">Thương hiệu <span class="text-red-500">*</span></label>
     <select x-model="form.brand_id" required @blur="touched.brand_id = true; validateField('brand_id')"
       @change="touched.brand_id && validateField('brand_id')" :class="[
         'w-full border rounded px-3 py-2',
@@ -116,7 +116,7 @@
 
   <!-- Loại sản phẩm -->
   <div>
-    <label class="block text-sm mb-1">Loại sản phẩm <span class="text-red-500">*</span></label>
+    <label class="block text-sm text-black font-semibold mb-1">Loại sản phẩm <span class="text-red-500">*</span></label>
     <select x-model="form.category_id" required @blur="touched.category_id = true; validateField('category_id')"
       @change="touched.category_id && validateField('category_id')" :class="[
         'w-full border rounded px-3 py-2',
@@ -134,14 +134,14 @@
 
   <!-- Pack size -->
   <div>
-    <label class="block text-sm mb-1">Quy cách</label>
+    <label class="block text-sm text-black font-semibold mb-1">Quy cách</label>
     <input x-model="form.pack_size" <?= input_attr_maxlength() ?> class="w-full border rounded px-3 py-2"
       placeholder="thùng 24 lon, 1kg...">
   </div>
 
   <!-- Barcode -->
   <div>
-    <label class="block text-sm mb-1">Mã vạch</label>
+    <label class="block text-sm text-black font-semibold mb-1">Mã vạch</label>
     <div class="flex gap-2">
       <input x-model="form.barcode" type="text" pattern="\d{13}" maxlength="13" class="w-full border rounded px-3 py-2"
         placeholder="VD: 8934567890123 (EAN-13)">
@@ -155,7 +155,7 @@
 
   <!-- Mô tả -->
   <div class="md:col-span-2">
-    <label class="block text-sm mb-1">Mô tả</label>
+    <label class="block text-sm text-black font-semibold mb-1">Mô tả</label>
     <textarea x-model="form.description" rows="3" <?= input_attr_maxlength(500) ?>
       class="w-full border rounded px-3 py-2" placeholder="Mô tả sản phẩm"></textarea>
   </div>

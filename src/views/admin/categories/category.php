@@ -23,8 +23,8 @@ $items = $items ?? [];
     <div style="overflow-x:auto; max-width:100%;">
       <table style="width:130%; min-width:1200px; border-collapse:collapse;">
         <thead>
-          <tr class="bg-gray-50 text-left text-slate-600">
-            <th class="py-2 px-4 text-left">Thao tác</th>
+          <tr class="bg-gray-50 text-slate-600">
+            <th class="py-2 px-4 text-center">Thao tác</th>
 
             <?= textFilterPopover('name', 'Tên') ?>
             <?= textFilterPopover('slug', 'Slug') ?>
@@ -45,7 +45,7 @@ $items = $items ?? [];
         <tbody>
           <template x-for="c in paginated()" :key="c.id">
             <tr class="border-t">
-              <td class="py-2 px-4 text-left space-x-2">
+              <td class="py-2 px-4 text-center space-x-2">
                 <!-- Sửa -->
                 <button @click="openEditModal(c)"
                   class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
@@ -69,19 +69,19 @@ $items = $items ?? [];
                 </button>
               </td>
 
-              <td class="py-2 px-4" x-text="c.name"></td>
-              <td class="py-2 px-4" x-text="c.slug || ''"></td>
-              <td class="py-2 px-4" x-text="parentName(c.parent_id)"></td>
-              <td class="py-2 px-4" x-text="c.sort_order ?? 0"></td>
-              <td class="py-2 px-4">
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="c.name"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="c.slug || ''"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="parentName(c.parent_id)"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="c.sort_order ?? 0"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line">
                 <span class="px-2 py-0.5 rounded text-xs"
                   :class="c.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
                   x-text="c.is_active ? 'Hiển thị' : 'Ẩn'"></span>
               </td>
-              <td class="py-2 px-4" x-text="c.created_at || '—'"></td>
-              <td class="py-2 px-4" x-text="c.created_by_name || '—'"></td>
-              <td class="py-2 px-4" x-text="c.updated_at || '—'"></td>
-              <td class="py-2 px-4" x-text="c.updated_by_name || '—'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="c.created_at || '—'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="c.created_by_name || '—'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="c.updated_at || '—'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="c.updated_by_name || '—'"></td>
             </tr>
           </template>
 
