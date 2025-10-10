@@ -117,13 +117,13 @@
             class="flex items-center gap-2 px-3 py-2 rounded hover:bg-[#002975] hover:text-white">
             <span>Quản lý khách hàng</span>
         </a>
-        <a href="/admin/roles" class="flex items-center gap-2 px-3 py-2 rounded hover:bg-[#002975] hover:text-white">
+        <!-- <a href="/admin/roles" class="flex items-center gap-2 px-3 py-2 rounded hover:bg-[#002975] hover:text-white">
             <span>Phân quyền (Vai trò)</span>
-        </a>
+        </a> -->
 
-        <a href="/admin/settings"
+        <!-- <a href="/admin/settings"
             class="flex items-center gap-2 px-3 py-2 mt-2 rounded hover:bg-[#002975] hover:text-white">
             <span>Cấu hình</span>
-        </a>
+        </a> -->
     </nav>
 </aside>

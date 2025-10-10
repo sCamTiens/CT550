@@ -20,7 +20,7 @@ $items = $items ?? [];
 
   <!-- Table -->
   <div class="bg-white rounded-xl shadow pb-4">
-    <div style="overflow-x:auto; max-width:100%;">
+    <div style="overflow-x:auto; max-width:100%;" class="pb-40">
       <table style="width:100%; min-width:1200px; border-collapse:collapse;">
         <thead>
           <tr class="bg-gray-50 text-slate-600">

@@ -15,6 +15,24 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script type="module" src="/assets/js/flatpickr-vi.js"></script>
 
+<?php
+// Server-side session check: nếu không có session admin/user -> chuyển về login
+if (session_status() === PHP_SESSION_NONE) session_start();
+$isLogged = !empty($_SESSION['admin_user'] ?? $_SESSION['user'] ?? null);
+// Tránh vòng redirect: nếu đang ở trang login hoặc các trang công khai thì không redirect
+$currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+$publicPaths = ['/admin/login', '/admin/logout', '/admin/forgot-password'];
+$isPublic = false;
+foreach ($publicPaths as $p) {
+    if (strpos($currentPath, $p) === 0) { $isPublic = true; break; }
+}
+
+if (! $isLogged && ! $isPublic) {
+    header('Location: /admin/login');
+    exit;
+}
+?>
+
 <script src="https://cdn.tailwindcss.com"></script>
 <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <script defer src="https://unpkg.com/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>

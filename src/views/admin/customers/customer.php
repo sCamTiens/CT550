@@ -15,7 +15,7 @@ $items = $items ?? [];
     <button class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]" @click="openCreate()">+ Thêm khách hàng</button>
   </div>
   <div class="bg-white rounded-xl shadow pb-4">
-    <div style="overflow-x:auto; max-width:100%;">
+    <div style="overflow-x:auto; max-width:100%;" class="pb-40">
       <table style="width:170%; min-width:1200px; border-collapse:collapse;">
         <thead>
           <tr class="bg-gray-50 text-slate-600">

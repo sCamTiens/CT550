@@ -15,7 +15,7 @@ $items = $items ?? [];
     <h1 class="text-3xl font-bold text-[#002975]">Quản lý kiểm kê kho</h1>
   </div>
   <div class="bg-white rounded-xl shadow pb-4">
-    <div style="overflow-x:auto; max-width:100%;">
+    <div style="overflow-x:auto; max-width:100%;" class="pb-40">
       <table style="width:1200px; min-width:900px; border-collapse:collapse;">
         <thead>
           <tr class="bg-gray-50 text-slate-600">
