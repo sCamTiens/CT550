@@ -119,6 +119,8 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/purchase-orders', [AdminPurchaseOrder::class, 'index']);
     $r->get('/api/purchase-orders', [AdminPurchaseOrder::class, 'apiIndex']);
     $r->post('/api/purchase-orders', [AdminPurchaseOrder::class, 'store']);
+    $r->put('/api/purchase-orders/{id}', [AdminPurchaseOrder::class, 'update']);
+    $r->delete('/api/purchase-orders/{id}', [AdminPurchaseOrder::class, 'destroy']);
 
     // Staffs
     $r->get('/staff', [AdminStaff::class, 'index']);
