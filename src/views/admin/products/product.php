@@ -31,7 +31,6 @@ $items = $items ?? [];
             <?= textFilterPopover('slug', 'Slug') ?>
             <?= textFilterPopover('brand', 'Thương hiệu') ?>
             <?= textFilterPopover('category', 'Loại') ?>
-            <?= numberFilterPopover('stock_qty', 'Tồn kho') ?>
             <?= numberFilterPopover('sale_price', 'Giá bán') ?>
             <?= numberFilterPopover('cost_price', 'Giá nhập') ?>
             <?= textFilterPopover('unit', 'Đơn vị tính') ?>
@@ -72,11 +71,10 @@ $items = $items ?? [];
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.slug"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.brand_name || ''"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.category_name || ''"></td>
-              <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="p.stock_qty || '0'"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="formatCurrency(p.sale_price)"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="formatCurrency(p.cost_price)"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.unit_name || ''"></td>
-              <td class="py-2 px-4 break-words whitespace-pre-line">
+              <td class="py-2 px-4 break-words whitespace-pre-line text-center">
                 <span class="px-2 py-0.5 rounded text-xs"
                   :class="p.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
                   x-text="p.is_active ? 'Bán' : 'Ẩn'"></span>
@@ -89,7 +87,7 @@ $items = $items ?? [];
           </template>
 
           <tr x-show="!loading && filtered().length===0">
-            <td colspan="11" class="py-12 text-center text-slate-500">
+            <td colspan="10" class="py-12 text-center text-slate-500">
               <div class="flex flex-col items-center justify-center">
                 <img src="/assets/images/Null.png" alt="Trống" class="w-40 h-24 mb-3 opacity-80">
                 <div class="text-lg text-slate-300">Trống</div>

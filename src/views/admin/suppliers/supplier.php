@@ -24,7 +24,7 @@ $items = $items ?? [];
             <table style="width:120%; min-width:1200px; border-collapse:collapse;">
                 <thead>
                     <tr class="bg-gray-50 text-slate-600">
-                        <th class="py-2 px-4 text-center">Thao tác</th> 
+                        <th class="py-2 px-4 text-center">Thao tác</th>
                         <?= textFilterPopover('name', 'Tên') ?>
                         <?= textFilterPopover('phone', 'SĐT') ?>
                         <?= textFilterPopover('email', 'Email') ?>
@@ -58,13 +58,18 @@ $items = $items ?? [];
                                 </button>
                             </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.name"></td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.phone || ''"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.phone || ''">
+                            </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.email || ''"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.address || ''"></td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.created_at || '—'"></td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.created_by_name || '—'"></td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.updated_at || '—'"></td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.updated_by_name || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-right"
+                                x-text="s.created_at || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.created_by_name || '—'">
+                            </td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-right"
+                                x-text="s.updated_at || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.updated_by_name || '—'">
+                            </td>
                         </tr>
                     </template>
 
@@ -115,9 +120,11 @@ $items = $items ?? [];
                 <?php require __DIR__ . '/form.php'; ?>
                 <div class="pt-2 flex justify-end gap-3">
                     <button type="button" class="px-4 py-2 rounded-md border" @click="openEdit=false">Đóng</button>
-                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.name"></td>
+                    <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.name"></td>
+                    <button
                         class="px-4 py-2 rounded-md text-[#002975] hover:bg-[#002975] hover:text-white border border-[#002975]"
-                        :disabled="submitting" x-text="submitting?'Đang lưu...':'Cập nhật'"></button>
+                        :disabled="submitting" x-text="submitting ? 'Đang lưu...' : 'Cập nhật'">
+                    </button>
                 </div>
             </form>
         </div>

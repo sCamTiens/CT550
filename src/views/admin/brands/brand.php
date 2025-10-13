@@ -86,7 +86,7 @@ $items = $items ?? [];
   <!-- MODAL: Create -->
   <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openAdd" x-transition.opacity
     style="display:none">
-    <div class="bg-white w-full max-w-3xl rounded-xl shadow" @click.outside="openAdd=false">
+    <div class="bg-white w-full max-w-xl rounded-xl shadow" @click.outside="openAdd=false">
       <div class="px-5 py-3 border-b flex justify-center items-center relative">
         <h3 class="font-semibold text-2xl text-[#002975]">Thêm thương hiệu</h3>
         <button class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
@@ -107,7 +107,7 @@ $items = $items ?? [];
   <!-- MODAL: Edit -->
   <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openEdit"
     x-transition.opacity style="display:none">
-    <div class="bg-white w-full max-w-3xl rounded-xl shadow" @click.outside="openEdit=false">
+    <div class="bg-white w-full max-w-xl rounded-xl shadow" @click.outside="openEdit=false">
       <div class="px-5 py-3 border-b flex justify-center items-center relative">
         <h3 class="font-semibold text-2xl text-[#002975]">Sửa thương hiệu</h3>
         <button class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>

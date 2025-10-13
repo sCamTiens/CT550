@@ -1049,3 +1049,13 @@ SELECT id, 'Admin', CURDATE(), 'Tài khoản admin mặc định'
 FROM users WHERE username = 'admin';
 
 ALTER TABLE users ADD COLUMN force_change_password BOOLEAN NOT NULL DEFAULT TRUE AFTER password_hash;
+
+ALTER TABLE product_batches ADD COLUMN unit_cost DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER current_qty;
+
+ALTER TABLE stock_movements ADD COLUMN unit_cost DECIMAL(12,2) NULL AFTER qty;
+
+ALTER TABLE order_items ADD COLUMN unit_cost DECIMAL(12,2) NULL AFTER unit_price;
+ALTER TABLE order_items ADD COLUMN line_cogs DECIMAL(14,2) NULL AFTER line_total;
+
+ALTER TABLE product_batches
+  ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE AFTER note;

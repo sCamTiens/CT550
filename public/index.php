@@ -23,6 +23,8 @@ use App\Controllers\Admin\StocktakeController as AdminStocktake;
 use App\Controllers\Admin\StaffController as AdminStaff;
 use App\Controllers\Admin\CustomerController as AdminCustomer;
 use App\Controllers\Admin\RoleController as AdminRole;
+use App\Controllers\Admin\ProductBatchController as AdminProductBatch;
+use App\Controllers\Admin\PurchaseOrderController as AdminPurchaseOrder;
 
 
 
@@ -104,6 +106,19 @@ $router->group('/admin', function (Router $r): void {
     // Stocks
     $r->get('/stocks', [AdminStock::class, 'index']);
     $r->get('/stocktakes', [AdminStocktake::class, 'index']);
+
+    // Product Batches (Inventory lots)
+    $r->get('/product-batches', [AdminProductBatch::class, 'index']);
+    $r->get('/api/product-batches', [AdminProductBatch::class, 'apiIndex']);
+    $r->post('/api/product-batches', [AdminProductBatch::class, 'store']);
+    $r->put('/api/product-batches/{id}', [AdminProductBatch::class, 'update']);
+    $r->delete('/api/product-batches/{id}', [AdminProductBatch::class, 'destroy']);
+    $r->post('/api/product-batches/{id}/restore', [AdminProductBatch::class, 'restore']);
+
+    // Purchase Orders / Receipts
+    $r->get('/purchase-orders', [AdminPurchaseOrder::class, 'index']);
+    $r->get('/api/purchase-orders', [AdminPurchaseOrder::class, 'apiIndex']);
+    $r->post('/api/purchase-orders', [AdminPurchaseOrder::class, 'store']);
 
     // Staffs
     $r->get('/staff', [AdminStaff::class, 'index']);

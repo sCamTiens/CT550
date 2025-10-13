@@ -1,5 +1,5 @@
 <?php
-// views/admin/stocktake/stocktake.php
+// views/admin/stock/stocktake.php
 $items = $items ?? [];
 ?>
 

@@ -14,7 +14,7 @@ class StocktakeController extends Controller
     /** GET /admin/stocktake (view) */
     public function index()
     {
-        return $this->view('admin/stocktake/stocktake');
+        return $this->view('admin/stock/stocktake');
     }
 
     /** GET /admin/api/stocktakes (list JSON) */
