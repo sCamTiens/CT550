@@ -3,22 +3,28 @@
   <!-- Họ tên -->
   <div>
     <label class="block text-sm text-black font-semibold mb-1">Họ tên <span class="text-red-500">*</span></label>
-    <input x-model="form.full_name" class="border rounded px-3 py-2 w-full" placeholder="Nhập họ tên" maxlength="250"
-      required>
+    <input x-model="form.full_name" @input="clearError('full_name'); validateField('full_name')"
+      @blur="touched.full_name = true; validateField('full_name')" class="border rounded px-3 py-2 w-full"
+      placeholder="Nhập họ tên" maxlength="250" required>
+    <p x-show="touched.full_name && errors.full_name" x-text="errors.full_name" class="text-red-500 text-xs mt-1"></p>
   </div>
 
   <!-- Email -->
   <div>
-    <label class="block text-sm text-black font-semibold mb-1">Email</label>
-    <input type="email" x-model="form.email" class="border rounded px-3 py-2 w-full" placeholder="Nhập email"
-      maxlength="250">
+    <label class="block text-sm text-black font-semibold mb-1">Email <span class="text-red-500">*</span></label>
+    <input type="email" x-model="form.email" @input="clearError('email'); validateField('email')"
+      @blur="touched.email = true; validateField('email')" class="border rounded px-3 py-2 w-full"
+      placeholder="Nhập email" maxlength="250" required>
+    <p x-show="touched.email && errors.email" x-text="errors.email" class="text-red-500 text-xs mt-1"></p>
   </div>
 
   <!-- Số điện thoại -->
   <div>
     <label class="block text-sm text-black font-semibold mb-1">Số điện thoại</label>
-    <input type="text" x-model="form.phone" class="border rounded px-3 py-2 w-full" placeholder="Nhập số điện thoại"
-      maxlength="32">
+    <input type="text" x-model="form.phone" @input="clearError('phone'); validateField('phone')"
+      @blur="touched.phone = true; validateField('phone')" class="border rounded px-3 py-2 w-full"
+      placeholder="Nhập số điện thoại" maxlength="32">
+    <p x-show="touched.phone && errors.phone" x-text="errors.phone" class="text-red-500 text-xs mt-1"></p>
   </div>
 
   <!-- Giới tính -->
@@ -28,7 +34,6 @@
       <option value="">-- Chọn --</option>
       <option value="Nam">Nam</option>
       <option value="Nữ">Nữ</option>
-      <option value="Khác">Khác</option>
     </select>
   </div>
 
@@ -37,7 +42,7 @@
     <label class="block text-sm text-black font-semibold mb-1">Ngày sinh</label>
     <div class="relative">
       <input type="text" x-model="form.date_of_birth" class="border rounded px-3 py-2 w-full customer-datepicker"
-        placeholder="Chọn ngày sinh" autocomplete="off">
+        placeholder="dd/mm/yyyy" autocomplete="off">
       <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
         <i class="fa-regular fa-calendar"></i>
       </span>
@@ -46,22 +51,24 @@
 
   <!-- Tài khoản -->
   <div>
-    <label class="block text-sm text-black font-semibold mb-1">Tài khoản <span class="text-red-500">*</span></label>
+    <label class="block text-sm text-black font-semibold mb-1">
+      Tài khoản <span class="text-red-500">*</span>
+    </label>
     <input x-model="form.username" @input="clearError('username'); validateField('username')"
       @blur="touched.username = true; validateField('username')" class="border rounded px-3 py-2 w-full"
-      placeholder="Nhập tài khoản" maxlength="50" required :disabled="!!form.user_id">
+      placeholder="Nhập tài khoản" maxlength="50" required :disabled="form.id">
     <p x-show="touched.username && errors.username" x-text="errors.username" class="text-red-500 text-xs mt-1"></p>
   </div>
 
-  <!-- Mật khẩu (chỉ khi tạo mới) -->
-  <template x-if="!form.user_id">
+  <!-- Mật khẩu và xác nhận mật khẩu chỉ hiển thị khi tạo mới -->
+  <template x-if="!form.id">
     <div>
       <label class="block text-sm text-black font-semibold mb-1">Mật khẩu <span class="text-red-500">*</span></label>
       <div class="flex gap-2 items-center">
         <div class="relative flex-1 min-w-0">
           <input :type="showPassword ? 'text' : 'password'" x-model="form.password"
             @input="clearError('password'); validateField('password')"
-            @blur="touched.password = true; validateField('password')" class="border rounded px-3 py-2 w-full pr-10"
+            @blur="touched.password = true; validateField('password'); if (!form.password) { errors.password = 'Mật khẩu không được để trống' } else if (form.password.length < 6) { errors.password = 'Mật khẩu phải ít nhất 6 ký tự' }" class="border rounded px-3 py-2 w-full pr-10"
             placeholder="Nhập mật khẩu" minlength="6" maxlength="50" autocomplete="new-password" required>
           <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900"
             @click="showPassword = !showPassword" tabindex="-1">
@@ -76,15 +83,14 @@
     </div>
   </template>
 
-  <!-- Xác nhận mật khẩu (chỉ khi tạo mới) -->
-  <template x-if="!form.user_id">
+  <template x-if="!form.id">
     <div>
       <label class="block text-sm text-black font-semibold mb-1">Xác nhận mật khẩu <span
           class="text-red-500">*</span></label>
       <div class="flex gap-2 items-center relative">
         <input :type="showPasswordConfirm ? 'text' : 'password'" x-model="form.password_confirm"
           @input="clearError('password_confirm'); validateField('password_confirm')"
-          @blur="touched.password_confirm = true; validateField('password_confirm')"
+          @blur="touched.password_confirm = true; validateField('password_confirm'); if (!form.password_confirm) { errors.password_confirm = 'Vui lòng nhập lại mật khẩu' } else if (form.password !== form.password_confirm) { errors.password_confirm = 'Mật khẩu không khớp' }" 
           class="border rounded px-3 py-2 w-full pr-10" placeholder="Nhập lại mật khẩu" minlength="6" maxlength="50"
           autocomplete="new-password" required>
         <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900"
@@ -108,18 +114,21 @@
 
   <!-- FontAwesome for eye icons (if not already included globally) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
-
   <!-- Flatpickr JS & CSS for date picker -->
   <link rel="stylesheet" href="/assets/css/flatpickr.min.css">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script type="module" src="/assets/js/flatpickr-vi.js"></script>
   <script>
-    nt.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function () {
       if (window.flatpickr) {
-        flatpickr('.customer-datepicker', {
-          dateFormat: 'Y-m-d',
-          locale: 'vi',
-          allowInput: true
+        document.querySelectorAll('.customer-datepicker').forEach(function(input) {
+          flatpickr(input, {
+            dateFormat: 'd/m/Y',
+            locale: 'vi',
+            allowInput: true,
+            static: true,
+            appendTo: input.parentElement
+          });
         });
       }
     });

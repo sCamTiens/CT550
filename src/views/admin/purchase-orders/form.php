@@ -143,7 +143,8 @@
                                         ]" x-text="p.name + ' (' + p.sku + ')'">
                                     </div>
                                 </template>
-                                <div x-show="filtered.length === 0" class="px-3 py-2 text-gray-400 text-sm">Không tìm thấy</div>
+                                <div x-show="filtered.length === 0" class="px-3 py-2 text-gray-400 text-sm">Không tìm
+                                    thấy</div>
                             </div>
                         </div>
 
@@ -155,8 +156,7 @@
 
                         <!-- Đơn giá -->
                         <div class="col-span-3">
-                            <input
-                                data-unit-cost-input
+                            <input data-unit-cost-input
                                 :value="l.unit_cost !== undefined && l.unit_cost !== null && l.unit_cost !== '' ? l.unit_cost.toLocaleString('en-US') : ''"
                                 @input="
                                     let val = $event.target.value.replace(/[^\d]/g, '');
@@ -164,9 +164,7 @@
                                     $event.target.value = l.unit_cost !== '' ? l.unit_cost.toLocaleString('en-US') : '';
                                 "
                                 @blur="$event.target.value = l.unit_cost !== '' ? l.unit_cost.toLocaleString('en-US') : ''"
-                                @focus="$event.target.select()"
-                                required placeholder="Đơn giá"
-                                inputmode="numeric"
+                                @focus="$event.target.select()" required placeholder="Đơn giá" inputmode="numeric"
                                 class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
                         </div>
 
@@ -210,11 +208,14 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         if (window.flatpickr) {
-            flatpickr('.purchase-date-picker', {
-                dateFormat: 'd/m/Y',
-                locale: 'vi',
-                allowInput: true,
-                defaultDate: undefined
+            document.querySelectorAll('.purchase-date-datepicker').forEach(function (input) {
+                flatpickr(input, {
+                    dateFormat: 'd/m/Y',
+                    locale: 'vi',
+                    allowInput: true,
+                    static: true,
+                    appendTo: input.parentElement
+                });
             });
         }
     });

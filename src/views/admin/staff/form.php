@@ -12,10 +12,12 @@
 
     <!-- Email -->
     <div>
-        <label class="block text-sm text-black font-semibold mb-1">Email</label>
+        <label class="block text-sm text-black font-semibold mb-1">
+            Email <span class="text-red-500">*</span>
+        </label>
         <input type="email" x-model="form.email" @input="clearError('email'); validateField('email')"
             @blur="touched.email = true; validateField('email')" class="border rounded px-3 py-2 w-full"
-            placeholder="Nhập email" maxlength="250">
+            placeholder="Nhập email" maxlength="250" required>
         <p x-show="touched.email && errors.email" x-text="errors.email" class="text-red-500 text-xs mt-1"></p>
     </div>
 
@@ -61,10 +63,14 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             if (window.flatpickr) {
-                flatpickr('.staff-datepicker', {
-                    dateFormat: 'Y-m-d',
-                    locale: 'vi',
-                    allowInput: true
+                document.querySelectorAll('.staff-datepicker').forEach(function (input) {
+                    flatpickr(input, {
+                        dateFormat: 'd/m/Y',
+                        locale: 'vi',
+                        allowInput: true,
+                        static: true,
+                        appendTo: input.parentElement
+                    });
                 });
             }
         });
@@ -88,7 +94,7 @@
                 <div class="relative flex-1 min-w-0">
                     <input :type="showPassword ? 'text' : 'password'" x-model="form.password"
                         @input="clearError('password'); validateField('password')"
-                        @blur="touched.password = true; validateField('password')"
+                        @blur="touched.password = true; validateField('password'); if (!form.password) { errors.password = 'Mật khẩu không được để trống' } else if (form.password.length < 6) { errors.password = 'Mật khẩu phải ít nhất 6 ký tự' }"
                         class="border rounded px-3 py-2 w-full pr-10" placeholder="Nhập mật khẩu" minlength="6"
                         maxlength="50" autocomplete="new-password" required>
                     <button type="button"
@@ -114,7 +120,7 @@
             <div class="flex gap-2 items-center relative">
                 <input :type="showPasswordConfirm ? 'text' : 'password'" x-model="form.password_confirm"
                     @input="clearError('password_confirm'); validateField('password_confirm')"
-                    @blur="touched.password_confirm = true; validateField('password_confirm')"
+                    @blur="touched.password_confirm = true; validateField('password_confirm'); if (!form.password_confirm) { errors.password_confirm = 'Vui lòng nhập lại mật khẩu' } else if (form.password !== form.password_confirm) { errors.password_confirm = 'Mật khẩu không khớp' }"
                     class="border rounded px-3 py-2 w-full pr-10" placeholder="Nhập lại mật khẩu" minlength="6"
                     maxlength="50" autocomplete="new-password" required>
                 <button type="button"

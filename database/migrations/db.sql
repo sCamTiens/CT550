@@ -1050,6 +1050,10 @@ FROM users WHERE username = 'admin';
 
 ALTER TABLE users ADD COLUMN force_change_password BOOLEAN NOT NULL DEFAULT TRUE AFTER password_hash;
 
+ALTER TABLE users ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT FALSE AFTER is_active;
+
+ALTER TABLE users MODIFY email VARCHAR(250) NOT NULL UNIQUE;
+
 ALTER TABLE product_batches ADD COLUMN unit_cost DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER current_qty;
 
 ALTER TABLE stock_movements ADD COLUMN unit_cost DECIMAL(12,2) NULL AFTER qty;

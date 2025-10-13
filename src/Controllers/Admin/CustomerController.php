@@ -46,12 +46,19 @@ class CustomerController extends Controller
         }
 
         $payload['created_by'] = $this->currentUserId();
+        $payload['updated_by'] = $this->currentUserId();
 
         try {
             $created = $this->repo->create($payload);
+
             if ($created === false) {
                 $this->json(['error' => 'Không thể tạo khách hàng'], 500);
             }
+
+            if (is_string($created)) {
+                $this->json(['error' => $created], 422); // báo chi tiết lỗi
+            }
+
             $this->json($created, 201);
         } catch (\PDOException $e) {
             $this->json([
@@ -142,4 +149,28 @@ class CustomerController extends Controller
     {
         return $_SESSION['user']['id'] ?? null;
     }
+
+    /**
+     * API: Đổi mật khẩu khách hàng
+     * PUT /admin/api/customers/{id}/password
+     */
+    public function changePassword($id)
+    {
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        $password = trim($data['password'] ?? '');
+        if ($password === '' || strlen($password) < 8) {
+            return $this->json(['error' => 'Mật khẩu phải ít nhất 8 ký tự'], 422);
+        }
+        try {
+            $ok = $this->repo->changePassword($id, $password);
+            if ($ok) {
+                $this->json(['ok' => true]);
+            } else {
+                $this->json(['error' => 'Không thể đổi mật khẩu'], 500);
+            }
+        } catch (\Throwable $e) {
+            $this->json(['error' => 'Lỗi khi đổi mật khẩu', 'detail' => $e->getMessage()], 500);
+        }
+    }
+
 }

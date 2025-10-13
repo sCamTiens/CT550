@@ -71,24 +71,33 @@ $items = $items ?? [];
                                     </svg>
                                 </button>
                             </td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.username"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line uppercase" x-text="s.username"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.full_name"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.staff_role"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.email"></td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.phone"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
+                                :class="(s.phone || '—') === '—' ? 'text-center' : 'text-right'"
+                                x-text="s.phone || '—'"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line text-center">
                                 <span x-text="s.is_active ? 'Hoạt động' : 'Khóa'"
                                     :class="s.is_active ? 'text-green-600' : 'text-red-600'"></span>
                             </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.hired_at"></td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.note"></td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line text-right"
-                                x-text="s.created_at || '—'"></td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.created_by_name || '—'">
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
+                                :class="(s.note || '—') === '—' ? 'text-center' : 'text-right'" x-text="s.note || '—'">
                             </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line text-right"
+                                x-text="s.created_at || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
+                                :class="(s.created_by_name || '—') === '—' ? 'text-center' : 'text-right'"
+                                x-text="s.created_by_name || '—'">
+                            </td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-right"
+                                :class="(s.updated_at || '—') === '—' ? 'text-center' : 'text-right'"
                                 x-text="s.updated_at || '—'"></td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.updated_by_name || '—'">
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
+                                :class="(s.updated_by_name || '—') === '—' ? 'text-center' : 'text-right'"
+                                x-text="s.updated_by_name || '—'">
                             </td>
                         </tr>
                     </template>
@@ -161,8 +170,9 @@ $items = $items ?? [];
                         <div class="relative flex-1 min-w-0">
                             <input :type="showChangePassword ? 'text' : 'password'"
                                 x-model="formChangePassword.password" class="border rounded px-3 py-2 w-full pr-10"
-                                placeholder="Nhập mật khẩu mới" minlength="6" maxlength="50" autocomplete="new-password"
-                                required>
+                                placeholder="Nhập mật khẩu mới" minlength="8" maxlength="50" autocomplete="new-password"
+                                required
+                                @blur="validateChangePasswordField('password')">
                             <button type="button"
                                 class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900"
                                 @click="showChangePassword = !showChangePassword" tabindex="-1">
@@ -173,7 +183,7 @@ $items = $items ?? [];
                             class="px-4 py-2 border rounded text-sm font-semibold text-[#002975] border-[#002975] hover:bg-[#002975] hover:text-white flex-shrink-0"
                             style="min-width:64px;" @click="generateChangePassword()">Tạo</button>
                     </div>
-                    <p x-show="changePasswordTouched && changePasswordErrors.password"
+                    <p x-show="changePasswordErrors.password"
                         x-text="changePasswordErrors.password" class="text-red-500 text-xs mt-1"></p>
                 </div>
                 <div>
@@ -182,15 +192,16 @@ $items = $items ?? [];
                     <div class="relative flex-1 min-w-0">
                         <input :type="showChangePasswordConfirm ? 'text' : 'password'"
                             x-model="formChangePassword.password_confirm" class="border rounded px-3 py-2 w-full pr-10"
-                            placeholder="Nhập lại mật khẩu" minlength="6" maxlength="50" autocomplete="new-password"
-                            required>
+                            placeholder="Nhập lại mật khẩu" minlength="8" maxlength="50" autocomplete="new-password"
+                            required
+                            @blur="validateChangePasswordField('password_confirm')">
                         <button type="button"
                             class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900"
                             @click="showChangePasswordConfirm = !showChangePasswordConfirm" tabindex="-1">
                             <i :class="showChangePasswordConfirm ? 'fa-regular fa-eye' : 'fa-regular fa-eye-slash'"></i>
                         </button>
                     </div>
-                    <p x-show="changePasswordTouched && changePasswordErrors.password_confirm"
+                    <p x-show="changePasswordErrors.password_confirm"
                         x-text="changePasswordErrors.password_confirm" class="text-red-500 text-xs mt-1"></p>
                 </div>
                 <div class="pt-2 flex justify-end gap-3">
@@ -268,15 +279,25 @@ $items = $items ?? [];
             },
 
             validateChangePassword() {
+                this.validateChangePasswordField('password');
+                this.validateChangePasswordField('password_confirm');
+                return Object.keys(this.changePasswordErrors).length === 0;
+            },
+
+            validateChangePasswordField(field) {
                 const pw = (this.formChangePassword.password || '').trim();
                 const pw2 = (this.formChangePassword.password_confirm || '').trim();
-                let errors = {};
-                if (!pw) errors.password = 'Mật khẩu không được để trống';
-                else if (pw.length < 6) errors.password = 'Mật khẩu phải ít nhất 6 ký tự';
-                if (!pw2) errors.password_confirm = 'Vui lòng nhập lại mật khẩu';
-                else if (pw !== pw2) errors.password_confirm = 'Mật khẩu không khớp';
-                this.changePasswordErrors = errors;
-                return Object.keys(errors).length === 0;
+                if (field === 'password') {
+                    if (!pw) this.changePasswordErrors.password = 'Mật khẩu không được để trống';
+                    else if (pw.length < 8) this.changePasswordErrors.password = 'Mật khẩu phải ít nhất 8 ký tự';
+                    else this.changePasswordErrors.password = '';
+                    // Also revalidate confirm if already filled
+                    if (pw2) this.validateChangePasswordField('password_confirm');
+                } else if (field === 'password_confirm') {
+                    if (!pw2) this.changePasswordErrors.password_confirm = 'Vui lòng nhập lại mật khẩu';
+                    else if (pw !== pw2) this.changePasswordErrors.password_confirm = 'Mật khẩu không khớp';
+                    else this.changePasswordErrors.password_confirm = '';
+                }
             },
 
             async submitChangePassword() {
@@ -339,26 +360,6 @@ $items = $items ?? [];
                 this.validateField('password_confirm');
             },
 
-            init() {
-                this.loading = true;
-                fetch('/admin/api/staff')
-                    .then(res => res.json())
-                    .then(data => this.items = data.items || [])
-                    .catch(e => console.error('Lỗi tải dữ liệu nhân viên:', e))
-                    .finally(() => this.loading = false);
-
-                // Kích hoạt flatpickr
-                setTimeout(() => {
-                    if (window.flatpickr) {
-                        flatpickr('.staff-datepicker', {
-                            dateFormat: 'Y-m-d',
-                            locale: 'vi',
-                            allowInput: true
-                        });
-                    }
-                }, 300);
-            },
-
             // Filter popover state
             openFilter: {
                 username: false, full_name: false, staff_role: false, email: false, phone: false, is_active: false, hired_at: false, note: false,
@@ -400,18 +401,22 @@ $items = $items ?? [];
                 switch (field) {
                     case 'username':
                         if (!value) msg = 'Tài khoản không được để trống';
-                        else if (value.length < 3) msg = 'Tài khoản phải có ít nhất 3 ký tự';
+                        else if (value.length < 6) msg = 'Tài khoản phải có ít nhất 6 ký tự';
+                        else if (!/^[a-zA-Z_.]+$/.test(value)) msg = 'Tài khoản chỉ được chứa chữ cái không dấu, dấu chấm hoặc gạch dưới';
                         break;
                     case 'full_name':
                         if (!value) msg = 'Họ tên không được để trống';
+                        else if (value.length < 3) msg = 'Họ tên phải có ít nhất 3 ký tự';
+                        else if (/[^a-zA-ZÀ-ỹà-ỹ\s'.-]/.test(value)) msg = 'Họ tên không được chứa số hoặc ký tự đặc biệt';
                         break;
                     case 'email':
-                        if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
+                        if (!value) msg = 'Email không được để trống';
+                        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
                             msg = 'Email không hợp lệ';
                         break;
                     case 'phone':
-                        if (value && !/^0\d{9,10}$/.test(value))
-                            msg = 'Số điện thoại phải bắt đầu bằng số 0 và có 10-11 chữ số';
+                        if (value && !/^0\d{9}$/.test(value))
+                            msg = 'Số điện thoại phải bắt đầu bằng số 0 và có 10 chữ số';
                         break;
                     case 'staff_role':
                         if (!value) msg = 'Vai trò không được để trống';
@@ -429,19 +434,19 @@ $items = $items ?? [];
 
             // Validate toàn bộ form
             validateAll() {
-                const requiredFields = ['username', 'full_name', 'staff_role'];
+                const requiredFields = ['username', 'full_name', 'staff_role', 'email'];
                 let ok = true;
                 requiredFields.forEach(f => {
                     if (!this.validateField(f)) ok = false;
                 });
-                if (!this.validateField('email')) ok = false;
                 if (!this.validateField('phone')) ok = false;
                 return ok;
             },
 
             paginated() {
-                const start = (this.currentPage - 1) * this.perPage;
-                return this.filtered().slice(start, start + this.perPage);
+                const arr = this.filtered();
+                if (!Array.isArray(arr)) return [];
+                return arr.filter(s => s && s.user_id != null);
             },
 
             // Filter logic giống productPage

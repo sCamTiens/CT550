@@ -13,6 +13,7 @@ class StaffController extends Controller
         AuthController::requirePasswordChanged();
         $this->repo = new StaffRepository();
     }
+
     /**
      * API: Đổi mật khẩu nhân viên
      * PUT /admin/api/staff/{id}/password
@@ -21,8 +22,8 @@ class StaffController extends Controller
     {
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
         $password = trim($data['password'] ?? '');
-        if ($password === '' || strlen($password) < 6) {
-            return $this->json(['error' => 'Mật khẩu phải ít nhất 6 ký tự'], 422);
+        if ($password === '' || strlen($password) < 8) {
+            return $this->json(['error' => 'Mật khẩu phải ít nhất 8 ký tự'], 422);
         }
         try {
             $ok = $this->repo->changePassword($id, $password);
@@ -35,7 +36,6 @@ class StaffController extends Controller
             $this->json(['error' => 'Lỗi khi đổi mật khẩu', 'detail' => $e->getMessage()], 500);
         }
     }
-
 
     /**
      * Giao diện trang quản lý nhân viên (View)
@@ -54,9 +54,33 @@ class StaffController extends Controller
     {
         try {
             $items = $this->repo->all();
-            $this->json(['items' => $items]);
+            // Đảm bảo mỗi phần tử là mảng (không phải object) và đủ trường
+            $data = array_map(function ($r) {
+                // Nếu là object chuyển thành mảng
+                if (is_object($r))
+                    $r = (array) $r;
+                return [
+                    'user_id' => $r['user_id'] ?? $r['id'] ?? null,
+                    'username' => $r['username'] ?? '',
+                    'full_name' => $r['full_name'] ?? '',
+                    'email' => $r['email'] ?? '',
+                    'phone' => $r['phone'] ?? '',
+                    'staff_role' => $r['staff_role'] ?? '',
+                    'hired_at' => $r['hired_at'] ?? null,
+                    'is_active' => $r['is_active'] ?? 1,
+                    'note' => $r['note'] ?? '',
+                    'created_by_name' => $r['created_by_name'] ?? '',
+                    'updated_by_name' => $r['updated_by_name'] ?? '',
+                    'created_at' => $r['created_at'] ?? '',
+                    'updated_at' => $r['updated_at'] ?? '',
+                ];
+            }, $items);
+            $this->json(['items' => $data]);
         } catch (\PDOException $e) {
-            $this->json(['error' => 'Không thể tải danh sách nhân viên', 'detail' => $e->getMessage()], 500);
+            $this->json([
+                'error' => 'Không thể tải danh sách nhân viên',
+                'detail' => $e->getMessage()
+            ], 500);
         }
     }
 
@@ -76,10 +100,7 @@ class StaffController extends Controller
         }
     }
 
-    /**
-     * API: Tạo mới nhân viên
-     * POST /admin/api/staff
-     */
+    /** API: Tạo mới nhân viên */
     public function store()
     {
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
@@ -99,16 +120,20 @@ class StaffController extends Controller
         try {
             $data['created_by'] = $this->currentUserId();
             $result = $this->repo->create($data);
+            if ($result === false) {
+                return $this->json(['error' => 'Không thể tạo nhân viên'], 500);
+            }
+            // Nếu repository trả về chuỗi lỗi (VD: "Email đã tồn tại trong hệ thống")
+            if (is_string($result)) {
+                return $this->json(['error' => $result], 422);
+            }
             $this->json($result);
         } catch (\PDOException $e) {
             $this->json(['error' => 'Lỗi cơ sở dữ liệu khi tạo nhân viên', 'detail' => $e->getMessage()], 500);
         }
     }
 
-    /**
-     * API: Cập nhật nhân viên
-     * PUT /admin/api/staff/{id}
-     */
+    /** API: Cập nhật nhân viên */
     public function update($id)
     {
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
@@ -127,25 +152,31 @@ class StaffController extends Controller
         try {
             $data['updated_by'] = $this->currentUserId();
             $result = $this->repo->update($id, $data);
+            if ($result === false) {
+                return $this->json(['error' => 'Không thể cập nhật nhân viên'], 500);
+            }
+            // Nếu repository trả về chuỗi lỗi (VD: "Email đã tồn tại trong hệ thống")
+            if (is_string($result)) {
+                return $this->json(['error' => $result], 422);
+            }
             $this->json($result);
         } catch (\PDOException $e) {
             $this->json(['error' => 'Lỗi cơ sở dữ liệu khi cập nhật nhân viên', 'detail' => $e->getMessage()], 500);
         }
     }
 
-    /**
-     * API: Xóa nhân viên
-     * DELETE /admin/api/staff/{id}
-     */
+    /** API: Xóa nhân viên */
     public function delete($id)
     {
         try {
-            $this->repo->delete($id);
-            $this->json(['ok' => true]);
+            $ok = $this->repo->delete($id);
+            return $ok
+                ? $this->json(['ok' => true])
+                : $this->json(['error' => 'Không thể xoá nhân viên'], 500);
         } catch (\RuntimeException $e) {
-            $this->json(['error' => $e->getMessage()], 409);
+            return $this->json(['error' => $e->getMessage()], 409);
         } catch (\PDOException $e) {
-            $this->json(['error' => 'Lỗi cơ sở dữ liệu khi xoá', 'detail' => $e->getMessage()], 500);
+            return $this->json(['error' => 'Lỗi cơ sở dữ liệu khi xoá', 'detail' => $e->getMessage()], 500);
         }
     }
 

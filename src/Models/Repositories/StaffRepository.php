@@ -7,18 +7,19 @@ use PDOException;
 
 class StaffRepository
 {
-    /** Đổi mật khẩu cho nhân viên */
-    public function changePassword(int|string $userId, string $newPassword): bool
-    {
-        $hash = password_hash($newPassword, PASSWORD_BCRYPT);
-        $sql = "UPDATE {$this->userTable} SET password_hash = ? WHERE id = ?";
-        $stmt = DB::pdo()->prepare($sql);
-        return $stmt->execute([$hash, $userId]);
-    }
     protected $userTable = 'users';
     protected $staffTable = 'staff_profiles';
 
-    /** Lấy toàn bộ danh sách nhân viên */
+    /** Đổi mật khẩu cho nhân viên */
+    public function changePassword(int|string $userId, string $newPassword): bool
+    {
+    $hash = password_hash($newPassword, PASSWORD_BCRYPT);
+    $sql = "UPDATE {$this->userTable} SET password_hash = ? WHERE id = ?";
+    $stmt = DB::pdo()->prepare($sql);
+    return $stmt->execute([$hash, $userId]);
+    }
+
+    /** Lấy toàn bộ danh sách nhân viên (chỉ nhân viên chưa bị xóa) */
     public function all(): array
     {
         $sql = "SELECT 
@@ -39,7 +40,7 @@ class StaffRepository
                 INNER JOIN {$this->staffTable} s ON u.id = s.user_id
                 LEFT JOIN {$this->userTable} cu ON cu.id = u.created_by
                 LEFT JOIN {$this->userTable} uu ON uu.id = u.updated_by
-                WHERE u.role_id = 2
+                WHERE u.role_id = 2 AND u.is_deleted = 0
                 ORDER BY u.id DESC";
         return DB::pdo()->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -65,32 +66,41 @@ class StaffRepository
                 INNER JOIN {$this->staffTable} s ON u.id = s.user_id
                 LEFT JOIN {$this->userTable} cu ON cu.id = u.created_by
                 LEFT JOIN {$this->userTable} uu ON uu.id = u.updated_by
-                WHERE u.id = ? AND u.role_id = 2";
+                WHERE u.id = ? AND u.role_id = 2 AND u.is_deleted = 0";
         $stmt = DB::pdo()->prepare($sql);
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
+    /** Xử lý lỗi duplicate constraint → trả về thông báo tiếng Việt */
+    private function mapDuplicateError(\PDOException $e): string|false
+    {
+        $msg = strtolower($e->getMessage());
+        if (str_contains($msg, 'username') || str_contains($msg, 'users.username')) {
+            return 'Tên tài khoản đã tồn tại trong hệ thống';
+        }
+        if (str_contains($msg, 'email') || str_contains($msg, 'users.email')) {
+            return 'Email đã tồn tại trong hệ thống';
+        }
+        return false;
+    }
+
     /** Thêm nhân viên mới */
-    public function create(array $data): array|false
+    public function create(array $data): array|string|false
     {
         try {
             DB::pdo()->beginTransaction();
 
-            // Chuẩn bị dữ liệu người dùng
             $username = trim($data['username'] ?? '');
             $fullName = trim($data['full_name'] ?? '');
             $email = $data['email'] ?? null;
             $phone = $data['phone'] ?? null;
 
-            // Mặc định mật khẩu 123456 nếu không truyền
             $passwordHash = password_hash('123456', PASSWORD_BCRYPT);
 
-            // Insert vào bảng users (set force_change_password = 1)
-            // Ghi created_by nếu controller truyền vào
             $sqlUser = "INSERT INTO {$this->userTable}
-                        (username, full_name, email, phone, password_hash, role_id, is_active, created_by, force_change_password)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    (username, full_name, email, phone, password_hash, role_id, is_active, created_by, force_change_password, is_deleted)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmtUser = DB::pdo()->prepare($sqlUser);
             $stmtUser->execute([
                 $username,
@@ -98,20 +108,19 @@ class StaffRepository
                 $email,
                 $phone,
                 $passwordHash,
-                2,  // role_id = 2 (Nhân viên)
-                $data['is_active'] ?? 1,  // is_active (use provided value or default to 1)
+                2,
+                $data['is_active'] ?? 1,
                 $data['created_by'] ?? null,
-                1   // force_change_password = true
+                1,   // force_change_password = true
+                0    // is_deleted = false
             ]);
             $userId = DB::pdo()->lastInsertId();
 
-            // Insert vào staff_profiles
             $sqlStaff = "INSERT INTO {$this->staffTable}
-                         (user_id, staff_role, hired_at, note)
-                         VALUES (?, ?, ?, ?)";
+                     (user_id, staff_role, hired_at, note)
+                     VALUES (?, ?, ?, ?)";
             $stmtStaff = DB::pdo()->prepare($sqlStaff);
 
-            // Chuẩn hóa giá trị ngày vào làm
             $hiredAt = trim($data['hired_at'] ?? '');
             if ($hiredAt === '' || strtolower($hiredAt) === 'null') {
                 $hiredAt = null;
@@ -124,25 +133,25 @@ class StaffRepository
             ]);
 
             DB::pdo()->commit();
-
             return $this->find($userId);
         } catch (PDOException $e) {
             DB::pdo()->rollBack();
-            error_log("StaffRepository::create error: " . $e->getMessage());
-            return false;
+            if ($err = $this->mapDuplicateError($e)) {
+                return $err;
+            }
+            throw $e;
         }
     }
 
     /** Cập nhật nhân viên */
-    public function update(int|string $id, array $data): array|false
+    public function update(int|string $id, array $data): array|string|false
     {
         try {
-            /** @var \PDO $pdo */
             DB::pdo()->beginTransaction();
 
             $sqlUser = "UPDATE {$this->userTable}
-                        SET username=?, full_name=?, email=?, phone=?, is_active=?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
-                        WHERE id=? AND role_id = 2";
+                    SET username=?, full_name=?, email=?, phone=?, is_active=?, updated_by=?, updated_at=CURRENT_TIMESTAMP
+                    WHERE id=? AND role_id=2 AND is_deleted=0";
             $stmtUser = DB::pdo()->prepare($sqlUser);
             $stmtUser->execute([
                 $data['username'] ?? null,
@@ -155,8 +164,8 @@ class StaffRepository
             ]);
 
             $sqlStaff = "UPDATE {$this->staffTable}
-                         SET staff_role=?, hired_at=?, note=?
-                         WHERE user_id=?";
+                     SET staff_role=?, hired_at=?, note=?
+                     WHERE user_id=?";
             $stmtStaff = DB::pdo()->prepare($sqlStaff);
             $stmtStaff->execute([
                 $data['staff_role'] ?? 'Kho',
@@ -167,21 +176,21 @@ class StaffRepository
 
             DB::pdo()->commit();
             $result = $this->find($id);
-            if (is_array($result) || $result === false) {
-                return $result;
-            }
-            return false;
+            return is_array($result) ? $result : false;
         } catch (PDOException $e) {
             DB::pdo()->rollBack();
-            error_log("StaffRepository::update error: " . $e->getMessage());
-            return false;
+            if ($err = $this->mapDuplicateError($e)) {
+                return $err;
+            }
+            throw $e;
         }
     }
 
-    /** Xóa nhân viên (user → staff_profiles bị xóa theo cascade) */
+    /** Xóa mềm nhân viên (chỉ đánh dấu is_deleted=1) */
     public function delete(int|string $id): bool
     {
-    $stmt = DB::pdo()->prepare("DELETE FROM {$this->userTable} WHERE id = ? AND role_id = 2");
+        $sql = "UPDATE {$this->userTable} SET is_deleted = 1, updated_at=CURRENT_TIMESTAMP WHERE id=? AND role_id=2 AND is_deleted=0";
+        $stmt = DB::pdo()->prepare($sql);
         return $stmt->execute([$id]);
     }
 }

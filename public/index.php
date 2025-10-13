@@ -59,7 +59,7 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/login', [AdminController::class, 'showLogin']);
     $r->post('/login', [AdminController::class, 'login']);
     $r->get('/logout', [AdminController::class, 'logout']);
-    
+
 
     // Profile
     $r->get('/profile', [AdminController::class, 'profile']);
@@ -134,6 +134,7 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/api/customers', [AdminCustomer::class, 'apiIndex']);
     $r->post('/api/customers', [AdminCustomer::class, 'store']);
     $r->put('/api/customers/{id}', [AdminCustomer::class, 'update']);
+    $r->put('/api/customers/{id}/password', [AdminCustomer::class, 'changePassword']);
     $r->delete('/api/customers/{id}', [AdminCustomer::class, 'destroy']);
 
 
