@@ -3,6 +3,7 @@
 
 <head><?php require __DIR__ . '/head.php'; ?></head>
 <?php require __DIR__ . '/header.php'; ?>
+
 <style>
      table th,
      table td {

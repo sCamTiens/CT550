@@ -51,12 +51,20 @@ $items = $items ?? [];
                                     </svg>
                                 </button>
                             </td>
-                                <td class="py-2 px-4 break-words whitespace-pre-line" x-text="u.name"></td>
-                                <td class="py-2 px-4 break-words whitespace-pre-line" x-text="u.slug"></td>
-                                <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="u.created_at || '—'"></td>
-                                <td class="py-2 px-4 break-words whitespace-pre-line" x-text="u.created_by_name || '—'"></td>
-                                <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="u.updated_at || '—'"></td>
-                                <td class="py-2 px-4 break-words whitespace-pre-line" x-text="u.updated_by_name || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="u.name"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="u.slug"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
+                                :class="(u.created_at || '—') === '—' ? 'text-center' : 'text-right'"
+                                x-text="u.created_at || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
+                                :class="(u.created_by_name || '—') === '—' ? 'text-center' : 'text-left'"
+                                x-text="u.created_by_name || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
+                                :class="(u.updated_at || '—') === '—' ? 'text-center' : 'text-right'"
+                                x-text="u.updated_at || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
+                                :class="(u.updated_by_name || '—') === '—' ? 'text-center' : 'text-left'"
+                                x-text="u.updated_by_name || '—'"></td>
                         </tr>
                     </template>
                     <tr x-show="!loading && filtered().length===0">

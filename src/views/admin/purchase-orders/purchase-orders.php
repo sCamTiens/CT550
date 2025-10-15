@@ -7,15 +7,15 @@ $items = $items ?? [];
 
 <!-- Breadcrumb + Title -->
 <nav class="text-sm text-slate-500 mb-4">
-    Admin / <span class="text-slate-800 font-medium">Quản lý đơn mua hàng</span>
+    Admin / Quản lý kho / <span class="text-slate-800 font-medium">Phiếu nhập kho</span>
 </nav>
 
 <div x-data="purchaseOrdersPage()" x-init="init()">
     <div class="flex items-center justify-between mb-4">
-        <h1 class="text-3xl font-bold text-[#002975]">Quản lý đơn mua hàng</h1>
+        <h1 class="text-3xl font-bold text-[#002975]">Phiếu nhập kho</h1>
         <button
             class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
-            @click="openCreate()">+ Thêm đơn mua</button>
+            @click="openCreate()">+ Thêm phiếu nhập kho</button>
     </div>
 
     <!-- Table -->
@@ -62,8 +62,12 @@ $items = $items ?? [];
                                 x-text="po.total_amount ? po.total_amount.toLocaleString('vi-VN'): '—'"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line text-right"
                                 x-text="po.paid_amount ? po.paid_amount.toLocaleString('vi-VN'): '0'"></td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="po.due_date || '—'"></td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="po.note || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
+                                :class="(po.due_date || '—') === '—' ? 'text-center' : 'text-right'"
+                                x-text="po.due_date || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
+                                :class="(po.note || '—') === '—' ? 'text-center' : 'text-left'" x-text="po.note || '—'">
+                            </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line text-center">
                                 <span x-text="statusLabel(po.payment_status)" :class="statusLabel(po.payment_status) === 'Đã thanh toán hết' 
                                     ? 'text-green-600 font-semibold'
@@ -72,8 +76,12 @@ $items = $items ?? [];
                                         : 'text-red-600 font-semibold')">
                                 </span>
                             </td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="po.received_at || '—'"></td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="po.created_by_name || '—'">
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
+                                :class="(po.received_at || '—') === '—' ? 'text-center' : 'text-right'"
+                                x-text="po.received_at || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
+                                :class="(po.created_by_name || '—') === '—' ? 'text-center' : 'text-left'"
+                                x-text="po.created_by_name || '—'">
                             </td>
                         </tr>
                     </template>
@@ -141,31 +149,30 @@ $items = $items ?? [];
             openAdd: false,
             openEdit: false,
             submitting: false,
+            touched: {},
+            errors: {},
             form: {},
             currentPage: 1,
             perPage: 20,
             perPageOptions: [10, 20, 50, 100],
 
-            // 🔹 thêm mấy biến/hàm frontend bị thiếu
+            // thêm mấy biến/hàm frontend bị thiếu
             supplier_id: null,
             suppliers: [],
+            product_id: null,
+            products: [],
             search: '',
             lines: [],
+            touchedLines: [],
             reset() {
                 this.form = {};
                 this.supplier_id = null;
                 this.suppliers = [];
+                this.product_id = null;
+                this.products = [];
                 this.search = '';
                 this.lines = [];
-            },
-            async fetchSuppliers() {
-                try {
-                    const res = await fetch('/admin/api/suppliers');
-                    const data = await res.json();
-                    this.suppliers = data.items || [];
-                } catch (e) {
-                    this.showToast('Không thể tải danh sách nhà cung cấp');
-                }
+                this.touchedLines = [];
             },
 
             async init() {
@@ -176,10 +183,90 @@ $items = $items ?? [];
                     this.items = data.items || [];
                     // gọi API lấy suppliers luôn khi load trang
                     this.fetchSuppliers();
+                    this.fetchProducts();
+                    // reset các lỗi và trạng thái touch
+                    this.touched = {};
+                    this.errors = {};
                 } catch (e) {
                     this.showToast('Không thể tải danh sách phiếu nhập');
                 } finally {
                     this.loading = false;
+                }
+            },
+
+            async fetchProducts() {
+                try {
+                    const res = await fetch('/admin/api/products');
+                    const data = await res.json();
+                    this.products = data.items || [];
+                } catch (e) {
+                    this.showToast('Không thể tải danh sách sản phẩm');
+                }
+            },
+
+            async fetchSuppliers() {
+                try {
+                    const res = await fetch('/admin/api/suppliers');
+                    const data = await res.json();
+                    this.suppliers = data.items || [];
+                } catch (e) {
+                    this.showToast('Không thể tải danh sách nhà cung cấp');
+                }
+            },
+
+            validateField(field, index = null) {
+                if (!this.errors) this.errors = {};
+                this.errors[field] = '';
+
+                // Nhà cung cấp
+                if (field === 'supplier_id' && !this.form.supplier_id) {
+                    this.errors[field] = 'Vui lòng chọn nhà cung cấp';
+                }
+
+                // Ngày nhập
+                if (field === 'created_at' && !this.form.created_at) {
+                    this.errors[field] = 'Vui lòng chọn ngày nhập';
+                }
+
+                // Dòng sản phẩm
+                if (field === 'lines' && this.lines.length === 0) {
+                    this.errors[field] = 'Vui lòng chọn ít nhất một mặt hàng';
+                }
+
+                // Kiểm tra từng dòng sản phẩm
+                if (['product', 'qty', 'unit_cost'].includes(field) && index !== null) {
+                    const line = this.lines[index];
+
+                    if (field === 'product' && !line.product_id) {
+                        // Chỉ hiện lỗi nếu đã submit hoặc đã blur input này
+                        if (this.touchedLines[index] || this.submitting) {
+                            this.errors[`product_${index}`] = 'Vui lòng chọn sản phẩm';
+                        } else {
+                            this.errors[`product_${index}`] = '';
+                        }
+                    } else {
+                        this.errors[`product_${index}`] = '';
+                    }
+
+                    if (field === 'qty') {
+                        if ((!line.qty || line.qty < 1) && (this.touchedLines[index] || this.submitting)) {
+                            this.errors[`qty_${index}`] = 'Số lượng phải lớn hơn hoặc bằng 1';
+                        } else if (line.qty > 999 && (this.touchedLines[index] || this.submitting)) {
+                            this.errors[`qty_${index}`] = 'Số lượng không vượt quá 999';
+                        } else {
+                            this.errors[`qty_${index}`] = '';
+                        }
+                    }
+
+                    if (field === 'unit_cost') {
+                        if ((line.unit_cost < 0) && (this.touchedLines[index] || this.submitting)) {
+                            this.errors[`unit_cost_${index}`] = 'Giá nhập không được âm';
+                        } else if (line.unit_cost > 999999999 && (this.touchedLines[index] || this.submitting)) {
+                            this.errors[`unit_cost_${index}`] = 'Giá nhập không vượt quá 999,999,999';
+                        } else {
+                            this.errors[`unit_cost_${index}`] = '';
+                        }
+                    }
                 }
             },
 
@@ -255,14 +342,32 @@ $items = $items ?? [];
                 if (p > this.totalPages()) p = this.totalPages();
                 this.currentPage = p;
             },
+            
             openCreate() {
                 this.reset();
-                this.openAdd = true;
+                // Always fetch suppliers before opening the form
+                    const fetchSuppliersPromise = typeof this.fetchSuppliers === 'function' ? this.fetchSuppliers() : Promise.resolve();
+                    const fetchProductsPromise = typeof this.fetchProducts === 'function' ? this.fetchProducts() : Promise.resolve();
+                    Promise.all([fetchSuppliersPromise, fetchProductsPromise]).then(() => {
+                        if (!this.lines || this.lines.length === 0) {
+                            this.lines.push({ product_id: '', qty: 1, unit_cost: 0 });
+                        }
+                        this.openAdd = true;
+                    });
             },
+
             openEditModal(po) {
                 this.form = { ...po };
-                this.openEdit = true;
+                // If editing, ensure lines is not empty
+                    const fetchProductsPromise = typeof this.fetchProducts === 'function' ? this.fetchProducts() : Promise.resolve();
+                    fetchProductsPromise.then(() => {
+                        if (!this.lines || this.lines.length === 0) {
+                            this.lines.push({ product_id: '', qty: 1, unit_cost: 0 });
+                        }
+                        this.openEdit = true;
+                    });
             },
+
             async submitCreate() {
                 this.submitting = true;
                 try {

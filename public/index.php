@@ -22,10 +22,12 @@ use App\Controllers\Admin\StockController as AdminStock;
 use App\Controllers\Admin\StocktakeController as AdminStocktake;
 use App\Controllers\Admin\StaffController as AdminStaff;
 use App\Controllers\Admin\CustomerController as AdminCustomer;
-use App\Controllers\Admin\RoleController as AdminRole;
 use App\Controllers\Admin\ProductBatchController as AdminProductBatch;
 use App\Controllers\Admin\PurchaseOrderController as AdminPurchaseOrder;
-
+use App\Controllers\Admin\ExpenseVoucherController as AdminExpenseVoucher;
+use App\Controllers\Admin\ReceiptVoucherController as AdminReceiptVoucher;
+use App\Controllers\Admin\OrderController as AdminOrder;
+use App\Controllers\Admin\StockOutController as AdminStockOut;
 
 
 /* --- load biến môi trường từ .env (đặt ở thư mục gốc dự án) --- */
@@ -121,6 +123,7 @@ $router->group('/admin', function (Router $r): void {
     $r->post('/api/purchase-orders', [AdminPurchaseOrder::class, 'store']);
     $r->put('/api/purchase-orders/{id}', [AdminPurchaseOrder::class, 'update']);
     $r->delete('/api/purchase-orders/{id}', [AdminPurchaseOrder::class, 'destroy']);
+    $r->get('/api/purchase-orders/unpaid', [AdminPurchaseOrder::class, 'unpaid']);
 
     // Staffs
     $r->get('/staff', [AdminStaff::class, 'index']);
@@ -139,10 +142,42 @@ $router->group('/admin', function (Router $r): void {
     $r->put('/api/customers/{id}/password', [AdminCustomer::class, 'changePassword']);
     $r->delete('/api/customers/{id}', [AdminCustomer::class, 'destroy']);
 
+    // Expense Vouchers
+    $r->get('/expense_vouchers', [AdminExpenseVoucher::class, 'index']);
+    $r->get('/api/expense_vouchers', [AdminExpenseVoucher::class, 'apiIndex']);
+    $r->post('/api/expense_vouchers', [AdminExpenseVoucher::class, 'store']);
+    $r->put('/api/expense_vouchers/{id}', [AdminExpenseVoucher::class, 'update']);
+    $r->delete('/api/expense_vouchers/{id}', [AdminExpenseVoucher::class, 'destroy']);
+    $r->get('/api/expense_vouchers/next-code', [AdminExpenseVoucher::class, 'nextCode']);
 
+    // Receipt Vouchers
+    $r->get('/receipt_vouchers', [AdminReceiptVoucher::class, 'index']);
+    $r->get('/api/receipt_vouchers', [AdminReceiptVoucher::class, 'apiIndex']);
+    $r->post('/api/receipt_vouchers', [AdminReceiptVoucher::class, 'store']);
+    $r->put('/api/receipt_vouchers/{id}', [AdminReceiptVoucher::class, 'update']);
+    $r->delete('/api/receipt_vouchers/{id}', [AdminReceiptVoucher::class, 'destroy']);
+    $r->get('/api/receipt_vouchers/next-code', [AdminReceiptVoucher::class, 'nextCode']);
 
+    // Orders (Quản lý bán hàng)
+    $r->get('/orders', [AdminOrder::class, 'index']);
+    $r->get('/api/orders', [AdminOrder::class, 'apiIndex']);
+    $r->post('/orders', [AdminOrder::class, 'store']);
+    $r->put('/orders/{id}', [AdminOrder::class, 'update']);
+    $r->delete('/orders/{id}', [AdminOrder::class, 'destroy']);
+    $r->get('/api/orders/next-code', [AdminOrder::class, 'nextCode']);
+    $r->get('/api/orders/unpaid', [AdminOrder::class, 'unpaid']);
+
+    // Stock Outs (Phiếu xuất kho)
+    $r->get('/stock-outs', [AdminStockOut::class, 'index']);
+    $r->get('/api/stock-outs', [AdminStockOut::class, 'apiIndex']);
+    $r->post('/api/stock-outs', [AdminStockOut::class, 'store']);
+    $r->put('/api/stock-outs/{id}', [AdminStockOut::class, 'update']);
+    $r->delete('/api/stock-outs/{id}', [AdminStockOut::class, 'destroy']);
+    $r->get('/api/stock-outs/next-code', [AdminStockOut::class, 'nextCode']);
+    $r->get('/api/stock-outs/pending', [AdminStockOut::class, 'pending']);
+    $r->post('/api/stock-outs/{id}/approve', [AdminStockOut::class, 'approve']);
+    $r->post('/api/stock-outs/{id}/complete', [AdminStockOut::class, 'complete']);
 });
-
 
 /* --- chạy router --- */
 $router->dispatch(Request::capture());

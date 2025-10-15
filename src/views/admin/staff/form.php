@@ -56,25 +56,6 @@
             </span>
         </div>
     </div>
-    <!-- Flatpickr JS & CSS for date picker -->
-    <link rel="stylesheet" href="/assets/css/flatpickr.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script type="module" src="/assets/js/flatpickr-vi.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            if (window.flatpickr) {
-                document.querySelectorAll('.staff-datepicker').forEach(function (input) {
-                    flatpickr(input, {
-                        dateFormat: 'd/m/Y',
-                        locale: 'vi',
-                        allowInput: true,
-                        static: true,
-                        appendTo: input.parentElement
-                    });
-                });
-            }
-        });
-    </script>
 
     <!-- Tài khoản -->
     <div>
@@ -143,9 +124,6 @@
         </select>
     </div>
 
-    <!-- FontAwesome for eye icons (if not already included globally) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
-
     <!-- Ghi chú -->
     <div class="md:col-span-2">
         <label class="block text-sm text-black font-semibold mb-1">Ghi chú</label>
@@ -153,3 +131,19 @@
             placeholder="Ghi chú thêm về nhân viên"></textarea>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (window.flatpickr) {
+            document.querySelectorAll('.staff-datepicker').forEach(function (input) {
+                flatpickr(input, {
+                    dateFormat: 'd/m/Y',
+                    locale: 'vi',
+                    allowInput: true,
+                    static: true,
+                    appendTo: input.parentElement
+                });
+            });
+        }
+    });
+</script>

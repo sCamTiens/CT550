@@ -31,7 +31,8 @@ $items = $items ?? [];
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.id"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.created_by_name"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.created_at"></td>
-              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.note"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line"
+              :class="(s.note || '—') === '—' ? 'text-center' : 'text-left'" x-text="s.note || '—'"></td>
             </tr>
           </template>
           <tr x-show="!loading && filtered().length===0">

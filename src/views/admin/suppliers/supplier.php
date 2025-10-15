@@ -58,17 +58,28 @@ $items = $items ?? [];
                                 </button>
                             </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.name"></td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.phone || ''">
-                            </td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.email || ''"></td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.address || ''"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line text-right"
+                                :class="(s.phone || '—') === '—' ? 'text-center' : 'text-right'"
+                                x-text="s.phone || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
+                                :class="(s.email || '—') === '—' ? 'text-center' : 'text-left'" x-text="s.email || '—'">
+                            </td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
+                                :class="(s.address || '—') === '—' ? 'text-center' : 'text-left'"
+                                x-text="s.address || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-right"
+                                :class="(s.created_at || '—') === '—' ? 'text-center' : 'text-right'"
                                 x-text="s.created_at || '—'"></td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.created_by_name || '—'">
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
+                                :class="(s.created_by_name || '—') === '—' ? 'text-center' : 'text-left'"
+                                x-text="s.created_by_name || '—'">
                             </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line text-right"
+                                :class="(s.updated_at || '—') === '—' ? 'text-center' : 'text-right'"
                                 x-text="s.updated_at || '—'"></td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.updated_by_name || '—'">
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
+                                :class="(s.updated_by_name || '—') === '—' ? 'text-center' : 'text-left'"
+                                x-text="s.updated_by_name || '—'">
                             </td>
                         </tr>
                     </template>

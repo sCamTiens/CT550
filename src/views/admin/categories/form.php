@@ -34,12 +34,18 @@
   <!-- Loại cha -->
   <div>
     <label class="block text-sm text-black font-semibold mb-1">Loại cha</label>
-    <select x-model="form.parent_id" class="border rounded px-3 py-2 w-full text-gray-700">
+
+    <input list="parentOptions" x-model="form.parent_id" :class="[
+      'w-full border rounded px-3 py-2',
+      form.parent_id === '' ? 'text-slate-400' : 'text-slate-900'
+    ]" placeholder="-- Không có --" />
+
+    <datalist id="parentOptions">
       <option value="">— Không có —</option>
       <template x-for="c in items" :key="c.id">
-        <option :value="c.id" x-text="c.name" :disabled="form.id && String(form.id) === String(c.id)"></option>
+        <option :value="c.name"></option>
       </template>
-    </select>
+    </datalist>
   </div>
 
   <!-- Thứ tự hiển thị -->

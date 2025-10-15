@@ -510,8 +510,9 @@ CREATE TABLE receipt_vouchers (
   order_id BIGINT NULL,              -- đơn hàng liên quan (nếu có)
   payment_id BIGINT NULL,            -- bản ghi thanh toán (nếu đã tạo payment)
   payer_user_id BIGINT NULL,         -- KH nội bộ (nếu có user)
-  payer_name VARCHAR(250) NULL,      -- tên người nộp (nếu không có user)
-  
+  payer_name VARCHAR(250) NULL,  
+  txn_ref VARCHAR(250) NULL AFTER method, -- mã giao dịch từ cổng/nhà cung cấp (nếu có)
+  bank_time DATETIME NULL AFTER received_at,  -- thời gian giao dịch bên ngân hàng (nếu có)
   method ENUM(
     'Tiền mặt','Chuyển khoản','Quẹt thẻ',
     'PayPal','Thanh toán khi nhận hàng (COD)'
@@ -523,9 +524,7 @@ CREATE TABLE receipt_vouchers (
   received_at DATETIME NULL,         -- thời điểm nhận
   note VARCHAR(255) NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   created_by BIGINT NULL,
-  updated_by BIGINT NULL,
   CONSTRAINT fk_rv_created_by FOREIGN KEY(created_by) REFERENCES users(id),
   CONSTRAINT fk_rv_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
 
@@ -699,9 +698,11 @@ CREATE TABLE expense_vouchers (
   purchase_order_id BIGINT NOT NULL,         -- phiếu nhập liên quan
   supplier_id BIGINT NULL,               -- nhà cung cấp (nếu chi rời/hoặc trùng với phiếu nhập)
   method ENUM('Tiền mặt','Chuyển khoản') NOT NULL,
+  txn_ref VARCHAR(250) NULL,                -- mã giao dịch ngân hàng (nếu có)
   amount DECIMAL(12,2) NOT NULL CHECK (amount >= 0),
   paid_by BIGINT NULL,                   -- nhân viên chi (users.id)
   paid_at DATETIME NULL,                 -- thời điểm chi
+  bank_time DATETIME NULL,               -- thời điểm ngân hàng xác nhận (nếu có)
   note VARCHAR(255) NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -764,38 +765,45 @@ CREATE TABLE stocktake_items (
   CONSTRAINT fk_stti_created_by FOREIGN KEY(created_by) REFERENCES users(id)
 ) ENGINE=InnoDB;
 
--- Phiếu xuất kho
-CREATE TABLE goods_issues (
+-- Phiếu xuất kho 
+CREATE TABLE stock_outs (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  order_id BIGINT NOT NULL,
-  code VARCHAR(32) NOT NULL UNIQUE,
-  status ENUM('Mới tạo','Đã đóng gói','Đã bàn giao cho đơn vị vận chuyển','Hoàn thành','Đã hủy')
-       NOT NULL DEFAULT 'Mới tạo',  
-  total_weight INT NOT NULL DEFAULT 0,
-  total_volume INT NOT NULL DEFAULT 0, 
-  note VARCHAR(255),
-  packed_by BIGINT NULL,
+  code VARCHAR(32) NOT NULL UNIQUE,      -- Mã phiếu xuất (XK20241015-00001)
+  type ENUM('sale','return','damage','other') NOT NULL DEFAULT 'sale',  -- Loại xuất: bán hàng, trả NCC, hư hỏng, khác
+  order_id BIGINT NULL,                   -- Đơn hàng liên quan (nếu xuất bán)
+  status ENUM('pending','approved','completed','cancelled') NOT NULL DEFAULT 'pending',
+  out_date DATETIME NOT NULL,             -- Ngày xuất kho
+  total_amount DECIMAL(14,2) NOT NULL DEFAULT 0,  -- Tổng giá trị xuất
+  note VARCHAR(500) NULL,                 -- Ghi chú
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   created_by BIGINT NULL,
-  CONSTRAINT fk_gi_created_by FOREIGN KEY(created_by) REFERENCES users(id),
-  CONSTRAINT fk_gi_order FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE,
-  CONSTRAINT fk_gi_user  FOREIGN KEY(packed_by) REFERENCES users(id) ON DELETE SET NULL,
-  INDEX idx_gi_order(order_id),
-  INDEX idx_gi_status(status)
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_so_order FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE SET NULL,
+  CONSTRAINT fk_so_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_so_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
+  INDEX idx_so_type(type),
+  INDEX idx_so_status(status),
+  INDEX idx_so_date(out_date),
+  INDEX idx_so_order(order_id)
 ) ENGINE=InnoDB;
 
 -- Chi tiết phiếu xuất kho
-CREATE TABLE goods_issue_items (
+CREATE TABLE stock_out_items (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  goods_issue_id BIGINT NOT NULL,
-  order_item_id BIGINT NOT NULL,
-  product_id BIGINT NOT NULL,
-  qty INT NOT NULL CHECK (qty > 0),
-  CONSTRAINT fk_gii_gi   FOREIGN KEY(goods_issue_id) REFERENCES goods_issues(id) ON DELETE CASCADE,
-  CONSTRAINT fk_gii_oit  FOREIGN KEY(order_item_id)   REFERENCES order_items(id),
-  CONSTRAINT fk_gii_prod FOREIGN KEY(product_id)      REFERENCES products(id),
-  INDEX idx_gii_gi(goods_issue_id)
+  stock_out_id BIGINT NOT NULL,           -- Mã phiếu xuất
+  product_id BIGINT NOT NULL,             -- Mã sản phẩm
+  batch_id BIGINT NULL,                   -- Mã lô (nếu có)
+  qty INT NOT NULL CHECK (qty > 0),      -- Số lượng xuất
+  unit_price DECIMAL(12,2) NOT NULL DEFAULT 0,  -- Đơn giá
+  total_price DECIMAL(14,2) NOT NULL DEFAULT 0, -- Thành tiền = qty * unit_price
+  note VARCHAR(255) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_soi_so FOREIGN KEY(stock_out_id) REFERENCES stock_outs(id) ON DELETE CASCADE,
+  CONSTRAINT fk_soi_prod FOREIGN KEY(product_id) REFERENCES products(id),
+  CONSTRAINT fk_soi_batch FOREIGN KEY(batch_id) REFERENCES product_batches(id) ON DELETE SET NULL,
+  INDEX idx_soi_so(stock_out_id),
+  INDEX idx_soi_prod(product_id)
 ) ENGINE=InnoDB;
 
 -- =====================================================================

@@ -39,7 +39,8 @@ $items = $items ?? [];
               <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.qty"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.min_qty"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.max_qty"></td>
-              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.updated_at || '—'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line"
+              :class="(s.updated_at || '—') === '—' ? 'text-center' : 'text-right'" x-text="s.updated_at || '—'"></td>
             </tr>
           </template>
           <tr x-show="!loading && filtered().length===0">

@@ -69,13 +69,17 @@ $items = $items ?? [];
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.barcode"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.name"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.slug"></td>
-              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.brand_name || ''"></td>
-              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.category_name || ''"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line"
+                :class="(p.brand_name || '—') === '—' ? 'text-center' : 'text-left'" x-text="p.brand_name || '—'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line"
+                :class="(p.category_name || '—') === '—' ? 'text-center' : 'text-right'"
+                x-text="p.category_name || '—'"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="formatCurrency(p.sale_price)">
               </td>
               <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="formatCurrency(p.cost_price)">
               </td>
-              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.unit_name || ''"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line"
+                :class="(p.unit_name || '—') === '—' ? 'text-center' : 'text-left'" x-text="p.unit_name || '—'"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line text-center">
                 <span class="px-2 py-0.5 rounded text-xs"
                   :class="p.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
@@ -84,12 +88,12 @@ $items = $items ?? [];
               <td class="py-2 px-4 break-words whitespace-pre-line text-right"
                 :class="(p.created_at || '—') === '—' ? 'text-center' : 'text-right'" x-text="p.created_at || '—'"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line"
-                :class="(p.created_by_name || '—') === '—' ? 'text-center' : 'text-right'"
+                :class="(p.created_by_name || '—') === '—' ? 'text-center' : 'text-left'"
                 x-text="p.created_by_name || '—'"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line text-right"
                 :class="(p.updated_at || '—') === '—' ? 'text-center' : 'text-right'" x-text="p.updated_at || '—'"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line"
-                :class="(p.updated_by_name || '—') === '—' ? 'text-center' : 'text-right'"
+                :class="(p.updated_by_name || '—') === '—' ? 'text-center' : 'text-left'"
                 x-text="p.updated_by_name || '—'"></td>
             </tr>
           </template>

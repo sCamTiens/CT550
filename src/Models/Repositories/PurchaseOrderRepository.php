@@ -10,6 +10,7 @@ class PurchaseOrderRepository
      * Create a purchase order (receipt) and for each line create a product_batch,
      * a stock_movement (Nhập kho) and update stocks. All in one transaction.
      */
+
     public function createReceipt(array $data, int $currentUser): int
     {
         $pdo = DB::pdo();
@@ -28,16 +29,27 @@ class PurchaseOrderRepository
                 $totalAmount += $qty * $unitCost;
             }
 
-            // Insert purchase order (payment_status mặc định = 1 = "Chưa đối soát")
+            // Xử lý trạng thái thanh toán và số tiền đã trả
+            $paymentStatus = $data['payment_status'] ?? 'Chưa đối soát';
+            $paidAmount = 0;
+            if ($paymentStatus === 'Đã thanh toán một phần' || $paymentStatus === 'Đã thanh toán hết') {
+                $paidAmount = isset($data['paid_amount']) ? (float)$data['paid_amount'] : 0;
+                if ($paymentStatus === 'Đã thanh toán hết') {
+                    $paidAmount = $totalAmount;
+                }
+            }
+
             $stmt = $pdo->prepare("
                 INSERT INTO purchase_orders 
                 (code, supplier_id, total_amount, paid_amount, payment_status, due_date, note, received_at, created_by, created_at, updated_at) 
-                VALUES (:code, :supplier_id, :total_amount, 0, 1, :due_date, :note, NOW(), :created_by, NOW(), NOW())
+                VALUES (:code, :supplier_id, :total_amount, :paid_amount, :payment_status, :due_date, :note, NOW(), :created_by, NOW(), NOW())
             ");
             $stmt->execute([
                 ':code' => $code,
                 ':supplier_id' => $data['supplier_id'] ?? null,
                 ':total_amount' => $totalAmount,
+                ':paid_amount' => $paidAmount,
+                ':payment_status' => $paymentStatus,
                 ':due_date' => $data['due_date'] ?? null,
                 ':note' => $data['note'] ?? null,
                 ':created_by' => $currentUser,
@@ -141,6 +153,23 @@ class PurchaseOrderRepository
                         ':updated_by2' => $currentUser,
                     ]);
                 }
+            }
+
+            // Nếu có thanh toán, tự động tạo phiếu chi
+            if ($paidAmount > 0) {
+                $expenseStmt = $pdo->prepare("
+                    INSERT INTO expense_vouchers (code, purchase_order_id, supplier_id, amount, paid_at, is_active, note, created_by, created_at, updated_by, updated_at)
+                    VALUES (:code, :purchase_order_id, :supplier_id, :amount, NOW(), 1, :note, :created_by, NOW(), :created_by, NOW())
+                ");
+                $expenseCode = 'PC-' . time();
+                $expenseStmt->execute([
+                    ':code' => $expenseCode,
+                    ':purchase_order_id' => $poId,
+                    ':supplier_id' => $data['supplier_id'] ?? null,
+                    ':amount' => $paidAmount,
+                    ':note' => 'Tự động tạo từ phiếu nhập',
+                    ':created_by' => $currentUser,
+                ]);
             }
 
             $pdo->commit();

@@ -82,52 +82,68 @@
 
   <!-- Đơn vị -->
   <div>
-    <label class="block text-sm text-black font-semibold mb-1">Đơn vị <span class="text-red-500">*</span></label>
-    <select x-model="form.unit_id" required @blur="touched.unit_id = true; validateField('unit_id')"
-      @change="touched.unit_id && validateField('unit_id')" :class="[
-        'w-full border rounded px-3 py-2',
-        (touched.unit_id && errors.unit_id) ? 'border-red-500' : '',
-        form.unit_id === '' ? 'text-slate-400' : 'text-slate-900'
-      ]">
-      <option value="">-- Chọn đơn vị --</option>
+    <label class="block text-sm text-black font-semibold mb-1">
+      Đơn vị <span class="text-red-500">*</span>
+    </label>
+
+    <input list="unitOptions" x-model="form.unit_id" @blur="touched.unit_id = true; validateField('unit_id')"
+      @input="touched.unit_id && validateField('unit_id')" :class="[
+      'w-full border rounded px-3 py-2',
+      (touched.unit_id && errors.unit_id) ? 'border-red-500' : '',
+      form.unit_id === '' ? 'text-slate-400' : 'text-slate-900'
+    ]" placeholder="-- Chọn đơn vị --" />
+
+    <datalist id="unitOptions">
       <template x-for="u in units" :key="u.id">
-        <option :value="String(u.id)" x-text="u.name"></option>
+        <option :value="u.name"></option>
       </template>
-    </select>
+    </datalist>
+
     <p class="text-red-600 text-xs mt-1" x-show="touched.unit_id && errors.unit_id" x-text="errors.unit_id"></p>
   </div>
 
   <!-- Thương hiệu -->
   <div>
-    <label class="block text-sm text-black font-semibold mb-1">Thương hiệu <span class="text-red-500">*</span></label>
-    <select x-model="form.brand_id" required @blur="touched.brand_id = true; validateField('brand_id')"
-      @change="touched.brand_id && validateField('brand_id')" :class="[
-        'w-full border rounded px-3 py-2',
-        (touched.brand_id && errors.brand_id) ? 'border-red-500' : '',
-        form.brand_id === '' ? 'text-slate-400' : 'text-slate-900'
-      ]">
-      <option value="">-- Chọn thương hiệu --</option>
+    <label class="block text-sm text-black font-semibold mb-1">
+      Thương hiệu <span class="text-red-500">*</span>
+    </label>
+
+    <input list="brandOptions" x-model="form.brand_id" @blur="touched.brand_id = true; validateField('brand_id')"
+      @input="touched.brand_id && validateField('brand_id')" :class="[
+      'w-full border rounded px-3 py-2',
+      (touched.brand_id && errors.brand_id) ? 'border-red-500' : '',
+      form.brand_id === '' ? 'text-slate-400' : 'text-slate-900'
+    ]" placeholder="-- Chọn thương hiệu --" />
+
+    <datalist id="brandOptions">
       <template x-for="b in brands" :key="b.id">
-        <option :value="String(b.id)" x-text="b.name"></option>
+        <option :value="b.name"></option>
       </template>
-    </select>
+    </datalist>
+
     <p class="text-red-600 text-xs mt-1" x-show="touched.brand_id && errors.brand_id" x-text="errors.brand_id"></p>
   </div>
 
   <!-- Loại sản phẩm -->
   <div>
-    <label class="block text-sm text-black font-semibold mb-1">Loại sản phẩm <span class="text-red-500">*</span></label>
-    <select x-model="form.category_id" required @blur="touched.category_id = true; validateField('category_id')"
-      @change="touched.category_id && validateField('category_id')" :class="[
-        'w-full border rounded px-3 py-2',
-        (touched.category_id && errors.category_id) ? 'border-red-500' : '',
-        form.category_id === '' ? 'text-slate-400' : 'text-slate-900'
-      ]">
-      <option value="">-- Chọn loại sản phẩm --</option>
+    <label class="block text-sm text-black font-semibold mb-1">
+      Loại sản phẩm <span class="text-red-500">*</span>
+    </label>
+
+    <input list="categoryOptions" x-model="form.category_id"
+      @blur="touched.category_id = true; validateField('category_id')"
+      @input="touched.category_id && validateField('category_id')" :class="[
+      'w-full border rounded px-3 py-2',
+      (touched.category_id && errors.category_id) ? 'border-red-500' : '',
+      form.category_id === '' ? 'text-slate-400' : 'text-slate-900'
+    ]" placeholder="-- Chọn loại sản phẩm --" />
+
+    <datalist id="categoryOptions">
       <template x-for="c in categories" :key="c.id">
-        <option :value="String(c.id)" x-text="c.name"></option>
+        <option :value="c.name"></option>
       </template>
-    </select>
+    </datalist>
+
     <p class="text-red-600 text-xs mt-1" x-show="touched.category_id && errors.category_id" x-text="errors.category_id">
     </p>
   </div>

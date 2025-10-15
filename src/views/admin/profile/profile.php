@@ -207,13 +207,13 @@ $avatarPath = !empty($user['avatar_url'])
                             const toast = document.createElement('div');
                             toast.className = "fixed top-5 right-5 z-[60] flex items-center w-[400px] p-4 mb-4 text-base font-semibold text-red-700 border-red-400 bg-white border-2 rounded-lg shadow";
                             toast.innerHTML = `
-            <svg class="flex-shrink-0 w-6 h-6 text-red-600 mr-3"
-                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />
-            </svg>
-            <div class="flex-1">Mật khẩu hiện tại không đúng.</div>`;
+                            <svg class="flex-shrink-0 w-6 h-6 text-red-600 mr-3"
+                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />
+                            </svg>
+                            <div class="flex-1">Mật khẩu hiện tại không đúng.</div>`;
                             box.appendChild(toast);
                             setTimeout(() => toast.remove(), 3500);
                         }
@@ -244,13 +244,13 @@ $avatarPath = !empty($user['avatar_url'])
                             const toast = document.createElement('div');
                             toast.className = "fixed top-5 right-5 z-[60] flex items-center w-[400px] p-4 mb-4 text-base font-semibold text-red-700 border-red-400 bg-white border-2 rounded-lg shadow";
                             toast.innerHTML = `
-            <svg class="flex-shrink-0 w-6 h-6 text-red-600 mr-3"
-                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />
-            </svg>
-            <div class="flex-1">Mật khẩu xác nhận không khớp.</div>`;
+                            <svg class="flex-shrink-0 w-6 h-6 text-red-600 mr-3"
+                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />
+                            </svg>
+                            <div class="flex-1">Mật khẩu xác nhận không khớp.</div>`;
                             box.appendChild(toast);
                             setTimeout(() => toast.remove(), 3500);
                         }
@@ -266,13 +266,13 @@ $avatarPath = !empty($user['avatar_url'])
                             const toast = document.createElement('div');
                             toast.className = "fixed top-5 right-5 z-[60] flex items-center w-[400px] p-4 mb-4 text-base font-semibold text-green-700 border-green-400 bg-green-50 border-l-4 rounded-lg shadow";
                             toast.innerHTML = `
-            <svg class="flex-shrink-0 w-6 h-6 text-green-600 mr-3"
-                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M5 13l4 4L19 7" />
-            </svg>
-            <div class="flex-1">Đổi mật khẩu thành công!</div>`;
+                            <svg class="flex-shrink-0 w-6 h-6 text-green-600 mr-3"
+                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 13l4 4L19 7" />
+                            </svg>
+                            <div class="flex-1">Đổi mật khẩu thành công!</div>`;
                             box.appendChild(toast);
                             setTimeout(() => toast.remove(), 3500);
                         }
@@ -384,11 +384,6 @@ $avatarPath = !empty($user['avatar_url'])
     </div>
 </div>
 
-<!-- Flatpickr JS -->
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script type="module" src="/assets/js/flatpickr-vi.js"></script>
-<script type="module" src="/assets/js/profile-datepicker.js"></script>
-
 <script>
     function profileForm() {
         return {
@@ -420,7 +415,7 @@ $avatarPath = !empty($user['avatar_url'])
                     else this.errors.email = '';
                 }
 
-                // ✅ Thay mới phần số điện thoại
+                // Thay mới phần số điện thoại
                 if (f === 'phone') {
                     const value = this.form.phone.trim();
                     if (!value) {

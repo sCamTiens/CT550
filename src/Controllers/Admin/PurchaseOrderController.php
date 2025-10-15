@@ -4,6 +4,7 @@ namespace App\Controllers\Admin;
 use App\Models\Repositories\PurchaseOrderRepository;
 use App\Models\Repositories\SupplierRepository;
 use App\Models\Repositories\ProductRepository;
+use App\Models\Repositories\ExpenseVoucherRepository;
 
 class PurchaseOrderController extends BaseAdminController
 {
@@ -72,6 +73,19 @@ class PurchaseOrderController extends BaseAdminController
 
         header('Content-Type: application/json; charset=utf-8');
         http_response_code(200);
+        echo json_encode(['items' => $items], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    /**
+     * GET /admin/api/purchase_orders/unpaid
+     * Trả về danh sách phiếu nhập chưa thanh toán hoặc thanh toán một phần
+     */
+    public function unpaid()
+    {
+        $repo = new ExpenseVoucherRepository();
+        $items = $repo->getUnpaidPurchaseOrders();
+        header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['items' => $items], JSON_UNESCAPED_UNICODE);
         exit;
     }

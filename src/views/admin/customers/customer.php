@@ -69,7 +69,7 @@ $items = $items ?? [];
               <td class="py-2 px-4 break-words whitespace-pre-line"
                 :class="(c.phone || '—') === '—' ? 'text-center' : 'text-right'" x-text="c.phone || '—'"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line"
-                :class="(c.gender || '—') === '—' ? 'text-center' : 'text-right'" x-text="c.gender || '—'"></td>
+                :class="(c.gender || '—') === '—' ? 'text-center' : 'text-left'" x-text="c.gender || '—'"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line"
                 :class="(c.date_of_birth || '—') === '—' ? 'text-center' : 'text-right'"
                 x-text="c.date_of_birth || '—'"></td>
@@ -77,15 +77,15 @@ $items = $items ?? [];
                 <span x-text="c.is_active ? 'Hoạt động' : 'Khóa'"
                   :class="c.is_active ? 'text-green-600' : 'text-red-600'"></span>
               </td>
-              <td class="py-2 px-4 break-words whitespace-pre-line text-right"
+              <td class="py-2 px-4 break-words whitespace-pre-line"
                 :class="(c.created_at || '—') === '—' ? 'text-center' : 'text-right'" x-text="c.created_at || '—'"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line"
-                :class="(c.created_by_name || '—') === '—' ? 'text-center' : 'text-right'"
+                :class="(c.created_by_name || '—') === '—' ? 'text-center' : 'text-left'"
                 x-text="c.created_by_name || '—'"></td>
-              <td class="py-2 px-4 break-words whitespace-pre-line text-right"
+              <td class="py-2 px-4 break-words whitespace-pre-line"
                 :class="(c.updated_at || '—') === '—' ? 'text-center' : 'text-right'" x-text="c.updated_at || '—'"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line"
-                :class="(c.updated_by_name || '—') === '—' ? 'text-center' : 'text-right'"
+                :class="(c.updated_by_name || '—') === '—' ? 'text-center' : 'text-left'"
                 x-text="c.updated_by_name || '—'"></td>
             </tr>
           </template>

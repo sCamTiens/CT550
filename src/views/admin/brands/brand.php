@@ -62,11 +62,17 @@ $items = $items ?? [];
               </td>
 
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="b.name"></td>
-              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="b.slug || ''"></td>
-              <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="b.created_at || '—'"></td>
-              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="b.created_by_name || '—'"></td>
-              <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="b.updated_at || '—'"></td>
-              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="b.updated_by_name || '—'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="b.slug || '—'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line"
+                :class="(b.created_at || '—') === '—' ? 'text-center' : 'text-right'" x-text="b.created_at || '—'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line"
+                :class="(b.created_by_name || '—') === '—' ? 'text-center' : 'text-left'"
+                x-text="b.created_by_name || '—'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line"
+                :class="(b.updated_at || '—') === '—' ? 'text-center' : 'text-right'" x-text="b.updated_at || '—'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line"
+                :class="(b.updated_by_name || '—') === '—' ? 'text-center' : 'text-left'"
+                x-text="b.updated_by_name || '—'"></td>
             </tr>
           </template>
 

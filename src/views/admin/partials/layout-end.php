@@ -80,6 +80,11 @@
     };
 </script>
 
+<!-- Flatpickr JS for date picker -->
+<link rel="stylesheet" href="/assets/css/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script type="module" src="/assets/js/flatpickr-vi.js"></script>
+
 </body>
 
 </html>

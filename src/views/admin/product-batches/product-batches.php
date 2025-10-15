@@ -48,10 +48,12 @@ $products = $products ?? [];
                             </td>
                             <td class="py-2 px-4" x-text="b.product_name || b.product_sku"></td>
                             <td class="py-2 px-4" x-text="b.batch_code"></td>
-                            <td class="py-2 px-4" x-text="b.exp_date || '—'"></td>
+                            <td class="py-2 px-4" :class="(b.exp_date || '—') === '—' ? 'text-center' : 'text-right'"
+                                x-text="b.exp_date || '—'"></td>
                             <td class="py-2 px-4 text-right" x-text="b.current_qty"></td>
                             <td class="py-2 px-4 text-right" x-text="formatCurrency(b.unit_cost)"></td>
-                            <td class="py-2 px-4" x-text="b.note || ''"></td>
+                            <td class="py-2 px-4" :class="(b.note || '—') === '—' ? 'text-center' : 'text-left'"
+                                x-text="b.note || '—'"></td>
                         </tr>
                     </template>
 
