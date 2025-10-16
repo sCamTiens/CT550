@@ -17,7 +17,9 @@ class OrderController extends BaseAdminController
     /** GET /admin/orders (trả về view) */
     public function index()
     {
-        return $this->view('admin/orders/order');
+        // Load items để truyền vào view
+        $items = $this->orderRepo->all();
+        return $this->view('admin/orders/order', ['items' => $items]);
     }
 
     /** GET /admin/api/orders (list) */
@@ -43,7 +45,7 @@ class OrderController extends BaseAdminController
     {
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
         $currentUser = $this->currentUserId();
-        
+
         try {
             $id = $this->orderRepo->create($data, $currentUser);
             header('Content-Type: application/json; charset=utf-8');
@@ -62,7 +64,7 @@ class OrderController extends BaseAdminController
     {
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
         $currentUser = $this->currentUserId();
-        
+
         try {
             $this->orderRepo->update($id, $data, $currentUser);
             header('Content-Type: application/json; charset=utf-8');
@@ -94,6 +96,15 @@ class OrderController extends BaseAdminController
     public function unpaid()
     {
         $items = $this->orderRepo->unpaid();
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['items' => $items], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    /** GET /admin/api/orders/{id}/items */
+    public function getItems($id)
+    {
+        $items = $this->orderRepo->getOrderItems($id);
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['items' => $items], JSON_UNESCAPED_UNICODE);
         exit;

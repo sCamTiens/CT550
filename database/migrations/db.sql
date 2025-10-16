@@ -1070,3 +1070,37 @@ ALTER TABLE order_items ADD COLUMN line_cogs DECIMAL(14,2) NULL AFTER line_total
 
 ALTER TABLE product_batches
   ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE AFTER note;
+
+ALTER TABLE purchase_order_items 
+  ADD COLUMN batch_code VARCHAR(64) NULL AFTER product_id,
+  ADD COLUMN mfg_date DATE NULL AFTER line_total,
+  ADD COLUMN exp_date DATE NULL AFTER mfg_date;
+
+  ALTER TABLE promotions
+  DROP COLUMN IF EXISTS promo_type,
+  DROP COLUMN IF EXISTS value,
+  DROP COLUMN IF EXISTS min_order_value,
+  DROP COLUMN IF EXISTS max_discount,
+  ADD COLUMN description TEXT AFTER name,
+  ADD COLUMN discount_type ENUM('percentage','fixed') NOT NULL DEFAULT 'percentage' AFTER description,
+  ADD COLUMN discount_value DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER discount_type,
+  ADD COLUMN apply_to ENUM('all','category','product') NOT NULL DEFAULT 'all' AFTER discount_value,
+  ADD COLUMN priority INT NOT NULL DEFAULT 0 AFTER apply_to;
+
+-- Tạo bảng promotion_categories (cho apply_to = 'category')
+CREATE TABLE IF NOT EXISTS promotion_categories (
+  promotion_id BIGINT NOT NULL,
+  category_id BIGINT NOT NULL,
+  PRIMARY KEY (promotion_id, category_id),
+  CONSTRAINT fk_pcat_promo FOREIGN KEY(promotion_id) REFERENCES promotions(id) ON DELETE CASCADE,
+  CONSTRAINT fk_pcat_cat FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Cập nhật promotion_products: bỏ created_by, updated_by
+ALTER TABLE promotion_products
+  DROP FOREIGN KEY IF EXISTS fk_ppromo_created_by,
+  DROP FOREIGN KEY IF EXISTS fk_ppromo_updated_by,
+  DROP COLUMN IF EXISTS created_at,
+  DROP COLUMN IF EXISTS updated_at,
+  DROP COLUMN IF EXISTS created_by,
+  DROP COLUMN IF EXISTS updated_by;

@@ -23,7 +23,7 @@ class StockOutRepository
             LEFT JOIN users cu ON cu.id = so.created_by
             LEFT JOIN users uu ON uu.id = so.updated_by
             LEFT JOIN orders o ON o.id = so.order_id
-            LEFT JOIN users c ON c.id = o.customer_id
+            LEFT JOIN users c ON c.id = o.user_id
             ORDER BY so.id DESC
             LIMIT 500
         ";
@@ -48,7 +48,7 @@ class StockOutRepository
             LEFT JOIN users cu ON cu.id = so.created_by
             LEFT JOIN users uu ON uu.id = so.updated_by
             LEFT JOIN orders o ON o.id = so.order_id
-            LEFT JOIN users c ON c.id = o.customer_id
+            LEFT JOIN users c ON c.id = o.user_id
             WHERE so.id = ?
         ";
         $st = $pdo->prepare($sql);

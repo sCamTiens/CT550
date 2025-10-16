@@ -7,72 +7,198 @@
     </div>
 
     <!-- Loại xuất -->
-    <div>
-        <label class="block text-sm text-black font-semibold mb-1">Loại xuất <span
-                class="text-red-500">*</span></label>
-        <select x-model="form.type" class="w-full border rounded px-3 py-2">
-            <option value="sale">Bán hàng</option>
-            <option value="return">Trả hàng NCC</option>
-            <option value="damage">Hư hỏng</option>
-            <option value="other">Khác</option>
-        </select>
+    <div class="relative" x-data="{
+        open: false,
+        search: '',
+        options: [
+            { value: 'sale',   label: 'Bán hàng' },
+            { value: 'return', label: 'Trả hàng NCC' },
+            { value: 'damage', label: 'Hư hỏng' },
+            { value: 'other',  label: 'Khác' }
+        ],
+        highlight: -1,
+        choose(opt) {
+            form.type = opt.value;
+            this.search = opt.label;
+            this.open = false;
+        },
+        reset() {
+            const selected = this.options.find(o => o.value === form.type);
+            this.search = selected ? selected.label : '';
+        }
+    }" x-effect="reset()" @click.away="open=false">
+
+        <label class="block text-sm text-black font-semibold mb-1">
+            Loại xuất <span class="text-red-500">*</span>
+        </label>
+
+        <div class="relative">
+            <input type="text" x-model="search" @focus="open=true" readonly
+                class="w-full border rounded px-3 py-2 pr-8 bg-white text-sm cursor-pointer focus:ring-1 focus:ring-[#002975] focus:border-[#002975]" />
+
+            <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" fill="none"
+                stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+        </div>
+
+        <!-- Dropdown -->
+        <div x-show="open" class="absolute z-20 mt-1 w-full bg-white border rounded shadow max-h-60 overflow-auto">
+            <template x-for="(opt, i) in options" :key="opt.value">
+                <div @click="choose(opt)" @mouseenter="highlight=i" @mouseleave="highlight=-1" :class="[
+                    highlight===i ? 'bg-[#002975] text-white' : 
+                    (form.type===opt.value ? 'bg-[#002975] text-white' : 
+                    'hover:bg-[#002975] hover:text-white text-black'),
+                    'px-3 py-2 cursor-pointer text-sm transition-colors'
+                 ]" x-text="opt.label">
+                </div>
+            </template>
+        </div>
     </div>
 
     <!-- Đơn hàng -->
-    <div x-data="orderDropdown()">
-        <label class="block text-sm text-black font-semibold mb-1">Đơn hàng (nếu có)</label>
+    <div class="relative" x-data="{
+            open: false,
+            search: '',
+            filtered: [],
+            highlight: -1,
+            get allOrders() {
+                return orders || [];
+            },
+            choose(order) {
+                form.order_id = order.id;
+                this.search = order.code + (order.customer_name ? ' - ' + order.customer_name : '');
+                this.open = false;
+            },
+            clear() {
+                form.order_id = '';
+                this.search = '';
+                this.filtered = this.allOrders;
+                this.open = false;
+            },
+            filter() {
+                if (!this.search) {
+                    this.filtered = this.allOrders;
+                } else {
+                    const s = this.search.toLowerCase();
+                    this.filtered = this.allOrders.filter(o => 
+                        o.code.toLowerCase().includes(s) ||
+                        (o.customer_name && o.customer_name.toLowerCase().includes(s))
+                    );
+                }
+            },
+            reset() {
+                const selected = this.allOrders.find(o => o.id == form.order_id);
+                this.search = selected ? (selected.code + (selected.customer_name ? ' - ' + selected.customer_name : '')) : '';
+                this.filtered = this.allOrders;
+                this.highlight = -1;
+            }
+        }" x-effect="reset()" @click.away="open = false">
+        <label class="block text-sm text-black font-semibold mb-1">
+            Mã đơn hàng
+        </label>
+
         <div class="relative">
-            <input type="text" x-model="search" @focus="open = true" @input="open = true"
-                :class="['w-full border rounded px-3 py-2', form.order_id ? 'text-slate-900' : 'text-slate-400']"
-                placeholder="Tìm kiếm đơn hàng...">
+            <input type="text" x-model="search" @focus="open = true; filter()" @input="filter()"
+                class="w-full border rounded px-3 py-2 pr-8 bg-white text-sm cursor-pointer focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
+                placeholder="-- Chọn đơn hàng --" />
 
-            <!-- Dropdown -->
-            <div x-show="open && filteredOrders().length > 0" @click.outside="open=false"
-                class="absolute z-50 w-full mt-1 bg-white border rounded shadow-lg max-h-60 overflow-y-auto">
-                <template x-for="o in filteredOrders()" :key="o.id">
-                    <div @click="select(o)"
-                        class="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b last:border-b-0">
-                        <div class="font-medium text-sm" x-text="o.code"></div>
-                        <div class="text-xs text-gray-500" x-text="o.customer_name"></div>
-                    </div>
-                </template>
-            </div>
+            <button x-show="form.order_id" type="button" @click.stop="clear()"
+                class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 focus:outline-none">
+                ✕
+            </button>
 
-            <!-- Không tìm thấy -->
-            <div x-show="open && search && filteredOrders().length === 0" @click.outside="open=false"
-                class="absolute z-50 w-full mt-1 bg-white border rounded shadow-lg px-3 py-2 text-slate-500 text-sm">
+            <svg x-show="!form.order_id"
+                class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" fill="none"
+                stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+        </div>
+
+        <div x-show="open" class="absolute z-20 mt-1 w-full bg-white border rounded shadow max-h-60 overflow-auto">
+            <template x-for="(order, i) in filtered" :key="order.id">
+                <div @click="choose(order)" @mouseenter="highlight = i" @mouseleave="highlight = -1" :class="[ 
+                highlight === i ? 'bg-[#002975] text-white' 
+                : (form.order_id == order.id ? 'bg-[#002975] text-white' 
+                : 'hover:bg-[#002975] hover:text-white text-black'), 
+                'px-3 py-2 cursor-pointer transition-colors text-sm'
+            ]">
+                    <div class="font-medium" x-text="order.code"></div>
+                    <div class="text-xs" x-show="order.customer_name" x-text="order.customer_name"></div>
+                </div>
+            </template>
+            <div x-show="filtered.length === 0" class="px-3 py-2 text-gray-400 text-sm">
                 Không tìm thấy đơn hàng
             </div>
-
-            <!-- Clear button -->
-            <button type="button" x-show="form.order_id" @click="clear()"
-                class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">✕</button>
         </div>
     </div>
 
     <!-- Trạng thái -->
-    <div>
-        <label class="block text-sm text-black font-semibold mb-1">Trạng thái <span
-                class="text-red-500">*</span></label>
-        <select x-model="form.status" class="w-full border rounded px-3 py-2">
-            <option value="pending">Chờ duyệt</option>
-            <option value="approved">Đã duyệt</option>
-            <option value="completed">Hoàn thành</option>
-            <option value="cancelled">Đã hủy</option>
-        </select>
+    <div class="relative" x-data="{
+            open: false,
+            options: [
+                { value: 'pending',   label: 'Chờ duyệt' },
+                { value: 'approved',  label: 'Đã duyệt' },
+                { value: 'completed', label: 'Hoàn thành' },
+                { value: 'cancelled', label: 'Đã hủy' }
+            ],
+            highlight: -1,
+            search: '',
+            choose(opt) {
+                form.status = opt.value;
+                this.search = opt.label;
+                this.open = false;
+            },
+            reset() {
+                const selected = this.options.find(o => o.value === form.status);
+                this.search = selected ? selected.label : '';
+            }
+        }" x-effect="reset()" @click.away="open = false">
+
+        <label class="block text-sm text-black font-semibold mb-1">
+            Trạng thái <span class="text-red-500">*</span>
+        </label>
+
+        <div class="relative">
+            <input type="text" x-model="search" @focus="open = true" readonly
+                class="w-full border rounded px-3 py-2 pr-8 bg-white text-sm cursor-pointer focus:ring-1 focus:ring-[#002975] focus:border-[#002975]" />
+
+            <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" fill="none"
+                stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+        </div>
+
+        <!-- Dropdown -->
+        <div x-show="open" class="absolute z-20 mt-1 w-full bg-white border rounded shadow max-h-60 overflow-auto">
+            <template x-for="(opt, i) in options" :key="opt.value">
+                <div @click="choose(opt)" @mouseenter="highlight = i" @mouseleave="highlight = -1" :class="[
+                    highlight === i ? 'bg-[#002975] text-white' :
+                    (form.status === opt.value ? 'bg-[#002975] text-white' :
+                    'hover:bg-[#002975] hover:text-white text-black'),
+                    'px-3 py-2 cursor-pointer text-sm transition-colors'
+                 ]" x-text="opt.label">
+                </div>
+            </template>
+        </div>
     </div>
 
     <!-- Ngày xuất -->
     <div>
-        <label class="block text-sm text-black font-semibold mb-1">Ngày xuất <span
-                class="text-red-500">*</span></label>
-        <input x-model="form.out_date" type="date" class="w-full border rounded px-3 py-2">
+        <label class="block text-sm text-black font-semibold mb-1">Ngày xuất <span class="text-red-500">*</span></label>
+        <div class="relative">
+            <input type="text" x-model="form.out_date" class="w-full border rounded px-3 py-2 stock-out-datepicker"
+                placeholder="Chọn ngày xuất" autocomplete="off"
+                x-init="flatpickr($el, {dateFormat: 'd/m/Y', allowInput: true, locale: 'vi'})" required>
+            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                <i class="fa-regular fa-calendar"></i>
+            </span>
+        </div>
     </div>
 
     <!-- Tổng tiền -->
     <div>
-        <label class="block text-sm text-black font-semibold mb-1">Tổng tiền <span
-                class="text-red-500">*</span></label>
+        <label class="block text-sm text-black font-semibold mb-1">Tổng tiền <span class="text-red-500">*</span></label>
         <input x-model="form.total_amountFormatted" @input="onAmountInput($event)"
             class="w-full border rounded px-3 py-2" placeholder="Nhập tổng tiền">
         <p class="text-red-600 text-xs mt-1" x-show="touched.total_amount && errors.total_amount"
@@ -88,48 +214,18 @@
 </div>
 
 <script>
-    function orderDropdown() {
-        return {
-            open: false,
-            search: '',
-
-            get orders() {
-                return this.$root.orders || [];
-            },
-
-            filteredOrders() {
-                if (!this.search) return this.orders;
-                const s = this.search.toLowerCase();
-                return this.orders.filter(o =>
-                    o.code.toLowerCase().includes(s) ||
-                    (o.customer_name && o.customer_name.toLowerCase().includes(s))
-                );
-            },
-
-            select(order) {
-                this.$root.form.order_id = String(order.id);
-                this.search = order.code + (order.customer_name ? ' - ' + order.customer_name : '');
-                this.open = false;
-            },
-
-            clear() {
-                this.$root.form.order_id = '';
-                this.search = '';
-                this.open = false;
-            },
-
-            reset() {
-                this.search = '';
-                this.open = false;
-            },
-
-            init() {
-                // Nếu đang edit và có order_id, hiển thị mã đơn
-                if (this.$root.form.order_id) {
-                    const o = this.orders.find(x => String(x.id) === String(this.$root.form.order_id));
-                    if (o) this.search = o.code + (o.customer_name ? ' - ' + o.customer_name : '');
-                }
-            }
-        };
-    }
+    document.addEventListener('DOMContentLoaded', function () {
+        if (window.flatpickr) {
+            document.querySelectorAll('.stock-out-datepicker').forEach(function (input) {
+                flatpickr(input, {
+                    dateFormat: 'Y-m-d',
+                    locale: 'vi',
+                    allowInput: true,
+                    static: false,
+                    appendTo: document.body,
+                    position: 'auto center'
+                });
+            });
+        }
+    });
 </script>

@@ -57,7 +57,7 @@ class PurchaseOrderRepository
 
             $poId = (int) $pdo->lastInsertId();
 
-            // 👉 Insert items
+            // Insert items
             $poiStmt = $pdo->prepare("
                 INSERT INTO purchase_order_items (purchase_order_id, product_id, qty, unit_cost, line_total) 
                 VALUES (:po, :product_id, :qty, :unit_cost, :line_total)
@@ -114,13 +114,20 @@ class PurchaseOrderRepository
                             ':updated_by' => $currentUser,
                             ':updated_by2' => $currentUser,
                         ]);
+                        
+                        // Cập nhật tồn kho trong bảng products
+                        $upProduct = $pdo->prepare("UPDATE products SET stock = stock + :qty WHERE id = :product_id");
+                        $upProduct->execute([
+                            ':qty' => $bqty,
+                            ':product_id' => $productId
+                        ]);
                     }
                     // Bắt buộc tổng batch = line qty
                     if ($sum !== $qty) {
                         throw new \Exception("Sum of batches ($sum) does not equal line qty ($qty)");
                     }
                 } else {
-                    // 👉 Single batch
+                    // Single batch
                     $batchData = [
                         'product_id' => $productId,
                         'batch_code' => $ln['batch_code'] ?? null,
@@ -152,11 +159,32 @@ class PurchaseOrderRepository
                         ':updated_by' => $currentUser,
                         ':updated_by2' => $currentUser,
                     ]);
+                    
+                    // Cập nhật tồn kho trong bảng products
+                    $upProduct = $pdo->prepare("UPDATE products SET stock = stock + :qty WHERE id = :product_id");
+                    $upProduct->execute([
+                        ':qty' => $qty,
+                        ':product_id' => $productId
+                    ]);
                 }
             }
 
-            // Nếu có thanh toán, tự động tạo phiếu chi
+            // Tạo bút toán công nợ: tăng công nợ (debit) cho tổng tiền phiếu nhập
+            $apDebitStmt = $pdo->prepare("
+                INSERT INTO ap_ledger (supplier_id, ref_type, ref_id, debit, credit, note, created_by, created_at)
+                VALUES (:supplier_id, 'Phiếu nhập', :ref_id, :debit, 0, :note, :created_by, NOW())
+            ");
+            $apDebitStmt->execute([
+                ':supplier_id' => $data['supplier_id'],
+                ':ref_id' => $poId,
+                ':debit' => $totalAmount,
+                ':note' => 'Phát sinh công nợ từ phiếu nhập #' . $poId,
+                ':created_by' => $currentUser
+            ]);
+
+            // Nếu có thanh toán, tự động tạo phiếu chi và giảm công nợ (credit)
             if ($paidAmount > 0) {
+                // 1. Tạo phiếu chi
                 $expenseStmt = $pdo->prepare("
                     INSERT INTO expense_vouchers (code, purchase_order_id, supplier_id, amount, paid_at, is_active, note, created_by, created_at, updated_by, updated_at)
                     VALUES (:code, :purchase_order_id, :supplier_id, :amount, NOW(), 1, :note, :created_by, NOW(), :created_by, NOW())
@@ -169,6 +197,21 @@ class PurchaseOrderRepository
                     ':amount' => $paidAmount,
                     ':note' => 'Tự động tạo từ phiếu nhập',
                     ':created_by' => $currentUser,
+                ]);
+
+                $expenseId = $pdo->lastInsertId();
+
+                // 2. Giảm công nợ (credit) cho số tiền đã thanh toán
+                $apCreditStmt = $pdo->prepare("
+                    INSERT INTO ap_ledger (supplier_id, ref_type, ref_id, debit, credit, note, created_by, created_at)
+                    VALUES (:supplier_id, 'Phiếu chi', :ref_id, 0, :credit, :note, :created_by, NOW())
+                ");
+                $apCreditStmt->execute([
+                    ':supplier_id' => $data['supplier_id'],
+                    ':ref_id' => $expenseId,
+                    ':credit' => $paidAmount,
+                    ':note' => 'Thanh toán phiếu chi #' . $expenseCode,
+                    ':created_by' => $currentUser
                 ]);
             }
 

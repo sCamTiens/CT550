@@ -1,5 +1,5 @@
 <?php
-// views/admin/staff/staff.php
+// views/admin/customers/customer.php
 $items = $items ?? [];
 ?>
 
@@ -18,10 +18,11 @@ $items = $items ?? [];
   </div>
   <div class="bg-white rounded-xl shadow pb-4">
     <div style="overflow-x:auto; max-width:100%;" class="pb-40">
-      <table style="width:170%; min-width:1200px; border-collapse:collapse;">
+      <table style="width:190%; min-width:1200px; border-collapse:collapse;">
         <thead>
           <tr class="bg-gray-50 text-slate-600">
             <th class="py-2 px-4 whitespace-nowrap text-center">Thao tác</th>
+            <th class="py-2 px-4 whitespace-nowrap text-center">Ảnh đại diện</th>
             <?= textFilterPopover('username', 'Tài khoản') ?>
             <?= textFilterPopover('full_name', 'Họ tên') ?>
             <?= textFilterPopover('email', 'Email') ?>
@@ -55,6 +56,16 @@ $items = $items ?? [];
                       d="M16 10V7a4 4 0 00-8 0v3M5 10h14a1 1 0 011 1v8a1 1 0 01-1 1H5a1 1 0 01-1-1v-8a1 1 0 011-1z" />
                   </svg>
                 </button>
+                <button @click="openAddressModal(c.id, c.full_name)"
+                  class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                  title="Xem địa chỉ">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </button>
                 <button @click="remove(c.id)" class="p-2 rounded hover:bg-gray-100 text-[#002975]" title="Xóa">
                   <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor" stroke-width="2">
@@ -62,6 +73,22 @@ $items = $items ?? [];
                       d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 </button>
+              </td>
+              <td class="py-2 px-4 text-center">
+                <template x-if="c.avatar_url">
+                  <img :src="c.avatar_url" :alt="c.full_name"
+                    class="w-12 h-12 rounded-full object-cover mx-auto border-2 border-gray-200">
+                </template>
+                <template x-if="!c.avatar_url">
+                  <div
+                    class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center mx-auto text-gray-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                      stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                </template>
               </td>
               <td class="py-2 px-4 break-words whitespace-pre-line uppercase" x-text="c.username"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="c.full_name"></td>
@@ -72,7 +99,7 @@ $items = $items ?? [];
                 :class="(c.gender || '—') === '—' ? 'text-center' : 'text-left'" x-text="c.gender || '—'"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line"
                 :class="(c.date_of_birth || '—') === '—' ? 'text-center' : 'text-right'"
-                x-text="c.date_of_birth || '—'"></td>
+                x-text="formatDate(c.date_of_birth) || '—'"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line">
                 <span x-text="c.is_active ? 'Hoạt động' : 'Khóa'"
                   :class="c.is_active ? 'text-green-600' : 'text-red-600'"></span>
@@ -90,7 +117,7 @@ $items = $items ?? [];
             </tr>
           </template>
           <tr x-show="!loading && filtered().length===0">
-            <td colspan="13" class="py-12 text-center text-slate-500">
+            <td colspan="14" class="py-12 text-center text-slate-500">
               <div class="flex flex-col items-center justify-center">
                 <img src="/assets/images/Null.png" alt="Trống" class="w-40 h-24 mb-3 opacity-80">
                 <div class="text-lg text-slate-300">Không có dữ liệu khách hàng</div>
@@ -186,8 +213,7 @@ $items = $items ?? [];
             <div class="relative flex-1 min-w-0">
               <input :type="showChangePassword ? 'text' : 'password'" x-model="formChangePassword.password"
                 class="border rounded px-3 py-2 w-full pr-10" placeholder="Nhập mật khẩu mới" minlength="8"
-                maxlength="50" autocomplete="new-password" required
-                @blur="validateChangePasswordField('password')">
+                maxlength="50" autocomplete="new-password" required @blur="validateChangePasswordField('password')">
               <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900"
                 @click="showChangePassword = !showChangePassword" tabindex="-1">
                 <i :class="showChangePassword ? 'fa-regular fa-eye' : 'fa-regular fa-eye-slash'"></i>
@@ -206,15 +232,14 @@ $items = $items ?? [];
           <div class="relative flex-1 min-w-0">
             <input :type="showChangePasswordConfirm ? 'text' : 'password'" x-model="formChangePassword.password_confirm"
               class="border rounded px-3 py-2 w-full pr-10" placeholder="Nhập lại mật khẩu" minlength="8" maxlength="50"
-              autocomplete="new-password" required
-              @blur="validateChangePasswordField('password_confirm')">
+              autocomplete="new-password" required @blur="validateChangePasswordField('password_confirm')">
             <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900"
               @click="showChangePasswordConfirm = !showChangePasswordConfirm" tabindex="-1">
               <i :class="showChangePasswordConfirm ? 'fa-regular fa-eye' : 'fa-regular fa-eye-slash'"></i>
             </button>
           </div>
-          <p x-show="changePasswordErrors.password_confirm"
-            x-text="changePasswordErrors.password_confirm" class="text-red-500 text-xs mt-1"></p>
+          <p x-show="changePasswordErrors.password_confirm" x-text="changePasswordErrors.password_confirm"
+            class="text-red-500 text-xs mt-1"></p>
         </div>
         <div class="pt-2 flex justify-end gap-3">
           <button type="button" class="px-4 py-2 rounded-md border" @click="openChangePassword=false">Đóng</button>
@@ -226,8 +251,105 @@ $items = $items ?? [];
     </div>
   </div>
 
+  <!-- Modal xem địa chỉ -->
+  <div x-show="openAddress" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    @click.self="openAddress = false" x-cloak>
+    <div class="bg-white rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto" @click.stop>
+      <div class="px-5 pb-3 border-b flex justify-center items-center relative">
+        <h3 class="font-semibold text-2xl text-[#002975]">Địa chỉ của khách hàng <span
+            x-text="addressCustomerName"></span>
+        </h3>
+        <button @click="openAddress = false" class="text-slate-500 absolute right-5">✕
+        </button>
+      </div>
+
+      <div x-show="loadingAddress" class="flex justify-center py-8">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#002975]"></div>
+      </div>
+
+      <div x-show="!loadingAddress">
+        <template x-if="addresses.length === 0">
+          <div class="text-center py-8 text-gray-500">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-gray-300" fill="none"
+              viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <p class="text-lg">Khách hàng chưa có địa chỉ nào</p>
+          </div>
+        </template>
+
+        <template x-if="addresses.length > 0">
+          <div class="space-y-4">
+            <template x-for="(addr, index) in addresses" :key="addr.id">
+              <div class="border rounded-lg p-4 hover:shadow-md transition-shadow"
+                :class="addr.is_default ? 'border-[#002975] bg-blue-50' : 'border-gray-200'">
+                <div class="flex items-start justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <span class="font-semibold text-[#002975]" x-text="addr.label"></span>
+                    <template x-if="addr.is_default">
+                      <span class="px-2 py-1 bg-[#002975] text-white text-xs rounded-full">Mặc định</span>
+                    </template>
+                  </div>
+                </div>
+
+                <div class="space-y-2 text-sm">
+                  <div class="flex items-start gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 flex-shrink-0 mt-0.5"
+                      fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <div>
+                      <span class="font-medium">Người nhận:</span>
+                      <span x-text="addr.recipient_name"></span>
+                    </div>
+                  </div>
+
+                  <div class="flex items-start gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 flex-shrink-0 mt-0.5"
+                      fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                    <div>
+                      <span class="font-medium">Số điện thoại:</span>
+                      <span x-text="addr.phone"></span>
+                    </div>
+                  </div>
+
+                  <div class="flex items-start gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 flex-shrink-0 mt-0.5"
+                      fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <div class="flex-1">
+                      <span class="font-medium">Địa chỉ:</span>
+                      <p x-text="addr.full_address" class="text-gray-700"></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+
+      <div class="mt-6 flex justify-end">
+        <button type="button" class="px-4 py-2 rounded-md border hover:bg-gray-50"
+          @click="openAddress = false">Đóng</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast-container" class="z-[60]"></div>
 </div>
+
 <script>
   function customerPage() {
     const api = {
@@ -265,6 +387,10 @@ $items = $items ?? [];
         password_confirm: false
       },
       openChangePassword: false,
+      openAddress: false,
+      addresses: [],
+      loadingAddress: false,
+      addressCustomerName: '',
       loading: true,
       submitting: false,
       openAdd: false,
@@ -305,6 +431,17 @@ $items = $items ?? [];
         updated_at_to: '',
         updated_by_name: ''
       },
+
+      formatDate(d) {
+        if (!d || d === '0000-00-00') return '';
+        const parts = d.split('-');
+        if (parts.length === 3) {
+          const [year, month, day] = parts;
+          return `${day}/${month}/${year}`;
+        }
+        return d;
+      },
+
       openChangePasswordModal(c) {
         this.formChangePassword = { user_id: c.id, password: '', password_confirm: '' };
         this.showChangePassword = false;
@@ -313,17 +450,38 @@ $items = $items ?? [];
         this.changePasswordTouched = false;
         this.openChangePassword = true;
       },
-generateChangePassword() {
-                const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-                let len = Math.floor(Math.random() * 5) + 8; // 8-12 ký tự
-                let pw = Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-                this.formChangePassword.password = pw;
-                this.formChangePassword.password_confirm = pw;
-                this.showChangePassword = true;
-                this.showChangePasswordConfirm = true;
-                this.changePasswordTouched = true;
-                this.changePasswordErrors = {};
-            },
+      async openAddressModal(customerId, customerName) {
+        this.addressCustomerName = customerName;
+        this.addresses = [];
+        this.loadingAddress = true;
+        this.openAddress = true;
+
+        try {
+          const res = await fetch(`/admin/api/customers/${customerId}/addresses`);
+          if (!res.ok) {
+            throw new Error('Không thể tải danh sách địa chỉ');
+          }
+          const data = await res.json();
+          this.addresses = data.addresses || [];
+        } catch (err) {
+          console.error(err);
+          showToast('Lỗi khi tải địa chỉ: ' + err.message, 'error');
+          this.addresses = [];
+        } finally {
+          this.loadingAddress = false;
+        }
+      },
+      generateChangePassword() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+        let len = Math.floor(Math.random() * 5) + 8; // 8-12 ký tự
+        let pw = Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+        this.formChangePassword.password = pw;
+        this.formChangePassword.password_confirm = pw;
+        this.showChangePassword = true;
+        this.showChangePasswordConfirm = true;
+        this.changePasswordTouched = true;
+        this.changePasswordErrors = {};
+      },
       paginated() {
         const start = (this.currentPage - 1) * this.perPage;
         return this.filtered().slice(start, start + this.perPage);
@@ -403,12 +561,28 @@ generateChangePassword() {
       },
       openEditModal(customer) {
         this.resetForm();
+
+        // Chuyển đổi date_of_birth từ yyyy-mm-dd sang dd/mm/yyyy để hiển thị
+        let dateOfBirth = customer.date_of_birth || '';
+        if (dateOfBirth && dateOfBirth !== '0000-00-00') {
+          const parts = dateOfBirth.split('-');
+          if (parts.length === 3) {
+            const [year, month, day] = parts;
+            dateOfBirth = `${day}/${month}/${year}`;
+          }
+        } else {
+          dateOfBirth = '';
+        }
+
         this.form = {
           ...customer,
-          is_active: Number(customer.is_active ?? 1)
+          date_of_birth: dateOfBirth,
+          is_active: String(customer.is_active ?? '1')  // ép về string để dropdown match
         };
+
         this.openEdit = true;
       },
+
       // reset validation/password state is handled in resetForm()
       // helper to clear a single field error
       clearError(field) { this.errors[field] = ''; },
@@ -460,13 +634,25 @@ generateChangePassword() {
         this.validateField('password_confirm');
       },
       serializeForm() {
+        // Chuyển đổi date_of_birth từ dd/mm/yyyy sang yyyy-mm-dd
+        let dateOfBirth = (this.form.date_of_birth || '').trim();
+        if (dateOfBirth) {
+          // Kiểm tra format dd/mm/yyyy
+          const parts = dateOfBirth.split('/');
+          if (parts.length === 3) {
+            const [day, month, year] = parts;
+            // Chuyển sang yyyy-mm-dd
+            dateOfBirth = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+          }
+        }
+
         const out = {
           username: (this.form.username || '').trim(),
           full_name: (this.form.full_name || '').trim(),
           email: (this.form.email || '').trim(),
           phone: (this.form.phone || '').trim(),
           gender: this.form.gender || '',
-          date_of_birth: this.form.date_of_birth || '',
+          date_of_birth: dateOfBirth,
           is_active: Number(this.form.is_active ?? 1)
         };
         if (!this.form.id && this.form.password) out.password = this.form.password;
@@ -564,6 +750,7 @@ generateChangePassword() {
           this.submitting = false;
         }
       },
+
       async submitUpdate() {
         const error = this.validateForm(false);
         if (error) {
@@ -579,11 +766,17 @@ generateChangePassword() {
 
         this.submitting = true;
         try {
+          const payload = {
+            ...this.serializeForm(),
+            is_active: Number(this.form.is_active ?? 1) // ép về số khi gửi API
+          };
+
           const resp = await fetch(api.update(id), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(this.serializeForm())
+            body: JSON.stringify(payload)
           });
+
           const data = await resp.json().catch(() => ({}));
           if (resp.ok) {
             const idx = this.items.findIndex(item => Number(item.id) === Number(id));
@@ -604,6 +797,7 @@ generateChangePassword() {
           this.submitting = false;
         }
       },
+
       async remove(id) {
         if (!confirm('Xóa khách hàng này?')) return;
         try {
@@ -629,7 +823,7 @@ generateChangePassword() {
           phone: '',
           gender: '',
           date_of_birth: '',
-          is_active: 1
+          is_active: '1'
         };
         this.errors = {
           username: '',

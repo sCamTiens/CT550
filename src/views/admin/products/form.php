@@ -80,73 +80,202 @@
     </p>
   </div>
 
-  <!-- Đơn vị -->
-  <div>
+  <!-- Đơn vị tính -->
+  <div class="relative" x-data="{
+        open: false,
+        search: '',
+        filtered: [],
+        highlight: -1,
+        choose(u) {
+            form.unit_id = u.id;
+            this.search = u.name;
+            this.open = false;
+            touched.unit_id = true;
+            validateField('unit_id');
+        },
+        clear() {
+            form.unit_id = '';
+            this.search = '';
+            this.filtered = units;
+            this.open = false;
+        },
+        reset() {
+            const selected = units.find(u => u.id == form.unit_id);
+            this.search = selected ? selected.name : '';
+            this.filtered = units;
+            this.highlight = -1;
+        }
+    }" x-effect="reset()" @click.away="open = false">
     <label class="block text-sm text-black font-semibold mb-1">
-      Đơn vị <span class="text-red-500">*</span>
+      Đơn vị tính<span class="text-red-500">*</span>
     </label>
 
-    <input list="unitOptions" x-model="form.unit_id" @blur="touched.unit_id = true; validateField('unit_id')"
-      @input="touched.unit_id && validateField('unit_id')" :class="[
-      'w-full border rounded px-3 py-2',
-      (touched.unit_id && errors.unit_id) ? 'border-red-500' : '',
-      form.unit_id === '' ? 'text-slate-400' : 'text-slate-900'
-    ]" placeholder="-- Chọn đơn vị --" />
+    <div class="relative">
+      <input type="text" x-model="search" @focus="open = true; filtered = units"
+        @input="open = true; filtered = units.filter(u => u.name.toLowerCase().includes(search.toLowerCase()))"
+        @blur="touched.unit_id = true; validateField('unit_id')"
+        class="w-full border rounded px-3 py-2 pr-8 bg-white text-sm cursor-pointer focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
+        :class="(touched.unit_id && errors.unit_id) ? 'border-red-500' : 'border-gray-300'"
+        placeholder="-- Chọn đơn vị --" />
 
-    <datalist id="unitOptions">
-      <template x-for="u in units" :key="u.id">
-        <option :value="u.name"></option>
+      <button x-show="form.unit_id" type="button" @click.stop="clear()"
+        class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700">
+        ✕
+      </button>
+
+      <svg x-show="!form.unit_id"
+        class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" fill="none"
+        stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+      </svg>
+    </div>
+
+    <!-- Dropdown -->
+    <div x-show="open" class="absolute z-20 mt-1 w-full bg-white border rounded shadow max-h-60 overflow-auto">
+      <template x-for="(u, i) in filtered" :key="u.id">
+        <div @click="choose(u)" @mouseenter="highlight = i" @mouseleave="highlight = -1" :class="[highlight === i ? 'bg-[#002975] text-white'
+                : (form.unit_id == u.id ? 'bg-[#002975] text-white'
+                : 'hover:bg-[#002975] hover:text-white text-black'),
+                'px-3 py-2 cursor-pointer transition-colors text-sm']" x-text="u.name"></div>
       </template>
-    </datalist>
+      <div x-show="filtered.length === 0" class="px-3 py-2 text-gray-400 text-sm">Không tìm thấy đơn vị</div>
+    </div>
 
-    <p class="text-red-600 text-xs mt-1" x-show="touched.unit_id && errors.unit_id" x-text="errors.unit_id"></p>
+    <p x-show="units.length === 0" class="text-red-400 text-xs italic mt-1">Danh sách trống</p>
+    <p x-show="touched.unit_id && errors.unit_id" x-text="errors.unit_id" class="text-red-500 text-xs mt-1"></p>
   </div>
 
   <!-- Thương hiệu -->
-  <div>
+  <div class="relative" x-data="{
+        open: false,
+        search: '',
+        filtered: [],
+        highlight: -1,
+        choose(b) {
+            form.brand_id = b.id;
+            this.search = b.name;
+            this.open = false;
+            touched.brand_id = true;
+            validateField('brand_id');
+        },
+        clear() {
+            form.brand_id = '';
+            this.search = '';
+            this.filtered = brands;
+            this.open = false;
+        },
+        reset() {
+            const selected = brands.find(b => b.id == form.brand_id);
+            this.search = selected ? selected.name : '';
+            this.filtered = brands;
+            this.highlight = -1;
+        }
+    }" x-effect="reset()" @click.away="open = false">
     <label class="block text-sm text-black font-semibold mb-1">
       Thương hiệu <span class="text-red-500">*</span>
     </label>
 
-    <input list="brandOptions" x-model="form.brand_id" @blur="touched.brand_id = true; validateField('brand_id')"
-      @input="touched.brand_id && validateField('brand_id')" :class="[
-      'w-full border rounded px-3 py-2',
-      (touched.brand_id && errors.brand_id) ? 'border-red-500' : '',
-      form.brand_id === '' ? 'text-slate-400' : 'text-slate-900'
-    ]" placeholder="-- Chọn thương hiệu --" />
+    <div class="relative">
+      <input type="text" x-model="search" @focus="open = true; filtered = brands"
+        @input="open = true; filtered = brands.filter(b => b.name.toLowerCase().includes(search.toLowerCase()))"
+        @blur="touched.brand_id = true; validateField('brand_id')"
+        class="w-full border rounded px-3 py-2 pr-8 bg-white text-sm cursor-pointer focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
+        :class="(touched.brand_id && errors.brand_id) ? 'border-red-500' : 'border-gray-300'"
+        placeholder="-- Chọn thương hiệu --" />
 
-    <datalist id="brandOptions">
-      <template x-for="b in brands" :key="b.id">
-        <option :value="b.name"></option>
+      <button x-show="form.brand_id" type="button" @click.stop="clear()"
+        class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700">
+        ✕
+      </button>
+
+      <svg x-show="!form.brand_id"
+        class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" fill="none"
+        stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+      </svg>
+    </div>
+
+    <!-- Dropdown -->
+    <div x-show="open" class="absolute z-20 mt-1 w-full bg-white border rounded shadow max-h-60 overflow-auto">
+      <template x-for="(b, i) in filtered" :key="b.id">
+        <div @click="choose(b)" @mouseenter="highlight = i" @mouseleave="highlight = -1" :class="[highlight === i ? 'bg-[#002975] text-white'
+                : (form.brand_id == b.id ? 'bg-[#002975] text-white'
+                : 'hover:bg-[#002975] hover:text-white text-black'),
+                'px-3 py-2 cursor-pointer transition-colors text-sm']" x-text="b.name"></div>
       </template>
-    </datalist>
+      <div x-show="filtered.length === 0" class="px-3 py-2 text-gray-400 text-sm">Không tìm thấy thương hiệu</div>
+    </div>
 
-    <p class="text-red-600 text-xs mt-1" x-show="touched.brand_id && errors.brand_id" x-text="errors.brand_id"></p>
+    <p x-show="brands.length === 0" class="text-red-400 text-xs italic mt-1">Danh sách trống</p>
+    <p x-show="touched.brand_id && errors.brand_id" x-text="errors.brand_id" class="text-red-500 text-xs mt-1"></p>
   </div>
 
   <!-- Loại sản phẩm -->
-  <div>
+  <div class="relative" x-data="{
+        open: false,
+        search: '',
+        filtered: [],
+        highlight: -1,
+        choose(c) {
+            form.category_id = c.id;
+            this.search = c.name;
+            this.open = false;
+            touched.category_id = true;
+            validateField('category_id');
+        },
+        clear() {
+            form.category_id = '';
+            this.search = '';
+            this.filtered = categories;
+            this.open = false;
+        },
+        reset() {
+            const selected = categories.find(c => c.id == form.category_id);
+            this.search = selected ? selected.name : '';
+            this.filtered = categories;
+            this.highlight = -1;
+        }
+    }" x-effect="reset()" @click.away="open = false">
     <label class="block text-sm text-black font-semibold mb-1">
       Loại sản phẩm <span class="text-red-500">*</span>
     </label>
 
-    <input list="categoryOptions" x-model="form.category_id"
-      @blur="touched.category_id = true; validateField('category_id')"
-      @input="touched.category_id && validateField('category_id')" :class="[
-      'w-full border rounded px-3 py-2',
-      (touched.category_id && errors.category_id) ? 'border-red-500' : '',
-      form.category_id === '' ? 'text-slate-400' : 'text-slate-900'
-    ]" placeholder="-- Chọn loại sản phẩm --" />
+    <div class="relative">
+      <input type="text" x-model="search" @focus="open = true; filtered = categories"
+        @input="open = true; filtered = categories.filter(c => c.name.toLowerCase().includes(search.toLowerCase()))"
+        @blur="touched.category_id = true; validateField('category_id')"
+        class="w-full border rounded px-3 py-2 pr-8 bg-white text-sm cursor-pointer focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
+        :class="(touched.category_id && errors.category_id) ? 'border-red-500' : 'border-gray-300'"
+        placeholder="-- Chọn loại sản phẩm --" />
 
-    <datalist id="categoryOptions">
-      <template x-for="c in categories" :key="c.id">
-        <option :value="c.name"></option>
+      <button x-show="form.category_id" type="button" @click.stop="clear()"
+        class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700">
+        ✕
+      </button>
+
+      <svg x-show="!form.category_id"
+        class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" fill="none"
+        stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+      </svg>
+    </div>
+
+    <!-- Dropdown -->
+    <div x-show="open" class="absolute z-20 mt-1 w-full bg-white border rounded shadow max-h-60 overflow-auto">
+      <template x-for="(c, i) in filtered" :key="c.id">
+        <div @click="choose(c)" @mouseenter="highlight = i" @mouseleave="highlight = -1" :class="[highlight === i ? 'bg-[#002975] text-white'
+                : (form.category_id == c.id ? 'bg-[#002975] text-white'
+                : 'hover:bg-[#002975] hover:text-white text-black'),
+                'px-3 py-2 cursor-pointer transition-colors text-sm']" x-text="c.name"></div>
       </template>
-    </datalist>
+      <div x-show="filtered.length === 0" class="px-3 py-2 text-gray-400 text-sm">Không tìm thấy loại sản phẩm</div>
+    </div>
 
-    <p class="text-red-600 text-xs mt-1" x-show="touched.category_id && errors.category_id" x-text="errors.category_id">
+    <p x-show="categories.length === 0" class="text-red-400 text-xs italic mt-1">Danh sách trống</p>
+    <p x-show="touched.category_id && errors.category_id" x-text="errors.category_id" class="text-red-500 text-xs mt-1">
     </p>
   </div>
+
 
   <!-- Pack size -->
   <div>
@@ -178,7 +307,7 @@
 
   <!-- Đang bán -->
   <div class="md:col-span-2 flex items-center gap-3">
-    <input id="isActive" type="checkbox" x-model="form.is_active" true-value="1" false-value="0" class="h-4 w-4">
-    <label for="isActive" class="text-sm">Đang bán</label>
+    <input id="isActive" type="checkbox" x-model="form.is_active" class="h-4 w-4">
+    <label for="isActive">Đang bán</label>
   </div>
 </div>

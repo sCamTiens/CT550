@@ -20,7 +20,7 @@ $items = $items ?? [];
     <!-- Table -->
     <div class="bg-white rounded-xl shadow pb-4">
         <div style="overflow-x:auto; max-width:100%;" class="pb-40">
-            <table style="width:180%; min-width:1250px; border-collapse:collapse;">
+            <table style="width:200%; min-width:1250px; border-collapse:collapse;">
                 <thead>
                     <tr class="bg-gray-50 text-slate-600">
                         <th class="py-2 px-4 text-center">Thao tác</th>
@@ -111,18 +111,22 @@ $items = $items ?? [];
         <!-- MODAL: Create -->
         <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openAdd"
             x-transition.opacity style="display:none">
-            <div class="bg-white w-full max-w-2xl rounded-xl shadow" @click.outside="openAdd=false">
-                <div class="px-5 py-3 border-b flex justify-center items-center relative">
+            <div class="bg-white w-full max-w-3xl rounded-xl shadow max-h-[90vh] flex flex-col" @click.outside="openAdd=false">
+                <div class="px-5 py-3 border-b flex justify-center items-center relative flex-shrink-0">
                     <h3 class="font-semibold text-2xl text-[#002975]">Thêm phiếu thu</h3>
                     <button class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
                 </div>
-                <form class="p-5 space-y-4" @submit.prevent="submitCreate()">
-                    <?php require __DIR__ . '/form.php'; ?>
-                    <div class="pt-2 flex justify-end gap-3">
-                        <button type="button" @click="openAdd=false"
-                            class="px-4 py-2 border rounded text-sm">Hủy</button>
-                        <button class="px-4 py-2 bg-[#002975] text-white rounded text-sm" :disabled="submitting"
-                            x-text="submitting ? 'Đang lưu...' : 'Tạo'"></button>
+                <form class="flex flex-col flex-1 overflow-hidden" @submit.prevent="submitCreate()">
+                    <div class="p-5 space-y-4 overflow-y-auto">
+                        <?php require __DIR__ . '/form.php'; ?>
+                    </div>
+                    <div class="px-5 py-3 border-t flex justify-end gap-3 flex-shrink-0 bg-white">
+                        <button type="button"
+                            class="px-4 py-2 rounded-md text-red-600 border border-red-600 hover:bg-red-600 hover:text-white"
+                            @click="openAdd=false">Hủy</button>
+                        <button
+                            class="px-4 py-2 rounded-md text-[#002975] hover:bg-[#002975] hover:text-white border border-[#002975]"
+                            :disabled="submitting" x-text="submitting?'Đang lưu...':'Lưu'"></button>
                     </div>
                 </form>
             </div>
@@ -131,14 +135,16 @@ $items = $items ?? [];
         <!-- MODAL: Edit -->
         <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openEdit"
             x-transition.opacity style="display:none">
-            <div class="bg-white w-full max-w-2xl rounded-xl shadow" @click.outside="openEdit=false">
-                <div class="px-5 py-3 border-b flex justify-center items-center relative">
+            <div class="bg-white w-full max-w-3xl rounded-xl shadow max-h-[90vh] flex flex-col" @click.outside="openEdit=false">
+                <div class="px-5 py-3 border-b flex justify-center items-center relative flex-shrink-0">
                     <h3 class="font-semibold text-2xl text-[#002975]">Sửa phiếu thu</h3>
                     <button class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>
                 </div>
-                <form class="p-5 space-y-4" @submit.prevent="submitUpdate()">
-                    <?php require __DIR__ . '/form.php'; ?>
-                    <div class="pt-2 flex justify-end gap-3">
+                <form class="flex flex-col flex-1 overflow-hidden" @submit.prevent="submitUpdate()">
+                    <div class="p-5 space-y-4 overflow-y-auto">
+                        <?php require __DIR__ . '/form.php'; ?>
+                    </div>
+                    <div class="px-5 py-3 border-t flex justify-end gap-3 flex-shrink-0 bg-white">
                         <button type="button" @click="openEdit=false"
                             class="px-4 py-2 border rounded text-sm">Hủy</button>
                         <button class="px-4 py-2 bg-[#002975] text-white rounded text-sm" :disabled="submitting"
@@ -317,27 +323,60 @@ $items = $items ?? [];
             validateField(field) {
                 this.errors[field] = '';
 
-                if (field === 'received_at' && !this.form.received_at) {
-                    this.errors.received_at = 'Vui lòng chọn ngày thu';
+                // Khách hàng - bắt buộc
+                if (field === 'customer_id') {
+                    if (!this.form.customer_id || this.form.customer_id === '') {
+                        this.errors.customer_id = 'Vui lòng chọn khách hàng';
+                    }
                 }
+
+                // Phương thức thanh toán - bắt buộc
+                if (field === 'method') {
+                    if (!this.form.method || this.form.method.trim() === '') {
+                        this.errors.method = 'Vui lòng chọn phương thức thanh toán';
+                    }
+                }
+
+                // Ngày thu - bắt buộc
+                if (field === 'received_at') {
+                    if (!this.form.received_at || this.form.received_at.trim() === '') {
+                        this.errors.received_at = 'Vui lòng chọn ngày thu';
+                    }
+                }
+
+                // Số tiền - bắt buộc, phải > 0
                 if (field === 'amount') {
-                    if (!this.form.amount || this.form.amount <= 0)
+                    if (this.form.amount === '' || this.form.amount === null || this.form.amount === undefined) {
+                        this.errors.amount = 'Vui lòng nhập số tiền';
+                    } else if (this.form.amount <= 0) {
                         this.errors.amount = 'Số tiền phải lớn hơn 0';
-                    else if (this.form.amount > MAX_AMOUNT)
-                        this.errors.amount = 'Số tiền quá lớn';
+                    } else if (this.form.amount > MAX_AMOUNT) {
+                        this.errors.amount = 'Số tiền quá lớn (tối đa 1 tỷ)';
+                    }
                 }
-                if (field === 'received_by_name') {
-                    if (!this.form.received_by_name?.trim())
-                        this.errors.received_by_name = 'Vui lòng nhập tên người thu';
-                    else if (this.form.received_by_name.length > MAXLEN)
-                        this.errors.received_by_name = 'Tên người thu quá dài';
+
+                // Người thu - bắt buộc
+                if (field === 'received_by') {
+                    if (!this.form.received_by || this.form.received_by === '') {
+                        this.errors.received_by = 'Vui lòng chọn người thu';
+                    }
                 }
             },
 
             validateForm() {
                 this.errors = {};
-                const fields = ['received_at', 'amount', 'received_by_name'];
+                const fields = ['customer_id', 'method', 'received_at', 'amount', 'received_by'];
                 for (const f of fields) this.validateField(f);
+                
+                // Mark all as touched
+                this.touched = {
+                    customer_id: true,
+                    method: true,
+                    received_at: true,
+                    amount: true,
+                    received_by: true
+                };
+                
                 return Object.values(this.errors).every(v => !v);
             },
 
@@ -456,7 +495,10 @@ $items = $items ?? [];
             },
 
             async submitCreate() {
-                if (!this.validateForm()) return;
+                if (!this.validateForm()) {
+                    this.showToast('Vui lòng kiểm tra lại thông tin!', 'error');
+                    return;
+                }
                 this.submitting = true;
                 try {
                     const res = await fetch(api.create, {
@@ -479,7 +521,10 @@ $items = $items ?? [];
             },
 
             async submitUpdate() {
-                if (!this.validateForm()) return;
+                if (!this.validateForm()) {
+                    this.showToast('Vui lòng kiểm tra lại thông tin!', 'error');
+                    return;
+                }
                 this.submitting = true;
                 try {
                     const res = await fetch(api.update(this.form.id), {

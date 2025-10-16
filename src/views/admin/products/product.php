@@ -582,23 +582,30 @@ $items = $items ?? [];
 
       openEditModal(p) {
         this.resetForm();
+
+        // Tìm id tương ứng với tên để fill lại
+        const brand = this.brands.find(b => b.name === p.brand_name);
+        const category = this.categories.find(c => c.name === p.category_name);
+        const unit = this.units.find(u => u.name === p.unit_name);
+
         this.form = {
           id: p.id,
           name: p.name || '',
           slug: p.slug || '',
           sku: p.sku || '',
-          sale_price: p.sale_price || 0,
-          sale_priceFormatted: (p.sale_price || 0).toLocaleString('en-US'),
-          cost_price: p.cost_price || 0,
-          cost_priceFormatted: (p.cost_price || 0).toLocaleString('en-US'),
-          unit_id: p.unit_id || '',
-          brand_id: p.brand_id || '',
-          category_id: p.category_id || '',
+          sale_price: Number(p.sale_price) || 0,
+          sale_priceFormatted: Number(p.sale_price || 0).toLocaleString('en-US'),
+          cost_price: Number(p.cost_price) || 0,
+          cost_priceFormatted: Number(p.cost_price || 0).toLocaleString('en-US'),
+          unit_id: p.unit_id || (unit ? unit.id : ''),
+          brand_id: p.brand_id || (brand ? brand.id : ''),
+          category_id: p.category_id || (category ? category.id : ''),
           pack_size: p.pack_size || '',
           barcode: p.barcode || '',
           description: p.description || '',
-          is_active: p.is_active ? 1 : 0
+          is_active: p.is_active == 1 // true hoặc false
         };
+
         this.openEdit = true;
       },
 
@@ -630,20 +637,30 @@ $items = $items ?? [];
         if (!this.validateForm()) return;
         this.submitting = true;
         try {
+          // Clone form và ép boolean -> 1/0
+          const payload = {
+            ...this.form,
+            is_active: this.form.is_active ? 1 : 0
+          };
+
           const r = await fetch(api.update(this.form.id), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(this.form)
+            body: JSON.stringify(payload)
           });
+
           const res = await r.json();
           if (!r.ok) throw new Error(res.error || 'Lỗi máy chủ');
+
           const i = this.items.findIndex(x => x.id == res.id);
           if (i > -1) this.items[i] = res; else this.items.unshift(res);
           this.openEdit = false;
           this.showToast('Cập nhật sản phẩm thành công!', 'success');
         } catch (e) {
           this.showToast(e.message || 'Không thể cập nhật sản phẩm');
-        } finally { this.submitting = false; }
+        } finally {
+          this.submitting = false;
+        }
       },
 
       async remove(id) {

@@ -28,6 +28,9 @@ use App\Controllers\Admin\ExpenseVoucherController as AdminExpenseVoucher;
 use App\Controllers\Admin\ReceiptVoucherController as AdminReceiptVoucher;
 use App\Controllers\Admin\OrderController as AdminOrder;
 use App\Controllers\Admin\StockOutController as AdminStockOut;
+use App\Controllers\Admin\CouponController as AdminCoupon;
+use App\Controllers\Admin\PromotionController as AdminPromotion;
+use App\Controllers\Admin\AuditLogController as AdminAuditLog;
 
 
 /* --- load biến môi trường từ .env (đặt ở thư mục gốc dự án) --- */
@@ -140,6 +143,7 @@ $router->group('/admin', function (Router $r): void {
     $r->post('/api/customers', [AdminCustomer::class, 'store']);
     $r->put('/api/customers/{id}', [AdminCustomer::class, 'update']);
     $r->put('/api/customers/{id}/password', [AdminCustomer::class, 'changePassword']);
+    $r->get('/api/customers/{id}/addresses', [AdminCustomer::class, 'getAddresses']);
     $r->delete('/api/customers/{id}', [AdminCustomer::class, 'destroy']);
 
     // Expense Vouchers
@@ -166,6 +170,7 @@ $router->group('/admin', function (Router $r): void {
     $r->delete('/orders/{id}', [AdminOrder::class, 'destroy']);
     $r->get('/api/orders/next-code', [AdminOrder::class, 'nextCode']);
     $r->get('/api/orders/unpaid', [AdminOrder::class, 'unpaid']);
+    $r->get('/api/orders/{id}/items', [AdminOrder::class, 'getItems']);
 
     // Stock Outs (Phiếu xuất kho)
     $r->get('/stock-outs', [AdminStockOut::class, 'index']);
@@ -177,6 +182,28 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/api/stock-outs/pending', [AdminStockOut::class, 'pending']);
     $r->post('/api/stock-outs/{id}/approve', [AdminStockOut::class, 'approve']);
     $r->post('/api/stock-outs/{id}/complete', [AdminStockOut::class, 'complete']);
+
+    // Coupons (Mã giảm giá)
+    $r->get('/coupons', [AdminCoupon::class, 'index']);
+    $r->get('/api/coupons', [AdminCoupon::class, 'apiIndex']);
+    $r->post('/coupons', [AdminCoupon::class, 'store']);
+    $r->put('/coupons/{id}', [AdminCoupon::class, 'update']);
+    $r->delete('/coupons/{id}', [AdminCoupon::class, 'destroy']);
+
+    // Promotions (Chương trình khuyến mãi)
+    $r->get('/promotions', [AdminPromotion::class, 'index']);
+    $r->get('/api/promotions', [AdminPromotion::class, 'apiIndex']);
+    $r->post('/promotions', [AdminPromotion::class, 'store']);
+    $r->put('/promotions/{id}', [AdminPromotion::class, 'update']);
+    $r->delete('/promotions/{id}', [AdminPromotion::class, 'destroy']);
+
+    // Audit Logs (Lịch sử thao tác)
+    $r->get('/audit-logs', [AdminAuditLog::class, 'index']);
+    $r->get('/api/audit-logs', [AdminAuditLog::class, 'apiIndex']);
+    $r->get('/api/audit-logs/entity/{type}/{id}', [AdminAuditLog::class, 'apiGetByEntity']);
+    $r->get('/api/audit-logs/stats/action', [AdminAuditLog::class, 'apiStatsByAction']);
+    $r->get('/api/audit-logs/stats/entity', [AdminAuditLog::class, 'apiStatsByEntity']);
+    $r->get('/api/audit-logs/stats/user', [AdminAuditLog::class, 'apiStatsByUser']);
 });
 
 /* --- chạy router --- */

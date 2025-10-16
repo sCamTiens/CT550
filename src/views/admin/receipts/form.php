@@ -16,6 +16,8 @@
                 form.customer_id = customer.id;
                 this.search = customer.name;
                 this.open = false;
+                touched.customer_id = true;
+                validateField('customer_id');
             },
             clear() {
                 form.customer_id = '';
@@ -29,7 +31,7 @@
                 this.filtered = customers;
                 this.highlight = -1;
             }
-        }" x-init="reset()" @click.away="open = false">
+        }" x-effect="reset()" @click.away="open = false">
         <label class="block text-sm text-black font-semibold mb-1">
             Khách hàng <span class="text-red-500">*</span>
         </label>
@@ -87,6 +89,8 @@
                 form.order_id = order.id;
                 this.search = order.code;
                 this.open = false;
+                touched.order_id = true;
+                validateField('order_id');
             },
             clear() {
                 form.order_id = '';
@@ -100,7 +104,7 @@
                 this.filtered = filteredOrders;
                 this.highlight = -1;
             }
-        }" x-init="reset()" @click.away="open = false">
+        }" x-effect="reset()" @click.away="open = false">
         <label class="block text-sm text-black font-semibold mb-1">
             Mã đơn hàng
         </label>
@@ -165,6 +169,8 @@
                 form.method = m.id;
                 this.search = m.name;
                 this.open = false;
+                touched.method = true;
+                validateField('method');
             },
             clear() {
                 form.method = '';
@@ -178,7 +184,7 @@
                 this.filtered = this.methods;
                 this.highlight = -1;
             }
-        }" x-init="reset()" @click.away="open = false">
+        }" x-effect="reset()" @click.away="open = false">
 
         <label class="block text-sm text-black font-semibold mb-1">
             Phương thức thanh toán <span class="text-red-500">*</span>
@@ -192,13 +198,11 @@
                 :class="(touched.method && errors.method) ? 'border-red-500' : 'border-gray-300'"
                 placeholder="-- Chọn phương thức --" />
 
-            <!-- Nút clear -->
             <button x-show="form.method" type="button" @click.stop="clear()"
                 class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 focus:outline-none">
                 ✕
             </button>
 
-            <!-- Icon mũi tên -->
             <svg x-show="!form.method"
                 class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" fill="none"
                 stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -206,7 +210,6 @@
             </svg>
         </div>
 
-        <!-- Dropdown -->
         <div x-show="open" class="absolute z-20 mt-1 w-full bg-white border rounded shadow max-h-60 overflow-auto">
             <template x-for="(m, i) in filtered" :key="m.id">
                 <div @click="choose(m)" @mouseenter="highlight = i" @mouseleave="highlight = -1" :class="[ 
@@ -222,43 +225,45 @@
             </div>
         </div>
 
-        <!-- Hiển thị lỗi -->
         <p class="text-red-600 text-xs mt-1" x-show="touched.method && errors.method" x-text="errors.method"></p>
-    </div>
-
-    <!-- Mã giao dịch -->
-    <div>
-        <label class="block text-sm text-black font-semibold mb-1">Mã giao dịch</label>
-        <input x-model="form.txn_ref" class="w-full border rounded px-3 py-2" placeholder="Nhập mã giao dịch (nếu có)">
     </div>
 
     <!-- Ngày thu -->
     <div>
         <label class="block text-sm text-black font-semibold mb-1">Ngày thu <span class="text-red-500">*</span></label>
         <div class="relative">
-            <input type="text" x-model="form.received_at" class="w-full border rounded px-3 py-2 receipts-datepicker"
-                placeholder="Chọn ngày thu" autocomplete="off"
-                x-init="flatpickr($el, {dateFormat: 'd/m/Y', allowInput: true, locale: 'vi'})"
+            <input type="text" x-model="form.received_at"
+                class="w-full border rounded px-3 py-2 receipts-datepicker focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
+                :class="(touched.received_at && errors.received_at) ? 'border-red-500' : 'border-gray-300'"
+                placeholder="dd/mm/yyyy" autocomplete="off"
+                x-init="flatpickr($el, {dateFormat: 'Y-m-d', allowInput: true, locale: 'vi'})"
                 @blur="touched.received_at = true; validateField('received_at')"
-                @input="touched.received_at && validateField('received_at')"
-                :class="['w-full border rounded px-3 py-2', (touched.received_at && errors.received_at) ? 'border-red-500' : '']"
-                required>
+                @input="touched.received_at && validateField('received_at')">
             <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                 <i class="fa-regular fa-calendar"></i>
             </span>
         </div>
-        <p class="text-red-600 text-xs mt-1" x-show="touched.received_at && errors.received_at"
+        <p class="text-red-500 text-xs mt-1" x-show="touched.received_at && errors.received_at"
             x-text="errors.received_at"></p>
     </div>
 
     <!-- Số tiền -->
     <div>
         <label class="block text-sm text-black font-semibold mb-1">Số tiền <span class="text-red-500">*</span></label>
-        <input x-model="form.amountFormatted" @input="onAmountInput($event); touched.amount && validateField('amount')"
+        <input x-model="form.amountFormatted" @input="onAmountInput($event); validateField('amount')"
             @blur="touched.amount = true; validateField('amount')"
-            :class="['w-full border rounded px-3 py-2', (touched.amount && errors.amount) ? 'border-red-500' : '']"
-            placeholder="Nhập số tiền" required>
-        <p class="text-red-600 text-xs mt-1" x-show="touched.amount && errors.amount" x-text="errors.amount"></p>
+            class="w-full border rounded px-3 py-2 focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
+            :class="(touched.amount && errors.amount) ? 'border-red-500' : 'border-gray-300'"
+            placeholder="Nhập số tiền">
+        <p class="text-red-500 text-xs mt-1" x-show="touched.amount && errors.amount" x-text="errors.amount"></p>
+    </div>
+
+    <!-- Mã giao dịch -->
+    <div>
+        <label class="block text-sm text-black font-semibold mb-1">Mã giao dịch</label>
+        <input x-model="form.txn_ref"
+            class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
+            placeholder="Nhập mã giao dịch (nếu có)">
     </div>
 
     <!-- Người thu -->
@@ -268,9 +273,11 @@
             filtered: [],
             highlight: -1,
             choose(staff) {
-                form.received_by = staff.id;   // Lưu id
-                this.search = staff.name;      // Hiển thị tên
+                form.received_by = staff.id;
+                this.search = staff.name;
                 this.open = false;
+                touched.received_by = true;
+                validateField('received_by');
             },
             clear() {
                 form.received_by = '';
@@ -284,7 +291,7 @@
                 this.filtered = staffs;
                 this.highlight = -1;
             }
-        }" x-init="reset()" @click.away="open = false">
+        }" x-effect="reset()" @click.away="open = false">
 
         <label class="block text-sm text-black font-semibold mb-1">
             Người thu <span class="text-red-500">*</span>
@@ -310,7 +317,6 @@
             </svg>
         </div>
 
-        <!-- Dropdown -->
         <div x-show="open" class="absolute z-20 mt-1 w-full bg-white border rounded shadow max-h-60 overflow-auto">
             <template x-for="(staff, i) in filtered" :key="staff.id">
                 <div @click="choose(staff)" @mouseenter="highlight = i" @mouseleave="highlight = -1" :class="[ 
@@ -336,16 +342,19 @@
     <!-- Ghi chú -->
     <div>
         <label class="block text-sm text-black font-semibold mb-1">Ghi chú</label>
-        <input x-model="form.note" class="w-full border rounded px-3 py-2" placeholder="Ghi chú (nếu có)">
+        <input x-model="form.note"
+            class="w-full border border-gray-300 rounded px-3 py-2 focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
+            placeholder="Ghi chú (nếu có)">
     </div>
 
     <!-- Xác nhận ngân hàng -->
     <div>
         <label class="block text-sm text-black font-semibold mb-1">Xác nhận ngân hàng</label>
         <div class="relative">
-            <input type="text" x-model="form.bank_time" class="w-full border rounded px-3 py-2 bank-time-datepicker"
-                placeholder="Chọn thời gian xác nhận" autocomplete="off"
-                x-init="flatpickr($el, {enableTime: true, dateFormat: 'd/m/Y H:i', allowInput: true, locale: 'vi', time_24hr: true})">
+            <input type="text" x-model="form.bank_time"
+                class="w-full border border-gray-300 rounded px-3 py-2 bank-time-datepicker focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
+                placeholder="dd/mm/yyyy hh:mm" autocomplete="off"
+                x-init="flatpickr($el, {enableTime: true, dateFormat: 'Y-m-d H:i', allowInput: true, locale: 'vi', time_24hr: true})">
             <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                 <i class="fa-regular fa-calendar"></i>
             </span>
@@ -365,7 +374,7 @@
             // Datepicker cho ngày thu
             document.querySelectorAll('.receipts-datepicker').forEach(function (input) {
                 flatpickr(input, {
-                    dateFormat: 'Y/m/d',
+                    dateFormat: 'Y-m-d',
                     locale: 'vi',
                     allowInput: true,
                     static: true,
@@ -377,7 +386,7 @@
             document.querySelectorAll('.bank-time-datepicker').forEach(function (input) {
                 flatpickr(input, {
                     enableTime: true,
-                    dateFormat: 'Y/m/d H:i',
+                    dateFormat: 'Y-m-d H:i',
                     locale: 'vi',
                     allowInput: true,
                     time_24hr: true,

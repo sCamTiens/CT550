@@ -1,3 +1,6 @@
+<!-- Flatpickr CSS -->
+<link rel="stylesheet" href="/assets/css/flatpickr.min.css">
+
 <?php
 // views/admin/purchase-orders/purchase-orders.php
 $items = $items ?? [];
@@ -101,27 +104,20 @@ $items = $items ?? [];
     <!-- MODAL: Create -->
     <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openAdd"
         x-transition.opacity style="display:none">
-        <div class="bg-white w-full max-w-3xl rounded-xl shadow" @click.outside="openAdd=false">
+        <div class="bg-white w-full max-w-5xl rounded-xl shadow" @click.outside="openAdd=false">
             <div class="px-5 py-3 border-b flex justify-center items-center relative">
                 <h3 class="font-semibold text-2xl text-[#002975]">Thêm phiếu nhập</h3>
                 <button class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
             </div>
             <form class="p-5 space-y-4" @submit.prevent="submitCreate()">
                 <?php require __DIR__ . '/form.php'; ?>
-                <div class="pt-2 flex justify-end gap-3">
-                    <button type="button" class="px-4 py-2 rounded-md text-red-600 border border-red-600 
-                  hover:bg-red-600 hover:text-white transition-colors" @click="openAdd=false">Hủy</button>
-                    <button
-                        class="px-4 py-2 rounded-md text-[#002975] hover:bg-[#002975] hover:text-white border border-[#002975]"
-                        :disabled="submitting" x-text="submitting?'Đang lưu...':'Lưu'"></button>
-                </div>
             </form>
         </div>
     </div>
     <!-- MODAL: Edit -->
     <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openEdit"
         x-transition.opacity style="display:none">
-        <div class="bg-white w-full max-w-3xl rounded-xl shadow" @click.outside="openEdit=false">
+        <div class="bg-white w-full max-w-5xl rounded-xl shadow" @click.outside="openEdit=false">
             <div class="px-5 py-3 border-b flex justify-center items-center relative">
                 <h3 class="font-semibold text-2xl text-[#002975]">Sửa phiếu nhập</h3>
                 <button class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>
@@ -139,6 +135,36 @@ $items = $items ?? [];
     </div>
 
     <div id="toast-container" class="z-[60]"></div>
+
+    <!-- Pagination -->
+    <div class="flex items-center justify-center mt-4 px-4 gap-6">
+        <div class="text-sm text-slate-600">
+            Tổng cộng <span x-text="filtered().length"></span> bản ghi
+        </div>
+        <div class="flex items-center gap-2">
+            <button @click="goToPage(currentPage-1)" :disabled="currentPage===1"
+                class="px-2 py-1 border rounded disabled:opacity-50">&lt;</button>
+            <span>Trang <span x-text="currentPage"></span> / <span x-text="totalPages()"></span></span>
+            <button @click="goToPage(currentPage+1)" :disabled="currentPage===totalPages()"
+                class="px-2 py-1 border rounded disabled:opacity-50">&gt;</button>
+            <div x-data="{ open: false }" class="relative">
+                <button @click="open=!open" class="border rounded px-2 py-1 w-28 flex justify-between items-center">
+                    <span x-text="perPage + ' / trang'"></span>
+                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+                <div x-show="open" @click.outside="open=false"
+                    class="absolute right-0 mt-1 bg-white border rounded shadow w-28 z-50">
+                    <template x-for="opt in perPageOptions" :key="opt">
+                        <div @click="perPage=opt;open=false"
+                            class="px-3 py-2 cursor-pointer hover:bg-[#002975] hover:text-white"
+                            x-text="opt + ' / trang'"></div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -342,30 +368,40 @@ $items = $items ?? [];
                 if (p > this.totalPages()) p = this.totalPages();
                 this.currentPage = p;
             },
-            
+
             openCreate() {
                 this.reset();
                 // Always fetch suppliers before opening the form
-                    const fetchSuppliersPromise = typeof this.fetchSuppliers === 'function' ? this.fetchSuppliers() : Promise.resolve();
-                    const fetchProductsPromise = typeof this.fetchProducts === 'function' ? this.fetchProducts() : Promise.resolve();
-                    Promise.all([fetchSuppliersPromise, fetchProductsPromise]).then(() => {
-                        if (!this.lines || this.lines.length === 0) {
-                            this.lines.push({ product_id: '', qty: 1, unit_cost: 0 });
-                        }
-                        this.openAdd = true;
-                    });
+                const fetchSuppliersPromise = typeof this.fetchSuppliers === 'function' ? this.fetchSuppliers() : Promise.resolve();
+                const fetchProductsPromise = typeof this.fetchProducts === 'function' ? this.fetchProducts() : Promise.resolve();
+                Promise.all([fetchSuppliersPromise, fetchProductsPromise]).then(() => {
+                    if (!this.lines || this.lines.length === 0) {
+                        this.lines.push({ product_id: '', qty: 1, unit_cost: 0, mfg_date: '', exp_date: '' });
+                    }
+                    this.openAdd = true;
+                    
+                    // Khởi tạo flatpickr sau khi modal mở
+                    if (typeof window.initAllDatePickers === 'function') {
+                        window.initAllDatePickers();
+                    }
+                });
             },
 
             openEditModal(po) {
                 this.form = { ...po };
                 // If editing, ensure lines is not empty
-                    const fetchProductsPromise = typeof this.fetchProducts === 'function' ? this.fetchProducts() : Promise.resolve();
-                    fetchProductsPromise.then(() => {
-                        if (!this.lines || this.lines.length === 0) {
-                            this.lines.push({ product_id: '', qty: 1, unit_cost: 0 });
-                        }
-                        this.openEdit = true;
-                    });
+                const fetchProductsPromise = typeof this.fetchProducts === 'function' ? this.fetchProducts() : Promise.resolve();
+                fetchProductsPromise.then(() => {
+                    if (!this.lines || this.lines.length === 0) {
+                        this.lines.push({ product_id: '', qty: 1, unit_cost: 0, mfg_date: '', exp_date: '' });
+                    }
+                    this.openEdit = true;
+                    
+                    // Khởi tạo flatpickr sau khi modal mở
+                    if (typeof window.initAllDatePickers === 'function') {
+                        window.initAllDatePickers();
+                    }
+                });
             },
 
             async submitCreate() {

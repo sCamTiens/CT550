@@ -20,7 +20,7 @@ $items = $items ?? [];
     <!-- Table -->
     <div class="bg-white rounded-xl shadow pb-4">
         <div style="overflow-x:auto; max-width:100%;" class="pb-40">
-            <table style="width:200%; min-width:1400px; border-collapse:collapse;">
+            <table style="width:180%; min-width:1250px; border-collapse:collapse;">
                 <thead>
                     <tr class="bg-gray-50 text-slate-600">
                         <th class="py-2 px-4 text-center">Thao tác</th>
@@ -84,13 +84,13 @@ $items = $items ?? [];
                                 }" x-text="getStatusText(o.status)"></span>
                             </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line text-right"
-                                x-text="formatCurrency(o.subtotal)"></td>
+                                x-text="formatCurrency(o.subtotal || 0)"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line text-right"
-                                x-text="formatCurrency(o.discount_amount)"></td>
+                                x-text="formatCurrency(o.discount_amount || 0)"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line text-right"
-                                x-text="formatCurrency(o.shipping_fee)"></td>
+                                x-text="formatCurrency(o.shipping_fee || 0)"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line text-right font-semibold"
-                                x-text="formatCurrency(o.total_amount)"></td>
+                                x-text="formatCurrency(o.total_amount || 0)"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line" x-text="o.payment_method || '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line">
                                 <span :class="{
@@ -101,12 +101,13 @@ $items = $items ?? [];
                                     'bg-gray-100 text-gray-800': o.payment_status === 'refunded'
                                 }" x-text="getPaymentStatusText(o.payment_status)"></span>
                             </td>
-                            <td class="px-3 py-2 break-words whitespace-pre-line" x-text="o.shipping_address || '—'"></td>
+                            <td class="px-3 py-2 break-words whitespace-pre-line" x-text="o.shipping_address || '—'">
+                            </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line" x-text="o.note || '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line text-right"
                                 x-text="o.created_at ? o.created_at : '—'"></td>
-                            <td class="px-3 py-2 break-words whitespace-pre-line"
-                                x-text="o.created_by_name || '—'"></td>
+                            <td class="px-3 py-2 break-words whitespace-pre-line" x-text="o.created_by_name || '—'">
+                            </td>
                         </tr>
                     </template>
                     <tr x-show="!loading && filtered().length===0">
@@ -120,50 +121,9 @@ $items = $items ?? [];
                 </tbody>
             </table>
         </div>
-
-        <!-- MODAL: Create -->
-        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openAdd"
-            x-transition.opacity style="display:none">
-            <div class="bg-white w-full max-w-3xl rounded-xl shadow max-h-[90vh] overflow-y-auto" @click.outside="openAdd=false">
-                <div class="px-5 py-3 border-b flex justify-center items-center relative sticky top-0 bg-white z-10">
-                    <h3 class="font-semibold text-2xl text-[#002975]">Thêm đơn hàng</h3>
-                    <button class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
-                </div>
-                <form class="p-5 space-y-4" @submit.prevent="submitCreate()">
-                    <?php require __DIR__ . '/form.php'; ?>
-                    <div class="pt-2 flex justify-end gap-3 sticky bottom-0 bg-white border-t py-3">
-                        <button type="button" @click="openAdd=false"
-                            class="px-4 py-2 border rounded text-sm">Hủy</button>
-                        <button class="px-4 py-2 bg-[#002975] text-white rounded text-sm" :disabled="submitting"
-                            x-text="submitting ? 'Đang lưu...' : 'Tạo'"></button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- MODAL: Edit -->
-        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openEdit"
-            x-transition.opacity style="display:none">
-            <div class="bg-white w-full max-w-3xl rounded-xl shadow max-h-[90vh] overflow-y-auto" @click.outside="openEdit=false">
-                <div class="px-5 py-3 border-b flex justify-center items-center relative sticky top-0 bg-white z-10">
-                    <h3 class="font-semibold text-2xl text-[#002975]">Sửa đơn hàng</h3>
-                    <button class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>
-                </div>
-                <form class="p-5 space-y-4" @submit.prevent="submitUpdate()">
-                    <?php require __DIR__ . '/form.php'; ?>
-                    <div class="pt-2 flex justify-end gap-3 sticky bottom-0 bg-white border-t py-3">
-                        <button type="button" @click="openEdit=false"
-                            class="px-4 py-2 border rounded text-sm">Hủy</button>
-                        <button class="px-4 py-2 bg-[#002975] text-white rounded text-sm" :disabled="submitting"
-                            x-text="submitting ? 'Đang lưu...' : 'Cập nhật'"></button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Toast -->
-        <div id="toast-container" class="z-[60]"></div>
     </div>
+
+
 
     <!-- Pagination -->
     <div class="flex items-center justify-center mt-4 px-4 gap-6">
@@ -193,6 +153,56 @@ $items = $items ?? [];
             </div>
         </div>
     </div>
+
+    <!-- MODAL: Create -->
+    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openAdd"
+        x-transition.opacity style="display:none">
+        <div class="bg-white w-full max-w-5xl rounded-xl shadow max-h-[90vh] flex flex-col" @click.outside="openAdd=false">
+            <div class="px-5 py-3 border-b flex justify-center items-center relative flex-shrink-0">
+                <h3 class="font-semibold text-2xl text-[#002975]">Thêm đơn hàng</h3>
+                <button type="button" class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
+            </div>
+
+            <form class="flex-1 overflow-y-auto" @submit.prevent="submitCreate()">
+                <div class="p-5 space-y-4">
+                    <?php require __DIR__ . '/form.php'; ?>
+                </div>
+                <div class="px-5 pb-5 pt-2 flex justify-end gap-3 border-t bg-white sticky bottom-0">
+                    <button type="button"
+                        class="px-4 py-2 rounded-md text-red-600 border border-red-600 hover:bg-red-600 hover:text-white"
+                        @click="openAdd=false">Hủy</button>
+                    <button
+                        class="px-4 py-2 rounded-md text-[#002975] hover:bg-[#002975] hover:text-white border border-[#002975]"
+                        :disabled="submitting" x-text="submitting?'Đang lưu...':'Lưu'"></button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: Edit -->
+    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openEdit"
+        x-transition.opacity style="display:none">
+        <div class="bg-white w-full max-w-5xl rounded-xl shadow max-h-[90vh] flex flex-col" @click.outside="openEdit=false">
+            <div class="px-5 py-3 border-b flex justify-center items-center relative flex-shrink-0">
+                <h3 class="font-semibold text-2xl text-[#002975]">Sửa đơn hàng</h3>
+                <button type="button" class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>
+            </div>
+            <form class="flex-1 overflow-y-auto" @submit.prevent="submitUpdate()">
+                <div class="p-5 space-y-4">
+                    <?php require __DIR__ . '/form.php'; ?>
+                </div>
+                <div class="px-5 pb-5 pt-2 flex justify-end gap-3 border-t bg-white sticky bottom-0">
+                    <button type="button" class="px-4 py-2 rounded-md border" @click="openEdit=false">Đóng</button>
+                    <button
+                        class="px-4 py-2 rounded-md text-[#002975] hover:bg-[#002975] hover:text-white border border-[#002975]"
+                        :disabled="submitting" x-text="submitting?'Đang lưu...':'Cập nhật'"></button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast-container" class="z-[60]"></div>
 </div>
 
 <script>
@@ -204,6 +214,7 @@ $items = $items ?? [];
             remove: (id) => `/admin/orders/${id}`,
             nextCode: '/admin/api/orders/next-code',
             customers: '/admin/api/customers',
+            products: '/admin/api/products',
         };
 
         const MAX_AMOUNT = 1_000_000_000;
@@ -216,6 +227,8 @@ $items = $items ?? [];
             openAdd: false,
             openEdit: false,
             customers: [],
+            products: [],
+            orderItems: [],
             items: <?= json_encode($items ?? [], JSON_UNESCAPED_UNICODE) ?>,
 
             // ===== PAGINATION =====
@@ -240,10 +253,9 @@ $items = $items ?? [];
             form: {
                 id: null,
                 code: '',
-                customer_id: '',
-                status: 'pending',
-                payment_method: '',
-                payment_status: 'pending',
+                customer_id: null,
+                payment_method: 'cash',
+                payment_status: 'paid',
                 subtotal: 0,
                 subtotalFormatted: '',
                 discount_amount: 0,
@@ -331,13 +343,32 @@ $items = $items ?? [];
             },
 
             calculateTotal() {
-                const subtotal = Number(this.form.subtotal) || 0;
+                // Tính tổng tiền từ danh sách sản phẩm
+                const subtotal = this.orderItems.reduce((sum, item) => {
+                    return sum + (Number(item.quantity) || 0) * (Number(item.unit_price) || 0);
+                }, 0);
+                
+                this.form.subtotal = subtotal;
+                this.form.subtotalFormatted = subtotal.toLocaleString('en-US');
+                
                 const discount = Number(this.form.discount_amount) || 0;
-                const shipping = Number(this.form.shipping_fee) || 0;
-                const tax = Number(this.form.tax_amount) || 0;
-                const total = subtotal - discount + shipping + tax;
+                const total = subtotal - discount;
+                
                 this.form.total_amount = total;
                 this.form.total_amountFormatted = total.toLocaleString('en-US');
+            },
+
+            addItem() {
+                this.orderItems.push({
+                    product_id: '',
+                    quantity: 1,
+                    unit_price: 0
+                });
+            },
+
+            removeItem(idx) {
+                this.orderItems.splice(idx, 1);
+                this.calculateTotal();
             },
 
             getStatusText(status) {
@@ -367,9 +398,6 @@ $items = $items ?? [];
             validateField(field) {
                 this.errors[field] = '';
 
-                if (field === 'customer_id' && !this.form.customer_id) {
-                    this.errors.customer_id = 'Vui lòng chọn khách hàng';
-                }
                 if (field === 'total_amount') {
                     if (!this.form.total_amount || this.form.total_amount <= 0)
                         this.errors.total_amount = 'Tổng tiền phải lớn hơn 0';
@@ -380,8 +408,32 @@ $items = $items ?? [];
 
             validateForm() {
                 this.errors = {};
-                const fields = ['customer_id', 'total_amount'];
+                const fields = ['total_amount'];
                 for (const f of fields) this.validateField(f);
+                
+                // Kiểm tra phải có ít nhất 1 sản phẩm
+                if (this.orderItems.length === 0) {
+                    this.showToast('Vui lòng chọn ít nhất một sản phẩm');
+                    return false;
+                }
+                
+                // Kiểm tra tất cả sản phẩm đã được chọn
+                for (let i = 0; i < this.orderItems.length; i++) {
+                    const item = this.orderItems[i];
+                    if (!item.product_id) {
+                        this.showToast(`Vui lòng chọn sản phẩm ở dòng ${i + 1}`);
+                        return false;
+                    }
+                    if (!item.quantity || item.quantity <= 0) {
+                        this.showToast(`Số lượng phải lớn hơn 0 ở dòng ${i + 1}`);
+                        return false;
+                    }
+                    if (!item.unit_price || item.unit_price <= 0) {
+                        this.showToast(`Đơn giá phải lớn hơn 0 ở dòng ${i + 1}`);
+                        return false;
+                    }
+                }
+                
                 return Object.values(this.errors).every(v => !v);
             },
 
@@ -389,10 +441,9 @@ $items = $items ?? [];
                 this.form = {
                     id: null,
                     code: '',
-                    customer_id: '',
-                    status: 'pending',
-                    payment_method: '',
-                    payment_status: 'pending',
+                    customer_id: null,
+                    payment_method: 'cash',
+                    payment_status: 'paid',
                     subtotal: 0,
                     subtotalFormatted: '',
                     discount_amount: 0,
@@ -409,18 +460,23 @@ $items = $items ?? [];
                 this.errors = {};
                 this.touched = {};
                 this.customers = [];
+                this.orderItems = [];
             },
 
-            async fetchCustomers() {
+
+
+            async fetchProducts() {
                 try {
-                    const res = await fetch(api.customers);
+                    const res = await fetch(api.products);
                     const data = await res.json();
-                    this.customers = (data.items || []).map(u => ({
-                        id: u.id,
-                        name: u.full_name
+                    this.products = (data.items || []).map(p => ({
+                        id: p.id,
+                        sku: p.sku,
+                        name: p.name,
+                        sale_price: p.sale_price
                     }));
                 } catch (e) {
-                    this.showToast('Không thể tải danh sách khách hàng');
+                    this.showToast('Không thể tải danh sách sản phẩm');
                 }
             },
 
@@ -428,9 +484,15 @@ $items = $items ?? [];
             async openCreate() {
                 this.resetForm();
                 await Promise.all([
-                    this.fetchCustomers(),
+                    this.fetchProducts(),
                     this.fetchNextCode()
                 ]);
+                // Thêm 1 dòng sản phẩm mặc định
+                this.orderItems = [{
+                    product_id: '',
+                    quantity: 1,
+                    unit_price: 0
+                }];
                 this.openAdd = true;
             },
 
@@ -450,10 +512,14 @@ $items = $items ?? [];
 
             async openEditModal(o) {
                 this.resetForm();
-                await this.fetchCustomers();
+                await Promise.all([
+                    this.fetchProducts(),
+                    this.fetchOrderItems(o.id)
+                ]);
                 this.form = {
                     ...o,
-                    customer_id: o.customer_id ? String(o.customer_id) : '',
+                    customer_id: o.customer_id || null,
+                    payment_status: 'paid',
                     subtotalFormatted: o.subtotal ? o.subtotal.toLocaleString('en-US') : '',
                     discount_amountFormatted: o.discount_amount ? o.discount_amount.toLocaleString('en-US') : '',
                     shipping_feeFormatted: o.shipping_fee ? o.shipping_fee.toLocaleString('en-US') : '',
@@ -463,14 +529,49 @@ $items = $items ?? [];
                 this.openEdit = true;
             },
 
+            async fetchOrderItems(orderId) {
+                try {
+                    const res = await fetch(`/admin/api/orders/${orderId}/items`);
+                    const data = await res.json();
+                    this.orderItems = (data.items || []).map(item => ({
+                        product_id: String(item.product_id),
+                        quantity: item.qty,
+                        unit_price: item.unit_price
+                    }));
+                    if (this.orderItems.length === 0) {
+                        this.orderItems = [{
+                            product_id: '',
+                            quantity: 1,
+                            unit_price: 0
+                        }];
+                    }
+                } catch (e) {
+                    this.showToast('Không thể tải danh sách sản phẩm của đơn hàng');
+                    this.orderItems = [{
+                        product_id: '',
+                        quantity: 1,
+                        unit_price: 0
+                    }];
+                }
+            },
+
             async submitCreate() {
                 if (!this.validateForm()) return;
                 this.submitting = true;
                 try {
+                    const payload = {
+                        ...this.form,
+                        items: this.orderItems.map(item => ({
+                            product_id: item.product_id,
+                            qty: item.quantity,
+                            unit_price: item.unit_price
+                        }))
+                    };
+                    
                     const res = await fetch(api.create, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(this.form)
+                        body: JSON.stringify(payload)
                     });
                     if (res.ok) {
                         this.showToast('Thêm đơn hàng thành công!', 'success');
@@ -490,10 +591,19 @@ $items = $items ?? [];
                 if (!this.validateForm()) return;
                 this.submitting = true;
                 try {
+                    const payload = {
+                        ...this.form,
+                        items: this.orderItems.map(item => ({
+                            product_id: item.product_id,
+                            qty: item.quantity,
+                            unit_price: item.unit_price
+                        }))
+                    };
+                    
                     const res = await fetch(api.update(this.form.id), {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(this.form)
+                        body: JSON.stringify(payload)
                     });
                     if (res.ok) {
                         this.showToast('Cập nhật đơn hàng thành công!', 'success');

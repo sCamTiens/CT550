@@ -16,8 +16,9 @@
                 form.supplier_id = s.id;
                 this.search = s.name;
                 this.open = false;
-                // Reset phiếu nhập khi đổi nhà cung cấp
                 form.purchase_order_id = '';
+                touched.supplier_id = true;
+                validateField('supplier_id');
             },
             clear() {
                 form.supplier_id = '';
@@ -32,7 +33,7 @@
                 this.filtered = suppliers;
                 this.highlight = -1;
             }
-        }" x-init="reset()" @click.away="open = false">
+        }" x-effect="reset()" @click.away="open = false">
         <label class="block text-sm text-black font-semibold mb-1">
             Nhà cung cấp <span class="text-red-500">*</span>
         </label>
@@ -90,6 +91,8 @@
                 form.purchase_order_id = po.id;
                 this.search = po.code;
                 this.open = false;
+                touched.purchase_order_id = true;
+                validateField('purchase_order_id');
             },
             clear() {
                 form.purchase_order_id = '';
@@ -103,7 +106,7 @@
                 this.filtered = filteredPurchaseOrders;
                 this.highlight = -1;
             }
-        }" x-init="reset()" @click.away="open = false">
+        }" x-effect="reset()" @click.away="open = false">
         <label class="block text-sm text-black font-semibold mb-1">
             Mã phiếu nhập <span class="text-red-500">*</span>
         </label>
@@ -170,6 +173,8 @@
                 form.method = m.id;
                 this.search = m.name;
                 this.open = false;
+                touched.method = true;
+                validateField('method');
             },
             clear() {
                 form.method = '';
@@ -183,7 +188,7 @@
                 this.filtered = this.methods;
                 this.highlight = -1;
             }
-        }" x-init="reset()" @click.away="open = false">
+        }" x-effect="reset()" @click.away="open = false">
         <label class="block text-sm text-black font-semibold mb-1">
             Phương thức thanh toán <span class="text-red-500">*</span>
         </label>
@@ -240,7 +245,7 @@
         <div class="relative">
             <input type="text" x-model="form.paid_at" class="w-full border rounded px-3 py-2 expenses-datepicker"
                 placeholder="Chọn ngày chi" autocomplete="off"
-                x-init="flatpickr($el, {dateFormat: 'd/m/Y', allowInput: true, locale: 'vi'})"
+                x-init="flatpickr($el, {dateFormat: 'Y-m-d', allowInput: true, locale: 'vi'})"
                 @blur="touched.paid_at = true; validateField('paid_at')"
                 @input="touched.paid_at && validateField('paid_at')"
                 :class="['w-full border rounded px-3 py-2', (touched.paid_at && errors.paid_at) ? 'border-red-500' : '']"
@@ -272,6 +277,8 @@
                 form.paid_by = user.id;
                 this.search = user.name;
                 this.open = false;
+                touched.paid_by = true;
+                validateField('paid_by');
             },
             clear() {
                 form.paid_by = '';
@@ -285,7 +292,7 @@
                 this.filtered = users;
                 this.highlight = -1;
             }
-        }" x-init="reset()" @click.away="open = false">
+        }" x-effect="reset()" @click.away="open = false">
         <label class="block text-sm text-black font-semibold mb-1">
             Người chi <span class="text-red-500">*</span>
         </label>
@@ -344,7 +351,7 @@
         <div class="relative">
             <input type="text" x-model="form.bank_time" class="w-full border rounded px-3 py-2 bank-time-datepicker"
                 placeholder="Chọn thời gian xác nhận" autocomplete="off"
-                x-init="flatpickr($el, {enableTime: true, dateFormat: 'd/m/Y H:i', allowInput: true, locale: 'vi', time_24hr: true})">
+                x-init="flatpickr($el, {enableTime: true, dateFormat: 'Y-m-d H:i', allowInput: true, locale: 'vi', time_24hr: true})">
             <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                 <i class="fa-regular fa-calendar"></i>
             </span>
@@ -364,7 +371,7 @@
             // Datepicker cho ngày chi
             document.querySelectorAll('.expenses-datepicker').forEach(function (input) {
                 flatpickr(input, {
-                    dateFormat: 'Y/m/d',
+                    dateFormat: 'Y-m-d',
                     locale: 'vi',
                     allowInput: true,
                     static: true,
@@ -376,7 +383,7 @@
             document.querySelectorAll('.bank-time-datepicker').forEach(function (input) {
                 flatpickr(input, {
                     enableTime: true,
-                    dateFormat: 'Y/m/d H:i',
+                    dateFormat: 'Y-m-d H:i',
                     locale: 'vi',
                     allowInput: true,
                     time_24hr: true,

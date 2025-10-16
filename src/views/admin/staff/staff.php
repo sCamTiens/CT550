@@ -82,7 +82,7 @@ $items = $items ?? [];
                                 <span x-text="s.is_active ? 'Hoạt động' : 'Khóa'"
                                     :class="s.is_active ? 'text-green-600' : 'text-red-600'"></span>
                             </td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.hired_at"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="formatDate(s.hired_at) || '—'"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line"
                                 :class="(s.note || '—') === '—' ? 'text-center' : 'text-right'" x-text="s.note || '—'">
                             </td>
@@ -171,8 +171,7 @@ $items = $items ?? [];
                             <input :type="showChangePassword ? 'text' : 'password'"
                                 x-model="formChangePassword.password" class="border rounded px-3 py-2 w-full pr-10"
                                 placeholder="Nhập mật khẩu mới" minlength="8" maxlength="50" autocomplete="new-password"
-                                required
-                                @blur="validateChangePasswordField('password')">
+                                required @blur="validateChangePasswordField('password')">
                             <button type="button"
                                 class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900"
                                 @click="showChangePassword = !showChangePassword" tabindex="-1">
@@ -183,8 +182,8 @@ $items = $items ?? [];
                             class="px-4 py-2 border rounded text-sm font-semibold text-[#002975] border-[#002975] hover:bg-[#002975] hover:text-white flex-shrink-0"
                             style="min-width:64px;" @click="generateChangePassword()">Tạo</button>
                     </div>
-                    <p x-show="changePasswordErrors.password"
-                        x-text="changePasswordErrors.password" class="text-red-500 text-xs mt-1"></p>
+                    <p x-show="changePasswordErrors.password" x-text="changePasswordErrors.password"
+                        class="text-red-500 text-xs mt-1"></p>
                 </div>
                 <div>
                     <label class="block text-sm text-black font-semibold mb-1">Xác nhận mật khẩu <span
@@ -193,16 +192,15 @@ $items = $items ?? [];
                         <input :type="showChangePasswordConfirm ? 'text' : 'password'"
                             x-model="formChangePassword.password_confirm" class="border rounded px-3 py-2 w-full pr-10"
                             placeholder="Nhập lại mật khẩu" minlength="8" maxlength="50" autocomplete="new-password"
-                            required
-                            @blur="validateChangePasswordField('password_confirm')">
+                            required @blur="validateChangePasswordField('password_confirm')">
                         <button type="button"
                             class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900"
                             @click="showChangePasswordConfirm = !showChangePasswordConfirm" tabindex="-1">
                             <i :class="showChangePasswordConfirm ? 'fa-regular fa-eye' : 'fa-regular fa-eye-slash'"></i>
                         </button>
                     </div>
-                    <p x-show="changePasswordErrors.password_confirm"
-                        x-text="changePasswordErrors.password_confirm" class="text-red-500 text-xs mt-1"></p>
+                    <p x-show="changePasswordErrors.password_confirm" x-text="changePasswordErrors.password_confirm"
+                        class="text-red-500 text-xs mt-1"></p>
                 </div>
                 <div class="pt-2 flex justify-end gap-3">
                     <button type="button" class="px-4 py-2 rounded-md border"
@@ -343,6 +341,16 @@ $items = $items ?? [];
 
             showPassword: false,
             showPasswordConfirm: false,
+
+            formatDate(d) {
+                if (!d || d === '0000-00-00') return '';
+                const parts = d.split('-');
+                if (parts.length === 3) {
+                    const [year, month, day] = parts;
+                    return `${day}/${month}/${year}`;
+                }
+                return d;
+            },
 
             generatePassword() {
                 const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';

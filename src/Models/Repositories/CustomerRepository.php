@@ -55,6 +55,10 @@ class CustomerRepository
             $passwordRaw = trim($data['password'] ?? '') ?: '123456';
             $passwordHash = password_hash($passwordRaw, PASSWORD_BCRYPT);
 
+            // Xử lý date_of_birth: nếu là chuỗi rỗng hoặc null thì gán null, không để chuỗi rỗng
+            $dateOfBirth = trim($data['date_of_birth'] ?? '');
+            $dateOfBirth = $dateOfBirth !== '' ? $dateOfBirth : null;
+
             $stmt->execute([
                 trim($data['username'] ?? ''),
                 $passwordHash,
@@ -62,7 +66,7 @@ class CustomerRepository
                 ($data['email'] ?? '') !== '' ? $data['email'] : null,
                 ($data['phone'] ?? '') !== '' ? $data['phone'] : null,
                 ($data['gender'] ?? '') !== '' ? $data['gender'] : null,
-                ($data['date_of_birth'] ?? '') !== '' ? $data['date_of_birth'] : null,
+                $dateOfBirth,
                 isset($data['is_active']) ? (int) $data['is_active'] : 1,
                 $data['created_by'] ?? null,
                 $data['updated_by'] ?? null,
@@ -112,12 +116,17 @@ class CustomerRepository
                 WHERE id = ? AND role_id = 1 AND is_deleted = 0";
 
             $stmt = DB::pdo()->prepare($sql);
+            
+            // Xử lý date_of_birth: nếu là chuỗi rỗng hoặc null thì gán null, không để chuỗi rỗng
+            $dateOfBirth = trim($data['date_of_birth'] ?? '');
+            $dateOfBirth = $dateOfBirth !== '' ? $dateOfBirth : null;
+            
             $stmt->execute([
                 trim($data['full_name'] ?? ''),
                 ($data['email'] ?? '') !== '' ? $data['email'] : null,
                 ($data['phone'] ?? '') !== '' ? $data['phone'] : null,
                 ($data['gender'] ?? '') !== '' ? $data['gender'] : null,
-                ($data['date_of_birth'] ?? '') !== '' ? $data['date_of_birth'] : null,
+                $dateOfBirth,
                 isset($data['is_active']) ? (int) $data['is_active'] : 1,
                 $data['updated_by'] ?? null,
                 $id
@@ -158,6 +167,42 @@ class CustomerRepository
     }
 
     /**
+     * Lấy danh sách địa chỉ của khách hàng
+     *
+     * @return array
+     */
+    public function getAddresses(int|string $userId): array
+    {
+        $sql = "SELECT 
+                ua.id,
+                ua.label,
+                ua.recipient_name,
+                ua.phone,
+                ua.address_line,
+                ua.province_code,
+                ua.district_code,
+                ua.commune_code,
+                ua.is_default,
+                CONCAT_WS(', ',
+                    ua.address_line,
+                    COALESCE(c.name, ''),
+                    COALESCE(d.name, ''),
+                    COALESCE(p.name, '')
+                ) AS full_address
+            FROM user_addresses ua
+            LEFT JOIN provinces p ON p.code = ua.province_code
+            LEFT JOIN districts d ON d.code = ua.district_code
+            LEFT JOIN communes c ON c.code = ua.commune_code
+            WHERE ua.user_id = ?
+            ORDER BY ua.is_default DESC, ua.id ASC";
+
+        $stmt = DB::pdo()->prepare($sql);
+        $stmt->execute([$userId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
      * Lấy câu lệnh SELECT cơ bản
      */
     private function getBaseSelect(): string
@@ -171,6 +216,7 @@ class CustomerRepository
                 u.gender,
                 u.date_of_birth,
                 u.is_active,
+                u.avatar_url,
                 u.created_at,
                 u.updated_at,
                 cu.full_name AS created_by_name,

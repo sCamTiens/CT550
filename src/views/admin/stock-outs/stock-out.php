@@ -20,7 +20,7 @@ $items = $items ?? [];
     <!-- Table -->
     <div class="bg-white rounded-xl shadow pb-4">
         <div style="overflow-x:auto; max-width:100%;" class="pb-40">
-            <table style="width:200%; min-width:1400px; border-collapse:collapse;">
+            <table style="width:200%; min-width:1250px; border-collapse:collapse;">
                 <thead>
                     <tr class="bg-gray-50 text-slate-600">
                         <th class="py-2 px-4 text-center">Thao tác</th>
@@ -101,8 +101,8 @@ $items = $items ?? [];
                             <td class="px-3 py-2 break-words whitespace-pre-line" x-text="s.note || '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line text-right"
                                 x-text="s.created_at ? s.created_at : '—'"></td>
-                            <td class="px-3 py-2 break-words whitespace-pre-line"
-                                x-text="s.created_by_name || '—'"></td>
+                            <td class="px-3 py-2 break-words whitespace-pre-line" x-text="s.created_by_name || '—'">
+                            </td>
                         </tr>
                     </template>
                     <tr x-show="!loading && filtered().length===0">
@@ -120,7 +120,8 @@ $items = $items ?? [];
         <!-- MODAL: Create -->
         <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openAdd"
             x-transition.opacity style="display:none">
-            <div class="bg-white w-full max-w-3xl rounded-xl shadow max-h-[90vh] overflow-y-auto" @click.outside="openAdd=false">
+            <div class="bg-white w-full max-w-3xl rounded-xl shadow max-h-[90vh] overflow-y-auto"
+                @click.outside="openAdd=false">
                 <div class="px-5 py-3 border-b flex justify-center items-center relative sticky top-0 bg-white z-10">
                     <h3 class="font-semibold text-2xl text-[#002975]">Thêm phiếu xuất kho</h3>
                     <button class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
@@ -140,7 +141,8 @@ $items = $items ?? [];
         <!-- MODAL: Edit -->
         <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openEdit"
             x-transition.opacity style="display:none">
-            <div class="bg-white w-full max-w-3xl rounded-xl shadow max-h-[90vh] overflow-y-auto" @click.outside="openEdit=false">
+            <div class="bg-white w-full max-w-3xl rounded-xl shadow max-h-[90vh] overflow-y-auto"
+                @click.outside="openEdit=false">
                 <div class="px-5 py-3 border-b flex justify-center items-center relative sticky top-0 bg-white z-10">
                     <h3 class="font-semibold text-2xl text-[#002975]">Sửa phiếu xuất kho</h3>
                     <button class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>
@@ -213,6 +215,7 @@ $items = $items ?? [];
             submitting: false,
             openAdd: false,
             openEdit: false,
+            order_id: null,
             orders: [],
             items: <?= json_encode($items ?? [], JSON_UNESCAPED_UNICODE) ?>,
 
@@ -357,6 +360,20 @@ $items = $items ?? [];
                 return Object.values(this.errors).every(v => !v);
             },
 
+            async fetchOrders() {
+                try {
+                    const res = await fetch(api.orders);
+                    const data = await res.json();
+                    this.orders = (data.items || []).map(o => ({
+                        id: o.id,
+                        code: o.code,
+                        customer_name: o.customer_name
+                    }));
+                } catch (e) {
+                    this.showToast('Không thể tải danh sách đơn hàng');
+                }
+            },
+
             resetForm() {
                 this.form = {
                     id: null,
@@ -371,20 +388,21 @@ $items = $items ?? [];
                 };
                 this.errors = {};
                 this.touched = {};
+                this.order_id = null;
                 this.orders = [];
             },
 
             async fetchOrders() {
                 try {
-                    const res = await fetch(api.orders);
-                    const data = await res.json();
-                    this.orders = (data.items || []).map(o => ({
-                        id: o.id,
-                        code: o.code,
-                        customer_name: o.customer_name
-                    }));
-                } catch (e) {
-                    this.showToast('Không thể tải danh sách đơn hàng');
+                    const res = await fetch('/admin/api/orders/unpaid');
+                    if (res.ok) {
+                        const data = await res.json();
+                        this.orders = data.items || [];
+                    } else {
+                        this.orders = [];
+                    }
+                } catch {
+                    this.orders = [];
                 }
             },
 
@@ -417,7 +435,7 @@ $items = $items ?? [];
                 await this.fetchOrders();
                 this.form = {
                     ...s,
-                    order_id: s.order_id ? String(s.order_id) : '',
+                    order_id: s?.order_id ? String(s.order_id) : '',  // thêm dấu ? để tránh undefined
                     out_date: s.out_date ? s.out_date.substring(0, 10) : '',
                     total_amountFormatted: s.total_amount ? s.total_amount.toLocaleString('en-US') : '',
                 };

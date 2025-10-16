@@ -117,13 +117,22 @@ class AuthController extends Controller
             return $fail('Tài khoản hoặc mật khẩu sai.');
 
 
+        // Lấy staff_role nếu có
+        $staffRole = null;
+        $pdo = \App\Core\DB::pdo();
+        $stmt = $pdo->prepare("SELECT staff_role FROM staff_profiles WHERE user_id = ?");
+        $stmt->execute([$user->id]);
+        $staffRole = $stmt->fetchColumn();
+
         // Lưu session cả cho admin_user và user
         $sessData = [
             'id' => (int) $user->id,
             'username' => $user->username,
             'email' => $user->email ?? null,
             'full_name' => $user->full_name ?? null,
+            'role_id' => (int) $user->role_id,
             'role' => $user->role_name,
+            'staff_role' => $staffRole, // Thêm staff_role vào session
             'avatar_url' => $user->avatar_url ?? null,
             'date_of_birth' => $user->date_of_birth ?? null,
             'phone' => $user->phone ?? null,

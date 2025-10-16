@@ -173,4 +173,21 @@ class CustomerController extends Controller
         }
     }
 
+    /**
+     * API: Lấy danh sách địa chỉ của khách hàng
+     * GET /admin/api/customers/{id}/addresses
+     */
+    public function getAddresses($id): void
+    {
+        try {
+            $addresses = $this->repo->getAddresses($id);
+            $this->json(['addresses' => $addresses]);
+        } catch (\PDOException $e) {
+            $this->json([
+                'error' => 'Không thể tải danh sách địa chỉ',
+                'detail' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
 }
