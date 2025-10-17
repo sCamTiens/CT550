@@ -20,7 +20,7 @@ $items = $items ?? [];
     <!-- Table -->
     <div class="bg-white rounded-xl shadow pb-4">
         <div style="overflow-x:auto; max-width:100%;" class="pb-40">
-            <table style="width:200%; min-width:1250px; border-collapse:collapse;">
+            <table style="width:220%; min-width:1250px; border-collapse:collapse;">
                 <thead>
                     <tr class="bg-gray-50 text-slate-600">
                         <th class="py-2 px-4 text-center">Thao tác</th>
@@ -61,24 +61,30 @@ $items = $items ?? [];
                                     <i class="fa-solid fa-trash"></i>
                                 </button>
                             </td>
-                            <td class="px-3 py-2 break-words whitespace-pre-line" x-text="r.code"></td>
-                            <td class="px-3 py-2 break-words whitespace-pre-line" x-text="r.payer_user_name"></td>
+                            <td class="px-3 py-2 break-words whitespace-pre-line"
+                                :class="(r.code || '—') === '—' ? 'text-center' : 'text-left'" x-text="r.code || '—'">
+                            </td>
+                            <td class="px-3 py-2 break-words whitespace-pre-line"
+                                :class="(r.payer_name || '—') === '—' ? 'text-center' : 'text-left'"
+                                x-text="r.payer_name || '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
                                 :class="(r.order_id || '—') === '—' ? 'text-center' : 'text-right'"
                                 x-text="r.order_id || '—'"></td>
-                            <td class="px-3 py-2 break-words whitespace-pre-line" x-text="r.method"></td>
+                            <td class="px-3 py-2 break-words whitespace-pre-line"
+                                :class="(r.method || '—') === '—' ? 'text-center' : 'text-left'"
+                                x-text="r.method || '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line text-right"
                                 x-text="formatCurrency(r.amount)">
                             </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
-                                :class="(r.payment_id || '—') === '—' ? 'text-center' : 'text-left'"
+                                :class="(r.payment_id || '—') === '—' ? 'text-center' : 'text-right'"
                                 x-text="r.payment_id || '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
-                                :class="(r.received_by || '—') === '—' ? 'text-center' : 'text-left'"
-                                x-text="r.received_by || '—'"></td>
+                                :class="(r.created_by_name || '—') === '—' ? 'text-center' : 'text-left'"
+                                x-text="r.created_by_name || '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
                                 :class="(r.received_at || '—') === '—' ? 'text-center' : 'text-right'"
-                                x-text="r.received_at ? r.received_at : '—'"></td>
+                                x-text="formatDate(r.received_at) || '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
                                 :class="(r.txn_ref || '—') === '—' ? 'text-center' : 'text-right'"
                                 x-text="r.txn_ref || '—'"></td>
@@ -111,7 +117,8 @@ $items = $items ?? [];
         <!-- MODAL: Create -->
         <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openAdd"
             x-transition.opacity style="display:none">
-            <div class="bg-white w-full max-w-3xl rounded-xl shadow max-h-[90vh] flex flex-col" @click.outside="openAdd=false">
+            <div class="bg-white w-full max-w-3xl rounded-xl shadow max-h-[90vh] flex flex-col"
+                @click.outside="openAdd=false">
                 <div class="px-5 py-3 border-b flex justify-center items-center relative flex-shrink-0">
                     <h3 class="font-semibold text-2xl text-[#002975]">Thêm phiếu thu</h3>
                     <button class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
@@ -135,7 +142,8 @@ $items = $items ?? [];
         <!-- MODAL: Edit -->
         <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openEdit"
             x-transition.opacity style="display:none">
-            <div class="bg-white w-full max-w-3xl rounded-xl shadow max-h-[90vh] flex flex-col" @click.outside="openEdit=false">
+            <div class="bg-white w-full max-w-3xl rounded-xl shadow max-h-[90vh] flex flex-col"
+                @click.outside="openEdit=false">
                 <div class="px-5 py-3 border-b flex justify-center items-center relative flex-shrink-0">
                     <h3 class="font-semibold text-2xl text-[#002975]">Sửa phiếu thu</h3>
                     <button class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>
@@ -208,6 +216,7 @@ $items = $items ?? [];
             openEdit: false,
             customer_id: null,
             customers: [],
+            staffs: [],
             order_id: null,
             orders: [],
 
@@ -262,6 +271,7 @@ $items = $items ?? [];
                     const res = await fetch(api.list);
                     const data = await res.json();
                     this.items = data.items || [];
+                    console.log('DATA ITEMS', this.items);
                 } catch (e) {
                     this.showToast('Không thể tải dữ liệu phiếu thu');
                 } finally {
@@ -367,7 +377,7 @@ $items = $items ?? [];
                 this.errors = {};
                 const fields = ['customer_id', 'method', 'received_at', 'amount', 'received_by'];
                 for (const f of fields) this.validateField(f);
-                
+
                 // Mark all as touched
                 this.touched = {
                     customer_id: true,
@@ -376,7 +386,7 @@ $items = $items ?? [];
                     amount: true,
                     received_by: true
                 };
-                
+
                 return Object.values(this.errors).every(v => !v);
             },
 
@@ -587,6 +597,16 @@ $items = $items ?? [];
 
                 box.appendChild(toast);
                 setTimeout(() => toast.remove(), 3000);
+            },
+
+            formatDate(dateStr) {
+                if (!dateStr) return '—';
+                const d = new Date(dateStr);
+                if (isNaN(d)) return dateStr; // phòng trường hợp dữ liệu không hợp lệ
+                const day = String(d.getDate()).padStart(2, '0');
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const year = d.getFullYear();
+                return `${day}/${month}/${year}`;
             },
         };
     }

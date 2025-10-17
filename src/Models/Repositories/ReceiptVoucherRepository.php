@@ -9,14 +9,22 @@ class ReceiptVoucherRepository
     public function all(): array
     {
         $pdo = DB::pdo();
-        $sql = "
-            SELECT r.*, cu.full_name AS created_by_name, uu.full_name AS updated_by_name
-            FROM receipt_vouchers r
-            LEFT JOIN users cu ON cu.id = r.created_by
-            LEFT JOIN users uu ON uu.id = r.updated_by
-            ORDER BY r.id DESC
-            LIMIT 500
-        ";
+        $sql = "SELECT 
+                    r.*,
+                    cu.full_name AS created_by_name, 
+                    uu.full_name AS updated_by_name,
+                    pu.full_name AS payer_user_name,
+                    ru.full_name AS received_by_name,
+                    o.code AS order_code
+                FROM receipt_vouchers r
+                LEFT JOIN users cu ON cu.id = r.created_by
+                LEFT JOIN users uu ON uu.id = r.updated_by
+                LEFT JOIN users pu ON pu.id = r.payer_user_id
+                LEFT JOIN users ru ON ru.id = r.received_by
+                LEFT JOIN orders o ON o.id = r.order_id
+                ORDER BY r.id DESC
+                LIMIT 500
+            ";
         $rows = $pdo->query($sql)->fetchAll(\PDO::FETCH_ASSOC);
         return array_map(fn($row) => new ReceiptVoucher($row), $rows);
     }
@@ -25,10 +33,16 @@ class ReceiptVoucherRepository
     {
         $pdo = DB::pdo();
         $sql = "
-            SELECT r.*, cu.full_name AS created_by_name, uu.full_name AS updated_by_name
+            SELECT r.*,
+                cu.full_name AS created_by_name, 
+                uu.full_name AS updated_by_name,
+                pu.full_name AS payer_user_name,
+                ru.full_name AS received_by_name
             FROM receipt_vouchers r
             LEFT JOIN users cu ON cu.id = r.created_by
             LEFT JOIN users uu ON uu.id = r.updated_by
+            LEFT JOIN users pu ON pu.id = r.payer_user_id
+            LEFT JOIN users ru ON ru.id = r.received_by
             WHERE r.id = ?
         ";
         $st = $pdo->prepare($sql);
@@ -42,16 +56,22 @@ class ReceiptVoucherRepository
         $pdo = DB::pdo();
         $stmt = $pdo->prepare("
             INSERT INTO receipt_vouchers
-            (received_at, amount, payer_name, note, is_active, txn_ref, bank_time, created_by, updated_by, created_at, updated_at)
+            (code, payer_user_id, order_id, payment_id, method, amount, received_by, received_at, 
+             note, txn_ref, bank_time, created_by, updated_by, created_at, updated_at)
             VALUES
-            (:received_at, :amount, :payer_name, :note, :is_active, :txn_ref, :bank_time, :created_by, :updated_by, NOW(), NOW())
+            (:code, :payer_user_id, :order_id, :payment_id, :method, :amount, :received_by, :received_at,
+             :note, :txn_ref, :bank_time, :created_by, :updated_by, NOW(), NOW())
         ");
         $stmt->execute([
-            ':received_at' => $data['received_at'],
-            ':amount' => $data['amount'],
-            ':payer_name' => $data['payer_name'],
+            ':code' => $data['code'] ?? '',
+            ':payer_user_id' => $data['customer_id'] ?? null,
+            ':order_id' => $data['order_id'] ?? null,
+            ':payment_id' => $data['payment_id'] ?? null,
+            ':method' => $data['method'] ?? null,
+            ':amount' => $data['amount'] ?? 0,
+            ':received_by' => $data['received_by'] ?? $currentUser,
+            ':received_at' => $data['received_at'] ?? null,
             ':note' => $data['note'] ?? null,
-            ':is_active' => !empty($data['is_active']) ? 1 : 0,
             ':txn_ref' => $data['txn_ref'] ?? null,
             ':bank_time' => $data['bank_time'] ?? null,
             ':created_by' => $currentUser,
@@ -65,18 +85,32 @@ class ReceiptVoucherRepository
         $pdo = DB::pdo();
         $stmt = $pdo->prepare("
             UPDATE receipt_vouchers SET 
-                received_at = :received_at, amount = :amount, payer_name = :payer_name, note = :note, is_active = :is_active,
-                txn_ref = :txn_ref, bank_time = :bank_time,
-                updated_by = :updated_by, updated_at = NOW()
+                code = :code,
+                payer_user_id = :payer_user_id,
+                order_id = :order_id,
+                payment_id = :payment_id,
+                method = :method,
+                amount = :amount,
+                received_by = :received_by,
+                received_at = :received_at,
+                note = :note,
+                txn_ref = :txn_ref,
+                bank_time = :bank_time,
+                updated_by = :updated_by, 
+                updated_at = NOW()
             WHERE id = :id
         ");
         $stmt->execute([
             ':id' => $id,
-            ':received_at' => $data['received_at'],
-            ':amount' => $data['amount'],
-            ':payer_name' => $data['payer_name'],
+            ':code' => $data['code'] ?? '',
+            ':payer_user_id' => $data['customer_id'] ?? null,
+            ':order_id' => $data['order_id'] ?? null,
+            ':payment_id' => $data['payment_id'] ?? null,
+            ':method' => $data['method'] ?? null,
+            ':amount' => $data['amount'] ?? 0,
+            ':received_by' => $data['received_by'] ?? null,
+            ':received_at' => $data['received_at'] ?? null,
             ':note' => $data['note'] ?? null,
-            ':is_active' => !empty($data['is_active']) ? 1 : 0,
             ':txn_ref' => $data['txn_ref'] ?? null,
             ':bank_time' => $data['bank_time'] ?? null,
             ':updated_by' => $currentUser,

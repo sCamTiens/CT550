@@ -236,7 +236,7 @@
                 class="w-full border rounded px-3 py-2 receipts-datepicker focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
                 :class="(touched.received_at && errors.received_at) ? 'border-red-500' : 'border-gray-300'"
                 placeholder="Chọn ngày" autocomplete="off"
-                x-init="flatpickr($el, {dateFormat: 'Y-m-d', allowInput: true, locale: 'vi'})"
+                x-init="flatpickr($el, {dateFormat: 'Y-m-d', allowInput: true, locale: 'vn'})"
                 @blur="touched.received_at = true; validateField('received_at')"
                 @input="touched.received_at && validateField('received_at')">
             <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
@@ -354,7 +354,7 @@
             <input type="text" x-model="form.bank_time"
                 class="w-full border border-gray-300 rounded px-3 py-2 bank-time-datepicker focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
                 placeholder="Chọn ngày hh:mm" autocomplete="off"
-                x-init="flatpickr($el, {enableTime: true, dateFormat: 'Y-m-d H:i', allowInput: true, locale: 'vi', time_24hr: true})">
+                x-init="flatpickr($el, {enableTime: true, dateFormat: 'Y-m-d H:i', allowInput: true, locale: 'vn', time_24hr: true})">
             <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                 <i class="fa-regular fa-calendar"></i>
             </span>
@@ -375,7 +375,7 @@
             document.querySelectorAll('.receipts-datepicker').forEach(function (input) {
                 flatpickr(input, {
                     dateFormat: 'Y-m-d',
-                    locale: 'vi',
+                    locale: 'vn',
                     allowInput: true,
                     static: true,
                     appendTo: input.parentElement
@@ -387,7 +387,7 @@
                 flatpickr(input, {
                     enableTime: true,
                     dateFormat: 'Y-m-d H:i',
-                    locale: 'vi',
+                    locale: 'vn',
                     allowInput: true,
                     time_24hr: true,
                     static: true,

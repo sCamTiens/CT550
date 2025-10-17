@@ -16,7 +16,7 @@ class OrderRepository
     {
         $pdo = DB::pdo();
         $sql = "
-            SELECT o.id, o.code, o.user_id AS customer_id, o.order_type, o.status,
+            SELECT o.id, o.code, o.user_id AS payer_user_id, o.order_type, o.status,
                 o.subtotal, 
                 o.discount_total AS discount_amount, 
                 o.shipping_fee, 
@@ -50,7 +50,7 @@ class OrderRepository
     {
         $pdo = DB::pdo();
         $sql = "
-            SELECT o.id, o.code, o.user_id AS customer_id, o.order_type, o.status,
+            SELECT o.id, o.code, o.user_id AS payer_user_id, o.order_type, o.status,
                 o.subtotal, 
                 o.discount_total AS discount_amount, 
                 o.shipping_fee, 
@@ -99,37 +99,6 @@ class OrderRepository
         try {
             $pdo->beginTransaction();
 
-            // Tạo payment nếu cần — giữ logic cũ (bạn có thể thay giá trị status phù hợp)
-            $paymentId = null;
-            if (!empty($data['payment_method'])) {
-                $stmtPay = $pdo->prepare("
-                    INSERT INTO payments (method, created_at)
-                    VALUES (:method, NOW())
-                ");
-                $stmtPay->execute([
-                    ':method' => $data['payment_method'],
-                ]);
-                $paymentId = (int) $pdo->lastInsertId();
-            }
-
-            // Tạo đơn hàng — dùng tên cột theo schema
-            $stmt = $pdo->prepare("
-                INSERT INTO orders
-                (code, user_id, order_type, status, payment_id, payment_method, payment_status,
-                subtotal, discount_total, shipping_fee, cod_amount, grand_total,
-                coupon_code,
-                shipping_address_id, note,
-                created_by, updated_by, created_at, updated_at)
-                VALUES
-                (:code, :user_id, :order_type, :status, :payment_id, :payment_method, :payment_status,
-                :subtotal, :discount_total, :shipping_fee, :cod_amount, :grand_total,
-                :coupon_code,
-                :shipping_address_id, :note,
-                :created_by, :updated_by, NOW(), NOW())
-            ");
-            // Xử lý customer_id - cho phép null (khách vãng lai)
-            $customerId = !empty($data['customer_id']) ? $data['customer_id'] : null;
-            
             // Map payment method
             $paymentMethodMap = [
                 'cash' => 'Tiền mặt',
@@ -137,7 +106,39 @@ class OrderRepository
                 'bank_transfer' => 'Chuyển khoản'
             ];
             $paymentMethod = $paymentMethodMap[$data['payment_method'] ?? 'cash'] ?? 'Tiền mặt';
-            
+
+            // Tạo payment nếu cần
+            $paymentId = null;
+            if (!empty($data['payment_method'])) {
+                $stmtPay = $pdo->prepare("
+                    INSERT INTO payments (method, amount, created_at)
+                    VALUES (:method, :amount, NOW())
+                ");
+                $stmtPay->execute([
+                    ':method' => $paymentMethod,
+                    ':amount' => $data['total_amount'] ?? 0,
+                ]);
+                $paymentId = (int) $pdo->lastInsertId();
+            }
+
+            // Xử lý user_id - cho phép null (khách vãng lai)
+            // Frontend có thể gửi customer_id hoặc payer_user_id
+            $customerId = $data['customer_id'] ?? $data['payer_user_id'] ?? null;
+
+            // Tạo đơn hàng - SỬ DỤNG ĐÚNG TÊN CỘT DATABASE
+            $stmt = $pdo->prepare("
+                INSERT INTO orders
+                (code, user_id, order_type, status, payment_id, payment_method, payment_status,
+                subtotal, discount_total, shipping_fee, cod_amount, grand_total,
+                coupon_code, shipping_address_id, note,
+                created_by, updated_by, created_at, updated_at)
+                VALUES
+                (:code, :user_id, :order_type, :status, :payment_id, :payment_method, :payment_status,
+                :subtotal, :discount_total, :shipping_fee, :cod_amount, :grand_total,
+                :coupon_code, :shipping_address_id, :note,
+                :created_by, :updated_by, NOW(), NOW())
+            ");
+
             $stmt->execute([
                 ':code' => $data['code'],
                 ':user_id' => $customerId,
@@ -147,9 +148,11 @@ class OrderRepository
                 ':payment_method' => $paymentMethod,
                 ':payment_status' => 'Đã thanh toán',
                 ':subtotal' => $data['subtotal'] ?? 0,
+                // QUAN TRỌNG: Map discount_amount từ frontend -> discount_total trong DB
                 ':discount_total' => $data['discount_amount'] ?? 0,
                 ':shipping_fee' => 0,
                 ':cod_amount' => 0,
+                // QUAN TRỌNG: Map total_amount từ frontend -> grand_total trong DB
                 ':grand_total' => $data['total_amount'] ?? 0,
                 ':coupon_code' => $data['coupon_code'] ?? null,
                 ':shipping_address_id' => null,
@@ -160,6 +163,41 @@ class OrderRepository
 
             $id = (int) $pdo->lastInsertId();
 
+            // Kiểm tra tồn kho trước khi lưu order items
+            if (!empty($data['items']) && is_array($data['items'])) {
+                foreach ($data['items'] as $item) {
+                    $productId = isset($item['product_id']) ? (int) $item['product_id'] : 0;
+                    $qtyNeeded = isset($item['qty']) ? (int) $item['qty'] : 0;
+
+                    if ($productId <= 0 || $qtyNeeded <= 0) {
+                        continue;
+                    }
+
+                    // Lấy tồn kho hiện tại
+                    $stmtCheck = $pdo->prepare("
+                        SELECT p.name, COALESCE(s.qty, 0) as current_stock 
+                        FROM products p
+                        LEFT JOIN stocks s ON s.product_id = p.id
+                        WHERE p.id = ?
+                    ");
+                    $stmtCheck->execute([$productId]);
+                    $product = $stmtCheck->fetch(\PDO::FETCH_ASSOC);
+
+                    if (!$product) {
+                        throw new \Exception("Không tìm thấy sản phẩm với ID: {$productId}");
+                    }
+
+                    $currentStock = (int) $product['current_stock'];
+
+                    if ($currentStock < $qtyNeeded) {
+                        throw new \Exception(
+                            "Sản phẩm '{$product['name']}' không đủ tồn kho. " .
+                            "Tồn kho hiện tại: {$currentStock}, yêu cầu: {$qtyNeeded}"
+                        );
+                    }
+                }
+            }
+
             // Lưu order items và trừ tồn kho
             if (!empty($data['items']) && is_array($data['items'])) {
                 $stmtItem = $pdo->prepare("
@@ -167,18 +205,18 @@ class OrderRepository
                     (order_id, product_id, qty, unit_price, discount, tax, line_total)
                     VALUES (:order_id, :product_id, :qty, :unit_price, :discount, :tax, :line_total)
                 ");
-                
+
                 $stmtUpdateStock = $pdo->prepare("
-                    UPDATE products SET stock = stock - :qty WHERE id = :product_id
+                    UPDATE stocks SET qty = qty - :qty WHERE product_id = :product_id
                 ");
-                
+
                 foreach ($data['items'] as $item) {
                     $qty = (int) ($item['qty'] ?? 0);
                     $unitPrice = (float) ($item['unit_price'] ?? 0);
                     $discount = (float) ($item['discount'] ?? 0);
                     $tax = (float) ($item['tax'] ?? 0);
                     $lineTotal = ($qty * $unitPrice) - $discount + $tax;
-                    
+
                     $stmtItem->execute([
                         ':order_id' => $id,
                         ':product_id' => $item['product_id'],
@@ -188,11 +226,24 @@ class OrderRepository
                         ':tax' => $tax,
                         ':line_total' => $lineTotal,
                     ]);
-                    
-                    // Trừ tồn kho
+
+                    // Trừ tồn kho từ bảng stocks
                     $stmtUpdateStock->execute([
                         ':qty' => $qty,
                         ':product_id' => $item['product_id']
+                    ]);
+
+                    // Ghi log stock movement
+                    $stmtMovement = $pdo->prepare("
+                        INSERT INTO stock_movements 
+                        (product_id, type, ref_type, ref_id, qty, note, created_at)
+                        VALUES (:product_id, 'Xuất kho', 'Đơn hàng', :ref_id, :qty, :note, NOW())
+                    ");
+                    $stmtMovement->execute([
+                        ':product_id' => $item['product_id'],
+                        ':ref_id' => $id,
+                        ':qty' => -$qty,
+                        ':note' => "Xuất kho cho đơn hàng {$data['code']}"
                     ]);
                 }
             }
@@ -201,13 +252,13 @@ class OrderRepository
             $receiptCode = $this->generateReceiptCode($pdo);
             $stmtReceipt = $pdo->prepare("
                 INSERT INTO receipt_vouchers
-                (code, customer_id, order_id, method, txn_ref, received_at, amount, received_by, note, bank_time, is_active, created_by, updated_by, created_at, updated_at)
+                (code, payer_user_id, order_id, method, txn_ref, received_at, amount, received_by, note, bank_time, created_by, updated_by, created_at, updated_at)
                 VALUES
-                (:code, :customer_id, :order_id, :method, :txn_ref, NOW(), :amount, :received_by, :note, NULL, 1, :created_by, :updated_by, NOW(), NOW())
+                (:code, :payer_user_id, :order_id, :method, :txn_ref, NOW(), :amount, :received_by, :note, NULL, :created_by, :updated_by, NOW(), NOW())
             ");
             $stmtReceipt->execute([
                 ':code' => $receiptCode,
-                ':customer_id' => $customerId,
+                ':payer_user_id' => $customerId,
                 ':order_id' => $id,
                 ':method' => $paymentMethod,
                 ':txn_ref' => $data['code'],
@@ -236,11 +287,11 @@ class OrderRepository
             ]);
 
             $pdo->commit();
-            
+
             // Log audit
             $this->logCreate('orders', $id, [
                 'code' => $data['code'],
-                'customer_id' => $customerId,
+                'payer_user_id' => $customerId,
                 'order_type' => 'Offline',
                 'status' => 'Hoàn tất',
                 'payment_method' => $paymentMethod,
@@ -249,10 +300,12 @@ class OrderRepository
                 'discount_amount' => $data['discount_amount'] ?? 0,
                 'total_amount' => $data['total_amount'] ?? 0
             ]);
-            
+
             return $id;
-        } catch (\PDOException $e) {
-            $pdo->rollBack();
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             throw $e;
         }
     }
@@ -262,12 +315,11 @@ class OrderRepository
      */
     public function update(int $id, array $data, int $currentUser): void
     {
-        // Get before data for audit
         $beforeOrder = $this->findOne($id);
         $beforeArray = null;
         if ($beforeOrder) {
             $beforeArray = [
-                'customer_id' => $beforeOrder->customer_id,
+                'payer_user_id' => $beforeOrder->customer_id,
                 'status' => $beforeOrder->status,
                 'payment_method' => $beforeOrder->payment_method,
                 'payment_status' => $beforeOrder->payment_status,
@@ -276,25 +328,39 @@ class OrderRepository
                 'total_amount' => $beforeOrder->total_amount
             ];
         }
-        
+
         $pdo = DB::pdo();
         try {
             $pdo->beginTransaction();
+
+            // Map payment method
+            $paymentMethodMap = [
+                'cash' => 'Tiền mặt',
+                'credit_card' => 'Quẹt thẻ',
+                'bank_transfer' => 'Chuyển khoản'
+            ];
+            $paymentMethod = $paymentMethodMap[$data['payment_method'] ?? 'cash'] ?? 'Tiền mặt';
 
             // Cập nhật payment nếu có
             if (isset($data['payment_id']) && $data['payment_id']) {
                 $stmtPay = $pdo->prepare("
                     UPDATE payments SET 
-                        method = :method
+                        method = :method,
+                        amount = :amount
                     WHERE id = :id
                 ");
                 $stmtPay->execute([
                     ':id' => $data['payment_id'],
-                    ':method' => $data['payment_method'] ?? null,
+                    ':method' => $paymentMethod,
+                    ':amount' => $data['total_amount'] ?? 0,
                 ]);
             }
 
-            // Cập nhật đơn hàng (tên cột theo schema)
+            // Xử lý user_id - cho phép null (khách vãng lai)
+            // Frontend có thể gửi customer_id hoặc payer_user_id
+            $customerId = $data['customer_id'] ?? $data['payer_user_id'] ?? null;
+
+            // Cập nhật đơn hàng - SỬ DỤNG ĐÚNG TÊN CỘT DATABASE
             $stmt = $pdo->prepare("
                 UPDATE orders SET 
                     user_id = :user_id,
@@ -314,17 +380,7 @@ class OrderRepository
                     updated_at = NOW()
                 WHERE id = :id
             ");
-            // Xử lý customer_id - cho phép null (khách vãng lai)
-            $customerId = !empty($data['customer_id']) ? $data['customer_id'] : null;
-            
-            // Map payment method
-            $paymentMethodMap = [
-                'cash' => 'Tiền mặt',
-                'credit_card' => 'Quẹt thẻ',
-                'bank_transfer' => 'Chuyển khoản'
-            ];
-            $paymentMethod = $paymentMethodMap[$data['payment_method'] ?? 'cash'] ?? 'Tiền mặt';
-            
+
             $stmt->execute([
                 ':id' => $id,
                 ':user_id' => $customerId,
@@ -333,9 +389,11 @@ class OrderRepository
                 ':payment_method' => $paymentMethod,
                 ':payment_status' => 'Đã thanh toán',
                 ':subtotal' => $data['subtotal'] ?? 0,
+                // QUAN TRỌNG: Map discount_amount -> discount_total
                 ':discount_total' => $data['discount_amount'] ?? 0,
                 ':shipping_fee' => 0,
                 ':cod_amount' => 0,
+                // QUAN TRỌNG: Map total_amount -> grand_total
                 ':grand_total' => $data['total_amount'] ?? 0,
                 ':coupon_code' => $data['coupon_code'] ?? null,
                 ':shipping_address_id' => null,
@@ -343,41 +401,41 @@ class OrderRepository
                 ':updated_by' => $currentUser,
             ]);
 
-            // Cập nhật order items - hoàn lại tồn kho cũ, xóa items cũ, thêm items mới và trừ tồn kho mới
+            // Cập nhật order items
             if (isset($data['items']) && is_array($data['items'])) {
                 // Lấy các items cũ để hoàn lại tồn kho
                 $stmtOldItems = $pdo->prepare("SELECT product_id, qty FROM order_items WHERE order_id = ?");
                 $stmtOldItems->execute([$id]);
                 $oldItems = $stmtOldItems->fetchAll(\PDO::FETCH_ASSOC);
-                
+
                 // Hoàn lại tồn kho cho các sản phẩm cũ
-                $stmtRestoreStock = $pdo->prepare("UPDATE products SET stock = stock + :qty WHERE id = :product_id");
+                $stmtRestoreStock = $pdo->prepare("UPDATE stocks SET qty = qty + :qty WHERE product_id = :product_id");
                 foreach ($oldItems as $oldItem) {
                     $stmtRestoreStock->execute([
                         ':qty' => $oldItem['qty'],
                         ':product_id' => $oldItem['product_id']
                     ]);
                 }
-                
+
                 // Xóa các items cũ
                 $pdo->prepare("DELETE FROM order_items WHERE order_id = ?")->execute([$id]);
-                
+
                 // Thêm các items mới và trừ tồn kho
                 $stmtItem = $pdo->prepare("
                     INSERT INTO order_items 
                     (order_id, product_id, qty, unit_price, discount, tax, line_total)
                     VALUES (:order_id, :product_id, :qty, :unit_price, :discount, :tax, :line_total)
                 ");
-                
-                $stmtUpdateStock = $pdo->prepare("UPDATE products SET stock = stock - :qty WHERE id = :product_id");
-                
+
+                $stmtUpdateStock = $pdo->prepare("UPDATE stocks SET qty = qty - :qty WHERE product_id = :product_id");
+
                 foreach ($data['items'] as $item) {
                     $qty = (int) ($item['qty'] ?? 0);
                     $unitPrice = (float) ($item['unit_price'] ?? 0);
                     $discount = (float) ($item['discount'] ?? 0);
                     $tax = (float) ($item['tax'] ?? 0);
                     $lineTotal = ($qty * $unitPrice) - $discount + $tax;
-                    
+
                     $stmtItem->execute([
                         ':order_id' => $id,
                         ':product_id' => $item['product_id'],
@@ -387,18 +445,17 @@ class OrderRepository
                         ':tax' => $tax,
                         ':line_total' => $lineTotal,
                     ]);
-                    
-                    // Trừ tồn kho mới
+
                     $stmtUpdateStock->execute([
                         ':qty' => $qty,
                         ':product_id' => $item['product_id']
                     ]);
                 }
-                
+
                 // Cập nhật phiếu thu nếu có
                 $stmtUpdateReceipt = $pdo->prepare("
                     UPDATE receipt_vouchers 
-                    SET customer_id = :customer_id, 
+                    SET payer_user_id = :payer_user_id, 
                         method = :method, 
                         amount = :amount,
                         note = :note,
@@ -407,14 +464,14 @@ class OrderRepository
                     WHERE order_id = :order_id
                 ");
                 $stmtUpdateReceipt->execute([
-                    ':customer_id' => $customerId,
+                    ':payer_user_id' => $customerId,
                     ':method' => $paymentMethod,
                     ':amount' => $data['total_amount'] ?? 0,
                     ':note' => 'Phiếu thu từ đơn hàng ' . ($data['code'] ?? ''),
                     ':updated_by' => $currentUser,
                     ':order_id' => $id
                 ]);
-                
+
                 // Cập nhật phiếu xuất kho nếu có
                 $stmtUpdateStockOut = $pdo->prepare("
                     UPDATE stock_outs 
@@ -433,22 +490,11 @@ class OrderRepository
             }
 
             $pdo->commit();
-            
+
             // Log audit
             if ($beforeArray) {
-                // Xử lý customer_id - cho phép null (khách vãng lai)
-                $customerId = !empty($data['customer_id']) ? $data['customer_id'] : null;
-                
-                // Map payment method
-                $paymentMethodMap = [
-                    'cash' => 'Tiền mặt',
-                    'credit_card' => 'Quẹt thẻ',
-                    'bank_transfer' => 'Chuyển khoản'
-                ];
-                $paymentMethod = $paymentMethodMap[$data['payment_method'] ?? 'cash'] ?? 'Tiền mặt';
-                
                 $afterArray = [
-                    'customer_id' => $customerId,
+                    'payer_user_id' => $customerId,
                     'status' => 'Hoàn tất',
                     'payment_method' => $paymentMethod,
                     'payment_status' => 'Đã thanh toán',
@@ -469,35 +515,31 @@ class OrderRepository
      */
     public function delete(int $id): void
     {
-        // Get before data for audit
         $beforeOrder = $this->findOne($id);
         $beforeArray = null;
         if ($beforeOrder) {
             $beforeArray = [
                 'code' => $beforeOrder->code,
-                'customer_id' => $beforeOrder->customer_id,
+                'payer_user_id' => $beforeOrder->customer_id,
                 'status' => $beforeOrder->status,
                 'payment_method' => $beforeOrder->payment_method,
                 'total_amount' => $beforeOrder->total_amount
             ];
         }
-        
+
         $pdo = DB::pdo();
         try {
             $pdo->beginTransaction();
 
-            // Lấy payment_id trước khi xóa
             $stmt = $pdo->prepare("SELECT payment_id FROM orders WHERE id = ?");
             $stmt->execute([$id]);
             $paymentId = $stmt->fetchColumn();
 
-            // Lấy các items để hoàn lại tồn kho
             $stmtItems = $pdo->prepare("SELECT product_id, qty FROM order_items WHERE order_id = ?");
             $stmtItems->execute([$id]);
             $items = $stmtItems->fetchAll(\PDO::FETCH_ASSOC);
-            
-            // Hoàn lại tồn kho
-            $stmtRestoreStock = $pdo->prepare("UPDATE products SET stock = stock + :qty WHERE id = :product_id");
+
+            $stmtRestoreStock = $pdo->prepare("UPDATE stocks SET qty = qty + :qty WHERE product_id = :product_id");
             foreach ($items as $item) {
                 $stmtRestoreStock->execute([
                     ':qty' => $item['qty'],
@@ -505,26 +547,17 @@ class OrderRepository
                 ]);
             }
 
-            // Xóa phiếu thu liên quan
             $pdo->prepare("DELETE FROM receipt_vouchers WHERE order_id = ?")->execute([$id]);
-            
-            // Xóa phiếu xuất kho liên quan
             $pdo->prepare("DELETE FROM stock_outs WHERE order_id = ?")->execute([$id]);
-
-            // Xóa order items
             $pdo->prepare("DELETE FROM order_items WHERE order_id = ?")->execute([$id]);
-
-            // Xóa đơn hàng
             $pdo->prepare("DELETE FROM orders WHERE id = ?")->execute([$id]);
 
-            // Xóa payment nếu có
             if ($paymentId) {
                 $pdo->prepare("DELETE FROM payments WHERE id = ?")->execute([$paymentId]);
             }
 
             $pdo->commit();
-            
-            // Log audit
+
             if ($beforeArray) {
                 $this->logDelete('orders', $id, $beforeArray);
             }
@@ -541,8 +574,8 @@ class OrderRepository
      */
     public function unpaid(): array
     {
-            $pdo = DB::pdo();
-            $sql = "
+        $pdo = DB::pdo();
+        $sql = "
             SELECT o.id, o.code, o.user_id, u.full_name AS customer_name, o.grand_total
             FROM orders o
             LEFT JOIN users u ON u.id = o.user_id
@@ -592,5 +625,4 @@ class OrderRepository
         $nextId = $maxId + 1;
         return 'XK' . date('Ymd') . str_pad($nextId, 5, '0', STR_PAD_LEFT);
     }
-
 }

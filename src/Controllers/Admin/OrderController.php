@@ -43,18 +43,53 @@ class OrderController extends BaseAdminController
     /** POST /admin/orders (create) */
     public function store()
     {
-        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        // Log request data để debug
+        $rawInput = file_get_contents('php://input');
+        error_log("=== ORDER CREATE REQUEST ===");
+        error_log("Raw input: " . $rawInput);
+
+        $data = json_decode($rawInput, true) ?? [];
+        error_log("Decoded data: " . json_encode($data, JSON_UNESCAPED_UNICODE));
+
         $currentUser = $this->currentUserId();
+        error_log("Current user ID: " . $currentUser);
 
         try {
             $id = $this->orderRepo->create($data, $currentUser);
+            error_log("Order created successfully with ID: " . $id);
+
+            http_response_code(200);
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode($this->orderRepo->findOne($id), JSON_UNESCAPED_UNICODE);
             exit;
         } catch (\PDOException $e) {
+            error_log("=== PDO EXCEPTION ===");
+            error_log("Message: " . $e->getMessage());
+            error_log("Code: " . $e->getCode());
+            error_log("File: " . $e->getFile() . ":" . $e->getLine());
+            error_log("Stack trace: " . $e->getTraceAsString());
+
             http_response_code(500);
             header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['error' => 'Lỗi máy chủ khi tạo đơn hàng: ' . $e->getMessage()]);
+            echo json_encode([
+                'error' => 'Lỗi cơ sở dữ liệu',
+                'message' => $e->getMessage(),
+                'code' => $e->getCode()
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        } catch (\Throwable $e) {
+            error_log("=== GENERAL EXCEPTION ===");
+            error_log("Message: " . $e->getMessage());
+            error_log("Code: " . $e->getCode());
+            error_log("File: " . $e->getFile() . ":" . $e->getLine());
+            error_log("Stack trace: " . $e->getTraceAsString());
+
+            http_response_code(400);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'error' => $e->getMessage(),
+                'type' => get_class($e)
+            ], JSON_UNESCAPED_UNICODE);
             exit;
         }
     }
@@ -73,7 +108,12 @@ class OrderController extends BaseAdminController
         } catch (\PDOException $e) {
             http_response_code(500);
             header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['error' => 'Lỗi máy chủ khi cập nhật đơn hàng: ' . $e->getMessage()]);
+            echo json_encode(['error' => 'Lỗi máy chủ khi cập nhật đơn hàng: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
+            exit;
+        } catch (\Exception $e) {
+            http_response_code(400);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['error' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
             exit;
         }
     }

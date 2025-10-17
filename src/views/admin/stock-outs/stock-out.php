@@ -74,25 +74,29 @@ $items = $items ?? [];
                                 </button>
                             </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line" x-text="s.code"></td>
-                            <td class="px-3 py-2 break-words whitespace-pre-line">
-                                <span :class="{
-                                    'px-2 py-1 rounded text-xs': true,
-                                    'bg-blue-100 text-blue-800': s.type === 'sale',
-                                    'bg-orange-100 text-orange-800': s.type === 'return',
-                                    'bg-red-100 text-red-800': s.type === 'damage',
-                                    'bg-gray-100 text-gray-800': s.type === 'other'
-                                }" x-text="getTypeText(s.type)"></span>
+                            <td class="px-3 py-2 text-center align-middle">
+                                <div class="flex justify-center items-center h-full">
+                                    <span class="px-2 py-[3px] rounded text-xs font-medium" :class="{
+                                        'bg-blue-100 text-blue-800': s.type === 'sale',
+                                        'bg-orange-100 text-orange-800': s.type === 'return',
+                                        'bg-red-100 text-red-800': s.type === 'damage',
+                                        'bg-gray-100 text-gray-800': s.type === 'other'
+                                    }" x-text="getTypeText(s.type)">
+                                    </span>
+                                </div>
                             </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line" x-text="s.order_code || '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line" x-text="s.customer_name || '—'"></td>
-                            <td class="px-3 py-2 break-words whitespace-pre-line">
-                                <span :class="{
+                            <td class="px-3 py-2 text-center align-middle">
+                                <div class="px-2 py-[3px] rounded text-xs font-medium" class="flex justify-center items-center h-full">
+                                    <span :class="{
                                     'px-2 py-1 rounded text-xs': true,
                                     'bg-yellow-100 text-yellow-800': s.status === 'pending',
                                     'bg-blue-100 text-blue-800': s.status === 'approved',
                                     'bg-green-100 text-green-800': s.status === 'completed',
                                     'bg-red-100 text-red-800': s.status === 'cancelled'
                                 }" x-text="getStatusText(s.status)"></span>
+                                </div>
                             </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line text-right"
                                 x-text="s.out_date ? s.out_date.substring(0,10) : '—'"></td>

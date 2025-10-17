@@ -69,8 +69,12 @@ $items = $items ?? [];
                                     <i class="fa-solid fa-trash"></i>
                                 </button>
                             </td>
-                            <td class="px-3 py-2 break-words whitespace-pre-line" x-text="o.code"></td>
-                            <td class="px-3 py-2 break-words whitespace-pre-line" x-text="o.customer_name || '—'"></td>
+                            <td class="px-3 py-2 break-words whitespace-pre-line"
+                                :class="(o.code || '—') === '—' ? 'text-center' : 'text-left'"
+                                x-text="o.code || '—'"></td>
+                            <td class="px-3 py-2 break-words whitespace-pre-line"
+                                :class="(o.customer_name || '—') === '—' ? 'text-center' : 'text-left'"
+                                x-text="o.customer_name || '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line">
                                 <span :class="{
                                     'px-2 py-1 rounded text-xs': true,
@@ -91,7 +95,9 @@ $items = $items ?? [];
                                 x-text="formatCurrency(o.shipping_fee || 0)"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line text-right font-semibold"
                                 x-text="formatCurrency(o.total_amount || 0)"></td>
-                            <td class="px-3 py-2 break-words whitespace-pre-line" x-text="o.payment_method || '—'"></td>
+                            <td class="px-3 py-2 break-words whitespace-pre-line"
+                                :class="(o.payment_method || '—') === '—' ? 'text-center' : 'text-left'"
+                                x-text="o.payment_method || '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line">
                                 <span :class="{
                                     'px-2 py-1 rounded text-xs': true,
@@ -371,6 +377,30 @@ $items = $items ?? [];
                 this.calculateTotal();
             },
 
+            validateQuantity(item) {
+                if (!item.product_id) {
+                    item.quantity = 1;
+                    return;
+                }
+                
+                const prod = this.products.find(p => p.id == item.product_id);
+                const maxStock = prod ? prod.stock : 0;
+                
+                if (item.quantity > maxStock) {
+                    this.showToast(
+                        'Sản phẩm "' + (prod?.name || 'này') + '" chỉ còn ' + maxStock + ' trong kho!', 
+                        'error'
+                    );
+                    item.quantity = maxStock;
+                }
+                
+                if (item.quantity < 0) {
+                    item.quantity = 0;
+                }
+                
+                this.calculateTotal();
+            },
+
             getStatusText(status) {
                 const map = {
                     'pending': 'Chờ xử lý',
@@ -432,6 +462,17 @@ $items = $items ?? [];
                         this.showToast(`Đơn giá phải lớn hơn 0 ở dòng ${i + 1}`);
                         return false;
                     }
+                    
+                    // Kiểm tra tồn kho
+                    const product = this.products.find(p => p.id == item.product_id);
+                    if (product && item.quantity > product.stock) {
+                        this.showToast(
+                            `Sản phẩm "${product.name}" không đủ tồn kho. ` +
+                            `Tồn kho hiện tại: ${product.stock}, yêu cầu: ${item.quantity}`,
+                            'error'
+                        );
+                        return false;
+                    }
                 }
                 
                 return Object.values(this.errors).every(v => !v);
@@ -473,10 +514,25 @@ $items = $items ?? [];
                         id: p.id,
                         sku: p.sku,
                         name: p.name,
-                        sale_price: p.sale_price
+                        sale_price: p.sale_price,
+                        stock: p.stock_qty || 0  // Map từ stock_qty sang stock
                     }));
                 } catch (e) {
                     this.showToast('Không thể tải danh sách sản phẩm');
+                }
+            },
+
+            async fetchCustomers() {
+                try {
+                    const res = await fetch(api.customers);
+                    const data = await res.json();
+                    this.customers = (data.items || []).map(c => ({
+                        id: c.id,
+                        name: c.full_name,
+                        phone: c.phone
+                    }));
+                } catch (e) {
+                    this.showToast('Không thể tải danh sách khách hàng');
                 }
             },
 
@@ -485,6 +541,7 @@ $items = $items ?? [];
                 this.resetForm();
                 await Promise.all([
                     this.fetchProducts(),
+                    this.fetchCustomers(),
                     this.fetchNextCode()
                 ]);
                 // Thêm 1 dòng sản phẩm mặc định
@@ -514,11 +571,12 @@ $items = $items ?? [];
                 this.resetForm();
                 await Promise.all([
                     this.fetchProducts(),
+                    this.fetchCustomers(),
                     this.fetchOrderItems(o.id)
                 ]);
                 this.form = {
                     ...o,
-                    customer_id: o.customer_id || null,
+                    customer_id: o.payer_user_id || null,
                     payment_status: 'paid',
                     subtotalFormatted: o.subtotal ? o.subtotal.toLocaleString('en-US') : '',
                     discount_amountFormatted: o.discount_amount ? o.discount_amount.toLocaleString('en-US') : '',
@@ -573,15 +631,20 @@ $items = $items ?? [];
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
+                    
+                    const data = await res.json();
+                    
                     if (res.ok) {
                         this.showToast('Thêm đơn hàng thành công!', 'success');
                         this.openAdd = false;
                         await this.fetchAll();
                     } else {
-                        this.showToast('Không thể thêm đơn hàng');
+                        // Hiển thị thông báo lỗi từ server
+                        const errorMsg = data.error || 'Không thể thêm đơn hàng';
+                        this.showToast(errorMsg, 'error');
                     }
                 } catch (e) {
-                    this.showToast('Không thể thêm đơn hàng');
+                    this.showToast('Không thể kết nối đến server', 'error');
                 } finally {
                     this.submitting = false;
                 }
@@ -605,15 +668,20 @@ $items = $items ?? [];
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
+                    
+                    const data = await res.json();
+                    
                     if (res.ok) {
                         this.showToast('Cập nhật đơn hàng thành công!', 'success');
                         this.openEdit = false;
                         await this.fetchAll();
                     } else {
-                        this.showToast('Không thể cập nhật đơn hàng');
+                        // Hiển thị thông báo lỗi từ server
+                        const errorMsg = data.error || 'Không thể cập nhật đơn hàng';
+                        this.showToast(errorMsg, 'error');
                     }
                 } catch (e) {
-                    this.showToast('Không thể cập nhật đơn hàng');
+                    this.showToast('Không thể kết nối đến server', 'error');
                 } finally {
                     this.submitting = false;
                 }
