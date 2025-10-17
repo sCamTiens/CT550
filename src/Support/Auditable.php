@@ -26,6 +26,14 @@ trait Auditable
     }
 
     /**
+     * Lấy ID của user hiện tại từ session
+     */
+    private function getCurrentUserId(): ?int
+    {
+        return $_SESSION['user']['id'] ?? $_SESSION['admin_user']['id'] ?? null;
+    }
+
+    /**
      * Log hành động CREATE
      */
     protected function logCreate(
@@ -34,6 +42,11 @@ trait Auditable
         array $afterData,
         ?int $actorUserId = null
     ): void {
+        // Nếu không truyền actorUserId, tự động lấy từ session
+        if ($actorUserId === null) {
+            $actorUserId = $this->getCurrentUserId();
+        }
+
         $this->getAuditRepo()->log(
             $actorUserId,
             $entityType,
@@ -59,6 +72,11 @@ trait Auditable
             return;
         }
 
+        // Nếu không truyền actorUserId, tự động lấy từ session
+        if ($actorUserId === null) {
+            $actorUserId = $this->getCurrentUserId();
+        }
+
         $this->getAuditRepo()->log(
             $actorUserId,
             $entityType,
@@ -78,6 +96,11 @@ trait Auditable
         array $beforeData,
         ?int $actorUserId = null
     ): void {
+        // Nếu không truyền actorUserId, tự động lấy từ session
+        if ($actorUserId === null) {
+            $actorUserId = $this->getCurrentUserId();
+        }
+
         $this->getAuditRepo()->log(
             $actorUserId,
             $entityType,
@@ -97,6 +120,11 @@ trait Auditable
         array $afterData,
         ?int $actorUserId = null
     ): void {
+        // Nếu không truyền actorUserId, tự động lấy từ session
+        if ($actorUserId === null) {
+            $actorUserId = $this->getCurrentUserId();
+        }
+
         $this->getAuditRepo()->log(
             $actorUserId,
             $entityType,
@@ -117,6 +145,11 @@ trait Auditable
         string $newStatus,
         ?int $actorUserId = null
     ): void {
+        // Nếu không truyền actorUserId, tự động lấy từ session
+        if ($actorUserId === null) {
+            $actorUserId = $this->getCurrentUserId();
+        }
+
         $this->getAuditRepo()->log(
             $actorUserId,
             $entityType,

@@ -547,7 +547,7 @@ CREATE TABLE receipt_vouchers (
 CREATE TABLE stocks (
   product_id BIGINT PRIMARY KEY,              -- Mã sản phẩm 
   qty INT NOT NULL DEFAULT 0,                 -- tồn hiện tại
-  safety_stock INT NOT NULL DEFAULT 0,        -- tồn an toàn
+  safety_stock INT NOT NULL DEFAULT 10,       -- tồn an toàn (mặc định 10)
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   updated_by BIGINT NULL,
   CONSTRAINT fk_st_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
@@ -1104,3 +1104,49 @@ ALTER TABLE promotion_products
   DROP COLUMN IF EXISTS updated_at,
   DROP COLUMN IF EXISTS created_by,
   DROP COLUMN IF EXISTS updated_by;
+
+
+CREATE TABLE supplier_bank_accounts (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  supplier_id BIGINT NOT NULL,
+  bank_name VARCHAR(250) NOT NULL,
+  account_number VARCHAR(50) NOT NULL,
+  account_name VARCHAR(250) NOT NULL,
+  branch VARCHAR(250) NULL,
+  is_default BOOLEAN NOT NULL DEFAULT FALSE,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  
+  CONSTRAINT fk_sba_supplier FOREIGN KEY(supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE,
+  CONSTRAINT fk_sba_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_sba_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
+  
+  INDEX idx_sba_supplier (supplier_id)
+) ENGINE=InnoDB;
+
+ALTER TABLE expense_vouchers
+  ADD COLUMN bank_account_id BIGINT NULL AFTER supplier_id,
+  ADD CONSTRAINT fk_ev_bank_account FOREIGN KEY(bank_account_id) 
+    REFERENCES supplier_bank_accounts(id) ON DELETE SET NULL;
+
+-- Cập nhật safety_stock mặc định cho các bản ghi hiện tại
+UPDATE stocks SET safety_stock = 10 WHERE safety_stock = 0;
+
+-- Bảng thông báo
+CREATE TABLE IF NOT EXISTS notifications (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,                    -- Người nhận thông báo
+  type ENUM('warning','info','success','error') NOT NULL DEFAULT 'info',
+  title VARCHAR(255) NOT NULL,                -- Tiêu đề thông báo
+  message TEXT NOT NULL,                      -- Nội dung thông báo
+  link VARCHAR(255) NULL,                     -- Link liên quan (nếu có)
+  is_read BOOLEAN NOT NULL DEFAULT FALSE,     -- Đã đọc chưa
+  read_at DATETIME NULL,                      -- Thời gian đọc
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_notif_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_notif_user_read (user_id, is_read),
+  INDEX idx_notif_created (created_at)
+) ENGINE=InnoDB;

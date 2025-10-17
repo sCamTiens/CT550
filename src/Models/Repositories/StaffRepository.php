@@ -2,11 +2,14 @@
 namespace App\Models\Repositories;
 
 use \App\Core\DB;
+use App\Support\Auditable;
 use PDO;
 use PDOException;
 
 class StaffRepository
 {
+    use Auditable;
+
     protected $userTable = 'users';
     protected $staffTable = 'staff_profiles';
 
@@ -133,7 +136,22 @@ class StaffRepository
             ]);
 
             DB::pdo()->commit();
-            return $this->find($userId);
+            
+            $created = $this->find($userId);
+            
+            // Log audit
+            if (is_array($created)) {
+                $this->logCreate('staff', (int)$userId, [
+                    'username' => $created['username'] ?? null,
+                    'full_name' => $created['full_name'] ?? null,
+                    'email' => $created['email'] ?? null,
+                    'phone' => $created['phone'] ?? null,
+                    'staff_role' => $created['staff_role'] ?? null,
+                    'is_active' => $created['is_active'] ?? null
+                ]);
+            }
+            
+            return $created;
         } catch (PDOException $e) {
             DB::pdo()->rollBack();
             if ($err = $this->mapDuplicateError($e)) {
@@ -146,6 +164,20 @@ class StaffRepository
     /** Cập nhật nhân viên */
     public function update(int|string $id, array $data): array|string|false
     {
+        // Get before data
+        $beforeData = $this->find($id);
+        $beforeArray = null;
+        if (is_array($beforeData)) {
+            $beforeArray = [
+                'username' => $beforeData['username'] ?? null,
+                'full_name' => $beforeData['full_name'] ?? null,
+                'email' => $beforeData['email'] ?? null,
+                'phone' => $beforeData['phone'] ?? null,
+                'staff_role' => $beforeData['staff_role'] ?? null,
+                'is_active' => $beforeData['is_active'] ?? null
+            ];
+        }
+        
         try {
             DB::pdo()->beginTransaction();
 
@@ -176,6 +208,19 @@ class StaffRepository
 
             DB::pdo()->commit();
             $result = $this->find($id);
+            
+            // Log audit
+            if (is_array($result) && $beforeArray) {
+                $afterArray = [
+                    'username' => $result['username'] ?? null,
+                    'full_name' => $result['full_name'] ?? null,
+                    'email' => $result['email'] ?? null,
+                    'phone' => $result['phone'] ?? null,
+                    'staff_role' => $result['staff_role'] ?? null,
+                    'is_active' => $result['is_active'] ?? null
+                ];
+                $this->logUpdate('staff', (int)$id, $beforeArray, $afterArray);
+            }
             return is_array($result) ? $result : false;
         } catch (PDOException $e) {
             DB::pdo()->rollBack();
@@ -189,8 +234,26 @@ class StaffRepository
     /** Xóa mềm nhân viên (chỉ đánh dấu is_deleted=1) */
     public function delete(int|string $id): bool
     {
+        // Get before data
+        $beforeData = $this->find($id);
+        $beforeArray = null;
+        if (is_array($beforeData)) {
+            $beforeArray = [
+                'username' => $beforeData['username'] ?? null,
+                'full_name' => $beforeData['full_name'] ?? null,
+                'staff_role' => $beforeData['staff_role'] ?? null
+            ];
+        }
+        
         $sql = "UPDATE {$this->userTable} SET is_deleted = 1, updated_at=CURRENT_TIMESTAMP WHERE id=? AND role_id=2 AND is_deleted=0";
         $stmt = DB::pdo()->prepare($sql);
-        return $stmt->execute([$id]);
+        $result = $stmt->execute([$id]);
+        
+        // Log audit
+        if ($result && $beforeArray) {
+            $this->logDelete('staff', (int)$id, $beforeArray);
+        }
+        
+        return $result;
     }
 }

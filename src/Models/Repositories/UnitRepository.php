@@ -4,9 +4,12 @@ namespace App\Models\Repositories;
 
 use App\Core\DB;
 use App\Models\Entities\Unit;
+use App\Support\Auditable;
 
 class UnitRepository
 {
+    use Auditable;
+
     // Kiểm tra có thể xóa không: nếu còn sản phẩm dùng đơn vị này thì không cho xóa
     public function canDelete($id): bool
     {
@@ -57,11 +60,29 @@ class UnitRepository
             ':created_by' => $currentUserId,
             ':updated_by' => $currentUserId,
         ]);
-        return $pdo->lastInsertId();
+        $id = $pdo->lastInsertId();
+        
+        // Log audit
+        $this->logCreate('units', (int)$id, [
+            'name' => $name,
+            'slug' => $slug ?: null
+        ]);
+        
+        return $id;
     }
 
     public function update($id, $name, $slug, $currentUserId)
     {
+        // Get before data
+        $beforeUnit = $this->findOne($id);
+        $beforeArray = null;
+        if ($beforeUnit) {
+            $beforeArray = [
+                'name' => $beforeUnit->name,
+                'slug' => $beforeUnit->slug
+            ];
+        }
+        
         $pdo = DB::pdo();
         $stmt = $pdo->prepare("UPDATE units SET name=:name, slug=:slug, updated_by=:updated_by, updated_at=NOW() WHERE id=:id");
         $stmt->execute([
@@ -70,6 +91,15 @@ class UnitRepository
             ':slug' => $slug ?: null,
             ':updated_by' => $currentUserId,
         ]);
+        
+        // Log audit
+        if ($beforeArray) {
+            $afterArray = [
+                'name' => $name,
+                'slug' => $slug ?: null
+            ];
+            $this->logUpdate('units', (int)$id, $beforeArray, $afterArray);
+        }
     }
 
     public function delete($id)
@@ -77,8 +107,24 @@ class UnitRepository
         if (!$this->canDelete($id)) {
             throw new \RuntimeException('Không thể xoá vì đơn vị này đang được ràng buộc với sản phẩm.');
         }
+        
+        // Get before data
+        $beforeUnit = $this->findOne($id);
+        $beforeArray = null;
+        if ($beforeUnit) {
+            $beforeArray = [
+                'name' => $beforeUnit->name,
+                'slug' => $beforeUnit->slug
+            ];
+        }
+        
         $pdo = DB::pdo();
         $st = $pdo->prepare("DELETE FROM units WHERE id=?");
         $st->execute([$id]);
+        
+        // Log audit
+        if ($beforeArray) {
+            $this->logDelete('units', (int)$id, $beforeArray);
+        }
     }
 }

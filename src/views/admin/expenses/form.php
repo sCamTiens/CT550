@@ -245,7 +245,7 @@
         <div class="relative">
             <input type="text" x-model="form.paid_at" class="w-full border rounded px-3 py-2 expenses-datepicker"
                 placeholder="Chọn ngày chi" autocomplete="off"
-                x-init="flatpickr($el, {dateFormat: 'Y-m-d', allowInput: true, locale: 'vi'})"
+                x-init="flatpickr($el, {dateFormat: 'd/m/Y', allowInput: true, locale: 'vn', static: true})"
                 @blur="touched.paid_at = true; validateField('paid_at')"
                 @input="touched.paid_at && validateField('paid_at')"
                 :class="['w-full border rounded px-3 py-2', (touched.paid_at && errors.paid_at) ? 'border-red-500' : '']"
@@ -351,17 +351,11 @@
         <div class="relative">
             <input type="text" x-model="form.bank_time" class="w-full border rounded px-3 py-2 bank-time-datepicker"
                 placeholder="Chọn thời gian xác nhận" autocomplete="off"
-                x-init="flatpickr($el, {enableTime: true, dateFormat: 'Y-m-d H:i', allowInput: true, locale: 'vi', time_24hr: true})">
+                x-init="flatpickr($el, {enableTime: true, dateFormat: 'd/m/Y H:i', allowInput: true, locale: 'vn', time_24hr: true, static: true})">
             <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                 <i class="fa-regular fa-calendar"></i>
             </span>
         </div>
-    </div>
-
-    <!-- Trạng thái -->
-    <div class="md:col-span-2 flex items-center gap-3">
-        <input id="isActive" type="checkbox" x-model="form.is_active" true-value="1" false-value="0" class="h-4 w-4">
-        <label for="isActive" class="text-sm">Đã chi</label>
     </div>
 </div>
 
@@ -370,26 +364,28 @@
         if (window.flatpickr) {
             // Datepicker cho ngày chi
             document.querySelectorAll('.expenses-datepicker').forEach(function (input) {
-                flatpickr(input, {
-                    dateFormat: 'Y-m-d',
-                    locale: 'vi',
-                    allowInput: true,
-                    static: true,
-                    appendTo: input.parentElement
-                });
+                if (!input._flatpickr) {
+                    flatpickr(input, {
+                        dateFormat: 'd/m/Y',
+                        locale: 'vn',
+                        allowInput: true,
+                        static: true
+                    });
+                }
             });
 
             // Datepicker cho xác nhận ngân hàng (có thời gian)
             document.querySelectorAll('.bank-time-datepicker').forEach(function (input) {
-                flatpickr(input, {
-                    enableTime: true,
-                    dateFormat: 'Y-m-d H:i',
-                    locale: 'vi',
-                    allowInput: true,
-                    time_24hr: true,
-                    static: true,
-                    appendTo: input.parentElement
-                });
+                if (!input._flatpickr) {
+                    flatpickr(input, {
+                        enableTime: true,
+                        dateFormat: 'd/m/Y H:i',
+                        locale: 'vn',
+                        allowInput: true,
+                        time_24hr: true,
+                        static: true
+                    });
+                }
             });
         }
     });

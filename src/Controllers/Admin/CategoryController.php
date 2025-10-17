@@ -7,9 +7,12 @@ use App\Models\Repositories\CategoryRepository;
 use App\Controllers\Admin\AuthController;
 class CategoryController extends Controller
 {
+    private $categoryRepo;
+
     public function __construct()
     {
         AuthController::requirePasswordChanged();
+        $this->categoryRepo = new CategoryRepository();
     }
     /** GET /admin/categories (view) */
     public function index()
@@ -21,7 +24,7 @@ class CategoryController extends Controller
     public function apiIndex()
     {
     header('Content-Type: application/json; charset=utf-8');
-    $rows = CategoryRepository::all();
+    $rows = $this->categoryRepo->all();
     echo json_encode(['items' => $rows], JSON_UNESCAPED_UNICODE);
     exit;
     }
@@ -54,7 +57,7 @@ class CategoryController extends Controller
         }
 
         try {
-            $id = CategoryRepository::create([
+            $id = $this->categoryRepo->create([
                 'name' => $name,
                 'slug' => $slug ?: null,
                 'parent_id' => $parent_id,
@@ -63,7 +66,7 @@ class CategoryController extends Controller
                 'created_by' => $currentUserId,
                 'updated_by' => $currentUserId,
             ]);
-            $row = CategoryRepository::find($id);
+            $row = $this->categoryRepo->find($id);
             $row['created_by_name'] = $currentUserName;
             $row['updated_by_name'] = $currentUserName;
             echo json_encode($row, JSON_UNESCAPED_UNICODE);
@@ -108,7 +111,7 @@ class CategoryController extends Controller
         }
 
         try {
-            CategoryRepository::update($id, [
+            $this->categoryRepo->update($id, [
                 'name' => $name,
                 'slug' => $slug ?: null,
                 'parent_id' => $parent_id,
@@ -116,7 +119,7 @@ class CategoryController extends Controller
                 'is_active' => $is_active,
                 'updated_by' => $currentUserId,
             ]);
-            $row = CategoryRepository::find($id);
+            $row = $this->categoryRepo->find($id);
             $row['updated_by_name'] = $currentUserName;
             echo json_encode($row, JSON_UNESCAPED_UNICODE);
             exit;
@@ -136,7 +139,7 @@ class CategoryController extends Controller
     public function destroy($id)
     {
         header('Content-Type: application/json; charset=utf-8');
-        $canDelete = CategoryRepository::canDelete($id);
+        $canDelete = $this->categoryRepo->canDelete($id);
         if ($canDelete === 'parent') {
             http_response_code(409);
             echo json_encode(['error' => 'Không thể xoá: đang là loại cha của mục khác']);
@@ -148,7 +151,7 @@ class CategoryController extends Controller
             exit;
         }
         try {
-            CategoryRepository::delete($id);
+            $this->categoryRepo->delete($id);
             echo json_encode(['ok' => true]);
         } catch (\PDOException $e) {
             http_response_code(500);

@@ -14,13 +14,17 @@ class ExpenseVoucher
     public $paid_at;
     public $bank_time;    // Thời gian giao dịch ngân hàng (nếu có)
     public $note;
-    public $is_active;
     public $created_at;
     public $updated_at;
     public $created_by;
     public $updated_by;
+    
+    // JOIN fields
     public $created_by_name;
     public $updated_by_name;
+    public $supplier_name;
+    public $purchase_order_code;
+    public $paid_by_name;
 
     public function __construct(array $data)
     {

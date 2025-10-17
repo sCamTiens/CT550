@@ -1,6 +1,3 @@
-<!-- Flatpickr CSS -->
-<link rel="stylesheet" href="/assets/css/flatpickr.min.css">
-
 <?php
 // views/admin/purchase-orders/purchase-orders.php
 $items = $items ?? [];
@@ -31,7 +28,7 @@ $items = $items ?? [];
                         <?= textFilterPopover('code', 'Mã phiếu') ?>
                         <?= textFilterPopover('supplier_name', 'Nhà cung cấp') ?>
                         <?= textFilterPopover('total_amount', 'Tổng tiền') ?>
-                        <?= textFilterPopover('paid_amount', 'Trạng thái thanh toán') ?>
+                        <?= textFilterPopover('paid_amount', 'Số tiền đã thanh toán') ?>
                         <?= dateFilterPopover('due_date', 'Ngày hẹn thanh toán') ?>
                         <?= textFilterPopover('note', 'Ghi chú') ?>
                         <?= selectFilterPopover('payment_status', 'Trạng thái thanh toán', [
@@ -48,25 +45,36 @@ $items = $items ?? [];
                     <template x-for="po in paginated()" :key="po.id">
                         <tr class="border-t">
                             <td class="py-2 px-4 text-center space-x-2">
-                                <button @click="openEditModal(po)"
-                                    class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
-                                    title="Sửa">
-                                    <i class="fa-solid fa-pen"></i>
-                                </button>
-                                <button @click="remove(po.id)"
-                                    class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
-                                    title="Xóa">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
+                                <!-- Debug: hiện giá trị payment_status -->
+                                <!-- <span x-text="'Status: ' + po.payment_status" class="text-xs"></span> -->
+
+                                <!-- Hiện nút sửa/xóa nếu KHÔNG phải đã thanh toán (0 hoặc 2) -->
+                                <template x-if="po.payment_status != '0' && po.payment_status != '2'">
+                                    <div class="inline-flex space-x-2">
+                                        <button @click="openEditModal(po)"
+                                            class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                                            title="Sửa">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+                                        <button @click="remove(po.id)"
+                                            class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                                            title="Xóa">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </template>
+                                <template x-if="po.payment_status == '0' || po.payment_status == '2'">
+                                    <span class="text-slate-400 text-sm">—</span>
+                                </template>
                             </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="po.code"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="po.supplier_name"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line text-right"
-                                x-text="po.total_amount ? po.total_amount.toLocaleString('vi-VN'): '—'"></td>
+                                x-text="po.total_amount ? formatCurrency(po.total_amount) : '—'">
+                            </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line text-right"
-                                x-text="po.paid_amount ? po.paid_amount.toLocaleString('vi-VN'): '0'"></td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line"
-                                :class="(po.due_date || '—') === '—' ? 'text-center' : 'text-right'"
+                                x-text="po.paid_amount ? formatCurrency(po.paid_amount) : '0'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-right"
                                 x-text="po.due_date || '—'"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line"
                                 :class="(po.note || '—') === '—' ? 'text-center' : 'text-left'" x-text="po.note || '—'">
@@ -124,12 +132,6 @@ $items = $items ?? [];
             </div>
             <form class="p-5 space-y-4" @submit.prevent="submitUpdate()">
                 <?php require __DIR__ . '/form.php'; ?>
-                <div class="pt-2 flex justify-end gap-3">
-                    <button type="button" class="px-4 py-2 rounded-md border" @click="openEdit=false">Đóng</button>
-                    <button
-                        class="px-4 py-2 rounded-md text-[#002975] hover:bg-[#002975] hover:text-white border border-[#002975]"
-                        :disabled="submitting" x-text="submitting?'Đang lưu...':'Cập nhật'"></button>
-                </div>
             </form>
         </div>
     </div>
@@ -191,14 +193,32 @@ $items = $items ?? [];
             lines: [],
             touchedLines: [],
             reset() {
-                this.form = {};
+                this.form = {
+                    payment_status: 'Chưa đối soát',
+                    paid_amount: 0,
+                    due_date: null
+                };
                 this.supplier_id = null;
-                this.suppliers = [];
                 this.product_id = null;
-                this.products = [];
                 this.search = '';
                 this.lines = [];
                 this.touchedLines = [];
+                this.touched = {};
+                this.errors = {};
+                // Không reset suppliers và products vì chúng đã được fetch
+            },
+
+            formatCurrency(n) {
+                try { return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n || 0) }
+                catch { return n }
+            },
+
+            calculateTotal() {
+                return this.lines.reduce((sum, line) => {
+                    const qty = parseInt(line.qty) || 0;
+                    const cost = parseInt(line.unit_cost) || 0;
+                    return sum + (qty * cost);
+                }, 0);
             },
 
             async init() {
@@ -254,6 +274,20 @@ $items = $items ?? [];
                     this.errors[field] = 'Vui lòng chọn ngày nhập';
                 }
 
+                // Số tiền thanh toán
+                if (field === 'paid_amount') {
+                    const total = this.calculateTotal();
+                    if (this.form.payment_status === 'Đã thanh toán một phần') {
+                        if (!this.form.paid_amount || this.form.paid_amount <= 0) {
+                            this.errors[field] = 'Số tiền phải lớn hơn 0';
+                        } else if (this.form.paid_amount >= total) {
+                            this.errors[field] = 'Số tiền phải nhỏ hơn tổng tiền (' + total.toLocaleString('vi-VN') + ' đ)';
+                        }
+                    } else if (this.form.payment_status === 'Đã thanh toán hết') {
+                        this.form.paid_amount = total;
+                    }
+                }
+
                 // Dòng sản phẩm
                 if (field === 'lines' && this.lines.length === 0) {
                     this.errors[field] = 'Vui lòng chọn ít nhất một mặt hàng';
@@ -301,11 +335,15 @@ $items = $items ?? [];
             filters: {},
 
             statusLabel(s) {
+                // NULL hoặc undefined = Chưa đối soát
+                if (s === null || s === undefined || s === '' || s === '1') {
+                    return 'Chưa đối soát';
+                }
+
                 switch (String(s)) {
                     case '0': return 'Đã thanh toán một phần';
-                    case '1': return 'Chưa đối soát';
                     case '2': return 'Đã thanh toán hết';
-                    default: return 'Không rõ';
+                    default: return 'Chưa đối soát';
                 }
             },
 
@@ -370,61 +408,188 @@ $items = $items ?? [];
             },
 
             openCreate() {
+                // Reset form trước
                 this.reset();
-                // Always fetch suppliers before opening the form
-                const fetchSuppliersPromise = typeof this.fetchSuppliers === 'function' ? this.fetchSuppliers() : Promise.resolve();
-                const fetchProductsPromise = typeof this.fetchProducts === 'function' ? this.fetchProducts() : Promise.resolve();
+
+                // Nếu suppliers hoặc products chưa được fetch, fetch chúng
+                const fetchSuppliersPromise = (this.suppliers.length === 0) ? this.fetchSuppliers() : Promise.resolve();
+                const fetchProductsPromise = (this.products.length === 0) ? this.fetchProducts() : Promise.resolve();
+
                 Promise.all([fetchSuppliersPromise, fetchProductsPromise]).then(() => {
+                    // Thêm dòng đầu tiên nếu chưa có
                     if (!this.lines || this.lines.length === 0) {
                         this.lines.push({ product_id: '', qty: 1, unit_cost: 0, mfg_date: '', exp_date: '' });
                     }
+
+                    // Mở modal
                     this.openAdd = true;
-                    
+
                     // Khởi tạo flatpickr sau khi modal mở
-                    if (typeof window.initAllDatePickers === 'function') {
-                        window.initAllDatePickers();
-                    }
+                    setTimeout(() => {
+                        if (typeof window.initAllDatePickers === 'function') {
+                            window.initAllDatePickers();
+                        }
+                    }, 100);
                 });
             },
 
             openEditModal(po) {
-                this.form = { ...po };
-                // If editing, ensure lines is not empty
-                const fetchProductsPromise = typeof this.fetchProducts === 'function' ? this.fetchProducts() : Promise.resolve();
-                fetchProductsPromise.then(() => {
-                    if (!this.lines || this.lines.length === 0) {
-                        this.lines.push({ product_id: '', qty: 1, unit_cost: 0, mfg_date: '', exp_date: '' });
-                    }
-                    this.openEdit = true;
-                    
-                    // Khởi tạo flatpickr sau khi modal mở
-                    if (typeof window.initAllDatePickers === 'function') {
-                        window.initAllDatePickers();
-                    }
-                });
+                // Reset form trước
+                this.reset();
+
+                // Gọi API để lấy chi tiết phiếu nhập kèm các dòng sản phẩm
+                fetch(`/admin/api/purchase-orders/${po.id}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        // Fill form với dữ liệu từ API
+                        this.form = {
+                            id: data.id,
+                            supplier_id: data.supplier_id,
+                            created_at: data.created_at, // đã được convert sang d/m/Y từ backend
+                            payment_status: data.payment_status, // đã được convert sang text
+                            paid_amount: data.paid_amount || 0,
+                            due_date: data.due_date || null, // đã được convert sang d/m/Y
+                            note: data.note || ''
+                        };
+
+                        // Fill lines với dữ liệu từ API
+                        this.lines = data.lines.map(line => ({
+                            product_id: line.product_id,
+                            qty: line.qty,
+                            unit_cost: line.unit_cost,
+                            mfg_date: line.mfg_date || '', // đã được convert sang d/m/Y
+                            exp_date: line.exp_date || ''  // đã được convert sang d/m/Y
+                        }));
+
+                        // Nếu suppliers hoặc products chưa được fetch, fetch chúng
+                        const fetchSuppliersPromise = (this.suppliers.length === 0) ? this.fetchSuppliers() : Promise.resolve();
+                        const fetchProductsPromise = (this.products.length === 0) ? this.fetchProducts() : Promise.resolve();
+
+                        Promise.all([fetchSuppliersPromise, fetchProductsPromise]).then(() => {
+                            // Mở modal
+                            this.openEdit = true;
+
+                            // Khởi tạo flatpickr sau khi modal mở
+                            setTimeout(() => {
+                                if (typeof window.initAllDatePickers === 'function') {
+                                    window.initAllDatePickers();
+                                }
+                            }, 100);
+                        });
+                    })
+                    .catch(e => {
+                        console.error(e);
+                        this.showToast('Không thể tải chi tiết phiếu nhập');
+                    });
             },
 
             async submitCreate() {
                 this.submitting = true;
                 try {
+                    // Validate trước khi submit
+                    this.validateField('supplier_id');
+                    this.validateField('created_at');
+
+                    if (!this.form.supplier_id || !this.form.created_at) {
+                        this.showToast('Vui lòng điền đầy đủ thông tin bắt buộc');
+                        this.submitting = false;
+                        return;
+                    }
+
+                    if (this.lines.length === 0) {
+                        this.showToast('Vui lòng chọn ít nhất một mặt hàng');
+                        this.submitting = false;
+                        return;
+                    }
+
+                    // Validate lines
+                    for (let i = 0; i < this.lines.length; i++) {
+                        const line = this.lines[i];
+                        if (!line.product_id) {
+                            this.showToast(`Dòng ${i + 1}: Chưa chọn sản phẩm`);
+                            this.submitting = false;
+                            return;
+                        }
+                        if (!line.qty || line.qty < 1) {
+                            this.showToast(`Dòng ${i + 1}: Số lượng không hợp lệ`);
+                            this.submitting = false;
+                            return;
+                        }
+                        if (line.unit_cost < 0) {
+                            this.showToast(`Dòng ${i + 1}: Giá nhập không hợp lệ`);
+                            this.submitting = false;
+                            return;
+                        }
+                    }
+
+                    // Validate số tiền thanh toán
+                    if (this.form.payment_status === 'Đã thanh toán một phần') {
+                        const total = this.calculateTotal();
+                        if (!this.form.paid_amount || this.form.paid_amount <= 0 || this.form.paid_amount >= total) {
+                            this.showToast('Số tiền thanh toán phải lớn hơn 0 và nhỏ hơn tổng tiền');
+                            this.submitting = false;
+                            return;
+                        }
+                    } else if (this.form.payment_status === 'Đã thanh toán hết') {
+                        this.form.paid_amount = this.calculateTotal();
+                    }
+
+                    // Chuẩn bị data để gửi
+                    const payload = {
+                        supplier_id: this.form.supplier_id,
+                        created_at: this.convertToYmd(this.form.created_at),
+                        payment_status: this.form.payment_status,
+                        paid_amount: this.form.paid_amount || 0,
+                        due_date: this.convertToYmd(this.form.due_date) || null,
+                        note: this.form.note || '',
+                        lines: this.lines.map(line => ({
+                            product_id: line.product_id,
+                            qty: line.qty,
+                            unit_cost: line.unit_cost,
+                            batch_code: line.batch_code || `BATCH-${Date.now()}`,
+                            mfg_date: this.convertToYmd(line.mfg_date),
+                            exp_date: this.convertToYmd(line.exp_date)
+                        }))
+                    };
+
                     const res = await fetch('/admin/api/purchase-orders', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(this.form),
+                        body: JSON.stringify(payload),
                     });
                     const data = await res.json();
                     if (res.ok && data.id) {
-                        this.items.unshift({ ...this.form, id: data.id });
+                        // Reload danh sách để lấy data mới nhất
+                        await this.init();
                         this.openAdd = false;
                         this.showToast('Thêm phiếu nhập thành công!', 'success');
                     } else {
-                        this.showToast(data.error || 'Không thể thêm phiếu nhập');
+                        this.showToast(data.message || data.error || 'Không thể thêm phiếu nhập');
+                        console.error('Server error:', data);
                     }
                 } catch (e) {
+                    console.error(e);
                     this.showToast('Không thể thêm phiếu nhập');
                 } finally {
                     this.submitting = false;
                 }
+            },
+            // Thêm hàm convert date
+            convertToYmd(dateStr) {
+                if (!dateStr) return null;
+
+                // Nếu đã đúng format Y-m-d thì giữ nguyên
+                if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                    return dateStr;
+                }
+
+                // Convert từ d/m/Y sang Y-m-d
+                const match = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                if (match) {
+                    return `${match[3]}-${match[2]}-${match[1]}`;
+                }
+
+                return null;
             },
             async submitUpdate() {
                 this.submitting = true;
@@ -436,30 +601,36 @@ $items = $items ?? [];
                     });
                     const data = await res.json();
                     if (res.ok && data.id) {
-                        const idx = this.items.findIndex(i => i.id === data.id);
-                        if (idx !== -1) this.items[idx] = { ...this.form, id: data.id };
+                        // Reload danh sách để lấy data mới nhất
+                        await this.init();
                         this.openEdit = false;
                         this.showToast('Cập nhật phiếu nhập thành công!', 'success');
                     } else {
                         this.showToast(data.error || 'Không thể cập nhật phiếu nhập');
                     }
                 } catch (e) {
+                    console.error(e);
                     this.showToast('Không thể cập nhật phiếu nhập');
                 } finally {
                     this.submitting = false;
                 }
             },
             async remove(id) {
-                if (!confirm('Xóa phiếu nhập này?')) return;
+                if (!confirm('Xóa phiếu nhập này? Hành động này sẽ xóa tất cả dữ liệu liên quan (lô hàng, biến động kho, phiếu chi).')) return;
                 try {
                     const res = await fetch(`/admin/api/purchase-orders/${id}`, { method: 'DELETE' });
+                    const data = await res.json();
+
                     if (res.ok) {
+                        // Xóa khỏi danh sách
                         this.items = this.items.filter(i => i.id !== id);
                         this.showToast('Xóa phiếu nhập thành công!', 'success');
                     } else {
-                        this.showToast('Không thể xóa phiếu nhập');
+                        // Hiển thị lỗi từ server
+                        this.showToast(data.error || 'Không thể xóa phiếu nhập');
                     }
                 } catch (e) {
+                    console.error(e);
                     this.showToast('Không thể xóa phiếu nhập');
                 }
             },

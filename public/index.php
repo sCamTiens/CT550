@@ -31,6 +31,7 @@ use App\Controllers\Admin\StockOutController as AdminStockOut;
 use App\Controllers\Admin\CouponController as AdminCoupon;
 use App\Controllers\Admin\PromotionController as AdminPromotion;
 use App\Controllers\Admin\AuditLogController as AdminAuditLog;
+use App\Controllers\Admin\NotificationController as AdminNotification;
 
 
 /* --- load biến môi trường từ .env (đặt ở thư mục gốc dự án) --- */
@@ -110,6 +111,7 @@ $router->group('/admin', function (Router $r): void {
 
     // Stocks
     $r->get('/stocks', [AdminStock::class, 'index']);
+    $r->get('/api/stocks', [AdminStock::class, 'apiIndex']);
     $r->get('/stocktakes', [AdminStocktake::class, 'index']);
 
     // Product Batches (Inventory lots)
@@ -123,10 +125,11 @@ $router->group('/admin', function (Router $r): void {
     // Purchase Orders / Receipts
     $r->get('/purchase-orders', [AdminPurchaseOrder::class, 'index']);
     $r->get('/api/purchase-orders', [AdminPurchaseOrder::class, 'apiIndex']);
+    $r->get('/api/purchase-orders/unpaid', [AdminPurchaseOrder::class, 'unpaid']);
+    $r->get('/api/purchase-orders/{id}', [AdminPurchaseOrder::class, 'show']);
     $r->post('/api/purchase-orders', [AdminPurchaseOrder::class, 'store']);
     $r->put('/api/purchase-orders/{id}', [AdminPurchaseOrder::class, 'update']);
     $r->delete('/api/purchase-orders/{id}', [AdminPurchaseOrder::class, 'destroy']);
-    $r->get('/api/purchase-orders/unpaid', [AdminPurchaseOrder::class, 'unpaid']);
 
     // Staffs
     $r->get('/staff', [AdminStaff::class, 'index']);
@@ -204,6 +207,13 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/api/audit-logs/stats/action', [AdminAuditLog::class, 'apiStatsByAction']);
     $r->get('/api/audit-logs/stats/entity', [AdminAuditLog::class, 'apiStatsByEntity']);
     $r->get('/api/audit-logs/stats/user', [AdminAuditLog::class, 'apiStatsByUser']);
+
+    // Notifications (Thông báo)
+    $r->get('/api/notifications', [AdminNotification::class, 'index']);
+    $r->get('/api/notifications/unread-count', [AdminNotification::class, 'unreadCount']);
+    $r->post('/api/notifications/{id}/read', [AdminNotification::class, 'markAsRead']);
+    $r->post('/api/notifications/read-all', [AdminNotification::class, 'markAllAsRead']);
+    $r->delete('/api/notifications/{id}', [AdminNotification::class, 'delete']);
 });
 
 /* --- chạy router --- */

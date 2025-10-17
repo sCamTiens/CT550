@@ -7,9 +7,12 @@ use App\Models\Repositories\BrandRepository;
 use App\Controllers\Admin\AuthController;
 class BrandController extends Controller
 {
+    private $brandRepo;
+
     public function __construct()
     {
         AuthController::requirePasswordChanged();
+        $this->brandRepo = new BrandRepository();
     }
     /** GET /admin/brands (view) */
     public function index()
@@ -20,7 +23,7 @@ class BrandController extends Controller
     /** GET /admin/api/brands (list JSON) */
     public function apiIndex()
     {
-        $rows = BrandRepository::all();
+        $rows = $this->brandRepo->all();
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['items' => $rows], JSON_UNESCAPED_UNICODE);
         exit;
@@ -52,7 +55,7 @@ class BrandController extends Controller
         }
 
         try {
-            $brand = BrandRepository::create($name, $slug, $currentUser);
+            $brand = $this->brandRepo->create($name, $slug, $currentUser);
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode($this->entityToArray($brand), JSON_UNESCAPED_UNICODE);
             exit;
@@ -88,7 +91,7 @@ class BrandController extends Controller
         }
 
         try {
-            $brand = BrandRepository::update($id, $name, $slug, $currentUser);
+            $brand = $this->brandRepo->update($id, $name, $slug, $currentUser);
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode($this->entityToArray($brand), JSON_UNESCAPED_UNICODE);
             exit;
@@ -108,13 +111,13 @@ class BrandController extends Controller
     public function destroy($id)
     {
         // Kiểm tra ràng buộc: nếu thương hiệu đã có sản phẩm thì không cho xóa
-        if (method_exists(BrandRepository::class, 'canDelete') ? !BrandRepository::canDelete($id) : $this->brandHasProducts($id)) {
+        if ($this->brandHasProducts($id)) {
             http_response_code(409);
             echo json_encode(['error' => 'Không thể xóa, thương hiệu đang bị ràng buộc với sản phẩm.']);
             exit;
         }
         try {
-            BrandRepository::delete($id);
+            $this->brandRepo->delete($id);
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
         } catch (\PDOException $e) {

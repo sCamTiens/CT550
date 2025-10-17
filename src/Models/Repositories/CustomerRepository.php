@@ -2,11 +2,14 @@
 namespace App\Models\Repositories;
 
 use App\Core\DB;
+use App\Support\Auditable;
 use PDO;
 use PDOException;
 
 class CustomerRepository
 {
+    use Auditable;
+
     protected string $userTable = 'users';
 
     /**
@@ -76,6 +79,17 @@ class CustomerRepository
             $pdo->commit();
 
             $created = $this->find($id);
+            
+            // Log audit
+            if (is_array($created)) {
+                $this->logCreate('customers', $id, [
+                    'username' => $created['username'] ?? null,
+                    'full_name' => $created['full_name'] ?? null,
+                    'email' => $created['email'] ?? null,
+                    'phone' => $created['phone'] ?? null,
+                    'is_active' => $created['is_active'] ?? null
+                ]);
+            }
 
             return is_array($created) ? $created : false;
         } catch (PDOException $e) {
@@ -103,6 +117,20 @@ class CustomerRepository
      */
     public function update(int|string $id, array $data): array|string|false
     {
+        // Get before data
+        $beforeData = $this->find($id);
+        $beforeArray = null;
+        if (is_array($beforeData)) {
+            $beforeArray = [
+                'full_name' => $beforeData['full_name'] ?? null,
+                'email' => $beforeData['email'] ?? null,
+                'phone' => $beforeData['phone'] ?? null,
+                'gender' => $beforeData['gender'] ?? null,
+                'date_of_birth' => $beforeData['date_of_birth'] ?? null,
+                'is_active' => $beforeData['is_active'] ?? null
+            ];
+        }
+        
         try {
             $sql = "UPDATE {$this->userTable}
                 SET full_name = ?,
@@ -133,6 +161,20 @@ class CustomerRepository
             ]);
 
             $result = $this->find($id);
+            
+            // Log audit
+            if (is_array($result) && $beforeArray) {
+                $afterArray = [
+                    'full_name' => $result['full_name'] ?? null,
+                    'email' => $result['email'] ?? null,
+                    'phone' => $result['phone'] ?? null,
+                    'gender' => $result['gender'] ?? null,
+                    'date_of_birth' => $result['date_of_birth'] ?? null,
+                    'is_active' => $result['is_active'] ?? null
+                ];
+                $this->logUpdate('customers', (int)$id, $beforeArray, $afterArray);
+            }
+            
             return is_array($result) ? $result : false;
         } catch (PDOException $e) {
             $msg = strtolower($e->getMessage());
@@ -151,8 +193,27 @@ class CustomerRepository
      */
     public function delete(int|string $id): bool
     {
+        // Get before data
+        $beforeData = $this->find($id);
+        $beforeArray = null;
+        if (is_array($beforeData)) {
+            $beforeArray = [
+                'username' => $beforeData['username'] ?? null,
+                'full_name' => $beforeData['full_name'] ?? null,
+                'email' => $beforeData['email'] ?? null,
+                'phone' => $beforeData['phone'] ?? null
+            ];
+        }
+        
         $stmt = DB::pdo()->prepare("UPDATE {$this->userTable} SET is_deleted = 1 WHERE id = ? AND role_id = 1");
-        return $stmt->execute([$id]);
+        $result = $stmt->execute([$id]);
+        
+        // Log audit (soft delete)
+        if ($result && $beforeArray) {
+            $this->logDelete('customers', (int)$id, $beforeArray);
+        }
+        
+        return $result;
     }
 
 

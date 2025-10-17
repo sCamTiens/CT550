@@ -91,6 +91,78 @@
                 class="text-red-500 text-xs mt-1"></p>
         </div>
 
+        <!-- Trạng thái thanh toán -->
+        <div>
+            <label class="block text-sm text-black font-semibold mb-1">Trạng thái thanh toán <span
+                    class="text-red-500">*</span></label>
+            <select x-model="form.payment_status" @change="
+                    if (form.payment_status === 'Đã thanh toán hết') {
+                        form.paid_amount = calculateTotal();
+                    } else if (form.payment_status === 'Chưa đối soát') {
+                        form.paid_amount = 0;
+                    }
+                    touched.payment_status=true; 
+                    validateField('payment_status')
+                "
+                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]">
+                <option value="Chưa đối soát">Chưa đối soát</option>
+                <option value="Đã thanh toán một phần">Đã thanh toán một phần</option>
+                <option value="Đã thanh toán hết">Đã thanh toán hết</option>
+            </select>
+        </div>
+
+        <!-- Tổng tiền -->
+        <div>
+            <label class="block text-sm text-black font-semibold mb-1">Tổng tiền</label>
+            <input readonly :value="calculateTotal().toLocaleString('vi-VN') + ' đ'"
+                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-gray-50 font-semibold text-[#002975]">
+        </div>
+
+        <!-- Số tiền thanh toán (chỉ hiện khi thanh toán một phần hoặc hết) -->
+        <div x-show="form.payment_status === 'Đã thanh toán một phần' || form.payment_status === 'Đã thanh toán hết'">
+            <label class="block text-sm text-black font-semibold mb-1">
+                Số tiền thanh toán <span class="text-red-500">*</span>
+            </label>
+            <input
+                :value="form.paid_amount !== undefined && form.paid_amount !== null && form.paid_amount !== '' ? parseInt(form.paid_amount).toLocaleString('en-US') : ''"
+                @input="
+                    let val = $event.target.value.replace(/[^\d]/g, '');
+                    form.paid_amount = val ? parseInt(val, 10) : 0;
+                    $event.target.value = form.paid_amount ? form.paid_amount.toLocaleString('en-US') : '';
+                " @blur="
+                    $event.target.value = form.paid_amount ? form.paid_amount.toLocaleString('en-US') : '';
+                    touched.paid_amount=true; 
+                    validateField('paid_amount')
+                " @focus="$event.target.select()" :readonly="form.payment_status === 'Đã thanh toán hết'"
+                inputmode="numeric" placeholder="Nhập số tiền"
+                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
+                :class="form.payment_status === 'Đã thanh toán hết' ? 'bg-gray-50' : ''">
+            <p x-show="touched.paid_amount && errors.paid_amount" x-text="errors.paid_amount"
+                class="text-red-500 text-xs mt-1"></p>
+        </div>
+
+        <!-- Công nợ (Tổng tiền - Số tiền thanh toán) -->
+        <div x-show="form.payment_status === 'Đã thanh toán một phần' || form.payment_status === 'Chưa đối soát'">
+            <label class="block text-sm text-black font-semibold mb-1">Công nợ</label>
+            <input readonly 
+                :value="(calculateTotal() - (form.paid_amount || 0)).toLocaleString('vi-VN') + ' đ'"
+                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-gray-50 font-semibold text-red-600">
+        </div>
+
+        <!-- Ngày hẹn thanh toán (chỉ hiện khi chưa đối soát hoặc thanh toán một phần) -->
+        <div x-show="form.payment_status === 'Chưa đối soát' || form.payment_status === 'Đã thanh toán một phần'">
+            <label class="block text-sm text-black font-semibold mb-1">Ngày hẹn thanh toán</label>
+            
+            <div class="relative">
+                <input x-model="form.due_date" type="text"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 due-date-picker"
+                    placeholder="Chọn ngày" autocomplete="off">
+                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                    <i class="fa-regular fa-calendar"></i>
+                </span>
+            </div>
+        </div>
+
         <!-- Danh sách mặt hàng -->
         <div class="mt-4 col-span-2">
             <label class="block text-sm text-black font-semibold mb-1">Mặt hàng
@@ -125,6 +197,12 @@
                                     const selected = products.find(p => p.id == l.product_id);
                                     this.search = selected ? selected.name + ' (' + selected.sku + ')' : '';
                                     this.filtered = products.filter(p => !lines.some((line, i) => i !== idx && line.product_id == p.id));
+                                },
+                                reset() {
+                                    const selected = products.find(p => p.id == l.product_id);
+                                    this.search = selected ? selected.name + ' (' + selected.sku + ')' : '';
+                                    this.filtered = products.filter(p => !lines.some((line, i) => i !== idx && line.product_id == p.id));
+                                    this.highlight = -1;
                                 },
                                 filter() {
                                     this.filtered = products.filter(p => {
@@ -233,7 +311,7 @@
                         <div class="col-span-2">
                             <input x-model="l.mfg_date" type="text" :class="'line-mfg-date-' + idx"
                                 class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                                placeholder="dd/mm/yyyy" autocomplete="off" />
+                                placeholder="Chọn ngày" autocomplete="off" />
                         </div>
 
                         <!-- Hạn sử dụng (HSD) -->
@@ -241,7 +319,7 @@
                             <div class="relative">
                                 <input x-model="l.exp_date" type="text" :class="'line-exp-date-' + idx"
                                     class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                                    placeholder="dd/mm/yyyy" autocomplete="off" @blur="touchedLines[idx]=true" />
+                                    placeholder="Chọn ngày" autocomplete="off" @blur="touchedLines[idx]=true" />
 
                                 <!-- Hiện lỗi khi HSD < NSX -->
                                 <p x-show="touchedLines[idx] && l.exp_date && l.mfg_date && (new Date(l.exp_date.split('/').reverse().join('-')) < new Date(l.mfg_date.split('/').reverse().join('-')))"
@@ -285,10 +363,8 @@
     </div>
 </form>
 
-<script src="/assets/js/flatpickr.min.js"></script>
-<script src="/assets/js/vi.js"></script>
 <script>
-    // Global function để khởi tạo flatpickr cho từng dòng mới
+    // HÀM khởi tạo flatpickr cho từng dòng mới
     window.initLineFlatpickr = function (idx) {
         setTimeout(() => {
             // Ngày sản xuất
@@ -297,10 +373,10 @@
                 if (!input._flatpickr) {
                     flatpickr(input, {
                         dateFormat: 'd/m/Y',
-                        locale: 'vi',
+                        locale: 'vn',  // Đổi từ 'vi' sang 'vn'
                         allowInput: true,
                         clickOpens: true,
-                        static: false
+                        static: true
                     });
                 }
             });
@@ -311,18 +387,23 @@
                 if (!input._flatpickr) {
                     flatpickr(input, {
                         dateFormat: 'd/m/Y',
-                        locale: 'vi',
+                        locale: 'vn',  // Đổi từ 'vi' sang 'vn'
                         allowInput: true,
                         clickOpens: true,
-                        static: false
+                        static: true
                     });
                 }
             });
         }, 100);
     };
 
-    // Khởi tạo tất cả flatpickr khi modal mở
+    // HÀM khởi tạo tất cả flatpickr khi modal mở
     window.initAllDatePickers = function () {
+        if (typeof flatpickr === 'undefined') {
+            console.warn('flatpickr chưa được load');
+            return;
+        }
+
         setTimeout(() => {
             // Ngày nhập
             const dateInputs = document.querySelectorAll('.purchase-date-picker');
@@ -330,10 +411,24 @@
                 if (!input._flatpickr) {
                     flatpickr(input, {
                         dateFormat: 'd/m/Y',
-                        locale: 'vi',
+                        locale: 'vn',  // Đổi từ 'vi' sang 'vn'
                         allowInput: true,
                         clickOpens: true,
-                        static: false
+                        static: true
+                    });
+                }
+            });
+
+            // Ngày hẹn thanh toán
+            const dueDateInputs = document.querySelectorAll('.due-date-picker');
+            dueDateInputs.forEach(function (input) {
+                if (!input._flatpickr) {
+                    flatpickr(input, {
+                        dateFormat: 'd/m/Y',
+                        locale: 'vn',  // Đổi từ 'vi' sang 'vn'
+                        allowInput: true,
+                        clickOpens: true,
+                        static: true
                     });
                 }
             });
@@ -356,8 +451,4 @@
             });
         }, 300);
     };
-
-    document.addEventListener('DOMContentLoaded', function () {
-        initAllDatePickers();
-    });
 </script>

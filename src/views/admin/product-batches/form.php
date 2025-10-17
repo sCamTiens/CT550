@@ -11,6 +11,8 @@
                     form.product_id = p.id;
                     this.search = p.name + ' (' + p.sku + ')';
                     this.open = false;
+                    touched.product_id = true;
+                    validateField('product_id');
                 },
                 clear() {
                     form.product_id = '';
@@ -76,25 +78,23 @@
         <!-- Ngày sản xuất -->
         <div>
             <label class="block text-sm font-semibold mb-1">Ngày sản xuất <span class="text-red-500">*</span></label>
-            <input x-model="form.mfg_date" type="text"
-                @blur="touched.mfg_date = true; validateField('mfg_date')"
+            <input x-model="form.mfg_date" type="text" @blur="touched.mfg_date = true; validateField('mfg_date')"
                 class="batch-mfg-date w-full border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
                 :class="(touched.mfg_date && errors.mfg_date) ? 'border-red-500' : 'border-gray-300'"
                 placeholder="Chọn ngày" autocomplete="off" />
-            <p x-show="touched.mfg_date && errors.mfg_date" x-text="errors.mfg_date"
-                class="text-red-500 text-xs mt-1"></p>
+            <p x-show="touched.mfg_date && errors.mfg_date" x-text="errors.mfg_date" class="text-red-500 text-xs mt-1">
+            </p>
         </div>
 
         <!-- Hạn sử dụng -->
         <div>
             <label class="block text-sm font-semibold mb-1">Hạn sử dụng <span class="text-red-500">*</span></label>
-            <input x-model="form.exp_date" type="text"
-                @blur="touched.exp_date = true; validateField('exp_date')"
+            <input x-model="form.exp_date" type="text" @blur="touched.exp_date = true; validateField('exp_date')"
                 class="batch-exp-date w-full border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
                 :class="(touched.exp_date && errors.exp_date) ? 'border-red-500' : 'border-gray-300'"
                 placeholder="Chọn ngày" autocomplete="off" />
-            <p x-show="touched.exp_date && errors.exp_date" x-text="errors.exp_date"
-                class="text-red-500 text-xs mt-1"></p>
+            <p x-show="touched.exp_date && errors.exp_date" x-text="errors.exp_date" class="text-red-500 text-xs mt-1">
+            </p>
         </div>
 
         <!-- Số lượng ban đầu -->
@@ -112,8 +112,7 @@
         <!-- Giá nhập -->
         <div>
             <label class="block text-sm font-semibold mb-1">Giá nhập <span class="text-red-500">*</span></label>
-            <input x-model.number="form.unit_cost" type="number" step="1" min="0"
-                @input="validateField('unit_cost')"
+            <input x-model.number="form.unit_cost" type="number" step="1" min="0" @input="validateField('unit_cost')"
                 @blur="touched.unit_cost = true; validateField('unit_cost')"
                 class="w-full border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
                 :class="(touched.unit_cost && errors.unit_cost) ? 'border-red-500' : 'border-gray-300'" />
@@ -144,13 +143,15 @@
     flatpickr(".batch-mfg-date", {
         dateFormat: "d/m/Y",
         locale: "vi",
-        allowInput: true
+        allowInput: true,
+        static: true  // Render calendar bên trong modal thay vì append vào body
     });
 
     // Khởi tạo flatpickr cho hạn sử dụng
     flatpickr(".batch-exp-date", {
         dateFormat: "d/m/Y",
         locale: "vi",
-        allowInput: true
+        allowInput: true,
+        static: true  // Render calendar bên trong modal thay vì append vào body
     });
 </script>

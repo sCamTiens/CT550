@@ -10,11 +10,6 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 
-<!-- Flatpickr CSS & JS for date picker -->
-<link rel="stylesheet" href="/assets/css/flatpickr.min.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script type="module" src="/assets/js/flatpickr-vi.js"></script>
-
 
 <?php
 // Server-side session check: nếu không có session admin/user -> chuyển về login
@@ -42,8 +37,7 @@ if (! $isLogged && ! $isPublic) {
     tailwind.config = { theme: { extend: { colors: { primary: { DEFAULT: '#0ea5e9' } } } } }
 </script>
 
-<script>
-// Tự động bật Flatpickr cho input ngày sinh nếu có trên trang
+<!-- <script>
 document.addEventListener('DOMContentLoaded', function() {
     if (window.flatpickr && document.querySelector("input[name='date_of_birth']")) {
         flatpickr("input[name='date_of_birth']", {
@@ -54,4 +48,4 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-</script>
+</script> -->

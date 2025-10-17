@@ -3,9 +3,12 @@ namespace App\Models\Repositories;
 
 use App\Core\DB;
 use App\Models\Entities\Supplier;
+use App\Support\Auditable;
 
 class SupplierRepository
 {
+    use Auditable;
+
     // Kiểm tra có thể xóa không: nếu còn sản phẩm liên kết qua supplier_products thì không cho xóa
     public function canDelete($id): bool
     {
@@ -52,11 +55,33 @@ class SupplierRepository
             $currentUser,
             $currentUser
         ]);
-        return $pdo->lastInsertId();
+        $id = $pdo->lastInsertId();
+        
+        // Log audit
+        $this->logCreate('suppliers', (int)$id, [
+            'name' => $data['name'],
+            'phone' => $data['phone'] ?? null,
+            'email' => $data['email'] ?? null,
+            'address' => $data['address'] ?? null
+        ]);
+        
+        return $id;
     }
 
     public function update($id, $data, $currentUser)
     {
+        // Get before data
+        $beforeSupplier = $this->findOne($id);
+        $beforeArray = null;
+        if ($beforeSupplier) {
+            $beforeArray = [
+                'name' => $beforeSupplier->name,
+                'phone' => $beforeSupplier->phone,
+                'email' => $beforeSupplier->email,
+                'address' => $beforeSupplier->address
+            ];
+        }
+        
         $pdo = DB::pdo();
         $stmt = $pdo->prepare("UPDATE suppliers SET name=?, phone=?, email=?, address=?, updated_at=NOW(), updated_by=? WHERE id=?");
         $stmt->execute([
@@ -67,6 +92,17 @@ class SupplierRepository
             $currentUser,
             $id
         ]);
+        
+        // Log audit
+        if ($beforeArray) {
+            $afterArray = [
+                'name' => $data['name'],
+                'phone' => $data['phone'] ?? null,
+                'email' => $data['email'] ?? null,
+                'address' => $data['address'] ?? null
+            ];
+            $this->logUpdate('suppliers', (int)$id, $beforeArray, $afterArray);
+        }
     }
 
     public function delete($id)
@@ -74,7 +110,25 @@ class SupplierRepository
         if (!$this->canDelete($id)) {
             throw new \RuntimeException('Không thể xoá: nhà cung cấp này đang được sử dụng bởi sản phẩm.');
         }
+        
+        // Get before data
+        $beforeSupplier = $this->findOne($id);
+        $beforeArray = null;
+        if ($beforeSupplier) {
+            $beforeArray = [
+                'name' => $beforeSupplier->name,
+                'phone' => $beforeSupplier->phone,
+                'email' => $beforeSupplier->email,
+                'address' => $beforeSupplier->address
+            ];
+        }
+        
         $pdo = DB::pdo();
         $pdo->prepare("DELETE FROM suppliers WHERE id=?")->execute([$id]);
+        
+        // Log audit
+        if ($beforeArray) {
+            $this->logDelete('suppliers', (int)$id, $beforeArray);
+        }
     }
 }

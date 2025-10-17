@@ -32,15 +32,10 @@ $items = $items ?? [];
                             'Tiền mặt' => 'Tiền mặt',
                             'Chuyển khoản' => 'Chuyển khoản'
                         ]) ?>
-                        <?= textFilterPopover('txn_ref', 'Mã giao dịch') ?>
                         <?= numberFilterPopover('amount', 'Số tiền') ?>
                         <?= textFilterPopover('paid_by_name', 'Người chi') ?>
                         <?= dateFilterPopover('paid_at', 'Ngày chi') ?>
-                        <?= selectFilterPopover('status', 'Trạng thái', [
-                            '' => '-- Tất cả --',
-                            '1' => 'Đã chi',
-                            '0' => 'Chưa chi'
-                        ]) ?>
+                        <?= textFilterPopover('txn_ref', 'Mã giao dịch') ?>
                         <?= dateFilterPopover('bank_time', 'Xác nhận NH') ?>
                         <?= textFilterPopover('note', 'Ghi chú') ?>
                         <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
@@ -70,9 +65,6 @@ $items = $items ?? [];
                                 :class="(e.supplier_name || '—') === '—' ? 'text-center' : 'text-left'"
                                 x-text="e.supplier_name || '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line" x-text="e.method"></td>
-                            <td class="px-3 py-2 break-words whitespace-pre-line"
-                                :class="(e.txn_ref || '—') === '—' ? 'text-center' : 'text-right'"
-                                x-text="e.txn_ref || '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line" x-text="formatCurrency(e.amount)">
                             </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
@@ -81,11 +73,9 @@ $items = $items ?? [];
                             <td class="px-3 py-2 break-words whitespace-pre-line"
                                 :class="(e.paid_at || '—') === '—' ? 'text-center' : 'text-right'"
                                 x-text="e.paid_at ? e.paid_at : '—'"></td>
-                            <td class="px-3 py-2 break-words whitespace-pre-line text-center">
-                                <span
-                                    x-text="e.is_active==1?'Chưa đối soát':'Đã thanh toán một phần':'Đã thanh toán hết'"
-                                    :class="e.is_active==1?'text-green-600':'text-gray-400'"></span>
-                            </td>
+                            <td class="px-3 py-2 break-words whitespace-pre-line"
+                                :class="(e.txn_ref || '—') === '—' ? 'text-center' : 'text-right'"
+                                x-text="e.txn_ref || '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
                                 :class="(e.bank_time || '—') === '—' ? 'text-center' : 'text-right'"
                                 x-text="e.bank_time ? e.bank_time : '—'"></td>
@@ -101,7 +91,7 @@ $items = $items ?? [];
                         </tr>
                     </template>
                     <tr x-show="!loading && filtered().length===0">
-                        <td colspan="12" class="py-12 text-center text-slate-500">
+                        <td colspan="13" class="py-12 text-center text-slate-500">
                             <div class="flex flex-col items-center justify-center">
                                 <img src="/assets/images/Null.png" alt="Trống" class="w-40 h-24 mb-3 opacity-80">
                                 <div class="text-lg text-slate-300">Trống</div>
@@ -241,7 +231,6 @@ $items = $items ?? [];
                 paid_at: '',
                 bank_time: '',
                 note: '',
-                is_active: 1,
             },
 
             errors: {},
@@ -285,8 +274,6 @@ $items = $items ?? [];
 
                     if (['amount'].includes(key)) {
                         data = data.filter(e => Number(e.amount) === Number(val));
-                    } else if (['status'].includes(key)) {
-                        data = data.filter(e => String(e.is_active) === String(val));
                     } else if (['paid_at', 'created_at', 'bank_time'].includes(key)) {
                         data = data.filter(e => (e[key] || '').startsWith(val));
                     } else {
@@ -372,7 +359,6 @@ $items = $items ?? [];
                     paid_at: '',
                     bank_time: '',
                     note: '',
-                    is_active: 1,
                 };
                 this.errors = {};
                 this.touched = {};

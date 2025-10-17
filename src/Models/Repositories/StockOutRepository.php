@@ -3,9 +3,12 @@ namespace App\Models\Repositories;
 
 use App\Core\DB;
 use App\Models\Entities\StockOut;
+use App\Support\Auditable;
 
 class StockOutRepository
 {
+    use Auditable;
+
     /**
      * Lấy toàn bộ danh sách phiếu xuất kho
      */

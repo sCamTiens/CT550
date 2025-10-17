@@ -17,6 +17,10 @@ class ProductBatch
     public $updated_at;
     public $created_by;
     public $updated_by;
+    
+    // Thêm các field từ JOIN với bảng products
+    public $product_name;
+    public $product_sku;
 
     public function __construct(array $data)
     {

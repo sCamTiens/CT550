@@ -78,7 +78,7 @@
     <label class="block text-sm text-black font-semibold mb-1">Ngày sinh</label>
     <div class="relative">
       <input type="text" x-model="form.date_of_birth" class="border rounded px-3 py-2 w-full customer-datepicker"
-        placeholder="dd/mm/yyyy" autocomplete="off">
+        placeholder="Chọn ngày" autocomplete="off">
       <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
         <i class="fa-regular fa-calendar"></i>
       </span>

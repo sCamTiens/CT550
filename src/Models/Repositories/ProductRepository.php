@@ -3,9 +3,12 @@ namespace App\Models\Repositories;
 
 use App\Core\DB;
 use App\Models\Entities\Product;
+use App\Support\Auditable;
 
 class ProductRepository
 {
+    use Auditable;
+
     /**
      * Kiểm tra xem có thể xóa sản phẩm hay không
      * → Nếu sản phẩm đang được ràng buộc với các bảng khác thì KHÔNG cho xóa
@@ -184,6 +187,23 @@ class ProductRepository
                     ]);
 
             $pdo->commit();
+            
+            // Log audit
+            $this->logCreate('products', $id, [
+                'sku' => $data['sku'],
+                'name' => $data['name'],
+                'slug' => $slug,
+                'brand_id' => $data['brand_id'] ?: null,
+                'category_id' => $data['category_id'] ?: null,
+                'pack_size' => $data['pack_size'] ?? null,
+                'unit_id' => $data['unit_id'] ?: null,
+                'barcode' => $data['barcode'] ?? null,
+                'sale_price' => $data['sale_price'] ?? 0,
+                'cost_price' => $data['cost_price'] ?? 0,
+                'tax_rate' => $data['tax_rate'] ?? 0,
+                'is_active' => !empty($data['is_active']) ? 1 : 0
+            ]);
+            
             return $id;
         } catch (\PDOException $e) {
             $pdo->rollBack();
@@ -196,6 +216,25 @@ class ProductRepository
      */
     public function update(int $id, array $data, int $currentUser, string $slug): void
     {
+        // Get before data
+        $beforeProduct = $this->findOne($id);
+        if ($beforeProduct) {
+            $beforeArray = [
+                'sku' => $beforeProduct->sku,
+                'name' => $beforeProduct->name,
+                'slug' => $beforeProduct->slug,
+                'brand_id' => $beforeProduct->brand_id,
+                'category_id' => $beforeProduct->category_id,
+                'pack_size' => $beforeProduct->pack_size,
+                'unit_id' => $beforeProduct->unit_id,
+                'barcode' => $beforeProduct->barcode,
+                'sale_price' => $beforeProduct->sale_price,
+                'cost_price' => $beforeProduct->cost_price,
+                'tax_rate' => $beforeProduct->tax_rate,
+                'is_active' => $beforeProduct->is_active
+            ];
+        }
+        
         $pdo = DB::pdo();
         $stmt = $pdo->prepare("
             UPDATE products SET 
@@ -223,6 +262,25 @@ class ProductRepository
             ':is_active' => !empty($data['is_active']) ? 1 : 0,
             ':updated_by' => $currentUser,
         ]);
+        
+        // Log audit
+        if (isset($beforeArray)) {
+            $afterArray = [
+                'sku' => $data['sku'],
+                'name' => $data['name'],
+                'slug' => $slug,
+                'brand_id' => $data['brand_id'] ?: null,
+                'category_id' => $data['category_id'] ?: null,
+                'pack_size' => $data['pack_size'] ?? null,
+                'unit_id' => $data['unit_id'] ?: null,
+                'barcode' => $data['barcode'] ?? null,
+                'sale_price' => $data['sale_price'] ?? 0,
+                'cost_price' => $data['cost_price'] ?? 0,
+                'tax_rate' => $data['tax_rate'] ?? 0,
+                'is_active' => !empty($data['is_active']) ? 1 : 0
+            ];
+            $this->logUpdate('products', $id, $beforeArray, $afterArray);
+        }
     }
 
     /**
@@ -230,6 +288,26 @@ class ProductRepository
      */
     public function delete(int $id): void
     {
+        // Get before data
+        $beforeProduct = $this->findOne($id);
+        $beforeArray = null;
+        if ($beforeProduct) {
+            $beforeArray = [
+                'sku' => $beforeProduct->sku,
+                'name' => $beforeProduct->name,
+                'slug' => $beforeProduct->slug,
+                'brand_id' => $beforeProduct->brand_id,
+                'category_id' => $beforeProduct->category_id,
+                'pack_size' => $beforeProduct->pack_size,
+                'unit_id' => $beforeProduct->unit_id,
+                'barcode' => $beforeProduct->barcode,
+                'sale_price' => $beforeProduct->sale_price,
+                'cost_price' => $beforeProduct->cost_price,
+                'tax_rate' => $beforeProduct->tax_rate,
+                'is_active' => $beforeProduct->is_active
+            ];
+        }
+        
         $pdo = DB::pdo();
         try {
             $pdo->beginTransaction();
@@ -238,6 +316,11 @@ class ProductRepository
             $pdo->prepare("DELETE FROM products WHERE id = ?")->execute([$id]);
 
             $pdo->commit();
+            
+            // Log audit
+            if ($beforeArray) {
+                $this->logDelete('products', $id, $beforeArray);
+            }
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();

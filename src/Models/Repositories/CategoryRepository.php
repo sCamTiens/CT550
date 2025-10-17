@@ -2,10 +2,13 @@
 namespace App\Models\Repositories;
 
 use App\Core\DB;
+use App\Support\Auditable;
 
 class CategoryRepository
 {
-    public static function all()
+    use Auditable;
+
+    public function all()
     {
         $pdo = DB::pdo();
         $sql = "SELECT c.id, c.name, c.slug, c.parent_id, c.sort_order, c.is_active, 
@@ -21,7 +24,7 @@ class CategoryRepository
         return $pdo->query($sql)->fetchAll(\PDO::FETCH_ASSOC);
     }
 
-    public static function find($id)
+    public function find($id)
     {
         $pdo = DB::pdo();
         $st = $pdo->prepare("SELECT c.id, c.name, c.slug, c.parent_id, c.sort_order, c.is_active, 
@@ -36,7 +39,7 @@ class CategoryRepository
         return $st->fetch(\PDO::FETCH_ASSOC);
     }
 
-    public static function create($data)
+    public function create($data)
     {
         $pdo = DB::pdo();
         $stmt = $pdo->prepare("INSERT INTO categories
@@ -51,11 +54,34 @@ class CategoryRepository
             ':created_by' => $data['created_by'],
             ':updated_by' => $data['updated_by'],
         ]);
-        return $pdo->lastInsertId();
+        $id = $pdo->lastInsertId();
+        
+        // Log audit
+        $this->logCreate('categories', (int)$id, [
+            'name' => $data['name'],
+            'slug' => $data['slug'],
+            'parent_id' => $data['parent_id'],
+            'sort_order' => $data['sort_order'],
+            'is_active' => $data['is_active'],
+            'created_by' => $data['created_by'],
+            'updated_by' => $data['updated_by']
+        ]);
+        
+        return $id;
     }
 
-    public static function update($id, $data)
+    public function update($id, $data)
     {
+        // Get before data
+        $beforeData = $this->find($id);
+        $beforeArray = [
+            'name' => $beforeData['name'],
+            'slug' => $beforeData['slug'],
+            'parent_id' => $beforeData['parent_id'],
+            'sort_order' => $beforeData['sort_order'],
+            'is_active' => $beforeData['is_active']
+        ];
+        
         $pdo = DB::pdo();
         $stmt = $pdo->prepare("UPDATE categories
             SET name=:name, slug=:slug, parent_id=:parent_id, sort_order=:sort_order, 
@@ -70,9 +96,19 @@ class CategoryRepository
             ':is_active' => $data['is_active'],
             ':updated_by' => $data['updated_by'],
         ]);
+        
+        // Log audit
+        $afterArray = [
+            'name' => $data['name'],
+            'slug' => $data['slug'],
+            'parent_id' => $data['parent_id'],
+            'sort_order' => $data['sort_order'],
+            'is_active' => $data['is_active']
+        ];
+        $this->logUpdate('categories', (int)$id, $beforeArray, $afterArray);
     }
 
-    public static function canDelete($id)
+    public function canDelete($id)
     {
         $pdo = DB::pdo();
         // Check if is parent of another category
@@ -86,9 +122,22 @@ class CategoryRepository
         return true;
     }
 
-    public static function delete($id)
+    public function delete($id)
     {
+        // Get before data
+        $beforeData = $this->find($id);
+        $beforeArray = [
+            'name' => $beforeData['name'],
+            'slug' => $beforeData['slug'],
+            'parent_id' => $beforeData['parent_id'],
+            'sort_order' => $beforeData['sort_order'],
+            'is_active' => $beforeData['is_active']
+        ];
+        
         $pdo = DB::pdo();
         $pdo->prepare("DELETE FROM categories WHERE id=?")->execute([$id]);
+        
+        // Log audit
+        $this->logDelete('categories', (int)$id, $beforeArray);
     }
 }

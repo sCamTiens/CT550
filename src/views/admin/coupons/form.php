@@ -2,8 +2,7 @@
     <!-- Mã giảm giá -->
     <div>
         <label class="block text-sm font-semibold mb-1">Mã giảm giá <span class="text-red-500">*</span></label>
-        <input x-model="form.code" type="text"
-            @blur="touched.code = true; validateField('code')"
+        <input x-model="form.code" type="text" @blur="touched.code = true; validateField('code')"
             @input="form.code = form.code.toUpperCase(); validateField('code')"
             class="w-full border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975] uppercase"
             :class="(touched.code && errors.code) ? 'border-red-500' : 'border-gray-300'"
@@ -111,40 +110,45 @@
 
     <!-- Giảm tối đa (chỉ cho percentage) -->
     <div x-show="form.discount_type === 'percentage'">
-        <label class="block text-sm font-semibold mb-1">Giảm tối đa (₫)</label>
+        <label class="block text-sm font-semibold mb-1">Giảm tối đa (₫)
+            <span title="Để trống nếu không giới hạn số tiền giảm tối đa"
+                class="inline-flex items-center justify-center w-4 h-4 rounded-full border border-gray-300 text-gray-400 text-xs font-bold cursor-help">?</span>
+        </label>
         <input x-model.number="form.max_discount" type="number" min="0" step="1000"
             class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
             placeholder="VD: 500000 (để trống nếu không giới hạn)" />
-        <p class="text-xs text-gray-500 mt-1">Để trống nếu không giới hạn số tiền giảm tối đa</p>
-    </div>
-
-    <!-- Số lần sử dụng tối đa -->
-    <div>
-        <label class="block text-sm font-semibold mb-1">Số lần sử dụng tối đa</label>
-        <input x-model.number="form.max_uses" type="number" min="0"
-            class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
-            placeholder="Để trống nếu không giới hạn" />
-        <p class="text-xs text-gray-500 mt-1">Tổng số lần mã có thể được sử dụng</p>
     </div>
 
     <!-- Ngày bắt đầu -->
     <div>
         <label class="block text-sm font-semibold mb-1">Ngày bắt đầu <span class="text-red-500">*</span></label>
-        <input x-model="form.starts_at" type="text" class="coupon-start-date w-full border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
+        <input x-model="form.starts_at" type="text"
+            class="coupon-start-date w-full border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
             :class="(touched.starts_at && errors.starts_at) ? 'border-red-500' : 'border-gray-300'"
-            placeholder="dd/mm/yyyy" autocomplete="off"
-            @blur="touched.starts_at = true; validateField('starts_at')" />
-        <p x-show="touched.starts_at && errors.starts_at" x-text="errors.starts_at" class="text-red-500 text-xs mt-1"></p>
+            placeholder="Chọn ngày" autocomplete="off" @blur="touched.starts_at = true; validateField('starts_at')" />
+        <p x-show="touched.starts_at && errors.starts_at" x-text="errors.starts_at" class="text-red-500 text-xs mt-1">
+        </p>
     </div>
 
     <!-- Ngày kết thúc -->
     <div>
         <label class="block text-sm font-semibold mb-1">Ngày kết thúc <span class="text-red-500">*</span></label>
-        <input x-model="form.ends_at" type="text" class="coupon-end-date w-full border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
-            :class="(touched.ends_at && errors.ends_at) ? 'border-red-500' : 'border-gray-300'"
-            placeholder="dd/mm/yyyy" autocomplete="off"
-            @blur="touched.ends_at = true; validateField('ends_at')" />
+        <input x-model="form.ends_at" type="text"
+            class="coupon-end-date w-full border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
+            :class="(touched.ends_at && errors.ends_at) ? 'border-red-500' : 'border-gray-300'" placeholder="Chọn ngày"
+            autocomplete="off" @blur="touched.ends_at = true; validateField('ends_at')" />
         <p x-show="touched.ends_at && errors.ends_at" x-text="errors.ends_at" class="text-red-500 text-xs mt-1"></p>
+    </div>
+
+    <!-- Số lần sử dụng tối đa -->
+    <div>
+        <label class="block text-sm font-semibold mb-1">Số lần sử dụng tối đa
+            <span title="Tổng số lần mã có thể được sử dụng"
+                class="inline-flex items-center justify-center w-4 h-4 rounded-full border border-gray-300 text-gray-400 text-xs font-bold cursor-help">?</span>
+        </label>
+        <input x-model.number="form.max_uses" type="number" min="0"
+            class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
+            placeholder="Để trống nếu không giới hạn" />
     </div>
 
     <!-- Trạng thái -->

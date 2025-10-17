@@ -235,7 +235,7 @@
             <input type="text" x-model="form.received_at"
                 class="w-full border rounded px-3 py-2 receipts-datepicker focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
                 :class="(touched.received_at && errors.received_at) ? 'border-red-500' : 'border-gray-300'"
-                placeholder="dd/mm/yyyy" autocomplete="off"
+                placeholder="Chọn ngày" autocomplete="off"
                 x-init="flatpickr($el, {dateFormat: 'Y-m-d', allowInput: true, locale: 'vi'})"
                 @blur="touched.received_at = true; validateField('received_at')"
                 @input="touched.received_at && validateField('received_at')">
@@ -353,7 +353,7 @@
         <div class="relative">
             <input type="text" x-model="form.bank_time"
                 class="w-full border border-gray-300 rounded px-3 py-2 bank-time-datepicker focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
-                placeholder="dd/mm/yyyy hh:mm" autocomplete="off"
+                placeholder="Chọn ngày hh:mm" autocomplete="off"
                 x-init="flatpickr($el, {enableTime: true, dateFormat: 'Y-m-d H:i', allowInput: true, locale: 'vi', time_24hr: true})">
             <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                 <i class="fa-regular fa-calendar"></i>

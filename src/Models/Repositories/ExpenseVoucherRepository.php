@@ -13,9 +13,15 @@ class ExpenseVoucherRepository
             SELECT 
                 e.id, e.code, e.purchase_order_id, e.supplier_id, e.method, e.txn_ref, e.amount, e.paid_by, e.paid_at, e.bank_time, e.note, 
                 e.created_at, e.updated_at, e.created_by,
-                cu.full_name AS created_by_name
+                cu.full_name AS created_by_name,
+                s.name AS supplier_name,
+                po.code AS purchase_order_code,
+                pb.full_name AS paid_by_name
             FROM expense_vouchers e
             LEFT JOIN users cu ON cu.id = e.created_by
+            LEFT JOIN suppliers s ON s.id = e.supplier_id
+            LEFT JOIN purchase_orders po ON po.id = e.purchase_order_id
+            LEFT JOIN users pb ON pb.id = e.paid_by
             ORDER BY e.id DESC
             LIMIT 500
         ";
@@ -44,20 +50,22 @@ class ExpenseVoucherRepository
         $pdo = DB::pdo();
         $stmt = $pdo->prepare("
             INSERT INTO expense_vouchers
-            (paid_at, amount, receiver_name, note, is_active, txn_ref, bank_time, created_by, updated_by, created_at, updated_at)
+            (code, purchase_order_id, supplier_id, method, txn_ref, amount, paid_by, paid_at, bank_time, note, created_by, created_at, updated_at)
             VALUES
-            (:paid_at, :amount, :receiver_name, :note, :is_active, :txn_ref, :bank_time, :created_by, :updated_by, NOW(), NOW())
+            (:code, :purchase_order_id, :supplier_id, :method, :txn_ref, :amount, :paid_by, :paid_at, :bank_time, :note, :created_by, NOW(), NOW())
         ");
         $stmt->execute([
-            ':paid_at' => $data['paid_at'],
-            ':amount' => $data['amount'],
-            ':receiver_name' => $data['receiver_name'],
-            ':note' => $data['note'] ?? null,
-            ':is_active' => !empty($data['is_active']) ? 1 : 0,
+            ':code' => $data['code'] ?? null,
+            ':purchase_order_id' => $data['purchase_order_id'] ?? null,
+            ':supplier_id' => $data['supplier_id'] ?? null,
+            ':method' => $data['method'] ?? null,
             ':txn_ref' => $data['txn_ref'] ?? null,
+            ':amount' => $data['amount'] ?? 0,
+            ':paid_by' => $data['paid_by'] ?? null,
+            ':paid_at' => $data['paid_at'] ?? null,
             ':bank_time' => $data['bank_time'] ?? null,
+            ':note' => $data['note'] ?? null,
             ':created_by' => $currentUser,
-            ':updated_by' => $currentUser,
         ]);
         return (int) $pdo->lastInsertId();
     }
@@ -67,21 +75,29 @@ class ExpenseVoucherRepository
         $pdo = DB::pdo();
         $stmt = $pdo->prepare("
             UPDATE expense_vouchers SET 
-                paid_at = :paid_at, amount = :amount, receiver_name = :receiver_name, note = :note, is_active = :is_active,
-                txn_ref = :txn_ref, bank_time = :bank_time,
-                updated_by = :updated_by, updated_at = NOW()
+                purchase_order_id = :purchase_order_id,
+                supplier_id = :supplier_id,
+                method = :method,
+                txn_ref = :txn_ref,
+                amount = :amount,
+                paid_by = :paid_by,
+                paid_at = :paid_at,
+                bank_time = :bank_time,
+                note = :note,
+                updated_at = NOW()
             WHERE id = :id
         ");
         $stmt->execute([
             ':id' => $id,
-            ':paid_at' => $data['paid_at'],
-            ':amount' => $data['amount'],
-            ':receiver_name' => $data['receiver_name'],
-            ':note' => $data['note'] ?? null,
-            ':is_active' => !empty($data['is_active']) ? 1 : 0,
+            ':purchase_order_id' => $data['purchase_order_id'] ?? null,
+            ':supplier_id' => $data['supplier_id'] ?? null,
+            ':method' => $data['method'] ?? null,
             ':txn_ref' => $data['txn_ref'] ?? null,
+            ':amount' => $data['amount'] ?? 0,
+            ':paid_by' => $data['paid_by'] ?? null,
+            ':paid_at' => $data['paid_at'] ?? null,
             ':bank_time' => $data['bank_time'] ?? null,
-            ':updated_by' => $currentUser,
+            ':note' => $data['note'] ?? null,
         ]);
     }
 

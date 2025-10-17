@@ -280,6 +280,9 @@
                     </svg>
                     <span>Ưu đãi</span>
                 </div>
+                <svg class="w-4 h-4 transition-transform" :class="groups.expense?'rotate-90':''" viewBox="0 0 20 20">
+                    <path d="M6 6l4 4 4-4" fill="currentColor" />
+                </svg>
             </button>
             <div class="pl-4 space-y-1 mt-1" x-show="groups.promo" x-collapse>
                 <a href="/admin/coupons"

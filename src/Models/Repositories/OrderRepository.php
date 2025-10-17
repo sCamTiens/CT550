@@ -3,9 +3,12 @@ namespace App\Models\Repositories;
 
 use App\Core\DB;
 use App\Models\Entities\Order;
+use App\Support\Auditable;
 
 class OrderRepository
 {
+    use Auditable;
+
     /**
      * Lấy toàn bộ danh sách đơn hàng
      */
@@ -233,6 +236,20 @@ class OrderRepository
             ]);
 
             $pdo->commit();
+            
+            // Log audit
+            $this->logCreate('orders', $id, [
+                'code' => $data['code'],
+                'customer_id' => $customerId,
+                'order_type' => 'Offline',
+                'status' => 'Hoàn tất',
+                'payment_method' => $paymentMethod,
+                'payment_status' => 'Đã thanh toán',
+                'subtotal' => $data['subtotal'] ?? 0,
+                'discount_amount' => $data['discount_amount'] ?? 0,
+                'total_amount' => $data['total_amount'] ?? 0
+            ]);
+            
             return $id;
         } catch (\PDOException $e) {
             $pdo->rollBack();
@@ -245,6 +262,21 @@ class OrderRepository
      */
     public function update(int $id, array $data, int $currentUser): void
     {
+        // Get before data for audit
+        $beforeOrder = $this->findOne($id);
+        $beforeArray = null;
+        if ($beforeOrder) {
+            $beforeArray = [
+                'customer_id' => $beforeOrder->customer_id,
+                'status' => $beforeOrder->status,
+                'payment_method' => $beforeOrder->payment_method,
+                'payment_status' => $beforeOrder->payment_status,
+                'subtotal' => $beforeOrder->subtotal,
+                'discount_amount' => $beforeOrder->discount_amount,
+                'total_amount' => $beforeOrder->total_amount
+            ];
+        }
+        
         $pdo = DB::pdo();
         try {
             $pdo->beginTransaction();
@@ -401,6 +433,31 @@ class OrderRepository
             }
 
             $pdo->commit();
+            
+            // Log audit
+            if ($beforeArray) {
+                // Xử lý customer_id - cho phép null (khách vãng lai)
+                $customerId = !empty($data['customer_id']) ? $data['customer_id'] : null;
+                
+                // Map payment method
+                $paymentMethodMap = [
+                    'cash' => 'Tiền mặt',
+                    'credit_card' => 'Quẹt thẻ',
+                    'bank_transfer' => 'Chuyển khoản'
+                ];
+                $paymentMethod = $paymentMethodMap[$data['payment_method'] ?? 'cash'] ?? 'Tiền mặt';
+                
+                $afterArray = [
+                    'customer_id' => $customerId,
+                    'status' => 'Hoàn tất',
+                    'payment_method' => $paymentMethod,
+                    'payment_status' => 'Đã thanh toán',
+                    'subtotal' => $data['subtotal'] ?? 0,
+                    'discount_amount' => $data['discount_amount'] ?? 0,
+                    'total_amount' => $data['total_amount'] ?? 0
+                ];
+                $this->logUpdate('orders', $id, $beforeArray, $afterArray);
+            }
         } catch (\PDOException $e) {
             $pdo->rollBack();
             throw $e;
@@ -412,6 +469,19 @@ class OrderRepository
      */
     public function delete(int $id): void
     {
+        // Get before data for audit
+        $beforeOrder = $this->findOne($id);
+        $beforeArray = null;
+        if ($beforeOrder) {
+            $beforeArray = [
+                'code' => $beforeOrder->code,
+                'customer_id' => $beforeOrder->customer_id,
+                'status' => $beforeOrder->status,
+                'payment_method' => $beforeOrder->payment_method,
+                'total_amount' => $beforeOrder->total_amount
+            ];
+        }
+        
         $pdo = DB::pdo();
         try {
             $pdo->beginTransaction();
@@ -453,6 +523,11 @@ class OrderRepository
             }
 
             $pdo->commit();
+            
+            // Log audit
+            if ($beforeArray) {
+                $this->logDelete('orders', $id, $beforeArray);
+            }
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();

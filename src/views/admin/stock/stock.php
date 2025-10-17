@@ -18,27 +18,23 @@ $items = $items ?? [];
   <!-- Table -->
   <div class="bg-white rounded-xl shadow pb-4">
     <div style="overflow-x:auto; max-width:100%;" class="pb-40">
-      <table style="width:1200px; min-width:900px; border-collapse:collapse;">
+      <table style="width:100%; min-width:1250px; border-collapse:collapse;">
         <thead>
           <tr class="bg-gray-50 text-slate-600">
             <?= textFilterPopover('product_sku', 'SKU') ?>
             <?= textFilterPopover('product_name', 'Tên sản phẩm') ?>
             <?= textFilterPopover('unit_name', 'Đơn vị tính') ?>
             <?= numberFilterPopover('qty', 'Tồn kho') ?>
-            <?= numberFilterPopover('min_qty', 'Tồn kho tối thiểu') ?>
-            <?= numberFilterPopover('max_qty', 'Tồn kho tối đa') ?>
             <?= dateFilterPopover('updated_at', 'Cập nhật') ?>
           </tr>
         </thead>
         <tbody>
           <template x-for="s in paginated()" :key="s.product_id">
             <tr class="border-t">
-              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.product_sku"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line text-center" x-text="s.product_sku"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.product_name"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.unit_name"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.qty"></td>
-              <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.min_qty"></td>
-              <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.max_qty"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line"
               :class="(s.updated_at || '—') === '—' ? 'text-center' : 'text-right'" x-text="s.updated_at || '—'"></td>
             </tr>

@@ -24,7 +24,7 @@ $products = $products ?? [];
     <!-- Table -->
     <div class="bg-white rounded-xl shadow pb-4">
         <div style="overflow-x:auto; max-width:100%;" class="pb-40">
-            <table style="width:1200px; min-width:800px; border-collapse:collapse;">
+            <table style="width:100%; min-width:1250px; border-collapse:collapse;">
                 <thead>
                     <tr class="bg-gray-50 text-slate-600">
                         <th class="py-2 px-4 whitespace-nowrap text-center">Thao tác</th>
@@ -39,7 +39,7 @@ $products = $products ?? [];
                 <tbody>
                     <template x-for="b in paginated()" :key="b.id">
                         <tr class="border-t">
-                            <td class="py-2 px-4 text-center">
+                            <!-- <td class="py-2 px-4 text-center">
                                 <button @click="openEdit(b)"
                                     class="p-2 rounded hover:bg-gray-100 text-[#002975]">Sửa</button>
                                 <template x-if="b.current_qty>0">
@@ -50,7 +50,33 @@ $products = $products ?? [];
                                     <button @click="remove(b.id)"
                                         class="p-2 rounded hover:bg-gray-100 text-[#002975]">Xóa</button>
                                 </template>
+                            </td> -->
+                            <td class="py-2 px-4 text-center space-x-2">
+                                <!-- Nếu còn tồn kho (current_qty > 0) -->
+                                <template x-if="b.current_qty > 0">
+                                    <span class="text-slate-400 text-sm" title="Không thể xóa lô còn tồn">—</span>
+                                </template>
+
+                                <!-- Nếu hết tồn kho (current_qty == 0) -->
+                                <template x-if="b.current_qty == 0">
+                                    <div class="inline-flex space-x-2">
+                                        <!-- Nút sửa -->
+                                        <button @click="openEdit(b)"
+                                            class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                                            title="Sửa">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+
+                                        <!-- Nút xóa -->
+                                        <button @click="remove(b.id)"
+                                            class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                                            title="Xóa">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </template>
                             </td>
+
                             <td class="py-2 px-4" x-text="b.product_name || b.product_sku"></td>
                             <td class="py-2 px-4" x-text="b.batch_code"></td>
                             <td class="py-2 px-4" :class="(b.exp_date || '—') === '—' ? 'text-center' : 'text-right'"
@@ -244,7 +270,7 @@ $products = $products ?? [];
                 if (field === 'product_id') {
                     this.errors.product_id = this.form.product_id ? '' : 'Vui lòng chọn sản phẩm';
                 }
-                
+
                 // Ngày sản xuất - bắt buộc
                 if (field === 'mfg_date') {
                     if (!this.form.mfg_date || this.form.mfg_date.trim() === '') {
@@ -253,7 +279,7 @@ $products = $products ?? [];
                         this.errors.mfg_date = '';
                     }
                 }
-                
+
                 // Hạn sử dụng - bắt buộc
                 if (field === 'exp_date') {
                     if (!this.form.exp_date || this.form.exp_date.trim() === '') {
@@ -262,7 +288,7 @@ $products = $products ?? [];
                         this.errors.exp_date = '';
                     }
                 }
-                
+
                 // Số lượng - bắt buộc, phải > 0
                 if (field === 'initial_qty') {
                     if (!this.form.initial_qty || this.form.initial_qty === '' || this.form.initial_qty === null) {
@@ -273,7 +299,7 @@ $products = $products ?? [];
                         this.errors.initial_qty = '';
                     }
                 }
-                
+
                 // Giá nhập - bắt buộc, không âm
                 if (field === 'unit_cost') {
                     if (this.form.unit_cost === '' || this.form.unit_cost === null || this.form.unit_cost === undefined) {
@@ -292,7 +318,7 @@ $products = $products ?? [];
                 this.validateField('exp_date');
                 this.validateField('initial_qty');
                 this.validateField('unit_cost');
-                
+
                 // Mark all as touched
                 this.touched = {
                     product_id: true,
@@ -301,27 +327,27 @@ $products = $products ?? [];
                     initial_qty: true,
                     unit_cost: true
                 };
-                
+
                 // Check if any errors exist
                 return !Object.values(this.errors).some(err => err !== '');
             },
 
             async submit() {
                 if (this.submitting) return;
-                
+
                 // Validate all fields before submit
                 if (!this.validateAll()) {
                     this.showToast('Vui lòng kiểm tra lại thông tin!', 'error');
                     return;
                 }
-                
+
                 this.submitting = true;
                 try {
                     const method = this.form.id ? 'PUT' : 'POST';
                     const url = this.form.id ? api.update(this.form.id) : api.create;
                     const r = await fetch(url, {
-                        method, 
-                        headers: { 'Content-Type': 'application/json' }, 
+                        method,
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(this.form)
                     });
                     if (!r.ok) throw new Error('Lỗi server');
@@ -330,8 +356,8 @@ $products = $products ?? [];
                     this.showToast('Thao tác thành công!', 'success');
                 } catch (e) {
                     this.showToast(e.message || 'Lỗi');
-                } finally { 
-                    this.submitting = false; 
+                } finally {
+                    this.submitting = false;
                 }
             },
 
@@ -342,19 +368,19 @@ $products = $products ?? [];
                     if (!r.ok) throw new Error('Lỗi server');
                     await this.fetchAll();
                     this.showToast('Xóa thành công!', 'success');
-                } catch (e) { 
-                    this.showToast(e.message || 'Lỗi'); 
+                } catch (e) {
+                    this.showToast(e.message || 'Lỗi');
                 }
             },
 
             // --- utils ---
             formatCurrency(n) {
-                try { 
-                    return new Intl.NumberFormat('vi-VN', { 
-                        style: 'currency', 
-                        currency: 'VND' 
+                try {
+                    return new Intl.NumberFormat('vi-VN', {
+                        style: 'currency',
+                        currency: 'VND'
                     }).format(n || 0);
-                } catch { 
+                } catch {
                     return n;
                 }
             },

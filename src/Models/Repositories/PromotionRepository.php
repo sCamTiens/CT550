@@ -2,9 +2,12 @@
 namespace App\Models\Repositories;
 
 use App\Core\DB;
+use App\Support\Auditable;
 
 class PromotionRepository
 {
+    use Auditable;
+
     /**
      * Lấy toàn bộ danh sách chương trình khuyến mãi
      */
@@ -136,6 +139,18 @@ class PromotionRepository
             }
 
             $pdo->commit();
+            
+            // Log audit
+            $this->logCreate('promotions', $id, [
+                'name' => $data['name'],
+                'discount_type' => $data['discount_type'] ?? 'percentage',
+                'discount_value' => $data['discount_value'] ?? 0,
+                'apply_to' => $data['apply_to'] ?? 'all',
+                'starts_at' => $data['starts_at'] ?? null,
+                'ends_at' => $data['ends_at'] ?? null,
+                'is_active' => $data['is_active'] ?? 1
+            ]);
+            
             return $id;
         } catch (\Exception $e) {
             $pdo->rollBack();
@@ -148,6 +163,19 @@ class PromotionRepository
      */
     public function update(int $id, array $data, int $currentUser): void
     {
+        // Get before data
+        $beforePromo = $this->findOne($id);
+        $beforeArray = null;
+        if ($beforePromo) {
+            $beforeArray = [
+                'name' => $beforePromo['name'] ?? null,
+                'discount_type' => $beforePromo['discount_type'] ?? null,
+                'discount_value' => $beforePromo['discount_value'] ?? null,
+                'apply_to' => $beforePromo['apply_to'] ?? null,
+                'is_active' => $beforePromo['is_active'] ?? null
+            ];
+        }
+        
         $pdo = DB::pdo();
         
         try {
@@ -203,6 +231,18 @@ class PromotionRepository
             }
 
             $pdo->commit();
+            
+            // Log audit
+            if ($beforeArray) {
+                $afterArray = [
+                    'name' => $data['name'],
+                    'discount_type' => $data['discount_type'] ?? 'percentage',
+                    'discount_value' => $data['discount_value'] ?? 0,
+                    'apply_to' => $data['apply_to'] ?? 'all',
+                    'is_active' => $data['is_active'] ?? 1
+                ];
+                $this->logUpdate('promotions', $id, $beforeArray, $afterArray);
+            }
         } catch (\Exception $e) {
             $pdo->rollBack();
             throw $e;
@@ -214,6 +254,18 @@ class PromotionRepository
      */
     public function delete(int $id): void
     {
+        // Get before data
+        $beforePromo = $this->findOne($id);
+        $beforeArray = null;
+        if ($beforePromo) {
+            $beforeArray = [
+                'name' => $beforePromo['name'] ?? null,
+                'discount_type' => $beforePromo['discount_type'] ?? null,
+                'discount_value' => $beforePromo['discount_value'] ?? null,
+                'apply_to' => $beforePromo['apply_to'] ?? null
+            ];
+        }
+        
         $pdo = DB::pdo();
         
         try {
@@ -229,6 +281,11 @@ class PromotionRepository
             $pdo->prepare("DELETE FROM promotions WHERE id = ?")->execute([$id]);
 
             $pdo->commit();
+            
+            // Log audit
+            if ($beforeArray) {
+                $this->logDelete('promotions', $id, $beforeArray);
+            }
         } catch (\Exception $e) {
             $pdo->rollBack();
             throw $e;

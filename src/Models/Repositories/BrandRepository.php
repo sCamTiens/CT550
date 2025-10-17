@@ -3,10 +3,13 @@ namespace App\Models\Repositories;
 
 use App\Core\DB;
 use App\Models\Entities\Brand;
+use App\Support\Auditable;
 
 class BrandRepository
 {
-    public static function all()
+    use Auditable;
+
+    public function all()
     {
      $pdo = DB::pdo();
      $rows = $pdo->query("SELECT b.id, b.name, b.slug, b.created_at, b.updated_at,
@@ -18,10 +21,10 @@ class BrandRepository
             LEFT JOIN users u2 ON u2.id = b.updated_by
             ORDER BY b.id DESC")
          ->fetchAll(\PDO::FETCH_ASSOC);
-     return array_map([self::class, 'mapToEntity'], $rows);
+     return array_map([$this, 'mapToEntity'], $rows);
     }
 
-    public static function find($id)
+    public function find($id)
     {
      $pdo = DB::pdo();
      $st = $pdo->prepare("SELECT b.id, b.name, b.slug, b.created_at, b.updated_at,
@@ -34,10 +37,10 @@ class BrandRepository
             WHERE b.id=?");
      $st->execute([$id]);
      $row = $st->fetch(\PDO::FETCH_ASSOC);
-     return $row ? self::mapToEntity($row) : null;
+     return $row ? $this->mapToEntity($row) : null;
     }
 
-    public static function create($name, $slug, $userId)
+    public function create($name, $slug, $userId)
     {
         $pdo = DB::pdo();
         $stmt = $pdo->prepare("INSERT INTO brands(name,slug,created_by,updated_by)
@@ -49,12 +52,26 @@ class BrandRepository
             ':updated_by' => $userId
         ]);
         $id = $pdo->lastInsertId();
-        return self::find($id);
+        
+        // Log audit
+        $this->logCreate('brands', (int)$id, [
+            'name' => $name,
+            'slug' => $slug,
+            'created_by' => $userId,
+            'updated_by' => $userId
+        ]);
+        
+        return $this->find($id);
     }
 
-    public static function update($id, $name, $slug, $userId)
+    public function update($id, $name, $slug, $userId)
     {
         $pdo = DB::pdo();
+        
+        // Lấy dữ liệu trước khi update
+        $beforeData = $this->find($id);
+        $beforeArray = $beforeData ? (array)$beforeData : [];
+        
         $stmt = $pdo->prepare("UPDATE brands 
                                    SET name=:name, slug=:slug, updated_by=:updated_by
                                    WHERE id=:id");
@@ -64,14 +81,23 @@ class BrandRepository
             ':slug' => $slug ?: null,
             ':updated_by' => $userId
         ]);
-        return self::find($id);
+        
+        // Log audit
+        $afterArray = [
+            'name' => $name,
+            'slug' => $slug,
+            'updated_by' => $userId
+        ];
+        $this->logUpdate('brands', (int)$id, $beforeArray, $afterArray);
+        
+        return $this->find($id);
     }
 
     /**
      * @param array $row
      * @return Brand
      */
-    private static function mapToEntity($row)
+    private function mapToEntity($row)
     {
         $brand = new Brand();
         foreach ($row as $k => $v) {
@@ -80,9 +106,17 @@ class BrandRepository
         return $brand;
     }
 
-    public static function delete($id)
+    public function delete($id)
     {
         $pdo = DB::pdo();
+        
+        // Lấy dữ liệu trước khi xóa
+        $beforeData = $this->find($id);
+        $beforeArray = $beforeData ? (array)$beforeData : [];
+        
         $pdo->prepare("DELETE FROM brands WHERE id=?")->execute([$id]);
+        
+        // Log audit
+        $this->logDelete('brands', (int)$id, $beforeArray);
     }
 }

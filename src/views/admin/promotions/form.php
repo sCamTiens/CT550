@@ -2,8 +2,7 @@
     <!-- Tên chương trình -->
     <div class="md:col-span-2">
         <label class="block text-sm font-semibold mb-1">Tên chương trình <span class="text-red-500">*</span></label>
-        <input x-model="form.name" type="text"
-            @blur="touched.name = true; validateField('name')"
+        <input x-model="form.name" type="text" @blur="touched.name = true; validateField('name')"
             @input="validateField('name')"
             class="w-full border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
             :class="(touched.name && errors.name) ? 'border-red-500' : 'border-gray-300'"
@@ -150,14 +149,11 @@
         <div class="border border-gray-300 rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
             <template x-for="cat in categories" :key="cat.id">
                 <label class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
-                    <input type="checkbox" :value="cat.id" 
-                        @change="if ($event.target.checked) { 
+                    <input type="checkbox" :value="cat.id" @change="if ($event.target.checked) { 
                             if (!form.category_ids.includes(cat.id)) form.category_ids.push(cat.id);
                         } else { 
                             form.category_ids = form.category_ids.filter(id => id !== cat.id);
-                        }"
-                        :checked="form.category_ids.includes(cat.id)"
-                        class="h-4 w-4">
+                        }" :checked="form.category_ids.includes(cat.id)" class="h-4 w-4">
                     <span class="text-sm" x-text="cat.name"></span>
                 </label>
             </template>
@@ -171,14 +167,11 @@
         <div class="border border-gray-300 rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
             <template x-for="prod in products" :key="prod.id">
                 <label class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
-                    <input type="checkbox" :value="prod.id"
-                        @change="if ($event.target.checked) {
+                    <input type="checkbox" :value="prod.id" @change="if ($event.target.checked) {
                             if (!form.product_ids.includes(prod.id)) form.product_ids.push(prod.id);
                         } else {
                             form.product_ids = form.product_ids.filter(id => id !== prod.id);
-                        }"
-                        :checked="form.product_ids.includes(prod.id)"
-                        class="h-4 w-4">
+                        }" :checked="form.product_ids.includes(prod.id)" class="h-4 w-4">
                     <span class="text-sm" x-text="prod.name + ' (' + prod.sku + ')'"></span>
                 </label>
             </template>
@@ -186,38 +179,42 @@
         </div>
     </div>
 
-    <!-- Độ ưu tiên -->
-    <div>
-        <label class="block text-sm font-semibold mb-1">Độ ưu tiên</label>
-        <input x-model.number="form.priority" type="number" min="0"
-            class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
-            placeholder="VD: 1" />
-        <p class="text-xs text-gray-500 mt-1">Số càng lớn càng ưu tiên áp dụng trước</p>
-    </div>
-
     <!-- Ngày bắt đầu -->
     <div>
         <label class="block text-sm font-semibold mb-1">Ngày bắt đầu <span class="text-red-500">*</span></label>
-        <input x-model="form.starts_at" type="text" class="promotion-start-date w-full border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
+        <input x-model="form.starts_at" type="text"
+            class="promotion-start-date w-full border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
             :class="(touched.starts_at && errors.starts_at) ? 'border-red-500' : 'border-gray-300'"
-            placeholder="dd/mm/yyyy" autocomplete="off"
-            @blur="touched.starts_at = true; validateField('starts_at')" />
-        <p x-show="touched.starts_at && errors.starts_at" x-text="errors.starts_at" class="text-red-500 text-xs mt-1"></p>
+            placeholder="Chọn ngày" autocomplete="off" @blur="touched.starts_at = true; validateField('starts_at')" />
+        <p x-show="touched.starts_at && errors.starts_at" x-text="errors.starts_at" class="text-red-500 text-xs mt-1">
+        </p>
     </div>
 
     <!-- Ngày kết thúc -->
     <div>
         <label class="block text-sm font-semibold mb-1">Ngày kết thúc <span class="text-red-500">*</span></label>
-        <input x-model="form.ends_at" type="text" class="promotion-end-date w-full border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
-            :class="(touched.ends_at && errors.ends_at) ? 'border-red-500' : 'border-gray-300'"
-            placeholder="dd/mm/yyyy" autocomplete="off"
-            @blur="touched.ends_at = true; validateField('ends_at')" />
+        <input x-model="form.ends_at" type="text"
+            class="promotion-end-date w-full border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
+            :class="(touched.ends_at && errors.ends_at) ? 'border-red-500' : 'border-gray-300'" placeholder="Chọn ngày"
+            autocomplete="off" @blur="touched.ends_at = true; validateField('ends_at')" />
         <p x-show="touched.ends_at && errors.ends_at" x-text="errors.ends_at" class="text-red-500 text-xs mt-1"></p>
+    </div>
+
+    <!-- Độ ưu tiên -->
+    <div>
+        <label class="block text-sm font-semibold mb-1">Độ ưu tiên
+            <span title="Số càng lớn càng ưu tiên áp dụng trước"
+                class="inline-flex items-center justify-center w-4 h-4 rounded-full border border-gray-300 text-gray-400 text-xs font-bold cursor-help">?</span>
+        </label>
+        <input x-model.number="form.priority" type="number" min="0"
+            class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
+            placeholder="VD: 1" />
     </div>
 
     <!-- Trạng thái -->
     <div class="md:col-span-2 flex items-center gap-3">
-        <input id="isActivePromo" type="checkbox" x-model="form.is_active" true-value="1" false-value="0" class="h-4 w-4">
+        <input id="isActivePromo" type="checkbox" x-model="form.is_active" true-value="1" false-value="0"
+            class="h-4 w-4">
         <label for="isActivePromo" class="text-sm">Kích hoạt</label>
     </div>
 </div>
