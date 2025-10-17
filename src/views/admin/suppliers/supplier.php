@@ -31,7 +31,7 @@ $items = $items ?? [];
                         <?= textFilterPopover('address', 'Địa chỉ') ?>
                         <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
                         <?= textFilterPopover('created_by_name', 'Người tạo') ?>
-                        <?= dateFilterPopover('updated_at', 'Ngày cập nhật') ?>
+                        <?= dateFilterPopover('updated_at', 'Thời gian cập nhật') ?>
                         <?= textFilterPopover('updated_by_name', 'Người cập nhật') ?>
                     </tr>
                 </thead>

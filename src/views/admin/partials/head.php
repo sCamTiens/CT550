@@ -13,17 +13,21 @@
 
 <?php
 // Server-side session check: nếu không có session admin/user -> chuyển về login
-if (session_status() === PHP_SESSION_NONE) session_start();
+if (session_status() === PHP_SESSION_NONE)
+    session_start();
 $isLogged = !empty($_SESSION['admin_user'] ?? $_SESSION['user'] ?? null);
 // Tránh vòng redirect: nếu đang ở trang login hoặc các trang công khai thì không redirect
 $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 $publicPaths = ['/admin/login', '/admin/logout', '/admin/forgot-password'];
 $isPublic = false;
 foreach ($publicPaths as $p) {
-    if (strpos($currentPath, $p) === 0) { $isPublic = true; break; }
+    if (strpos($currentPath, $p) === 0) {
+        $isPublic = true;
+        break;
+    }
 }
 
-if (! $isLogged && ! $isPublic) {
+if (!$isLogged && !$isPublic) {
     header('Location: /admin/login');
     exit;
 }

@@ -457,6 +457,22 @@ $items = $items ?? [];
                 return arr.filter(s => s && s.user_id != null);
             },
 
+            // Hàm chuẩn hóa ngày: chuyển về dạng YYYY-MM-DD
+            normalizeDateStr(dateStr) {
+                if (!dateStr) return '';
+                const s = String(dateStr).trim();
+                // Nếu dạng d/m/Y
+                if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
+                    const [d, m, y] = s.split(/[\s\/]/);
+                    return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+                }
+                // Nếu dạng Y-m-d hoặc Y-m-d H:i:s
+                if (/^\d{4}-\d{1,2}-\d{1,2}/.test(s)) {
+                    return s.substring(0, 10);
+                }
+                return s;
+            },
+
             // Filter logic giống productPage
             filtered() {
                 let data = this.items;
@@ -473,62 +489,92 @@ $items = $items ?? [];
                 if (f.updated_by_name) data = data.filter(s => fn(s.updated_by_name).includes(fn(f.updated_by_name)));
                 // Date filter: hired_at
                 if (f.hired_at_type === 'eq' && f.hired_at_value) {
-                    data = data.filter(s => (s.hired_at || '').startsWith(f.hired_at_value));
+                    const val = this.normalizeDateStr(f.hired_at_value);
+                    data = data.filter(s => this.normalizeDateStr(s.hired_at) === val);
                 }
                 if (f.hired_at_type === 'between' && f.hired_at_from && f.hired_at_to) {
-                    data = data.filter(s => s.hired_at >= f.hired_at_from && s.hired_at <= f.hired_at_to);
+                    const from = this.normalizeDateStr(f.hired_at_from);
+                    const to = this.normalizeDateStr(f.hired_at_to);
+                    data = data.filter(s => {
+                        const d = this.normalizeDateStr(s.hired_at);
+                        return d >= from && d <= to;
+                    });
                 }
                 if (f.hired_at_type === 'lt' && f.hired_at_value) {
-                    data = data.filter(s => s.hired_at < f.hired_at_value);
+                    const val = this.normalizeDateStr(f.hired_at_value);
+                    data = data.filter(s => this.normalizeDateStr(s.hired_at) < val);
                 }
                 if (f.hired_at_type === 'gt' && f.hired_at_value) {
-                    data = data.filter(s => s.hired_at > f.hired_at_value);
+                    const val = this.normalizeDateStr(f.hired_at_value);
+                    data = data.filter(s => this.normalizeDateStr(s.hired_at) > val);
                 }
                 if (f.hired_at_type === 'lte' && f.hired_at_value) {
-                    data = data.filter(s => s.hired_at <= f.hired_at_value);
+                    const val = this.normalizeDateStr(f.hired_at_value);
+                    data = data.filter(s => this.normalizeDateStr(s.hired_at) <= val);
                 }
                 if (f.hired_at_type === 'gte' && f.hired_at_value) {
-                    data = data.filter(s => s.hired_at >= f.hired_at_value);
+                    const val = this.normalizeDateStr(f.hired_at_value);
+                    data = data.filter(s => this.normalizeDateStr(s.hired_at) >= val);
                 }
 
                 // Date filter: created_at
                 if (f.created_at_type === 'eq' && f.created_at_value) {
-                    data = data.filter(s => (s.created_at || '').startsWith(f.created_at_value));
+                    const val = this.normalizeDateStr(f.created_at_value);
+                    data = data.filter(s => this.normalizeDateStr(s.created_at) === val);
                 }
                 if (f.created_at_type === 'between' && f.created_at_from && f.created_at_to) {
-                    data = data.filter(s => s.created_at >= f.created_at_from && s.created_at <= f.created_at_to);
+                    const from = this.normalizeDateStr(f.created_at_from);
+                    const to = this.normalizeDateStr(f.created_at_to);
+                    data = data.filter(s => {
+                        const d = this.normalizeDateStr(s.created_at);
+                        return d >= from && d <= to;
+                    });
                 }
                 if (f.created_at_type === 'lt' && f.created_at_value) {
-                    data = data.filter(s => s.created_at < f.created_at_value);
+                    const val = this.normalizeDateStr(f.created_at_value);
+                    data = data.filter(s => this.normalizeDateStr(s.created_at) < val);
                 }
                 if (f.created_at_type === 'gt' && f.created_at_value) {
-                    data = data.filter(s => s.created_at > f.created_at_value);
+                    const val = this.normalizeDateStr(f.created_at_value);
+                    data = data.filter(s => this.normalizeDateStr(s.created_at) > val);
                 }
                 if (f.created_at_type === 'lte' && f.created_at_value) {
-                    data = data.filter(s => s.created_at <= f.created_at_value);
+                    const val = this.normalizeDateStr(f.created_at_value);
+                    data = data.filter(s => this.normalizeDateStr(s.created_at) <= val);
                 }
                 if (f.created_at_type === 'gte' && f.created_at_value) {
-                    data = data.filter(s => s.created_at >= f.created_at_value);
+                    const val = this.normalizeDateStr(f.created_at_value);
+                    data = data.filter(s => this.normalizeDateStr(s.created_at) >= val);
                 }
 
                 // Date filter: updated_at
                 if (f.updated_at_type === 'eq' && f.updated_at_value) {
-                    data = data.filter(s => (s.updated_at || '').startsWith(f.updated_at_value));
+                    const val = this.normalizeDateStr(f.updated_at_value);
+                    data = data.filter(s => this.normalizeDateStr(s.updated_at) === val);
                 }
                 if (f.updated_at_type === 'between' && f.updated_at_from && f.updated_at_to) {
-                    data = data.filter(s => s.updated_at >= f.updated_at_from && s.updated_at <= f.updated_at_to);
+                    const from = this.normalizeDateStr(f.updated_at_from);
+                    const to = this.normalizeDateStr(f.updated_at_to);
+                    data = data.filter(s => {
+                        const d = this.normalizeDateStr(s.updated_at);
+                        return d >= from && d <= to;
+                    });
                 }
                 if (f.updated_at_type === 'lt' && f.updated_at_value) {
-                    data = data.filter(s => s.updated_at < f.updated_at_value);
+                    const val = this.normalizeDateStr(f.updated_at_value);
+                    data = data.filter(s => this.normalizeDateStr(s.updated_at) < val);
                 }
                 if (f.updated_at_type === 'gt' && f.updated_at_value) {
-                    data = data.filter(s => s.updated_at > f.updated_at_value);
+                    const val = this.normalizeDateStr(f.updated_at_value);
+                    data = data.filter(s => this.normalizeDateStr(s.updated_at) > val);
                 }
                 if (f.updated_at_type === 'lte' && f.updated_at_value) {
-                    data = data.filter(s => s.updated_at <= f.updated_at_value);
+                    const val = this.normalizeDateStr(f.updated_at_value);
+                    data = data.filter(s => this.normalizeDateStr(s.updated_at) <= val);
                 }
                 if (f.updated_at_type === 'gte' && f.updated_at_value) {
-                    data = data.filter(s => s.updated_at >= f.updated_at_value);
+                    const val = this.normalizeDateStr(f.updated_at_value);
+                    data = data.filter(s => this.normalizeDateStr(s.updated_at) >= val);
                 }
                 return data;
             },

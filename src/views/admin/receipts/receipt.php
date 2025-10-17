@@ -84,7 +84,7 @@ $items = $items ?? [];
                                 x-text="r.created_by_name || '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
                                 :class="(r.received_at || '—') === '—' ? 'text-center' : 'text-right'"
-                                x-text="formatDate(r.received_at) || '—'"></td>
+                                x-text="r.received_at ? r.received_at : '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
                                 :class="(r.txn_ref || '—') === '—' ? 'text-center' : 'text-right'"
                                 x-text="r.txn_ref || '—'"></td>
@@ -597,16 +597,6 @@ $items = $items ?? [];
 
                 box.appendChild(toast);
                 setTimeout(() => toast.remove(), 3000);
-            },
-
-            formatDate(dateStr) {
-                if (!dateStr) return '—';
-                const d = new Date(dateStr);
-                if (isNaN(d)) return dateStr; // phòng trường hợp dữ liệu không hợp lệ
-                const day = String(d.getDate()).padStart(2, '0');
-                const month = String(d.getMonth() + 1).padStart(2, '0');
-                const year = d.getFullYear();
-                return `${day}/${month}/${year}`;
             },
         };
     }

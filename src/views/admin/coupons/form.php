@@ -80,43 +80,74 @@
     </div>
 
     <!-- Giá trị giảm -->
-    <div>
+    <div x-data="{
+        formatted: '',
+        onInput(e) {
+            if (form.discount_type === 'percentage') {
+                // Cho phần trăm, chỉ cần nhập số thập phân
+                form.discount_value = e.target.value ? Number(e.target.value) : 0;
+                this.formatted = e.target.value;
+            } else {
+                // Cho fixed amount, format với dấu phẩy
+                const raw = e.target.value.replace(/[^\d]/g, '');
+                form.discount_value = raw ? Number(raw) : 0;
+                this.formatted = raw ? Number(raw).toLocaleString('en-US') : '';
+            }
+            validateField('discount_value');
+        }
+    }" x-init="formatted = form.discount_type === 'percentage' ? form.discount_value : (form.discount_value ? form.discount_value.toLocaleString('en-US') : '')"
+        x-effect="if (form.discount_type === 'percentage') { formatted = form.discount_value; } else { formatted = form.discount_value ? form.discount_value.toLocaleString('en-US') : ''; }">
         <label class="block text-sm font-semibold mb-1">
             Giá trị giảm <span class="text-red-500">*</span>
             <span class="text-xs text-gray-500" x-text="form.discount_type === 'percentage' ? '(%)' : '(₫)'"></span>
         </label>
-        <input x-model.number="form.discount_value" type="number" min="0" step="0.01"
-            @input="validateField('discount_value')"
+        <input x-model="formatted" :type="form.discount_type === 'percentage' ? 'number' : 'text'"
+            :min="form.discount_type === 'percentage' ? 0 : undefined"
+            :step="form.discount_type === 'percentage' ? 0.01 : undefined" @input="onInput($event)"
             @blur="touched.discount_value = true; validateField('discount_value')"
             class="w-full border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
             :class="(touched.discount_value && errors.discount_value) ? 'border-red-500' : 'border-gray-300'"
-            :placeholder="form.discount_type === 'percentage' ? 'VD: 10' : 'VD: 50000'" />
+            :placeholder="form.discount_type === 'percentage' ? 'VD: 10' : 'VD: 50,000'" />
         <p x-show="touched.discount_value && errors.discount_value" x-text="errors.discount_value"
             class="text-red-500 text-xs mt-1"></p>
     </div>
 
     <!-- Giá trị đơn tối thiểu -->
-    <div>
+    <div x-data="{
+        formatted: '',
+        onInput(e) {
+            const raw = e.target.value.replace(/[^\d]/g, '');
+            form.min_order_value = raw ? Number(raw) : 0;
+            this.formatted = raw ? Number(raw).toLocaleString('en-US') : '';
+            validateField('min_order_value');
+        }
+    }" x-init="formatted = form.min_order_value ? form.min_order_value.toLocaleString('en-US') : ''">
         <label class="block text-sm font-semibold mb-1">Giá trị đơn tối thiểu (₫)</label>
-        <input x-model.number="form.min_order_value" type="number" min="0" step="1000"
-            @input="validateField('min_order_value')"
+        <input x-model="formatted" type="text" @input="onInput($event)"
             @blur="touched.min_order_value = true; validateField('min_order_value')"
             class="w-full border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
             :class="(touched.min_order_value && errors.min_order_value) ? 'border-red-500' : 'border-gray-300'"
-            placeholder="VD: 100000" />
+            placeholder="VD: 100,000" />
         <p x-show="touched.min_order_value && errors.min_order_value" x-text="errors.min_order_value"
             class="text-red-500 text-xs mt-1"></p>
     </div>
 
     <!-- Giảm tối đa (chỉ cho percentage) -->
-    <div x-show="form.discount_type === 'percentage'">
+    <div x-show="form.discount_type === 'percentage'" x-data="{
+        formatted: '',
+        onInput(e) {
+            const raw = e.target.value.replace(/[^\d]/g, '');
+            form.max_discount = raw ? Number(raw) : 0;
+            this.formatted = raw ? Number(raw).toLocaleString('en-US') : '';
+        }
+    }" x-init="formatted = form.max_discount ? form.max_discount.toLocaleString('en-US') : ''">
         <label class="block text-sm font-semibold mb-1">Giảm tối đa (₫)
             <span title="Để trống nếu không giới hạn số tiền giảm tối đa"
                 class="inline-flex items-center justify-center w-4 h-4 rounded-full border border-gray-300 text-gray-400 text-xs font-bold cursor-help">?</span>
         </label>
-        <input x-model.number="form.max_discount" type="number" min="0" step="1000"
+        <input x-model="formatted" type="text" @input="onInput($event)"
             class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
-            placeholder="VD: 500000 (để trống nếu không giới hạn)" />
+            placeholder="VD: 500,000 (để trống nếu không giới hạn)" />
     </div>
 
     <!-- Ngày bắt đầu -->
@@ -158,22 +189,20 @@
     </div>
 </div>
 
-<script src="/assets/js/flatpickr.min.js"></script>
-<script src="/assets/js/vi.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         if (window.flatpickr) {
             // Ngày bắt đầu
             flatpickr(".coupon-start-date", {
                 dateFormat: "d/m/Y",
-                locale: "vi",
+                locale: "vn",
                 allowInput: true
             });
 
             // Ngày kết thúc
             flatpickr(".coupon-end-date", {
                 dateFormat: "d/m/Y",
-                locale: "vi",
+                locale: "vn",
                 allowInput: true
             });
         }

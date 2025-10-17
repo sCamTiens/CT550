@@ -253,13 +253,35 @@ $items = $items ?? [];
       },
       applyDateFilter(val, type, value, from, to) {
         if (!val) return true;
-        const d = new Date(val);
-        if (type === 'eq' && value) return d.toDateString() === new Date(value).toDateString();
-        if (type === 'between' && from && to) return d >= new Date(from) && d <= new Date(to);
-        if (type === 'lt' && value) return d < new Date(value);
-        if (type === 'gt' && value) return d > new Date(value);
-        if (type === 'lte' && value) return d <= new Date(value);
-        if (type === 'gte' && value) return d >= new Date(value);
+        
+        // Chuẩn hóa format về YYYY-MM-DD để so sánh
+        const normalize = (dateStr) => {
+          if (!dateStr) return null;
+          const parts = dateStr.split(/[-/\s]/);
+          if (parts.length >= 3) {
+            // Nếu format Y-m-d (2025-01-17)
+            if (parts[0].length === 4) return dateStr.split(' ')[0];
+            // Nếu format d/m/Y (17/01/2025)
+            if (parts[0].length <= 2) return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+          }
+          return dateStr.split(' ')[0];
+        };
+
+        const valNorm = normalize(val);
+        if (!valNorm) return true;
+
+        if (type === 'eq' && value) {
+          return valNorm === normalize(value);
+        }
+        if (type === 'between' && from && to) {
+          const fromNorm = normalize(from);
+          const toNorm = normalize(to);
+          return valNorm >= fromNorm && valNorm <= toNorm;
+        }
+        if (type === 'lt' && value) return valNorm < normalize(value);
+        if (type === 'gt' && value) return valNorm > normalize(value);
+        if (type === 'lte' && value) return valNorm <= normalize(value);
+        if (type === 'gte' && value) return valNorm >= normalize(value);
         return true;
       },
       filtered() {

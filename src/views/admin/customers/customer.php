@@ -494,6 +494,16 @@ $items = $items ?? [];
         if (page > this.totalPages()) page = this.totalPages();
         this.currentPage = page;
       },
+      // Chuẩn hóa ngày về YYYY-MM-DD
+      normalizeDateStr(dateStr) {
+        if (!dateStr) return null;
+        const parts = dateStr.split(/[-/\s]/);
+        if (parts.length >= 3) {
+          if (parts[0].length === 4) return dateStr.split(' ')[0];
+          if (parts[0].length <= 2) return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+        }
+        return dateStr.split(' ')[0];
+      },
       filtered() {
         let data = this.items;
         if (this.filters.username) data = data.filter(x => (x.username || '').toLowerCase().includes(this.filters.username.toLowerCase()));
@@ -507,17 +517,27 @@ $items = $items ?? [];
         }
         if (this.filters.created_by_name) data = data.filter(x => (x.created_by_name || '').toLowerCase().includes(this.filters.created_by_name.toLowerCase()));
         if (this.filters.updated_by_name) data = data.filter(x => (x.updated_by_name || '').toLowerCase().includes(this.filters.updated_by_name.toLowerCase()));
+        
+        // Filter created_at
         if (this.filters.created_at_value && this.filters.created_at_type === 'eq') {
-          data = data.filter(x => (x.created_at || '').startsWith(this.filters.created_at_value));
+          data = data.filter(x => this.normalizeDateStr(x.created_at) === this.normalizeDateStr(this.filters.created_at_value));
         }
         if (this.filters.created_at_from && this.filters.created_at_to && this.filters.created_at_type === 'between') {
-          data = data.filter(x => x.created_at >= this.filters.created_at_from && x.created_at <= this.filters.created_at_to);
+          data = data.filter(x => {
+            const d = this.normalizeDateStr(x.created_at);
+            return d >= this.normalizeDateStr(this.filters.created_at_from) && d <= this.normalizeDateStr(this.filters.created_at_to);
+          });
         }
+        
+        // Filter updated_at
         if (this.filters.updated_at_value && this.filters.updated_at_type === 'eq') {
-          data = data.filter(x => (x.updated_at || '').startsWith(this.filters.updated_at_value));
+          data = data.filter(x => this.normalizeDateStr(x.updated_at) === this.normalizeDateStr(this.filters.updated_at_value));
         }
         if (this.filters.updated_at_from && this.filters.updated_at_to && this.filters.updated_at_type === 'between') {
-          data = data.filter(x => x.updated_at >= this.filters.updated_at_from && x.updated_at <= this.filters.updated_at_to);
+          data = data.filter(x => {
+            const d = this.normalizeDateStr(x.updated_at);
+            return d >= this.normalizeDateStr(this.filters.updated_at_from) && d <= this.normalizeDateStr(this.filters.updated_at_to);
+          });
         }
         return data;
       },

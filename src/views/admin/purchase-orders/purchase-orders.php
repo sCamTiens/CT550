@@ -348,6 +348,22 @@ $items = $items ?? [];
             },
 
             // lọc client-side
+            // Hàm chuẩn hóa ngày: chuyển về dạng YYYY-MM-DD
+            normalizeDateStr(dateStr) {
+                if (!dateStr) return '';
+                const s = String(dateStr).trim();
+                // Nếu dạng d/m/Y
+                if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
+                    const [d, m, y] = s.split(/[\s\/]/);
+                    return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+                }
+                // Nếu dạng Y-m-d hoặc Y-m-d H:i:s
+                if (/^\d{4}-\d{1,2}-\d{1,2}/.test(s)) {
+                    return s.substring(0, 10);
+                }
+                return s;
+            },
+
             filtered() {
                 let data = this.items;
                 if (this.filters.code) {
@@ -376,18 +392,30 @@ $items = $items ?? [];
 
                 // lọc ngày tạo
                 if (this.filters.received_at_value && this.filters.received_at_type === 'eq') {
-                    data = data.filter(p => (p.received_at || '').startsWith(this.filters.received_at_value));
+                    const val = this.normalizeDateStr(this.filters.received_at_value);
+                    data = data.filter(p => this.normalizeDateStr(p.received_at) === val);
                 }
                 if (this.filters.received_at_from && this.filters.received_at_to && this.filters.received_at_type === 'between') {
-                    data = data.filter(p => p.received_at >= this.filters.received_at_from && p.received_at <= this.filters.received_at_to);
+                    const from = this.normalizeDateStr(this.filters.received_at_from);
+                    const to = this.normalizeDateStr(this.filters.received_at_to);
+                    data = data.filter(p => {
+                        const d = this.normalizeDateStr(p.received_at);
+                        return d >= from && d <= to;
+                    });
                 }
 
                 // lọc ngày hẹn thanh toán
                 if (this.filters.due_date_value && this.filters.due_date_type === 'eq') {
-                    data = data.filter(p => (p.due_date || '').startsWith(this.filters.due_date_value));
+                    const val = this.normalizeDateStr(this.filters.due_date_value);
+                    data = data.filter(p => this.normalizeDateStr(p.due_date) === val);
                 }
                 if (this.filters.due_date_from && this.filters.due_date_to && this.filters.due_date_type === 'between') {
-                    data = data.filter(p => p.due_date >= this.filters.due_date_from && p.due_date <= this.filters.due_date_to);
+                    const from = this.normalizeDateStr(this.filters.due_date_from);
+                    const to = this.normalizeDateStr(this.filters.due_date_to);
+                    data = data.filter(p => {
+                        const d = this.normalizeDateStr(p.due_date);
+                        return d >= from && d <= to;
+                    });
                 }
 
                 return data;

@@ -116,7 +116,7 @@ if (!function_exists('dateFilterPopover')) {
 <th class="py-2 px-4 relative min-w-[150px] text-center align-middle">
   <div class="flex items-center justify-center gap-2">
     <span>{$labelEsc}</span>
-    <button @click.stop="toggleFilter('{$keyEsc}')" class="p-1 rounded hover:bg-gray-100" title="Lọc theo {$labelEsc}">
+    <button @click.stop="toggleFilter('{$keyEsc}')" class="p-1 rounded hover:bg-[#002975] hover:text-white" title="Lọc theo {$labelEsc}">
       <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" />
       </svg>

@@ -265,6 +265,22 @@ $items = $items ?? [];
             openFilter: {},
             filters: {},
 
+            // Hàm chuẩn hóa ngày: chuyển về dạng YYYY-MM-DD
+            normalizeDateStr(dateStr) {
+                if (!dateStr) return '';
+                const s = String(dateStr).trim();
+                // Nếu dạng d/m/Y
+                if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
+                    const [d, m, y] = s.split(/[\s\/]/);
+                    return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+                }
+                // Nếu dạng Y-m-d hoặc Y-m-d H:i:s
+                if (/^\d{4}-\d{1,2}-\d{1,2}/.test(s)) {
+                    return s.substring(0, 10);
+                }
+                return s;
+            },
+
             filtered() {
                 let data = this.items;
 
@@ -275,7 +291,8 @@ $items = $items ?? [];
                     if (['amount'].includes(key)) {
                         data = data.filter(e => Number(e.amount) === Number(val));
                     } else if (['paid_at', 'created_at', 'bank_time'].includes(key)) {
-                        data = data.filter(e => (e[key] || '').startsWith(val));
+                        const normalizedVal = this.normalizeDateStr(val);
+                        data = data.filter(e => this.normalizeDateStr(e[key]) === normalizedVal);
                     } else {
                         data = data.filter(e => (e[key] || '').toLowerCase().includes(val.toLowerCase()));
                     }

@@ -44,7 +44,7 @@ $items = $items ?? [];
                         <?= dateFilterPopover('out_date', 'Ngày xuất') ?>
                         <?= numberFilterPopover('total_amount', 'Tổng tiền') ?>
                         <?= textFilterPopover('note', 'Ghi chú') ?>
-                        <?= dateFilterPopover('created_at', 'Ngày tạo') ?>
+                        <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
                         <?= textFilterPopover('created_by_name', 'Người tạo') ?>
                     </tr>
                 </thead>
@@ -279,6 +279,22 @@ $items = $items ?? [];
             openFilter: {},
             filters: {},
 
+            // Hàm chuẩn hóa ngày: chuyển về dạng YYYY-MM-DD
+            normalizeDateStr(dateStr) {
+                if (!dateStr) return '';
+                const s = String(dateStr).trim();
+                // Nếu dạng d/m/Y
+                if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
+                    const [d, m, y] = s.split(/[\s\/]/);
+                    return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+                }
+                // Nếu dạng Y-m-d hoặc Y-m-d H:i:s
+                if (/^\d{4}-\d{1,2}-\d{1,2}/.test(s)) {
+                    return s.substring(0, 10);
+                }
+                return s;
+            },
+
             filtered() {
                 let data = this.items;
 
@@ -289,7 +305,8 @@ $items = $items ?? [];
                     if (['total_amount'].includes(key)) {
                         data = data.filter(r => Number(r[key]) === Number(val));
                     } else if (['created_at', 'out_date'].includes(key)) {
-                        data = data.filter(r => (r[key] || '').startsWith(val));
+                        const normalizedVal = this.normalizeDateStr(val);
+                        data = data.filter(r => this.normalizeDateStr(r[key]) === normalizedVal);
                     } else {
                         data = data.filter(r => (r[key] || '').toLowerCase().includes(val.toLowerCase()));
                     }
