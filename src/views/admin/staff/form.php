@@ -252,7 +252,7 @@
             document.querySelectorAll('.staff-datepicker').forEach(function (input) {
                 flatpickr(input, {
                     dateFormat: 'd/m/Y',
-                    locale: 'vi',
+                    locale: 'vn',
                     allowInput: true,
                     static: true,
                     appendTo: input.parentElement

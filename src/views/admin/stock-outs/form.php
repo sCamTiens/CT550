@@ -189,7 +189,7 @@
         <div class="relative">
             <input type="text" x-model="form.out_date" class="w-full border rounded px-3 py-2 stock-out-datepicker"
                 placeholder="Chọn ngày xuất" autocomplete="off"
-                x-init="flatpickr($el, {dateFormat: 'd/m/Y', allowInput: true, locale: 'vi'})" required>
+                x-init="flatpickr($el, {dateFormat: 'd/m/Y', allowInput: true, locale: 'vn'})" required>
             <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                 <i class="fa-regular fa-calendar"></i>
             </span>
@@ -219,7 +219,7 @@
             document.querySelectorAll('.stock-out-datepicker').forEach(function (input) {
                 flatpickr(input, {
                     dateFormat: 'Y-m-d',
-                    locale: 'vi',
+                    locale: 'vn',
                     allowInput: true,
                     static: false,
                     appendTo: document.body,

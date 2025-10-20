@@ -91,8 +91,9 @@ class StockRepository
             $updStocks = $pdo->prepare("UPDATE stocks SET qty = qty - ? WHERE product_id = ?");
             $updStocks->execute([$qtyNeeded, $productId]);
 
-            // Kiểm tra tồn kho sau khi xuất, tạo thông báo nếu thấp
-            self::checkLowStock($productId);
+            // NOTE: Không tạo thông báo ngay ở đây nữa
+            // Thông báo tồn kho sẽ được tạo tự động mỗi ngày lúc 7h sáng bởi DailyStockAlertService
+            // self::checkLowStock($productId);
 
             // store unit_cost / cogs on order_item if provided
             if ($orderItemId) {
@@ -111,35 +112,12 @@ class StockRepository
     }
 
     /**
-     * Kiểm tra tồn kho thấp và tạo thông báo nếu cần
+     * NOTE: Method checkLowStock() đã bị xóa
+     * 
+     * Lý do: Tránh tạo thông báo trùng lặp
+     * Thông báo tồn kho thấp giờ chỉ được tạo bởi DailyStockAlertService
+     * Tự động chạy mỗi ngày lúc 7h sáng qua Windows Task Scheduler
+     * 
+     * Xem: daily_stock_check.php và DAILY_STOCK_ALERT_README.md
      */
-    private static function checkLowStock(int $productId): void
-    {
-        try {
-            $pdo = DB::pdo();
-            
-            // Lấy thông tin tồn kho và sản phẩm
-            $sql = "SELECT s.qty, s.safety_stock, p.name 
-                    FROM stocks s 
-                    JOIN products p ON p.id = s.product_id 
-                    WHERE s.product_id = ?";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([$productId]);
-            $stock = $stmt->fetch(\PDO::FETCH_ASSOC);
-
-            if ($stock && $stock['qty'] <= $stock['safety_stock']) {
-                // Tồn kho đã thấp, tạo thông báo
-                require_once __DIR__ . '/NotificationRepository.php';
-                NotificationRepository::createLowStockAlert(
-                    $productId,
-                    $stock['name'],
-                    $stock['qty'],
-                    $stock['safety_stock']
-                );
-            }
-        } catch (\Exception $e) {
-            // Log error nhưng không throw để không ảnh hưởng flow chính
-            error_log("Error checking low stock: " . $e->getMessage());
-        }
-    }
 }

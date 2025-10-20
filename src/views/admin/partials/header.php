@@ -162,7 +162,6 @@
                     const res = await fetch('/admin/api/notifications');
                     if (res.ok) {
                         this.notifications = await res.json();
-                        console.log('Loaded notifications:', this.notifications);
                     } else {
                         console.error('Failed to fetch notifications:', res.status);
                     }
@@ -176,8 +175,6 @@
                     const res = await fetch('/admin/api/notifications/unread-count');
                     if (res.ok) {
                         const data = await res.json();
-                        this.unreadCount = data.count;
-                        console.log('Unread count:', this.unreadCount);
                     }
                 } catch (e) {
                     console.error('Error fetching unread count:', e);

@@ -29,7 +29,7 @@ $items = $items ?? [];
             <?= textFilterPopover('name', 'Tên') ?>
             <?= textFilterPopover('slug', 'Slug') ?>
             <?= textFilterPopover('parent', 'Cấp cha') ?>
-            <?= numberFilterPopover('sort', 'Thứ tự') ?>
+            <!-- <?= numberFilterPopover('sort', 'Thứ tự') ?> -->
             <?= selectFilterPopover('status', 'Trạng thái', [
               '' => '-- Tất cả --',
               '1' => 'Hiển thị',
@@ -73,7 +73,7 @@ $items = $items ?? [];
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="c.slug || '—'"
                 :class="(c.slug || '—') === '—' ? 'text-center' : 'text-right'"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="parentName(c.parent_id)"></td>
-              <td class="py-2 px-4 break-words whitespace-pre-line text-center" x-text="c.sort_order ?? 0"></td>
+              <!-- <td class="py-2 px-4 break-words whitespace-pre-line text-center" x-text="c.sort_order ?? 0"></td> -->
               <td class="py-2 px-4 break-words whitespace-pre-line text-center">
                 <span class="px-2 py-0.5 rounded text-xs"
                   :class="c.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"

@@ -186,19 +186,13 @@
     </div>
   </div>
 
-  <!-- FontAwesome for eye icons (if not already included globally) -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
-  <!-- Flatpickr JS & CSS for date picker -->
-  <link rel="stylesheet" href="/assets/css/flatpickr.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-  <script type="module" src="/assets/js/flatpickr-vi.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function () {
       if (window.flatpickr) {
         document.querySelectorAll('.customer-datepicker').forEach(function (input) {
           flatpickr(input, {
             dateFormat: 'd/m/Y',
-            locale: 'vi',
+            locale: 'vn',
             allowInput: true,
             static: true,
             appendTo: input.parentElement

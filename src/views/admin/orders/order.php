@@ -70,22 +70,23 @@ $items = $items ?? [];
                                 </button>
                             </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
-                                :class="(o.code || '—') === '—' ? 'text-center' : 'text-left'"
-                                x-text="o.code || '—'"></td>
+                                :class="(o.code || '—') === '—' ? 'text-center' : 'text-left'" x-text="o.code || '—'">
+                            </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
-                                :class="(o.customer_name || '—') === '—' ? 'text-center' : 'text-left'"
-                                x-text="o.customer_name || '—'"></td>
-                            <td class="px-3 py-2 break-words whitespace-pre-line">
-                                <span :class="{
-                                    'px-2 py-1 rounded text-xs': true,
-                                    'bg-yellow-100 text-yellow-800': o.status === 'pending',
-                                    'bg-blue-100 text-blue-800': o.status === 'confirmed',
-                                    'bg-purple-100 text-purple-800': o.status === 'preparing',
-                                    'bg-orange-100 text-orange-800': o.status === 'shipping',
-                                    'bg-green-100 text-green-800': o.status === 'delivered',
-                                    'bg-red-100 text-red-800': o.status === 'cancelled',
-                                    'bg-gray-100 text-gray-800': o.status === 'returned'
-                                }" x-text="getStatusText(o.status)"></span>
+                                :class="(o.customer_name || 'Khách vãng lai') === 'Khách vãng lai' ? 'text-left' : 'text-left'"
+                                x-text="o.customer_name || 'Khách vãng lai'"></td>
+                            <td class="px-3 py-2 text-center align-middle">
+                                <div class="flex justify-center items-center h-full">
+                                    <span class="px-2 py-[3px] rounded text-xs font-medium" :class="{
+                                        'bg-yellow-100 text-yellow-800': o.status === 'Chờ xác nhận',
+                                        'bg-blue-100 text-blue-800': o.status === 'Đã xác nhận',
+                                        'bg-purple-100 text-purple-800': o.status === 'Đang chuẩn bị',
+                                        'bg-orange-100 text-orange-800': o.status === 'Đang giao',
+                                        'bg-green-100 text-green-800': o.status === 'Hoàn tất',
+                                        'bg-red-100 text-red-800': o.status === 'Đã hủy',
+                                        'bg-gray-100 text-gray-800': o.status === 'Hoàn trả'
+                                    }" x-text="getStatusText(o.status)"></span>
+                                </div>
                             </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line text-right"
                                 x-text="formatCurrency(o.subtotal || 0)"></td>
@@ -98,14 +99,16 @@ $items = $items ?? [];
                             <td class="px-3 py-2 break-words whitespace-pre-line"
                                 :class="(o.payment_method || '—') === '—' ? 'text-center' : 'text-left'"
                                 x-text="o.payment_method || '—'"></td>
-                            <td class="px-3 py-2 break-words whitespace-pre-line">
-                                <span :class="{
+                            <td class="px-3 py-2 text-center align-middle">
+                                <div class="flex justify-center items-center h-full">
+                                    <span class="px-2 py-[3px] rounded text-xs font-medium" :class="{
                                     'px-2 py-1 rounded text-xs': true,
-                                    'bg-yellow-100 text-yellow-800': o.payment_status === 'pending',
-                                    'bg-green-100 text-green-800': o.payment_status === 'paid',
-                                    'bg-red-100 text-red-800': o.payment_status === 'failed',
-                                    'bg-gray-100 text-gray-800': o.payment_status === 'refunded'
-                                }" x-text="getPaymentStatusText(o.payment_status)"></span>
+                                    'bg-yellow-100 text-yellow-800': o.payment_status === 'Chờ thanh toán',
+                                    'bg-green-100 text-green-800': o.payment_status === 'Đã thanh toán',
+                                    'bg-red-100 text-red-800': o.payment_status === 'Thất bại',
+                                    'bg-gray-100 text-gray-800': o.payment_status === 'Đã hoàn'
+                                }" x-text="o.payment_status"></span>
+                                </div>
                             </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line" x-text="o.shipping_address || '—'">
                             </td>
@@ -163,7 +166,8 @@ $items = $items ?? [];
     <!-- MODAL: Create -->
     <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openAdd"
         x-transition.opacity style="display:none">
-        <div class="bg-white w-full max-w-5xl rounded-xl shadow max-h-[90vh] flex flex-col" @click.outside="openAdd=false">
+        <div class="bg-white w-full max-w-5xl rounded-xl shadow max-h-[90vh] flex flex-col"
+            @click.outside="openAdd=false">
             <div class="px-5 py-3 border-b flex justify-center items-center relative flex-shrink-0">
                 <h3 class="font-semibold text-2xl text-[#002975]">Thêm đơn hàng</h3>
                 <button type="button" class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
@@ -188,7 +192,8 @@ $items = $items ?? [];
     <!-- MODAL: Edit -->
     <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openEdit"
         x-transition.opacity style="display:none">
-        <div class="bg-white w-full max-w-5xl rounded-xl shadow max-h-[90vh] flex flex-col" @click.outside="openEdit=false">
+        <div class="bg-white w-full max-w-5xl rounded-xl shadow max-h-[90vh] flex flex-col"
+            @click.outside="openEdit=false">
             <div class="px-5 py-3 border-b flex justify-center items-center relative flex-shrink-0">
                 <h3 class="font-semibold text-2xl text-[#002975]">Sửa đơn hàng</h3>
                 <button type="button" class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>
@@ -353,13 +358,13 @@ $items = $items ?? [];
                 const subtotal = this.orderItems.reduce((sum, item) => {
                     return sum + (Number(item.quantity) || 0) * (Number(item.unit_price) || 0);
                 }, 0);
-                
+
                 this.form.subtotal = subtotal;
                 this.form.subtotalFormatted = subtotal.toLocaleString('en-US');
-                
+
                 const discount = Number(this.form.discount_amount) || 0;
                 const total = subtotal - discount;
-                
+
                 this.form.total_amount = total;
                 this.form.total_amountFormatted = total.toLocaleString('en-US');
             },
@@ -382,22 +387,22 @@ $items = $items ?? [];
                     item.quantity = 1;
                     return;
                 }
-                
+
                 const prod = this.products.find(p => p.id == item.product_id);
                 const maxStock = prod ? prod.stock : 0;
-                
+
                 if (item.quantity > maxStock) {
                     this.showToast(
-                        'Sản phẩm "' + (prod?.name || 'này') + '" chỉ còn ' + maxStock + ' trong kho!', 
+                        'Sản phẩm "' + (prod?.name || 'này') + '" chỉ còn ' + maxStock + ' trong kho!',
                         'error'
                     );
                     item.quantity = maxStock;
                 }
-                
+
                 if (item.quantity < 0) {
                     item.quantity = 0;
                 }
-                
+
                 this.calculateTotal();
             },
 
@@ -440,13 +445,13 @@ $items = $items ?? [];
                 this.errors = {};
                 const fields = ['total_amount'];
                 for (const f of fields) this.validateField(f);
-                
+
                 // Kiểm tra phải có ít nhất 1 sản phẩm
                 if (this.orderItems.length === 0) {
                     this.showToast('Vui lòng chọn ít nhất một sản phẩm');
                     return false;
                 }
-                
+
                 // Kiểm tra tất cả sản phẩm đã được chọn
                 for (let i = 0; i < this.orderItems.length; i++) {
                     const item = this.orderItems[i];
@@ -462,7 +467,7 @@ $items = $items ?? [];
                         this.showToast(`Đơn giá phải lớn hơn 0 ở dòng ${i + 1}`);
                         return false;
                     }
-                    
+
                     // Kiểm tra tồn kho
                     const product = this.products.find(p => p.id == item.product_id);
                     if (product && item.quantity > product.stock) {
@@ -474,7 +479,7 @@ $items = $items ?? [];
                         return false;
                     }
                 }
-                
+
                 return Object.values(this.errors).every(v => !v);
             },
 
@@ -625,15 +630,15 @@ $items = $items ?? [];
                             unit_price: item.unit_price
                         }))
                     };
-                    
+
                     const res = await fetch(api.create, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
-                    
+
                     const data = await res.json();
-                    
+
                     if (res.ok) {
                         this.showToast('Thêm đơn hàng thành công!', 'success');
                         this.openAdd = false;
@@ -662,15 +667,15 @@ $items = $items ?? [];
                             unit_price: item.unit_price
                         }))
                     };
-                    
+
                     const res = await fetch(api.update(this.form.id), {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
-                    
+
                     const data = await res.json();
-                    
+
                     if (res.ok) {
                         this.showToast('Cập nhật đơn hàng thành công!', 'success');
                         this.openEdit = false;

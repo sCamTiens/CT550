@@ -219,22 +219,20 @@
     </div>
 </div>
 
-<script src="/assets/js/flatpickr.min.js"></script>
-<script src="/assets/js/vi.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         if (window.flatpickr) {
             // Ngày bắt đầu
             flatpickr(".promotion-start-date", {
                 dateFormat: "d/m/Y",
-                locale: "vi",
+                locale: "vn",
                 allowInput: true
             });
 
             // Ngày kết thúc
             flatpickr(".promotion-end-date", {
                 dateFormat: "d/m/Y",
-                locale: "vi",
+                locale: "vn",
                 allowInput: true
             });
         }

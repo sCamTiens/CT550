@@ -136,13 +136,11 @@
     </div>
 </form>
 
-<script src="/assets/js/flatpickr.min.js"></script>
-<script src="/assets/js/vi.js"></script>
 <script>
     // Khởi tạo flatpickr cho ngày sản xuất
     flatpickr(".batch-mfg-date", {
         dateFormat: "d/m/Y",
-        locale: "vi",
+        locale: "vn",
         allowInput: true,
         static: true  // Render calendar bên trong modal thay vì append vào body
     });
@@ -150,7 +148,7 @@
     // Khởi tạo flatpickr cho hạn sử dụng
     flatpickr(".batch-exp-date", {
         dateFormat: "d/m/Y",
-        locale: "vi",
+        locale: "vn",
         allowInput: true,
         static: true  // Render calendar bên trong modal thay vì append vào body
     });

@@ -32,6 +32,7 @@ use App\Controllers\Admin\CouponController as AdminCoupon;
 use App\Controllers\Admin\PromotionController as AdminPromotion;
 use App\Controllers\Admin\AuditLogController as AdminAuditLog;
 use App\Controllers\Admin\NotificationController as AdminNotification;
+use App\Controllers\Admin\StockAlertController as AdminStockAlert;
 
 
 /* --- load biến môi trường từ .env (đặt ở thư mục gốc dự án) --- */
@@ -62,6 +63,7 @@ $router->group('/admin', function (Router $r): void {
     $r->post('/force-change-password', [\App\Controllers\Admin\ForceChangePasswordController::class, 'update']);
     $r->get('/logout-force', [\App\Controllers\Admin\ForceChangePasswordController::class, 'logoutForce']);
     $r->get('/', [AdminDashboard::class, 'index']);
+    $r->get('/api/dashboard/revenue-expense', [AdminDashboard::class, 'apiRevenueExpense']);
     $r->get('/login', [AdminController::class, 'showLogin']);
     $r->post('/login', [AdminController::class, 'login']);
     $r->get('/logout', [AdminController::class, 'logout']);
@@ -214,6 +216,12 @@ $router->group('/admin', function (Router $r): void {
     $r->post('/api/notifications/{id}/read', [AdminNotification::class, 'markAsRead']);
     $r->post('/api/notifications/read-all', [AdminNotification::class, 'markAllAsRead']);
     $r->delete('/api/notifications/{id}', [AdminNotification::class, 'delete']);
+
+    // Stock Alerts (Cảnh báo tồn kho tự động)
+    $r->get('/stock-alerts', [AdminStockAlert::class, 'index']);
+    $r->post('/api/stock-alerts/run-check', [AdminStockAlert::class, 'runCheck']);
+    $r->get('/api/stock-alerts/stats', [AdminStockAlert::class, 'stats']);
+    $r->post('/api/stock-alerts/cleanup', [AdminStockAlert::class, 'cleanup']);
 });
 
 /* --- chạy router --- */

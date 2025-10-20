@@ -82,43 +82,14 @@ class NotificationRepository
     }
 
     /**
-     * Kiểm tra và tạo thông báo cảnh báo tồn kho thấp
-     * Chỉ tạo nếu chưa có thông báo tương tự trong vòng 24h
+     * NOTE: Method createLowStockAlert() đã bị xóa
+     * 
+     * Lý do: Không còn tạo thông báo ngay khi xuất kho nữa
+     * Tất cả thông báo tồn kho giờ được tạo bởi DailyStockAlertService
+     * Tự động chạy mỗi ngày lúc 7h sáng
+     * 
+     * Xem: src/Services/DailyStockAlertService.php
      */
-    public static function createLowStockAlert(int $productId, string $productName, int $currentQty, int $safetyStock)
-    {
-        $pdo = DB::pdo();
-        
-        // Lấy danh sách admin/kho để gửi thông báo
-        $sqlUsers = "SELECT u.id FROM users u 
-                     LEFT JOIN staff_profiles sp ON sp.user_id = u.id 
-                     WHERE u.role_id IN (2, 3, 4) 
-                        OR sp.staff_role IN ('Kho', 'Admin')";
-        $stmt = $pdo->query($sqlUsers);
-        $userIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
-        foreach ($userIds as $userId) {
-            // Kiểm tra xem đã có thông báo tương tự trong 24h chưa
-            $sqlCheck = "SELECT id FROM notifications 
-                         WHERE user_id = ? 
-                           AND title LIKE ? 
-                           AND created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)
-                         LIMIT 1";
-            $stmtCheck = $pdo->prepare($sqlCheck);
-            $stmtCheck->execute([$userId, "%$productName%"]);
-            
-            if (!$stmtCheck->fetch()) {
-                // Chưa có thông báo, tạo mới
-                self::create([
-                    'user_id' => $userId,
-                    'type' => 'warning',
-                    'title' => "Cảnh báo tồn kho thấp",
-                    'message' => "Sản phẩm '$productName' chỉ còn $currentQty (mức an toàn: $safetyStock)",
-                    'link' => '/admin/stocks'
-                ]);
-            }
-        }
-    }
 
     /**
      * Xóa thông báo

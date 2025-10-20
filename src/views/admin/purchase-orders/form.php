@@ -114,7 +114,7 @@
         <!-- Tổng tiền -->
         <div>
             <label class="block text-sm text-black font-semibold mb-1">Tổng tiền</label>
-            <input readonly :value="calculateTotal().toLocaleString('vi-VN') + ' đ'"
+            <input readonly :value="calculateTotal().toLocaleString('vn-VN') + ' đ'"
                 class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-gray-50 font-semibold text-[#002975]">
         </div>
 
@@ -145,7 +145,7 @@
         <div x-show="form.payment_status === 'Đã thanh toán một phần' || form.payment_status === 'Chưa đối soát'">
             <label class="block text-sm text-black font-semibold mb-1">Công nợ</label>
             <input readonly 
-                :value="(calculateTotal() - (form.paid_amount || 0)).toLocaleString('vi-VN') + ' đ'"
+                :value="(calculateTotal() - (form.paid_amount || 0)).toLocaleString('vn-VN') + ' đ'"
                 class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-gray-50 font-semibold text-red-600">
         </div>
 
@@ -373,7 +373,7 @@
                 if (!input._flatpickr) {
                     flatpickr(input, {
                         dateFormat: 'd/m/Y',
-                        locale: 'vn',  // Đổi từ 'vi' sang 'vn'
+                        locale: 'vn',  
                         allowInput: true,
                         clickOpens: true,
                         static: true
@@ -387,7 +387,7 @@
                 if (!input._flatpickr) {
                     flatpickr(input, {
                         dateFormat: 'd/m/Y',
-                        locale: 'vn',  // Đổi từ 'vi' sang 'vn'
+                        locale: 'vn', 
                         allowInput: true,
                         clickOpens: true,
                         static: true
@@ -411,7 +411,7 @@
                 if (!input._flatpickr) {
                     flatpickr(input, {
                         dateFormat: 'd/m/Y',
-                        locale: 'vn',  // Đổi từ 'vi' sang 'vn'
+                        locale: 'vn',  
                         allowInput: true,
                         clickOpens: true,
                         static: true
@@ -425,7 +425,7 @@
                 if (!input._flatpickr) {
                     flatpickr(input, {
                         dateFormat: 'd/m/Y',
-                        locale: 'vn',  // Đổi từ 'vi' sang 'vn'
+                        locale: 'vn', 
                         allowInput: true,
                         clickOpens: true,
                         static: true

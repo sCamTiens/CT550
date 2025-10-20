@@ -47,6 +47,26 @@ class CouponRepository
     }
 
     /**
+     * Chuyển đổi ngày từ d/m/Y sang Y-m-d
+     */
+    private function convertDate(?string $date): ?string
+    {
+        if (!$date) return null;
+        
+        // Nếu đã đúng định dạng Y-m-d
+        if (preg_match('/^\d{4}-\d{2}-\d{2}/', $date)) {
+            return substr($date, 0, 10);
+        }
+        
+        // Nếu là định dạng d/m/Y
+        if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})/', $date, $matches)) {
+            return sprintf('%04d-%02d-%02d', $matches[3], $matches[2], $matches[1]);
+        }
+        
+        return null;
+    }
+
+    /**
      * Tạo mã giảm giá mới
      */
     public function create(array $data, int $currentUser): int
@@ -74,8 +94,8 @@ class CouponRepository
             ':min_order_value' => $data['min_order_value'] ?? 0,
             ':max_discount' => $data['max_discount'] ?? 0,
             ':max_uses' => !empty($data['max_uses']) ? $data['max_uses'] : null,
-            ':starts_at' => $data['starts_at'] ?? null,
-            ':ends_at' => $data['ends_at'] ?? null,
+            ':starts_at' => $this->convertDate($data['starts_at'] ?? null),
+            ':ends_at' => $this->convertDate($data['ends_at'] ?? null),
             ':is_active' => $data['is_active'] ?? 1,
             ':created_by' => $currentUser,
             ':updated_by' => $currentUser,
@@ -124,8 +144,8 @@ class CouponRepository
             ':min_order_value' => $data['min_order_value'] ?? 0,
             ':max_discount' => $data['max_discount'] ?? 0,
             ':max_uses' => !empty($data['max_uses']) ? $data['max_uses'] : null,
-            ':starts_at' => $data['starts_at'] ?? null,
-            ':ends_at' => $data['ends_at'] ?? null,
+            ':starts_at' => $this->convertDate($data['starts_at'] ?? null),
+            ':ends_at' => $this->convertDate($data['ends_at'] ?? null),
             ':is_active' => $data['is_active'] ?? 1,
             ':updated_by' => $currentUser,
             ':id' => $id,
