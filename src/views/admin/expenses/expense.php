@@ -414,7 +414,7 @@ $items = $items ?? [];
             // ===== UTILITIES =====
             formatCurrency(n) {
                 try {
-                    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n || 0);
+                    return new Intl.NumberFormat('vi-VN').format(n || 0);
                 } catch {
                     return n;
                 }

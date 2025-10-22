@@ -41,10 +41,18 @@ class CouponController extends BaseAdminController
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode($this->couponRepo->findOne($id), JSON_UNESCAPED_UNICODE);
             exit;
-        } catch (\PDOException $e) {
+        } catch (\Exception $e) {
             http_response_code(500);
             header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['error' => 'Lỗi máy chủ khi tạo mã giảm giá: ' . $e->getMessage()]);
+            
+            // Log chi tiết để debug
+            error_log("Coupon create error: " . $e->getMessage());
+            error_log("Stack trace: " . $e->getTraceAsString());
+            
+            echo json_encode([
+                'error' => 'Lỗi máy chủ khi tạo mã giảm giá: ' . $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], JSON_UNESCAPED_UNICODE);
             exit;
         }
     }
@@ -84,6 +92,6 @@ class CouponController extends BaseAdminController
 
     private function currentUserId(): ?int
     {
-        return $_SESSION['user']['id'] ?? null;
+        return $_SESSION['admin_user']['id'] ?? $_SESSION['user']['id'] ?? null;
     }
 }

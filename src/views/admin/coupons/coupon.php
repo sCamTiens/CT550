@@ -62,7 +62,7 @@ $items = $items ?? [];
                                     <i class="fa-solid fa-trash"></i>
                                 </button>
                             </td>
-                            <td class="py-2 px-4 font-semibold text-[#002975]" x-text="c.code"></td>
+                            <td class="py-2 px-4" x-text="c.code"></td>
                             <td class="py-2 px-4" x-text="c.description || '—'"></td>
                             <td class="py-2 px-4" x-text="c.discount_type === 'percentage' ? 'Phần trăm' : 'Số tiền cố định'"></td>
                             <td class="py-2 px-4 text-right" 
@@ -482,10 +482,7 @@ $items = $items ?? [];
 
             formatCurrency(n) {
                 try {
-                    return new Intl.NumberFormat('vi-VN', {
-                        style: 'currency',
-                        currency: 'VND'
-                    }).format(n || 0);
+                    return new Intl.NumberFormat('vi-VN').format(n || 0);
                 } catch {
                     return n;
                 }

@@ -67,15 +67,17 @@ $items = $items ?? [];
                             </td>
                             <td class="py-2 px-4 font-semibold text-[#002975]" x-text="p.name"></td>
                             <td class="py-2 px-4" x-text="p.description || '—'"></td>
-                            <td class="py-2 px-4" x-text="p.discount_type === 'percentage' ? 'Phần trăm' : 'Số tiền cố định'"></td>
-                            <td class="py-2 px-4 text-right" 
-                                x-text="p.discount_type === 'percentage' ? (p.discount_value + '%') : formatCurrency(p.discount_value)"></td>
+                            <td class="py-2 px-4"
+                                x-text="p.discount_type === 'percentage' ? 'Phần trăm' : 'Số tiền cố định'"></td>
+                            <td class="py-2 px-4 text-right"
+                                x-text="p.discount_type === 'percentage' ? (p.discount_value + '%') : formatCurrency(p.discount_value)">
+                            </td>
                             <td class="py-2 px-4" x-text="getApplyToText(p.apply_to)"></td>
                             <td class="py-2 px-4 text-center" x-text="p.priority || 0"></td>
                             <td class="py-2 px-4 text-right" x-text="p.starts_at || '—'"></td>
                             <td class="py-2 px-4 text-right" x-text="p.ends_at || '—'"></td>
                             <td class="py-2 px-4 text-center">
-                                <span :class="p.is_active == 1 ? 'text-green-600' : 'text-red-600'" 
+                                <span :class="p.is_active == 1 ? 'text-green-600' : 'text-red-600'"
                                     x-text="p.is_active == 1 ? 'Kích hoạt' : 'Vô hiệu hóa'"></span>
                             </td>
                             <td class="py-2 px-4 text-right" x-text="p.created_at || '—'"></td>
@@ -96,11 +98,13 @@ $items = $items ?? [];
         </div>
 
         <!-- Modal Create/Edit -->
-        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openForm"
-            x-transition.opacity style="display:none">
-            <div class="bg-white w-full max-w-5xl rounded-xl shadow max-h-[90vh] flex flex-col animate__animated animate__zoomIn animate__faster" @click.outside="openForm=false">
+        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
+            x-show="openForm" x-transition.opacity style="display:none">
+            <div class="bg-white w-full max-w-5xl rounded-xl shadow max-h-[90vh] flex flex-col animate__animated animate__zoomIn animate__faster"
+                @click.outside="openForm=false">
                 <div class="px-5 py-3 border-b flex justify-center items-center relative flex-shrink-0">
-                    <h3 class="font-semibold text-2xl text-[#002975]" x-text="form.id ? 'Sửa chương trình khuyến mãi' : 'Thêm chương trình khuyến mãi'"></h3>
+                    <h3 class="font-semibold text-2xl text-[#002975]"
+                        x-text="form.id ? 'Sửa chương trình khuyến mãi' : 'Thêm chương trình khuyến mãi'"></h3>
                     <button class="text-slate-500 absolute right-5" @click="openForm=false">✕</button>
                 </div>
 
@@ -109,8 +113,10 @@ $items = $items ?? [];
                         <?php require __DIR__ . '/form.php'; ?>
                     </div>
                     <div class="px-5 py-3 border-t flex justify-end gap-3 flex-shrink-0 bg-white">
-                        <button type="button" @click="openForm=false" class="px-4 py-2 border rounded text-sm">Hủy</button>
-                        <button type="submit" class="px-4 py-2 bg-[#002975] text-white rounded text-sm" :disabled="submitting"
+                        <button type="button" @click="openForm=false"
+                            class="px-4 py-2 border rounded text-sm">Hủy</button>
+                        <button type="submit" class="px-4 py-2 bg-[#002975] text-white rounded text-sm"
+                            :disabled="submitting"
                             x-text="submitting ? 'Đang lưu...' : (form.id ? 'Cập nhật' : 'Tạo')"></button>
                     </div>
                 </form>
@@ -410,7 +416,7 @@ $items = $items ?? [];
             },
 
             async openEdit(p) {
-                this.form = { 
+                this.form = {
                     ...p,
                     category_ids: p.category_ids || [],
                     product_ids: p.product_ids || []
@@ -514,12 +520,10 @@ $items = $items ?? [];
                 return map[applyTo] || applyTo;
             },
 
+            // --- utils ---
             formatCurrency(n) {
                 try {
-                    return new Intl.NumberFormat('vi-VN', {
-                        style: 'currency',
-                        currency: 'VND'
-                    }).format(n || 0);
+                    return new Intl.NumberFormat('vi-VN').format(n || 0);
                 } catch {
                     return n;
                 }

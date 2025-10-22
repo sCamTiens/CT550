@@ -22,7 +22,15 @@ class CouponRepository
             LEFT JOIN users uu ON uu.id = c.updated_by
             ORDER BY c.id DESC
         ";
-        return $pdo->query($sql)->fetchAll(\PDO::FETCH_ASSOC);
+        $items = $pdo->query($sql)->fetchAll(\PDO::FETCH_ASSOC);
+        
+        // Convert discount_type từ tiếng Việt sang tiếng Anh cho frontend
+        foreach ($items as &$item) {
+            $item['description'] = $item['name'];  // Thêm field description
+            $item['discount_type'] = ($item['discount_type'] === 'Phần trăm') ? 'percentage' : 'fixed';
+        }
+        
+        return $items;
     }
 
     /**
@@ -43,6 +51,13 @@ class CouponRepository
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$id]);
         $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        
+        if ($row) {
+            // Convert discount_type từ tiếng Việt sang tiếng Anh cho frontend
+            $row['description'] = $row['name'];
+            $row['discount_type'] = ($row['discount_type'] === 'Phần trăm') ? 'percentage' : 'fixed';
+        }
+        
         return $row ?: null;
     }
 
@@ -72,39 +87,58 @@ class CouponRepository
     public function create(array $data, int $currentUser): int
     {
         $pdo = DB::pdo();
+        
+        // Convert dates
+        $startsAt = $this->convertDate($data['starts_at'] ?? null);
+        $endsAt = $this->convertDate($data['ends_at'] ?? null);
+        
+        // Convert discount_type từ tiếng Anh sang tiếng Việt (khớp với ENUM trong database)
+        $discountTypeMap = [
+            'percentage' => 'Phần trăm',
+            'fixed' => 'Số tiền'
+        ];
+        $discountType = $discountTypeMap[$data['discount_type'] ?? 'percentage'] ?? 'Phần trăm';
+        
         $stmt = $pdo->prepare("
             INSERT INTO coupons (
-                code, description, discount_type, discount_value,
+                code, name, discount_type, discount_value,
                 min_order_value, max_discount, max_uses, used_count,
                 starts_at, ends_at, is_active,
                 created_by, updated_by, created_at, updated_at
             ) VALUES (
-                :code, :description, :discount_type, :discount_value,
+                :code, :name, :discount_type, :discount_value,
                 :min_order_value, :max_discount, :max_uses, 0,
                 :starts_at, :ends_at, :is_active,
                 :created_by, :updated_by, NOW(), NOW()
             )
         ");
 
-        $stmt->execute([
+        $params = [
             ':code' => strtoupper($data['code']),
-            ':description' => $data['description'] ?? null,
-            ':discount_type' => $data['discount_type'] ?? 'percentage',
+            ':name' => $data['description'] ?? null,
+            ':discount_type' => $discountType,
             ':discount_value' => $data['discount_value'] ?? 0,
             ':min_order_value' => $data['min_order_value'] ?? 0,
-            ':max_discount' => $data['max_discount'] ?? 0,
-            ':max_uses' => !empty($data['max_uses']) ? $data['max_uses'] : null,
-            ':starts_at' => $this->convertDate($data['starts_at'] ?? null),
-            ':ends_at' => $this->convertDate($data['ends_at'] ?? null),
+            ':max_discount' => $data['max_discount'] ?? 0,  // Thêm max_discount
+            ':max_uses' => !empty($data['max_uses']) ? $data['max_uses'] : 0,
+            ':starts_at' => $startsAt,
+            ':ends_at' => $endsAt,
             ':is_active' => $data['is_active'] ?? 1,
             ':created_by' => $currentUser,
             ':updated_by' => $currentUser,
-        ]);
+        ];
+        
+        $stmt->execute($params);
 
         $id = (int) $pdo->lastInsertId();
         
-        // Log audit
-        $this->logCreate('coupons', $id, $data, $currentUser);
+        // Log audit (with error handling)
+        try {
+            $this->logCreate('coupons', $id, $data, $currentUser);
+        } catch (\Exception $e) {
+            // Silent fail - không để lỗi audit log chặn việc tạo coupon
+            error_log("Audit log failed: " . $e->getMessage());
+        }
         
         return $id;
     }
@@ -119,10 +153,17 @@ class CouponRepository
         // Lấy dữ liệu trước khi update
         $beforeData = $this->findOne($id);
         
+        // Convert discount_type từ tiếng Anh sang tiếng Việt
+        $discountTypeMap = [
+            'percentage' => 'Phần trăm',
+            'fixed' => 'Số tiền'
+        ];
+        $discountType = $discountTypeMap[$data['discount_type'] ?? 'percentage'] ?? 'Phần trăm';
+        
         $stmt = $pdo->prepare("
             UPDATE coupons SET
                 code = :code,
-                description = :description,
+                name = :name,
                 discount_type = :discount_type,
                 discount_value = :discount_value,
                 min_order_value = :min_order_value,
@@ -138,12 +179,12 @@ class CouponRepository
 
         $stmt->execute([
             ':code' => strtoupper($data['code']),
-            ':description' => $data['description'] ?? null,
-            ':discount_type' => $data['discount_type'] ?? 'percentage',
+            ':name' => $data['description'] ?? null,
+            ':discount_type' => $discountType,
             ':discount_value' => $data['discount_value'] ?? 0,
             ':min_order_value' => $data['min_order_value'] ?? 0,
-            ':max_discount' => $data['max_discount'] ?? 0,
-            ':max_uses' => !empty($data['max_uses']) ? $data['max_uses'] : null,
+            ':max_discount' => $data['max_discount'] ?? 0,  // Thêm max_discount
+            ':max_uses' => !empty($data['max_uses']) ? $data['max_uses'] : 0,
             ':starts_at' => $this->convertDate($data['starts_at'] ?? null),
             ':ends_at' => $this->convertDate($data['ends_at'] ?? null),
             ':is_active' => $data['is_active'] ?? 1,
@@ -151,9 +192,13 @@ class CouponRepository
             ':id' => $id,
         ]);
         
-        // Log audit
+        // Log audit (with error handling)
         if ($beforeData) {
-            $this->logUpdate('coupons', $id, $beforeData, $data, $currentUser);
+            try {
+                $this->logUpdate('coupons', $id, $beforeData, $data, $currentUser);
+            } catch (\Exception $e) {
+                error_log("Audit log failed: " . $e->getMessage());
+            }
         }
     }
 
@@ -178,9 +223,13 @@ class CouponRepository
 
         $pdo->prepare("DELETE FROM coupons WHERE id = ?")->execute([$id]);
         
-        // Log audit
+        // Log audit (with error handling)
         if ($beforeData) {
-            $this->logDelete('coupons', $id, $beforeData, $currentUser);
+            try {
+                $this->logDelete('coupons', $id, $beforeData, $currentUser);
+            } catch (\Exception $e) {
+                error_log("Audit log failed: " . $e->getMessage());
+            }
         }
     }
 }

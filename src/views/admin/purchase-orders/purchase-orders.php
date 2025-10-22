@@ -212,9 +212,13 @@ $items = $items ?? [];
                 // Không reset suppliers và products vì chúng đã được fetch
             },
 
+            // --- utils ---
             formatCurrency(n) {
-                try { return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n || 0) }
-                catch { return n }
+                try {
+                    return new Intl.NumberFormat('vi-VN').format(n || 0);
+                } catch {
+                    return n;
+                }
             },
 
             calculateTotal() {

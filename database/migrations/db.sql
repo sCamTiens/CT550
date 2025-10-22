@@ -1171,3 +1171,7 @@ WHERE s.qty <= s.safety_stock
       AND n.title LIKE CONCAT('%', p.name, '%')
       AND n.created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)
   );
+
+ALTER TABLE coupons 
+ADD COLUMN max_discount DECIMAL(12,2) DEFAULT 0 COMMENT 'Giảm tối đa (chỉ áp dụng cho loại Phần trăm)' 
+AFTER min_order_value;
