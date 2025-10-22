@@ -47,7 +47,7 @@ $items = $items ?? [];
                             '0' => 'Vô hiệu hóa'
                         ]) ?>
                         <?= dateFilterPopover('created_at', 'Ngày tạo') ?>
-                        <?= textFilterPopover('created_by_name', 'Người tạo') ?>
+                        <?= textFilterPopover('created_by', 'Người tạo') ?>
                     </tr>
                 </thead>
                 <tbody>
@@ -96,9 +96,9 @@ $items = $items ?? [];
         </div>
 
         <!-- Modal Create/Edit -->
-        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openForm"
+        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openForm"
             x-transition.opacity style="display:none">
-            <div class="bg-white w-full max-w-5xl rounded-xl shadow max-h-[90vh] flex flex-col" @click.outside="openForm=false">
+            <div class="bg-white w-full max-w-5xl rounded-xl shadow max-h-[90vh] flex flex-col animate__animated animate__zoomIn animate__faster" @click.outside="openForm=false">
                 <div class="px-5 py-3 border-b flex justify-center items-center relative flex-shrink-0">
                     <h3 class="font-semibold text-2xl text-[#002975]" x-text="form.id ? 'Sửa chương trình khuyến mãi' : 'Thêm chương trình khuyến mãi'"></h3>
                     <button class="text-slate-500 absolute right-5" @click="openForm=false">✕</button>
@@ -180,8 +180,24 @@ $items = $items ?? [];
             perPageOptions: [5, 10, 20, 50, 100],
 
             // Filters
-            openFilter: {},
-            filters: {},
+            openFilter: {
+                name: false, description: false, discount_type: false, discount_value: false,
+                apply_to: false, priority: false, starts_at: false, ends_at: false,
+                is_active: false, created_at: false, created_by: false
+            },
+            filters: {
+                name: '',
+                description: '',
+                discount_type: '',
+                discount_value_type: '', discount_value_value: '', discount_value_from: '', discount_value_to: '',
+                apply_to: '',
+                priority_type: '', priority_value: '', priority_from: '', priority_to: '',
+                starts_at_type: '', starts_at_value: '', starts_at_from: '', starts_at_to: '',
+                ends_at_type: '', ends_at_value: '', ends_at_from: '', ends_at_to: '',
+                is_active: '',
+                created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
+                created_by: ''
+            },
 
             paginated() {
                 const start = (this.currentPage - 1) * this.perPage;
@@ -198,28 +214,117 @@ $items = $items ?? [];
                 this.currentPage = page;
             },
 
-            filtered() {
-                let data = this.items;
-                for (const key in this.filters) {
-                    const val = this.filters[key];
-                    if (!val) continue;
-
-                    if (['discount_value', 'priority'].includes(key)) {
-                        data = data.filter(p => Number(p[key]) === Number(val));
-                    } else if (['starts_at', 'ends_at', 'created_at'].includes(key)) {
-                        data = data.filter(p => (p[key] || '').startsWith(val));
-                    } else if (key === 'is_active') {
-                        data = data.filter(p => String(p[key]) === String(val));
-                    } else {
-                        data = data.filter(p => (p[key] || '').toLowerCase().includes(val.toLowerCase()));
+            // Chuẩn hóa ngày cho so sánh (loại bỏ phần giờ)
+            applyDateFilter(val, type, value, from, to) {
+                if (!type) return true;
+                const normalizeDate = (d) => {
+                    if (!d) return null;
+                    let s = String(d).trim();
+                    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
+                        const [dd, mm, yy] = s.split(/[\s\/]/);
+                        s = `${yy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
                     }
+                    if (/^\d{4}-\d{1,2}-\d{1,2}/.test(s)) {
+                        s = s.substring(0, 10);
+                    }
+                    const parsed = new Date(s);
+                    if (isNaN(parsed)) return null;
+                    return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+                };
+                const itemDate = normalizeDate(val);
+                if (!itemDate) return false;
+                if (type === 'eq') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate.getTime() === compareDate.getTime();
                 }
-                return data;
+                if (type === 'between') {
+                    if (!from || !to) return true;
+                    const fromDate = normalizeDate(from);
+                    const toDate = normalizeDate(to);
+                    if (!fromDate || !toDate) return false;
+                    return itemDate >= fromDate && itemDate <= toDate;
+                }
+                if (type === 'lt') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate < compareDate;
+                }
+                if (type === 'gt') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate > compareDate;
+                }
+                if (type === 'lte') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate <= compareDate;
+                }
+                if (type === 'gte') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate >= compareDate;
+                }
+                return true;
+            },
+
+            applyNumberFilter(val, type, value, from, to) {
+                const num = Number(val);
+                if (isNaN(num)) return false;
+                if (!type) return true;
+                if (type === 'eq') {
+                    if (!value && value !== 0) return true;
+                    return num === Number(value);
+                }
+                if (type === 'between') {
+                    if ((!from && from !== 0) || (!to && to !== 0)) return true;
+                    return num >= Number(from) && num <= Number(to);
+                }
+                if (type === 'lt') {
+                    if (!value && value !== 0) return true;
+                    return num < Number(value);
+                }
+                if (type === 'gt') {
+                    if (!value && value !== 0) return true;
+                    return num > Number(value);
+                }
+                if (type === 'lte') {
+                    if (!value && value !== 0) return true;
+                    return num <= Number(value);
+                }
+                if (type === 'gte') {
+                    if (!value && value !== 0) return true;
+                    return num >= Number(value);
+                }
+                return true;
+            },
+
+            filtered() {
+                const fn = (v) => (v ?? '').toString().toLowerCase();
+                const f = this.filters;
+                return this.items.filter(p => {
+                    if (f.name && !fn(p.name).includes(fn(f.name))) return false;
+                    if (f.description && !fn(p.description).includes(fn(f.description))) return false;
+                    if (f.discount_type && !fn(p.discount_type).includes(fn(f.discount_type))) return false;
+                    if (f.apply_to && !fn(p.apply_to).includes(fn(f.apply_to))) return false;
+                    if (f.is_active !== '' && f.is_active !== undefined && String(p.is_active) !== String(f.is_active)) return false;
+                    if (f.created_by && !fn(p.created_by_name || '').includes(fn(f.created_by))) return false;
+                    if (!this.applyNumberFilter(p.discount_value, f.discount_value_type, f.discount_value_value, f.discount_value_from, f.discount_value_to)) return false;
+                    if (!this.applyNumberFilter(p.priority, f.priority_type, f.priority_value, f.priority_from, f.priority_to)) return false;
+                    if (!this.applyDateFilter(p.starts_at, f.starts_at_type, f.starts_at_value, f.starts_at_from, f.starts_at_to)) return false;
+                    if (!this.applyDateFilter(p.ends_at, f.ends_at_type, f.ends_at_value, f.ends_at_from, f.ends_at_to)) return false;
+                    if (!this.applyDateFilter(p.created_at, f.created_at_type, f.created_at_value, f.created_at_from, f.created_at_to)) return false;
+                    return true;
+                });
             },
 
             toggleFilter(key) {
-                for (const k in this.openFilter) this.openFilter[k] = false;
-                this.openFilter[key] = true;
+                Object.keys(this.openFilter).forEach(k => this.openFilter[k] = (k === key ? !this.openFilter[k] : false));
             },
 
             applyFilter(key) {
@@ -227,7 +332,19 @@ $items = $items ?? [];
             },
 
             resetFilter(key) {
-                this.filters[key] = '';
+                if (['starts_at', 'ends_at', 'created_at'].includes(key)) {
+                    this.filters[`${key}_type`] = '';
+                    this.filters[`${key}_value`] = '';
+                    this.filters[`${key}_from`] = '';
+                    this.filters[`${key}_to`] = '';
+                } else if (['discount_value', 'priority'].includes(key)) {
+                    this.filters[`${key}_type`] = '';
+                    this.filters[`${key}_value`] = '';
+                    this.filters[`${key}_from`] = '';
+                    this.filters[`${key}_to`] = '';
+                } else {
+                    this.filters[key] = '';
+                }
                 this.openFilter[key] = false;
             },
 

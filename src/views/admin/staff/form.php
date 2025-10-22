@@ -23,7 +23,7 @@
 
     <!-- Số điện thoại -->
     <div>
-        <label class="block text-sm text-black font-semibold mb-1">Số điện thoại</label>
+        <label class="block text-sm text-black font-semibold mb-1">Số điện thoại <span class="text-red-500">*</span></label>
         <input type="text" x-model="form.phone" @input="clearError('phone'); validateField('phone')"
             @blur="touched.phone = true; validateField('phone')" class="border rounded px-3 py-2 w-full"
             placeholder="Nhập số điện thoại" maxlength="32">

@@ -11,9 +11,10 @@ use App\Models\Repositories\NotificationRepository;
 class DailyStockAlertService
 {
     /**
-     * Reset và tạo lại thông báo tồn kho cho ngày mới
-     * - Đánh dấu tất cả thông báo tồn kho cũ là đã đọc (để xóa badge đỏ)
-     * - Tạo thông báo mới cho tất cả sản phẩm đang tồn kho thấp
+     * Reset và tạo lại thông báo tồn kho cho ngày mới (Chạy lúc 7h sáng)
+     * - XÓA HOÀN TOÀN tất cả thông báo tồn kho cũ (cả đã đọc và chưa đọc)
+     * - Tạo thông báo mới CHỈ cho sản phẩm ĐANG CÒN tồn kho thấp
+     * - Nếu sản phẩm đã được nhập đủ hàng → KHÔNG tạo thông báo nữa
      * - Chỉ cảnh báo sản phẩm đang bán (is_active = 1)
      * 
      * @return array Kết quả thực hiện
@@ -22,7 +23,7 @@ class DailyStockAlertService
     {
         $pdo = DB::pdo();
         $result = [
-            'reset_old_notifications' => 0,
+            'deleted_old_notifications' => 0,
             'low_stock_products' => 0,
             'out_of_stock_products' => 0,
             'notifications_created' => 0,
@@ -30,15 +31,14 @@ class DailyStockAlertService
         ];
         
         try {
-            // Bước 1: Đánh dấu tất cả thông báo tồn kho cũ là đã đọc
-            $sqlReset = "UPDATE notifications 
-                         SET is_read = 1, read_at = NOW() 
-                         WHERE (title LIKE '%tồn kho%' OR title LIKE '%hết hàng%') 
-                           AND is_read = 0";
-            $stmtReset = $pdo->query($sqlReset);
-            $result['reset_old_notifications'] = $stmtReset->rowCount();
+            // Bước 1: XÓA HOÀN TOÀN tất cả thông báo tồn kho cũ (reset mỗi ngày)
+            $sqlDelete = "DELETE FROM notifications 
+                         WHERE title LIKE '%tồn kho%' OR title LIKE '%hết hàng%'";
+            $stmtDelete = $pdo->query($sqlDelete);
+            $result['deleted_old_notifications'] = $stmtDelete->rowCount();
             
-            // Bước 2: Lấy tất cả sản phẩm có tồn kho thấp hoặc hết hàng (chỉ sản phẩm đang bán)
+            // Bước 2: Lấy CHỈ những sản phẩm ĐANG CÒN tồn kho thấp (chỉ sản phẩm đang bán)
+            // Nếu sản phẩm đã được nhập hàng đủ → KHÔNG nằm trong list này → KHÔNG tạo thông báo
             $sql = "SELECT 
                         s.product_id, 
                         s.qty, 
@@ -54,6 +54,9 @@ class DailyStockAlertService
             $stmt = $pdo->query($sql);
             $lowStockProducts = $stmt->fetchAll(\PDO::FETCH_ASSOC);
             
+            // Ghi log để debug
+            error_log("Daily Stock Check at " . date('Y-m-d H:i:s') . ": Found " . count($lowStockProducts) . " products with low stock");
+            
             // Đếm sản phẩm hết hàng và tồn kho thấp
             foreach ($lowStockProducts as $product) {
                 if ($product['qty'] == 0) {
@@ -63,7 +66,7 @@ class DailyStockAlertService
                 }
             }
             
-            // Bước 3: Tạo thông báo mới cho từng sản phẩm
+            // Bước 3: Tạo thông báo mới CHỈ cho sản phẩm còn tồn kho thấp
             foreach ($lowStockProducts as $product) {
                 $created = self::createNotificationForProduct(
                     $product['product_id'],
@@ -77,6 +80,12 @@ class DailyStockAlertService
                     $result['notifications_created']++;
                 }
             }
+            
+            // Bước 4: Tự động dọn dẹp thông báo cũ hơn 30 ngày (tránh database phình to)
+            $result['old_notifications_cleaned'] = self::cleanupOldNotifications();
+            
+            // Ghi log kết quả
+            error_log("Daily Stock Check completed: " . json_encode($result));
             
             return $result;
             

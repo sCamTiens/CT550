@@ -170,23 +170,24 @@ $router->group('/admin', function (Router $r): void {
     // Orders (Quản lý bán hàng)
     $r->get('/orders', [AdminOrder::class, 'index']);
     $r->get('/api/orders', [AdminOrder::class, 'apiIndex']);
-    $r->post('/orders', [AdminOrder::class, 'store']);
-    $r->put('/orders/{id}', [AdminOrder::class, 'update']);
-    $r->delete('/orders/{id}', [AdminOrder::class, 'destroy']);
     $r->get('/api/orders/next-code', [AdminOrder::class, 'nextCode']);
     $r->get('/api/orders/unpaid', [AdminOrder::class, 'unpaid']);
     $r->get('/api/orders/{id}/items', [AdminOrder::class, 'getItems']);
+    $r->get('/orders/{id}/print', [AdminOrder::class, 'print']);
+    $r->post('/orders', [AdminOrder::class, 'store']);
+    $r->delete('/orders/{id}', [AdminOrder::class, 'destroy']);
 
     // Stock Outs (Phiếu xuất kho)
     $r->get('/stock-outs', [AdminStockOut::class, 'index']);
     $r->get('/api/stock-outs', [AdminStockOut::class, 'apiIndex']);
     $r->post('/api/stock-outs', [AdminStockOut::class, 'store']);
-    $r->put('/api/stock-outs/{id}', [AdminStockOut::class, 'update']);
-    $r->delete('/api/stock-outs/{id}', [AdminStockOut::class, 'destroy']);
     $r->get('/api/stock-outs/next-code', [AdminStockOut::class, 'nextCode']);
     $r->get('/api/stock-outs/pending', [AdminStockOut::class, 'pending']);
+    $r->get('/api/stock-outs/{id}/items', [AdminStockOut::class, 'getItems']);
     $r->post('/api/stock-outs/{id}/approve', [AdminStockOut::class, 'approve']);
     $r->post('/api/stock-outs/{id}/complete', [AdminStockOut::class, 'complete']);
+    $r->put('/api/stock-outs/{id}', [AdminStockOut::class, 'update']);
+    $r->delete('/api/stock-outs/{id}', [AdminStockOut::class, 'destroy']);
 
     // Coupons (Mã giảm giá)
     $r->get('/coupons', [AdminCoupon::class, 'index']);

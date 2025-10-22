@@ -143,7 +143,9 @@
                     : (form.purchase_order_id == po.id ? 'bg-[#002975] text-white'
                     : 'hover:bg-[#002975] hover:text-white text-black'),
                     'px-3 py-2 cursor-pointer transition-colors text-sm'
-                ]" x-text="po.code">
+                ]">
+                    <div class="font-medium" x-text="po.code"></div>
+                    <div class="text-xs opacity-90" x-text="'Còn nợ: ' + formatCurrency(po.remaining_debt || 0)"></div>
                 </div>
             </template>
             <div x-show="filtered.length === 0" class="px-3 py-2 text-gray-400 text-sm">
@@ -157,6 +159,19 @@
 
         <p class="text-red-600 text-xs mt-1" x-show="touched.purchase_order_id && errors.purchase_order_id"
             x-text="errors.purchase_order_id"></p>
+        
+        <!-- Hiển thị công nợ còn lại -->
+        <div x-show="form.purchase_order_id && selectedPurchaseOrderDebt > 0" class="mt-2 p-3 bg-amber-50 border border-amber-200 rounded">
+            <div class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div class="flex-1">
+                    <span class="text-sm text-amber-800 font-semibold">Công nợ còn lại:</span>
+                    <span class="text-base text-amber-900 font-bold ml-2" x-text="formatCurrency(selectedPurchaseOrderDebt)"></span>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Phương thức thanh toán -->

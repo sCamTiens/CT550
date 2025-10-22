@@ -492,10 +492,12 @@ require __DIR__ . '/partials/layout-start.php';
 
         // Tạo danh sách tháng (3 năm gần nhất)
         const monthPeriods = [];
+        const monthNames = ['', 'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 
+                            'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
         for (let y = currentYear; y >= currentYear - 2; y--) {
             for (let m = 12; m >= 1; m--) {
                 if (y === currentYear && m > currentMonth) continue;
-                const monthName = new Date(y, m - 1).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
+                const monthName = monthNames[m] + ' ' + y;
                 const value = y + '-' + String(m).padStart(2, '0');
                 monthPeriods.push({ value: value, label: monthName });
             }
@@ -525,7 +527,7 @@ require __DIR__ . '/partials/layout-start.php';
             yearOpen: false,
             filterTypeLabel: 'Theo tuần',
             weekLabel: 'Tất cả',
-            periodLabel: new Date(currentYear, currentMonth - 1).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' }),
+            periodLabel: monthNames[currentMonth] + ' ' + currentYear,
             yearLabel: currentYear,
             monthPeriods: monthPeriods,
             yearPeriods: yearPeriods,
@@ -557,13 +559,15 @@ require __DIR__ . '/partials/layout-start.php';
                 const now = new Date();
                 const currentYear = now.getFullYear();
                 const currentMonth = now.getMonth() + 1;
+                const monthNames = ['', 'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 
+                                    'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
 
                 if (type === 'week') {
                     this.selectedWeek = 0;
                     this.weekLabel = 'Tất cả';
                     // Reset về tháng hiện tại
                     this.filterPeriod = currentYear + '-' + String(currentMonth).padStart(2, '0');
-                    this.periodLabel = new Date(currentYear, currentMonth - 1).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
+                    this.periodLabel = monthNames[currentMonth] + ' ' + currentYear;
                 } else if (type === 'month') {
                     // Reset về tháng và năm hiện tại
                     this.selectedMonth = String(currentMonth).padStart(2, '0');
@@ -583,6 +587,8 @@ require __DIR__ . '/partials/layout-start.php';
                 const now = new Date();
                 const currentYear = now.getFullYear();
                 const currentMonth = now.getMonth() + 1;
+                const monthNames = ['', 'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 
+                                    'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
                 
                 // Reset về filter tuần, tháng hiện tại, tất cả tuần
                 this.filterType = 'week';
@@ -590,7 +596,7 @@ require __DIR__ . '/partials/layout-start.php';
                 this.selectedWeek = 0;
                 this.weekLabel = 'Tất cả';
                 this.filterPeriod = currentYear + '-' + String(currentMonth).padStart(2, '0');
-                this.periodLabel = new Date(currentYear, currentMonth - 1).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
+                this.periodLabel = monthNames[currentMonth] + ' ' + currentYear;
                 this.selectedMonth = String(currentMonth).padStart(2, '0');
                 this.filterYear = currentYear;
                 
@@ -718,6 +724,16 @@ require __DIR__ . '/partials/layout-start.php';
                 const ctx = document.getElementById('categoryChart');
                 if (!ctx || this.categoryData.length === 0) return;
 
+                // Helper function để format số tiền
+                const formatRevenue = (value) => {
+                    if (value >= 1) {
+                        return value.toFixed(1) + 'M';
+                    } else if (value > 0) {
+                        return (value * 1000).toFixed(0) + 'K';
+                    }
+                    return '0';
+                };
+
                 this.categoryChart = new Chart(ctx, {
                     type: 'doughnut',
                     data: {
@@ -749,8 +765,8 @@ require __DIR__ . '/partials/layout-start.php';
                                     label: function(context) {
                                         const value = context.parsed;
                                         const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                        const percentage = ((value / total) * 100).toFixed(1);
-                                        return context.label + ': ' + value.toFixed(1) + 'M (' + percentage + '%)';
+                                        const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+                                        return context.label + ': ' + formatRevenue(value) + ' (' + percentage + '%)';
                                     }
                                 }
                             }
@@ -798,7 +814,7 @@ require __DIR__ . '/partials/layout-start.php';
                                     label: function(context) {
                                         const value = context.parsed;
                                         const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                        const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                        const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
                                         return context.label + ': ' + value + ' đơn (' + percentage + '%)';
                                     }
                                 }
@@ -863,10 +879,9 @@ require __DIR__ . '/partials/layout-start.php';
             updateChart() {
                 if (!this.chart) return;
 
-                this.chart.data.labels = this.chartData.labels;
-                this.chart.data.datasets[0].data = this.chartData.revenue;
-                this.chart.data.datasets[1].data = this.chartData.expense;
-                this.chart.update();
+                // Destroy chart cũ và tạo lại
+                this.chart.destroy();
+                this.initChart();
             },
 
             formatMoney(value) {

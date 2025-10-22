@@ -175,6 +175,7 @@
                     const res = await fetch('/admin/api/notifications/unread-count');
                     if (res.ok) {
                         const data = await res.json();
+                        this.unreadCount = data.count || 0;
                     }
                 } catch (e) {
                     console.error('Error fetching unread count:', e);

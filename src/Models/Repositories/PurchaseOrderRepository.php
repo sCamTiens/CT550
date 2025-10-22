@@ -89,8 +89,8 @@ class PurchaseOrderRepository
 
             $stmt = $pdo->prepare("
                 INSERT INTO purchase_orders 
-                (code, supplier_id, total_amount, paid_amount, payment_status, due_date, note, received_at, created_by, created_at, updated_at) 
-                VALUES (:code, :supplier_id, :total_amount, :paid_amount, :payment_status, :due_date, :note, :received_at, :created_by, NOW(), NOW())
+                (code, supplier_id, total_amount, paid_amount, payment_status, due_date, note, received_at, created_by, created_at) 
+                VALUES (:code, :supplier_id, :total_amount, :paid_amount, :payment_status, :due_date, :note, :received_at, :created_by, NOW())
             ");
             $stmt->execute([
                 ':code' => $code,
@@ -380,6 +380,11 @@ class PurchaseOrderRepository
 
         // Lấy dữ liệu cũ trước khi update
         $po = $this->findById($id);
+        
+        // Kiểm tra xem phiếu nhập đã thanh toán một phần chưa
+        if ($po && ($po['payment_status'] === '0' || $po['payment_status'] === '2')) {
+            throw new \Exception("Không thể sửa phiếu nhập kho đã thanh toán một phần hoặc thanh toán hết");
+        }
 
         // Chỉ cho phép cập nhật một số trường nhất định
         $sql = "
@@ -418,6 +423,11 @@ class PurchaseOrderRepository
             $po = $this->findById($id);
             if (!$po) {
                 throw new \Exception('Không tìm thấy phiếu nhập');
+            }
+            
+            // Kiểm tra xem phiếu nhập đã thanh toán hết chưa
+            if ($po['payment_status'] === '2') {
+                throw new \Exception('Không thể xóa phiếu nhập kho đã thanh toán hết');
             }
 
             // 1. Xóa các product_batch liên quan và cập nhật tồn kho

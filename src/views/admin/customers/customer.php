@@ -76,8 +76,8 @@ $items = $items ?? [];
               </td>
               <td class="py-2 px-4 text-center">
                 <template x-if="c.avatar_url">
-                  <img :src="c.avatar_url" :alt="c.full_name"
-                    class="w-12 h-12 rounded-full object-cover mx-auto border-2 border-gray-200">
+                  <img x-show="c.avatar_url" :src="'/assets/images/avatar/' + c.avatar_url" :alt="c.full_name"
+                    class="w-12 h-12 rounded-full object-cover border-2 border-gray-200">
                 </template>
                 <template x-if="!c.avatar_url">
                   <div
@@ -128,6 +128,7 @@ $items = $items ?? [];
       </table>
     </div>
   </div>
+
   <!-- Pagination -->
   <div class="flex items-center justify-center mt-4 px-4 gap-6">
     <div class="text-sm text-slate-600">
@@ -156,10 +157,11 @@ $items = $items ?? [];
       </div>
     </div>
   </div>
+
   <!-- MODAL: Create -->
-  <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openAdd" x-transition.opacity
+  <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openAdd" x-transition.opacity
     style="display:none">
-    <div class="bg-white w-full max-w-2xl rounded-xl shadow" @click.outside="openAdd=false">
+    <div class="bg-white w-full max-w-2xl rounded-xl shadow animate__animated animate__zoomIn animate__faster" @click.outside="openAdd=false">
       <div class="px-5 py-3 border-b flex justify-center items-center relative">
         <h3 class="font-semibold text-2xl text-[#002975]">Thêm khách hàng</h3>
         <button class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
@@ -177,10 +179,11 @@ $items = $items ?? [];
       </form>
     </div>
   </div>
+
   <!-- MODAL: Edit -->
-  <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openEdit"
+  <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openEdit"
     x-transition.opacity style="display:none">
-    <div class="bg-white w-full max-w-2xl rounded-xl shadow" @click.outside="openEdit=false">
+    <div class="bg-white w-full max-w-2xl rounded-xl shadow animate__animated animate__zoomIn animate__faster" @click.outside="openEdit=false">
       <div class="px-5 py-3 border-b flex justify-center items-center relative">
         <h3 class="font-semibold text-2xl text-[#002975]">Sửa khách hàng</h3>
         <button class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>
@@ -198,9 +201,9 @@ $items = $items ?? [];
   </div>
 
   <!-- MODAL: Đổi mật khẩu -->
-  <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openChangePassword"
+  <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openChangePassword"
     x-transition.opacity style="display:none">
-    <div class="bg-white w-full max-w-md rounded-xl shadow" @click.outside="openChangePassword=false">
+    <div class="bg-white w-full max-w-md rounded-xl shadow animate__animated animate__zoomIn animate__faster" @click.outside="openChangePassword=false">
       <div class="px-5 py-3 border-b flex justify-center items-center relative">
         <h3 class="font-semibold text-2xl text-[#002975]">Đổi mật khẩu</h3>
         <button class="text-slate-500 absolute right-5" @click="openChangePassword=false">✕</button>
@@ -252,9 +255,9 @@ $items = $items ?? [];
   </div>
 
   <!-- Modal xem địa chỉ -->
-  <div x-show="openAddress" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+  <div x-show="openAddress" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate__animated animate__fadeIn animate__faster"
     @click.self="openAddress = false" x-cloak>
-    <div class="bg-white rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto" @click.stop>
+    <div class="bg-white rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto animate__animated animate__zoomIn animate__faster" @click.stop>
       <div class="px-5 pb-3 border-b flex justify-center items-center relative">
         <h3 class="font-semibold text-2xl text-[#002975]">Địa chỉ của khách hàng <span
             x-text="addressCustomerName"></span>
@@ -387,6 +390,13 @@ $items = $items ?? [];
         password_confirm: false
       },
       openChangePassword: false,
+      formChangePassword: { user_id: null, password: '', password_confirm: '' },
+      showChangePassword: false,
+      showChangePasswordConfirm: false,
+      changePasswordErrors: {},
+      changePasswordTouched: false,
+      showPassword: false,
+      showPasswordConfirm: false,
       openAddress: false,
       addresses: [],
       loadingAddress: false,
@@ -424,12 +434,12 @@ $items = $items ?? [];
         created_at_value: '',
         created_at_from: '',
         created_at_to: '',
-        created_by_name: '',
+        created_by: '',
         updated_at_type: '',
         updated_at_value: '',
         updated_at_from: '',
         updated_at_to: '',
-        updated_by_name: ''
+        updated_by: ''
       },
 
       formatDate(d) {
@@ -500,63 +510,106 @@ $items = $items ?? [];
         const parts = dateStr.split(/[-/\s]/);
         if (parts.length >= 3) {
           if (parts[0].length === 4) return dateStr.split(' ')[0];
-          if (parts[0].length <= 2) return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+          if (parts[0].length <= 2) return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
         }
         return dateStr.split(' ')[0];
       },
+      // ===== helper riêng cho date filter =====
+      applyDateFilter(val, type, value, from, to) {
+        if (!val) return true;
+        if (!type) return true;
+
+        const normalizeDate = (dateStr) => {
+          if (!dateStr) return null;
+          const d = new Date(dateStr);
+          if (isNaN(d.getTime())) return null;
+          return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        };
+
+        const d = normalizeDate(val);
+        if (!d) return true;
+
+        if (type === 'eq') {
+          if (!value) return true;
+          const compareDate = normalizeDate(value);
+          return compareDate ? d.getTime() === compareDate.getTime() : true;
+        }
+
+        if (type === 'between') {
+          if (!from || !to) return true;
+          const fromDate = normalizeDate(from);
+          const toDate = normalizeDate(to);
+          return fromDate && toDate ? (d >= fromDate && d <= toDate) : true;
+        }
+
+        if (type === 'lt') {
+          if (!value) return true;
+          const compareDate = normalizeDate(value);
+          return compareDate ? d < compareDate : true;
+        }
+
+        if (type === 'gt') {
+          if (!value) return true;
+          const compareDate = normalizeDate(value);
+          return compareDate ? d > compareDate : true;
+        }
+
+        if (type === 'lte') {
+          if (!value) return true;
+          const compareDate = normalizeDate(value);
+          return compareDate ? d <= compareDate : true;
+        }
+
+        if (type === 'gte') {
+          if (!value) return true;
+          const compareDate = normalizeDate(value);
+          return compareDate ? d >= compareDate : true;
+        }
+
+        return true;
+      },
+
       filtered() {
-        let data = this.items;
-        if (this.filters.username) data = data.filter(x => (x.username || '').toLowerCase().includes(this.filters.username.toLowerCase()));
-        if (this.filters.full_name) data = data.filter(x => (x.full_name || '').toLowerCase().includes(this.filters.full_name.toLowerCase()));
-        if (this.filters.email) data = data.filter(x => (x.email || '').toLowerCase().includes(this.filters.email.toLowerCase()));
-        if (this.filters.phone) data = data.filter(x => (x.phone || '').toLowerCase().includes(this.filters.phone.toLowerCase()));
-        if (this.filters.gender) data = data.filter(x => (x.gender || '').toLowerCase().includes(this.filters.gender.toLowerCase()));
-        if (this.filters.date_of_birth) data = data.filter(x => (x.date_of_birth || '').includes(this.filters.date_of_birth));
-        if (this.filters.is_active !== '' && this.filters.is_active !== undefined) {
-          data = data.filter(x => String(x.is_active) === String(this.filters.is_active));
-        }
-        if (this.filters.created_by_name) data = data.filter(x => (x.created_by_name || '').toLowerCase().includes(this.filters.created_by_name.toLowerCase()));
-        if (this.filters.updated_by_name) data = data.filter(x => (x.updated_by_name || '').toLowerCase().includes(this.filters.updated_by_name.toLowerCase()));
-        
-        // Filter created_at
-        if (this.filters.created_at_value && this.filters.created_at_type === 'eq') {
-          data = data.filter(x => this.normalizeDateStr(x.created_at) === this.normalizeDateStr(this.filters.created_at_value));
-        }
-        if (this.filters.created_at_from && this.filters.created_at_to && this.filters.created_at_type === 'between') {
-          data = data.filter(x => {
-            const d = this.normalizeDateStr(x.created_at);
-            return d >= this.normalizeDateStr(this.filters.created_at_from) && d <= this.normalizeDateStr(this.filters.created_at_to);
-          });
-        }
-        
-        // Filter updated_at
-        if (this.filters.updated_at_value && this.filters.updated_at_type === 'eq') {
-          data = data.filter(x => this.normalizeDateStr(x.updated_at) === this.normalizeDateStr(this.filters.updated_at_value));
-        }
-        if (this.filters.updated_at_from && this.filters.updated_at_to && this.filters.updated_at_type === 'between') {
-          data = data.filter(x => {
-            const d = this.normalizeDateStr(x.updated_at);
-            return d >= this.normalizeDateStr(this.filters.updated_at_from) && d <= this.normalizeDateStr(this.filters.updated_at_to);
-          });
-        }
-        return data;
+        const fn = (v) => (v ?? '').toString().toLowerCase();
+        const f = this.filters;
+
+        return this.items.filter(x => {
+          if (f.username && !fn(x.username).includes(fn(f.username))) return false;
+          if (f.full_name && !fn(x.full_name).includes(fn(f.full_name))) return false;
+          if (f.email && !fn(x.email).includes(fn(f.email))) return false;
+          if (f.phone && !fn(x.phone).includes(fn(f.phone))) return false;
+          if (f.gender && !fn(x.gender).includes(fn(f.gender))) return false;
+          if (f.date_of_birth && !fn(x.date_of_birth).includes(fn(f.date_of_birth))) return false;
+
+          if (f.is_active !== '' && f.is_active !== undefined) {
+            if (String(x.is_active) !== String(f.is_active)) return false;
+          }
+
+          if (f.created_by && !fn(x.created_by_name || '').includes(fn(f.created_by))) return false;
+          if (f.updated_by && !fn(x.updated_by_name || '').includes(fn(f.updated_by))) return false;
+
+          if (!this.applyDateFilter(x.created_at, f.created_at_type, f.created_at_value, f.created_at_from, f.created_at_to)) return false;
+          if (!this.applyDateFilter(x.updated_at, f.updated_at_type, f.updated_at_value, f.updated_at_from, f.updated_at_to)) return false;
+
+          return true;
+        });
       },
       toggleFilter(key) {
-        Object.keys(this.openFilter).forEach(k => this.openFilter[k] = false);
-        this.openFilter[key] = true;
+        Object.keys(this.openFilter).forEach(k => this.openFilter[k] = (k === key ? !this.openFilter[k] : false));
       },
       applyFilter(key) {
         this.openFilter[key] = false;
       },
       resetFilter(key) {
-        if (key in this.filters) {
+        if (['created_at', 'updated_at'].includes(key)) {
+          this.filters[`${key}_type`] = '';
+          this.filters[`${key}_value`] = '';
+          this.filters[`${key}_from`] = '';
+          this.filters[`${key}_to`] = '';
+        } else {
           this.filters[key] = '';
         }
-        ['_type', '_value', '_from', '_to'].forEach(suffix => {
-          const composed = `${key}${suffix}`;
-          if (composed in this.filters) this.filters[composed] = '';
-        });
-        if (key in this.openFilter) this.openFilter[key] = false;
+        this.openFilter[key] = false;
       },
       async init() {
         await this.fetchAll();
@@ -625,7 +678,8 @@ $items = $items ?? [];
             else if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) msg = 'Email không hợp lệ';
             break;
           case 'phone':
-            if (value && !/^0\d{9,10}$/.test(value)) msg = 'Số điện thoại phải bắt đầu bằng số 0 và có 10-11 chữ số';
+            if (!value) msg = 'Số điện thoại không được để trống';
+            else if (value && !/^0\d{9,10}$/.test(value)) msg = 'Số điện thoại phải bắt đầu bằng số 0 và có 10-11 chữ số';
             break;
           case 'password':
             if (!this.form.id && !value) msg = 'Mật khẩu không được để trống';

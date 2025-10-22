@@ -16,9 +16,9 @@ $products = $products ?? [];
     <!-- Header -->
     <div class="flex items-center justify-between mb-4">
         <h1 class="text-3xl font-bold text-[#002975]">Quản lý lô sản phẩm</h1>
-        <button
+        <!-- <button
             class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
-            @click="openCreate()">+ Thêm lô</button>
+            @click="openCreate()">+ Thêm lô</button> -->
     </div>
 
     <!-- Table -->
@@ -27,9 +27,10 @@ $products = $products ?? [];
             <table style="width:100%; min-width:1250px; border-collapse:collapse;">
                 <thead>
                     <tr class="bg-gray-50 text-slate-600">
-                        <th class="py-2 px-4 whitespace-nowrap text-center">Thao tác</th>
+                        <!-- <th class="py-2 px-4 whitespace-nowrap text-center">Thao tác</th> -->
                         <?= textFilterPopover('product_name', 'Sản phẩm') ?>
                         <?= textFilterPopover('batch_code', 'Mã lô') ?>
+                        <?= textFilterPopover('mfg_date', 'Ngày sản xuất') ?>
                         <?= textFilterPopover('exp_date', 'HSD') ?>
                         <?= numberFilterPopover('current_qty', 'Tồn hiện tại') ?>
                         <?= numberFilterPopover('unit_cost', 'Giá nhập') ?>
@@ -51,23 +52,19 @@ $products = $products ?? [];
                                         class="p-2 rounded hover:bg-gray-100 text-[#002975]">Xóa</button>
                                 </template>
                             </td> -->
-                            <td class="py-2 px-4 text-center space-x-2">
-                                <!-- Nếu còn tồn kho (current_qty > 0) -->
+                            <!-- <td class="py-2 px-4 text-center space-x-2">
                                 <template x-if="b.current_qty > 0">
                                     <span class="text-slate-400 text-sm" title="Không thể xóa lô còn tồn">—</span>
                                 </template>
 
-                                <!-- Nếu hết tồn kho (current_qty == 0) -->
                                 <template x-if="b.current_qty == 0">
                                     <div class="inline-flex space-x-2">
-                                        <!-- Nút sửa -->
                                         <button @click="openEdit(b)"
                                             class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
                                             title="Sửa">
                                             <i class="fa-solid fa-pen"></i>
                                         </button>
 
-                                        <!-- Nút xóa -->
                                         <button @click="remove(b.id)"
                                             class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
                                             title="Xóa">
@@ -75,10 +72,12 @@ $products = $products ?? [];
                                         </button>
                                     </div>
                                 </template>
-                            </td>
+                            </td> -->
 
                             <td class="py-2 px-4" x-text="b.product_name || b.product_sku"></td>
                             <td class="py-2 px-4" x-text="b.batch_code"></td>
+                            <td class="py-2 px-4" :class="(b.mfg_date || '—') === '—' ? 'text-center' : 'text-right'"
+                                x-text="b.mfg_date || '—'"></td>
                             <td class="py-2 px-4" :class="(b.exp_date || '—') === '—' ? 'text-center' : 'text-right'"
                                 x-text="b.exp_date || '—'"></td>
                             <td class="py-2 px-4 text-right" x-text="b.current_qty"></td>
@@ -101,9 +100,9 @@ $products = $products ?? [];
         </div>
 
         <!-- Modal Create/Edit -->
-        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openForm"
+        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openForm"
             x-transition.opacity style="display:none">
-            <div class="bg-white w-full max-w-2xl rounded-xl shadow" @click.outside="openForm=false">
+            <div class="bg-white w-full max-w-2xl rounded-xl shadow animate__animated animate__zoomIn animate__faster" @click.outside="openForm=false">
                 <div class="px-5 py-3 border-b flex justify-center items-center relative">
                     <h3 class="font-semibold text-2xl text-[#002975]" x-text="form.id? 'Sửa lô':'Thêm lô'"></h3>
                     <button class="text-slate-500 absolute right-5" @click="openForm=false">✕</button>
@@ -196,6 +195,9 @@ $products = $products ?? [];
                 }
                 if (this.filters.batch_code) {
                     data = data.filter(b => (b.batch_code || '').toLowerCase().includes(this.filters.batch_code.toLowerCase()));
+                }
+                if (this.filters.mfg_date) {
+                    data = data.filter(b => (b.mfg_date || '').toLowerCase().includes(this.filters.mfg_date.toLowerCase()));
                 }
                 if (this.filters.exp_date) {
                     data = data.filter(b => (b.exp_date || '').toLowerCase().includes(this.filters.exp_date.toLowerCase()));

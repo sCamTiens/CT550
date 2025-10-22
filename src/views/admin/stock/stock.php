@@ -51,6 +51,7 @@ $items = $items ?? [];
       </table>
     </div>
   </div>
+  
   <!-- Pagination -->
   <div class="flex items-center justify-center mt-4 px-4 gap-6">
     <div class="text-sm text-slate-600">
@@ -106,49 +107,106 @@ $items = $items ?? [];
       },
       filters: {},
       openFilter: {},
+      
+      // ===== helper riêng cho date filter =====
+      applyDateFilter(val, type, value, from, to) {
+        if (!val) return true;
+        if (!type) return true;
+        
+        const normalizeDate = (dateStr) => {
+          if (!dateStr) return null;
+          const d = new Date(dateStr);
+          if (isNaN(d.getTime())) return null;
+          return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        };
+        
+        const d = normalizeDate(val);
+        if (!d) return true;
+        
+        if (type === 'eq') {
+          if (!value) return true;
+          const compareDate = normalizeDate(value);
+          return compareDate ? d.getTime() === compareDate.getTime() : true;
+        }
+        
+        if (type === 'between') {
+          if (!from || !to) return true;
+          const fromDate = normalizeDate(from);
+          const toDate = normalizeDate(to);
+          return fromDate && toDate ? (d >= fromDate && d <= toDate) : true;
+        }
+        
+        if (type === 'lt') {
+          if (!value) return true;
+          const compareDate = normalizeDate(value);
+          return compareDate ? d < compareDate : true;
+        }
+        
+        if (type === 'gt') {
+          if (!value) return true;
+          const compareDate = normalizeDate(value);
+          return compareDate ? d > compareDate : true;
+        }
+        
+        if (type === 'lte') {
+          if (!value) return true;
+          const compareDate = normalizeDate(value);
+          return compareDate ? d <= compareDate : true;
+        }
+        
+        if (type === 'gte') {
+          if (!value) return true;
+          const compareDate = normalizeDate(value);
+          return compareDate ? d >= compareDate : true;
+        }
+        
+        return true;
+      },
+      
       filtered() {
-        let data = this.items;
-        if (this.filters.product_sku) {
-          data = data.filter(s => (s.product_sku || '').toLowerCase().includes(this.filters.product_sku.toLowerCase()));
-        }
-        if (this.filters.product_name) {
-          data = data.filter(s => (s.product_name || '').toLowerCase().includes(this.filters.product_name.toLowerCase()));
-        }
-        if (this.filters.unit_name) {
-          data = data.filter(s => (s.unit_name || '').toLowerCase().includes(this.filters.unit_name.toLowerCase()));
-        }
-        if (this.filters.qty) {
-          const val = Number(this.filters.qty);
-          if (!isNaN(val)) data = data.filter(s => Number(s.qty) === val);
-        }
-        if (this.filters.min_qty) {
-          const val = Number(this.filters.min_qty);
-          if (!isNaN(val)) data = data.filter(s => Number(s.min_qty) === val);
-        }
-        if (this.filters.max_qty) {
-          const val = Number(this.filters.max_qty);
-          if (!isNaN(val)) data = data.filter(s => Number(s.max_qty) === val);
-        }
-        // lọc ngày cập nhật
-        if (this.filters.updated_at_value && this.filters.updated_at_type === 'eq') {
-          data = data.filter(s => (s.updated_at || '').startsWith(this.filters.updated_at_value));
-        }
-        if (this.filters.updated_at_from && this.filters.updated_at_to && this.filters.updated_at_type === 'between') {
-          data = data.filter(s => s.updated_at >= this.filters.updated_at_from && s.updated_at <= this.filters.updated_at_to);
-        }
-        return data;
+        const fn = (v) => (v ?? '').toString().toLowerCase();
+        const f = this.filters;
+        
+        return this.items.filter(s => {
+          if (f.product_sku && !fn(s.product_sku).includes(fn(f.product_sku))) return false;
+          if (f.product_name && !fn(s.product_name).includes(fn(f.product_name))) return false;
+          if (f.unit_name && !fn(s.unit_name).includes(fn(f.unit_name))) return false;
+          
+          if (f.qty !== '' && f.qty !== null) {
+            const val = Number(f.qty);
+            if (!isNaN(val) && Number(s.qty) !== val) return false;
+          }
+          
+          if (f.min_qty !== '' && f.min_qty !== null) {
+            const val = Number(f.min_qty);
+            if (!isNaN(val) && Number(s.min_qty) !== val) return false;
+          }
+          
+          if (f.max_qty !== '' && f.max_qty !== null) {
+            const val = Number(f.max_qty);
+            if (!isNaN(val) && Number(s.max_qty) !== val) return false;
+          }
+          
+          if (!this.applyDateFilter(s.updated_at, f.updated_at_type, f.updated_at_value, f.updated_at_from, f.updated_at_to)) return false;
+          
+          return true;
+        });
       },
       toggleFilter(key) {
-        for (const k in this.openFilter) this.openFilter[k] = false;
-        this.openFilter[key] = true;
+        Object.keys(this.openFilter).forEach(k => this.openFilter[k] = (k === key ? !this.openFilter[k] : false));
       },
-      applyFilter(key) { this.openFilter[key] = false; },
+      applyFilter(key) { 
+        this.openFilter[key] = false; 
+      },
       resetFilter(key) {
-        this.filters[key] = '';
-        this.filters[key + '_type'] = '';
-        this.filters[key + '_value'] = '';
-        this.filters[key + '_from'] = '';
-        this.filters[key + '_to'] = '';
+        if (['created_at', 'updated_at'].includes(key)) {
+          this.filters[`${key}_type`] = '';
+          this.filters[`${key}_value`] = '';
+          this.filters[`${key}_from`] = '';
+          this.filters[`${key}_to`] = '';
+        } else {
+          this.filters[key] = '';
+        }
         this.openFilter[key] = false;
       },
       async init() {

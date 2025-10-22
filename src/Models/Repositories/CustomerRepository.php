@@ -49,6 +49,15 @@ class CustomerRepository
         try {
             $pdo = DB::pdo();
             $pdo->beginTransaction();
+            
+            $email = ($data['email'] ?? '') !== '' ? $data['email'] : null;
+            $phone = ($data['phone'] ?? '') !== '' ? $data['phone'] : null;
+            
+            // Kiểm tra trùng email/phone trước khi insert
+            if ($err = $this->checkDuplicateContact($email, $phone)) {
+                $pdo->rollBack();
+                return $err;
+            }
 
             $sql = "INSERT INTO {$this->userTable}
                     (username, password_hash, full_name, email, phone, gender, date_of_birth, is_active, role_id, created_by, updated_by, force_change_password, is_deleted)
@@ -66,8 +75,8 @@ class CustomerRepository
                 trim($data['username'] ?? ''),
                 $passwordHash,
                 trim($data['full_name'] ?? ''),
-                ($data['email'] ?? '') !== '' ? $data['email'] : null,
-                ($data['phone'] ?? '') !== '' ? $data['phone'] : null,
+                $email,
+                $phone,
                 ($data['gender'] ?? '') !== '' ? $data['gender'] : null,
                 $dateOfBirth,
                 isset($data['is_active']) ? (int) $data['is_active'] : 1,
@@ -104,10 +113,49 @@ class CustomerRepository
             if (preg_match('/(email|users\.email)/', $msg)) {
                 return 'Email đã tồn tại trong hệ thống';
             }
+            if (preg_match('/(phone|users\.phone)/', $msg)) {
+                return 'Số điện thoại đã tồn tại trong hệ thống';
+            }
 
-            throw $e; // nếu không phải lỗi username/email thì ném tiếp
+            throw $e; // nếu không phải lỗi username/email/phone thì ném tiếp
         }
 
+    }
+    
+    /** Kiểm tra email hoặc phone đã tồn tại chưa (trừ user hiện tại) */
+    private function checkDuplicateContact(string|null $email, string|null $phone, int|string|null $excludeUserId = null): string|false
+    {
+        // Kiểm tra email
+        if (!empty($email)) {
+            $sql = "SELECT id FROM {$this->userTable} WHERE email = ? AND is_deleted = 0";
+            $params = [$email];
+            if ($excludeUserId) {
+                $sql .= " AND id != ?";
+                $params[] = $excludeUserId;
+            }
+            $stmt = DB::pdo()->prepare($sql);
+            $stmt->execute($params);
+            if ($stmt->fetch()) {
+                return 'Email đã tồn tại trong hệ thống';
+            }
+        }
+        
+        // Kiểm tra phone
+        if (!empty($phone)) {
+            $sql = "SELECT id FROM {$this->userTable} WHERE phone = ? AND is_deleted = 0";
+            $params = [$phone];
+            if ($excludeUserId) {
+                $sql .= " AND id != ?";
+                $params[] = $excludeUserId;
+            }
+            $stmt = DB::pdo()->prepare($sql);
+            $stmt->execute($params);
+            if ($stmt->fetch()) {
+                return 'Số điện thoại đã tồn tại trong hệ thống';
+            }
+        }
+        
+        return false;
     }
 
     /**
@@ -129,6 +177,13 @@ class CustomerRepository
                 'date_of_birth' => $beforeData['date_of_birth'] ?? null,
                 'is_active' => $beforeData['is_active'] ?? null
             ];
+        }
+        
+        // Kiểm tra trùng email/phone (loại trừ user hiện tại)
+        $email = ($data['email'] ?? '') !== '' ? $data['email'] : null;
+        $phone = ($data['phone'] ?? '') !== '' ? $data['phone'] : null;
+        if ($err = $this->checkDuplicateContact($email, $phone, $id)) {
+            return $err;
         }
         
         try {

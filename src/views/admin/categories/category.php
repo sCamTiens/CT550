@@ -106,9 +106,9 @@ $items = $items ?? [];
     </div>
   </div>
   <!-- MODAL: Create -->
-  <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openAdd" x-transition.opacity
+  <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openAdd" x-transition.opacity
     style="display:none">
-    <div class="bg-white w-full max-w-3xl rounded-xl shadow" @click.outside="openAdd=false">
+    <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster" @click.outside="openAdd=false">
       <div class="px-5 py-3 border-b flex justify-center items-center relative">
         <h3 class="font-semibold text-2xl text-[#002975]">Thêm loại sản phẩm</h3>
         <button class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
@@ -127,9 +127,9 @@ $items = $items ?? [];
   </div>
 
   <!-- MODAL: Edit -->
-  <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openEdit"
+  <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openEdit"
     x-transition.opacity style="display:none">
-    <div class="bg-white w-full max-w-3xl rounded-xl shadow" @click.outside="openEdit=false">
+    <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster" @click.outside="openEdit=false">
       <div class="px-5 py-3 border-b flex justify-center items-center relative">
         <h3 class="font-semibold text-2xl text-[#002975]">Sửa loại sản phẩm</h3>
         <button class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>
@@ -149,8 +149,7 @@ $items = $items ?? [];
   <!-- Toast lỗi nổi -->
   <div id="toast-container" class="z-[60]"></div>
 
-
-
+  <!-- Pagination -->
   <div class="flex items-center justify-center mt-4 px-4 gap-6">
     <div class="text-sm text-slate-600">
       Tổng cộng <span x-text="filtered().length"></span> bản ghi
@@ -246,7 +245,9 @@ $items = $items ?? [];
         sort: '',
         status: '',
         created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
+        created_by: '',
         updated_at_type: '', updated_at_value: '', updated_at_from: '', updated_at_to: '',
+        updated_by: '',
       },
 
       openFilter: {
@@ -260,7 +261,11 @@ $items = $items ?? [];
       toggleFilter(key) {
         Object.keys(this.openFilter).forEach(k => this.openFilter[k] = (k === key ? !this.openFilter[k] : false));
       },
-      applyFilter(key) { this.openFilter[key] = false; },
+      applyFilter(key) { 
+        // Chỉ đóng popup, không reload trang
+        this.openFilter[key] = false; 
+      },
+
       resetFilter(key) {
         if (['created_at', 'updated_at'].includes(key)) {
           this.filters[`${key}_type`] = '';
@@ -335,13 +340,59 @@ $items = $items ?? [];
       // ===== helper riêng cho date filter =====
       applyDateFilter(val, type, value, from, to) {
         if (!val) return true;
-        const d = new Date(val);
-        if (type === 'eq' && value) return d.toDateString() === new Date(value).toDateString();
-        if (type === 'between' && from && to) return d >= new Date(from) && d <= new Date(to);
-        if (type === 'lt' && value) return d < new Date(value);
-        if (type === 'gt' && value) return d > new Date(value);
-        if (type === 'lte' && value) return d <= new Date(value);
-        if (type === 'gte' && value) return d >= new Date(value);
+        if (!type) return true; // Không có kiểu lọc
+        
+        // Chuẩn hóa ngày về dạng YYYY-MM-DD (bỏ thời gian)
+        const normalizeDate = (dateStr) => {
+          if (!dateStr) return null;
+          const d = new Date(dateStr);
+          if (isNaN(d.getTime())) return null;
+          return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        };
+        
+        const d = normalizeDate(val);
+        if (!d) return true;
+        
+        // Debug - uncomment để kiểm tra
+        // console.log('applyDateFilter:', { val, type, value, from, to, d, normalizedValue: normalizeDate(value) });
+        
+        if (type === 'eq') {
+          if (!value) return true;
+          const compareDate = normalizeDate(value);
+          return compareDate ? d.getTime() === compareDate.getTime() : true;
+        }
+        
+        if (type === 'between') {
+          if (!from || !to) return true;
+          const fromDate = normalizeDate(from);
+          const toDate = normalizeDate(to);
+          return fromDate && toDate ? (d >= fromDate && d <= toDate) : true;
+        }
+        
+        if (type === 'lt') {
+          if (!value) return true;
+          const compareDate = normalizeDate(value);
+          return compareDate ? d < compareDate : true;
+        }
+        
+        if (type === 'gt') {
+          if (!value) return true;
+          const compareDate = normalizeDate(value);
+          return compareDate ? d > compareDate : true;
+        }
+        
+        if (type === 'lte') {
+          if (!value) return true;
+          const compareDate = normalizeDate(value);
+          return compareDate ? d <= compareDate : true;
+        }
+        
+        if (type === 'gte') {
+          if (!value) return true;
+          const compareDate = normalizeDate(value);
+          return compareDate ? d >= compareDate : true;
+        }
+        
         return true;
       },
 
@@ -361,6 +412,8 @@ $items = $items ?? [];
           if (f.status !== '') {
             if (Boolean(c.is_active) !== (f.status === '1')) return false;
           }
+          if (f.created_by && !fn(c.created_by_name || '').includes(fn(f.created_by))) return false;
+          if (f.updated_by && !fn(c.updated_by_name || '').includes(fn(f.updated_by))) return false;
           if (!this.applyDateFilter(c.created_at, f.created_at_type, f.created_at_value, f.created_at_from, f.created_at_to)) return false;
           if (!this.applyDateFilter(c.updated_at, f.updated_at_type, f.updated_at_value, f.updated_at_from, f.updated_at_to)) return false;
           return true;

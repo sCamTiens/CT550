@@ -97,6 +97,18 @@ class OrderRepository
     {
         $pdo = DB::pdo();
         try {
+            error_log("=== OrderRepository::create START ===");
+            error_log("Data received: " . json_encode($data, JSON_UNESCAPED_UNICODE));
+            error_log("Current user: " . $currentUser);
+            
+            // Validate required fields
+            if (empty($data['code'])) {
+                throw new \Exception('Mã đơn hàng không được để trống');
+            }
+            if (empty($data['items']) || !is_array($data['items'])) {
+                throw new \Exception('Đơn hàng phải có ít nhất 1 sản phẩm');
+            }
+            
             $pdo->beginTransaction();
 
             // Map payment method
@@ -106,10 +118,12 @@ class OrderRepository
                 'bank_transfer' => 'Chuyển khoản'
             ];
             $paymentMethod = $paymentMethodMap[$data['payment_method'] ?? 'cash'] ?? 'Tiền mặt';
+            error_log("Payment method: " . $paymentMethod);
 
             // Tạo payment nếu cần
             $paymentId = null;
             if (!empty($data['payment_method'])) {
+                error_log("Creating payment record...");
                 $stmtPay = $pdo->prepare("
                     INSERT INTO payments (method, amount, created_at)
                     VALUES (:method, :amount, NOW())
@@ -119,27 +133,32 @@ class OrderRepository
                     ':amount' => $data['total_amount'] ?? 0,
                 ]);
                 $paymentId = (int) $pdo->lastInsertId();
+                error_log("Payment ID created: " . $paymentId);
             }
 
             // Xử lý user_id - cho phép null (khách vãng lai)
             // Frontend có thể gửi customer_id hoặc payer_user_id
             $customerId = $data['customer_id'] ?? $data['payer_user_id'] ?? null;
+            error_log("Customer ID: " . ($customerId ?? 'NULL'));
 
             // Tạo đơn hàng - SỬ DỤNG ĐÚNG TÊN CỘT DATABASE
-            $stmt = $pdo->prepare("
+            $sql = "
                 INSERT INTO orders
                 (code, user_id, order_type, status, payment_id, payment_method, payment_status,
                 subtotal, discount_total, shipping_fee, cod_amount, grand_total,
                 coupon_code, shipping_address_id, note,
-                created_by, updated_by, created_at, updated_at)
+                created_by, created_at)
                 VALUES
                 (:code, :user_id, :order_type, :status, :payment_id, :payment_method, :payment_status,
                 :subtotal, :discount_total, :shipping_fee, :cod_amount, :grand_total,
                 :coupon_code, :shipping_address_id, :note,
-                :created_by, :updated_by, NOW(), NOW())
-            ");
-
-            $stmt->execute([
+                :created_by, NOW())
+            ";
+            
+            error_log("SQL: " . $sql);
+            $stmt = $pdo->prepare($sql);
+            
+            $params = [
                 ':code' => $data['code'],
                 ':user_id' => $customerId,
                 ':order_type' => 'Offline',
@@ -158,10 +177,20 @@ class OrderRepository
                 ':shipping_address_id' => null,
                 ':note' => $data['note'] ?? null,
                 ':created_by' => $currentUser,
-                ':updated_by' => $currentUser,
-            ]);
-
-            $id = (int) $pdo->lastInsertId();
+            ];
+            
+            error_log("Executing order INSERT with params: " . json_encode($params, JSON_UNESCAPED_UNICODE));
+            
+            try {
+                $stmt->execute($params);
+                $id = (int) $pdo->lastInsertId();
+                error_log("Order created with ID: " . $id);
+            } catch (\PDOException $e) {
+                error_log("PDO ERROR in INSERT: " . $e->getMessage());
+                error_log("Error Code: " . $e->getCode());
+                error_log("SQL State: " . ($e->errorInfo[0] ?? 'unknown'));
+                throw $e;
+            }
 
             // Kiểm tra tồn kho trước khi lưu order items
             if (!empty($data['items']) && is_array($data['items'])) {
@@ -249,44 +278,138 @@ class OrderRepository
             }
 
             // Tự động tạo phiếu thu
+            error_log("Creating receipt voucher...");
             $receiptCode = $this->generateReceiptCode($pdo);
-            $stmtReceipt = $pdo->prepare("
-                INSERT INTO receipt_vouchers
-                (code, payer_user_id, order_id, method, txn_ref, received_at, amount, received_by, note, bank_time, created_by, updated_by, created_at, updated_at)
-                VALUES
-                (:code, :payer_user_id, :order_id, :method, :txn_ref, NOW(), :amount, :received_by, :note, NULL, :created_by, :updated_by, NOW(), NOW())
-            ");
-            $stmtReceipt->execute([
-                ':code' => $receiptCode,
-                ':payer_user_id' => $customerId,
-                ':order_id' => $id,
-                ':method' => $paymentMethod,
-                ':txn_ref' => $data['code'],
-                ':amount' => $data['total_amount'] ?? 0,
-                ':received_by' => $currentUser,
-                ':note' => 'Phiếu thu tự động từ đơn hàng ' . $data['code'],
-                ':created_by' => $currentUser,
-                ':updated_by' => $currentUser,
-            ]);
+            error_log("Receipt code: " . $receiptCode);
+            
+            try {
+                $stmtReceipt = $pdo->prepare("
+                    INSERT INTO receipt_vouchers
+                    (code, payer_user_id, order_id, method, txn_ref, received_at, amount, received_by, note, bank_time, created_by, created_at)
+                    VALUES
+                    (:code, :payer_user_id, :order_id, :method, :txn_ref, NOW(), :amount, :received_by, :note, NULL, :created_by, NOW())
+                ");
+                $stmtReceipt->execute([
+                    ':code' => $receiptCode,
+                    ':payer_user_id' => $customerId,
+                    ':order_id' => $id,
+                    ':method' => $paymentMethod,
+                    ':txn_ref' => $data['code'],
+                    ':amount' => $data['total_amount'] ?? 0,
+                    ':received_by' => $currentUser,
+                    ':note' => 'Phiếu thu tự động từ đơn hàng ' . $data['code'],
+                    ':created_by' => $currentUser,
+                ]);
+                error_log("Receipt voucher created successfully");
+            } catch (\PDOException $e) {
+                error_log("PDO ERROR creating receipt: " . $e->getMessage());
+                throw $e;
+            }
 
             // Tự động tạo phiếu xuất kho
+            error_log("Creating stock out...");
             $stockOutCode = $this->generateStockOutCode($pdo);
-            $stmtStockOut = $pdo->prepare("
-                INSERT INTO stock_outs
-                (code, type, order_id, status, out_date, total_amount, note, created_by, updated_by, created_at, updated_at)
-                VALUES
-                (:code, 'sale', :order_id, 'completed', NOW(), :total_amount, :note, :created_by, :updated_by, NOW(), NOW())
-            ");
-            $stmtStockOut->execute([
-                ':code' => $stockOutCode,
-                ':order_id' => $id,
-                ':total_amount' => $data['total_amount'] ?? 0,
-                ':note' => 'Phiếu xuất kho tự động từ đơn hàng ' . $data['code'],
-                ':created_by' => $currentUser,
-                ':updated_by' => $currentUser,
-            ]);
+            error_log("Stock out code: " . $stockOutCode);
+            
+            try {
+                $stmtStockOut = $pdo->prepare("
+                    INSERT INTO stock_outs
+                    (code, type, order_id, status, out_date, total_amount, note, created_by, created_at)
+                    VALUES
+                    (:code, 'sale', :order_id, 'completed', NOW(), :total_amount, :note, :created_by, NOW())
+                ");
+                $stmtStockOut->execute([
+                    ':code' => $stockOutCode,
+                    ':order_id' => $id,
+                    ':total_amount' => $data['total_amount'] ?? 0,
+                    ':note' => 'Phiếu xuất kho tự động từ đơn hàng ' . $data['code'],
+                    ':created_by' => $currentUser,
+                ]);
+                $stockOutId = (int) $pdo->lastInsertId();
+                error_log("Stock out created with ID: " . $stockOutId);
+
+                // Thêm chi tiết phiếu xuất kho (stock_out_items) với logic FEFO + FIFO
+                if (!empty($data['items']) && is_array($data['items'])) {
+                    $stmtStockOutItem = $pdo->prepare("
+                        INSERT INTO stock_out_items
+                        (stock_out_id, product_id, batch_id, qty, unit_price, total_price, note, created_at)
+                        VALUES
+                        (:stock_out_id, :product_id, :batch_id, :qty, :unit_price, :total_price, :note, NOW())
+                    ");
+
+                    foreach ($data['items'] as $item) {
+                        $productId = $item['product_id'];
+                        $qtyNeeded = $item['qty'];
+                        $unitPrice = $item['unit_price'];
+
+                        error_log("Processing stock-out item for product_id=$productId, qty=$qtyNeeded");
+
+                        // Lấy danh sách lô hàng theo thứ tự ưu tiên:
+                        // 1. Hàng sắp hết hạn (exp_date gần nhất, còn hạn)
+                        // 2. Hàng nhập trước (mfg_date cũ nhất)
+                        // 3. Có tồn kho > 0 (current_qty trong product_batches)
+                        $stmtBatches = $pdo->prepare("
+                            SELECT pb.id, pb.batch_code, pb.mfg_date, pb.exp_date, pb.current_qty
+                            FROM product_batches pb
+                            WHERE pb.product_id = :product_id 
+                            AND pb.current_qty > 0
+                            ORDER BY 
+                                CASE 
+                                    WHEN pb.exp_date IS NOT NULL AND pb.exp_date >= CURDATE() 
+                                    THEN pb.exp_date 
+                                    ELSE '9999-12-31' 
+                                END ASC,
+                                pb.mfg_date ASC,
+                                pb.id ASC
+                        ");
+                        $stmtBatches->execute([':product_id' => $productId]);
+                        $batches = $stmtBatches->fetchAll(\PDO::FETCH_ASSOC);
+
+                        error_log("Found " . count($batches) . " batches for product_id=$productId");
+
+                        $qtyRemaining = $qtyNeeded;
+                        foreach ($batches as $batch) {
+                            if ($qtyRemaining <= 0) break;
+
+                            $batchId = $batch['id'];
+                            $batchCode = $batch['batch_code'];
+                            $currentQty = $batch['current_qty'];
+
+                            // Lấy số lượng từ lô này (không vượt quá tồn kho và số lượng cần)
+                            $qtyFromBatch = min($qtyRemaining, $currentQty);
+                            $totalPrice = $qtyFromBatch * $unitPrice;
+
+                            error_log("Taking $qtyFromBatch from batch_id=$batchId (batch_code=$batchCode, current_qty=$currentQty)");
+
+                            // Thêm vào stock_out_items
+                            $stmtStockOutItem->execute([
+                                ':stock_out_id' => $stockOutId,
+                                ':product_id' => $productId,
+                                ':batch_id' => $batchId,
+                                ':qty' => $qtyFromBatch,
+                                ':unit_price' => $unitPrice,
+                                ':total_price' => $totalPrice,
+                                ':note' => "Lô: $batchCode"
+                            ]);
+
+                            $qtyRemaining -= $qtyFromBatch;
+                        }
+
+                        if ($qtyRemaining > 0) {
+                            error_log("WARNING: Not enough stock for product_id=$productId, remaining=$qtyRemaining");
+                        }
+                    }
+                    error_log("Stock out items created successfully");
+                }
+
+                error_log("Stock out created successfully");
+            } catch (\PDOException $e) {
+                error_log("PDO ERROR creating stock out: " . $e->getMessage());
+                throw $e;
+            }
 
             $pdo->commit();
+            error_log("Transaction committed successfully");
 
             // Log audit
             $this->logCreate('orders', $id, [
@@ -593,7 +716,10 @@ class OrderRepository
     {
         $pdo = DB::pdo();
         $sql = "
-            SELECT oi.*, p.name as product_name, p.sku as product_sku
+            SELECT 
+                oi.*,
+                p.name as product_name, 
+                p.sku as product_sku
             FROM order_items oi
             LEFT JOIN products p ON p.id = oi.product_id
             WHERE oi.order_id = ?

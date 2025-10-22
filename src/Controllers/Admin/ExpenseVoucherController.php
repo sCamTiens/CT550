@@ -36,14 +36,20 @@ class ExpenseVoucherController extends BaseAdminController
         $currentUser = $this->currentUserId();
         try {
             $id = $this->repo->create($data, $currentUser);
+            // Trả về danh sách đầy đủ để cập nhật UI
+            $items = $this->repo->all();
             header('Content-Type: application/json; charset=utf-8');
-            echo json_encode($this->repo->findOne($id), JSON_UNESCAPED_UNICODE);
+            http_response_code(201);
+            echo json_encode(['items' => $items], JSON_UNESCAPED_UNICODE);
             exit;
-        } catch (\PDOException $e) {
+        } catch (\Throwable $e) {
             http_response_code(500);
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
-                'error' => 'Lỗi máy chủ khi tạo phiếu chi'
+                'error' => $e->getMessage(),
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
             ]);
             exit;
         }

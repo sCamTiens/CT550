@@ -81,9 +81,9 @@ $items = $items ?? [];
     </div>
 
     <!-- MODAL: Create -->
-    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openAdd"
+    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openAdd"
         x-transition.opacity style="display:none">
-        <div class="bg-white w-full max-w-3xl rounded-xl shadow" @click.outside="openAdd=false">
+        <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster" @click.outside="openAdd=false">
             <div class="px-5 py-3 border-b flex justify-center items-center relative">
                 <h3 class="font-semibold text-2xl text-[#002975]">Thêm đơn vị tính</h3>
                 <button class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
@@ -103,9 +103,9 @@ $items = $items ?? [];
     </div>
 
     <!-- MODAL: Edit -->
-    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openEdit"
+    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openEdit"
         x-transition.opacity style="display:none">
-        <div class="bg-white w-full max-w-3xl rounded-xl shadow" @click.outside="openEdit=false">
+        <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster" @click.outside="openEdit=false">
             <div class="px-5 py-3 border-b flex justify-between items-center">
                 <h3 class="font-semibold text-2xl text-[#002975]">Sửa đơn vị tính</h3>
                 <button class="text-slate-500" @click="openEdit=false">✕</button>
@@ -272,46 +272,92 @@ $items = $items ?? [];
 
             onNameInput() { if (!this.form.id) this.form.slug = this.slugify(this.form.name); },
 
+            // ===== helper riêng cho date filter =====
+            applyDateFilter(val, type, value, from, to) {
+                if (!val) return true;
+                if (!type) return true;
+                
+                const normalizeDate = (dateStr) => {
+                    if (!dateStr) return null;
+                    const d = new Date(dateStr);
+                    if (isNaN(d.getTime())) return null;
+                    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+                };
+                
+                const d = normalizeDate(val);
+                if (!d) return true;
+                
+                if (type === 'eq') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    return compareDate ? d.getTime() === compareDate.getTime() : true;
+                }
+                
+                if (type === 'between') {
+                    if (!from || !to) return true;
+                    const fromDate = normalizeDate(from);
+                    const toDate = normalizeDate(to);
+                    return fromDate && toDate ? (d >= fromDate && d <= toDate) : true;
+                }
+                
+                if (type === 'lt') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    return compareDate ? d < compareDate : true;
+                }
+                
+                if (type === 'gt') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    return compareDate ? d > compareDate : true;
+                }
+                
+                if (type === 'lte') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    return compareDate ? d <= compareDate : true;
+                }
+                
+                if (type === 'gte') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    return compareDate ? d >= compareDate : true;
+                }
+                
+                return true;
+            },
+
             // Filter logic
             filtered() {
-                let data = this.items;
+                const fn = (v) => (v ?? '').toString().toLowerCase();
                 const f = this.filters;
-
-                if (f.name) data = data.filter(u => (u.name || '').toLowerCase().includes(f.name.toLowerCase()));
-                if (f.slug) data = data.filter(u => (u.slug || '').toLowerCase().includes(f.slug.toLowerCase()));
-                if (f.created_by) data = data.filter(u => (u.created_by_name || '').toLowerCase().includes(f.created_by.toLowerCase()));
-                if (f.updated_by) data = data.filter(u => (u.updated_by_name || '').toLowerCase().includes(f.updated_by.toLowerCase()));
-
-                // ngày tạo
-                if (f.created_at_value && f.created_at_type === 'eq') {
-                    data = data.filter(u => (u.created_at || '').startsWith(f.created_at_value));
-                }
-                if (f.created_at_from && f.created_at_to && f.created_at_type === 'between') {
-                    data = data.filter(u => u.created_at >= f.created_at_from && u.created_at <= f.created_at_to);
-                }
-
-                // ngày cập nhật
-                if (f.updated_at_value && f.updated_at_type === 'eq') {
-                    data = data.filter(u => (u.updated_at || '').startsWith(f.updated_at_value));
-                }
-                if (f.updated_at_from && f.updated_at_to && f.updated_at_type === 'between') {
-                    data = data.filter(u => u.updated_at >= f.updated_at_from && u.updated_at <= f.updated_at_to);
-                }
-
-                return data;
+                
+                return this.items.filter(u => {
+                    if (f.name && !fn(u.name).includes(fn(f.name))) return false;
+                    if (f.slug && !fn(u.slug).includes(fn(f.slug))) return false;
+                    if (f.created_by && !fn(u.created_by_name || '').includes(fn(f.created_by))) return false;
+                    if (f.updated_by && !fn(u.updated_by_name || '').includes(fn(f.updated_by))) return false;
+                    if (!this.applyDateFilter(u.created_at, f.created_at_type, f.created_at_value, f.created_at_from, f.created_at_to)) return false;
+                    if (!this.applyDateFilter(u.updated_at, f.updated_at_type, f.updated_at_value, f.updated_at_from, f.updated_at_to)) return false;
+                    return true;
+                });
             },
 
             toggleFilter(key) {
-                for (const k in this.openFilter) this.openFilter[k] = false;
-                this.openFilter[key] = true;
+                Object.keys(this.openFilter).forEach(k => this.openFilter[k] = (k === key ? !this.openFilter[k] : false));
             },
-            applyFilter(key) { this.openFilter[key] = false; },
+            applyFilter(key) { 
+                this.openFilter[key] = false; 
+            },
             resetFilter(key) {
-                this.filters[key] = '';
-                this.filters[key + '_type'] = '';
-                this.filters[key + '_value'] = '';
-                this.filters[key + '_from'] = '';
-                this.filters[key + '_to'] = '';
+                if (['created_at', 'updated_at'].includes(key)) {
+                    this.filters[`${key}_type`] = '';
+                    this.filters[`${key}_value`] = '';
+                    this.filters[`${key}_from`] = '';
+                    this.filters[`${key}_to`] = '';
+                } else {
+                    this.filters[key] = '';
+                }
                 this.openFilter[key] = false;
             },
 

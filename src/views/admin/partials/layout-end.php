@@ -16,40 +16,76 @@
     window.__initFlatpickr = function (rootEl) {
         if (!window.flatpickr) return;
 
-        rootEl.querySelectorAll('input.flatpickr:not([data-fp])').forEach(el => {
-            flatpickr(el, {
-                altInput: true,
-                altFormat: "d/m/Y",
-                dateFormat: "Y-m-d",
-                locale: "vn",
-                onChange: function (selectedDates, dateStr, instance) {
-                    const parent = instance.input.closest('[x-show]');
-                    if (!parent) return;
+        // Đợi để Alpine.js bind giá trị x-model vào input trước
+        setTimeout(() => {
+            rootEl.querySelectorAll('input.flatpickr:not([data-fp])').forEach(el => {
+                // Lấy thông tin filter key/field
+                const filterKey = el.getAttribute('data-filter-key');
+                const filterField = el.getAttribute('data-filter-field');
+                
+                // Lấy giá trị hiện tại từ Alpine.js
+                let initialValue = '';
+                const alpineEl = el.closest('[x-data]');
+                if (alpineEl && alpineEl._x_dataStack) {
+                    const data = alpineEl._x_dataStack[0];
+                    if (data && data.filters && filterKey && filterField) {
+                        initialValue = data.filters[`${filterKey}_${filterField}`] || '';
+                    }
+                }
 
-                    const fromInput = parent.querySelector('input[x-model*="_from"]');
-                    const toInput = parent.querySelector('input[x-model*="_to"]');
+                // Khởi tạo Flatpickr
+                const fp = flatpickr(el, {
+                    altInput: true,
+                    altFormat: "d/m/Y",
+                    dateFormat: "Y-m-d",
+                    locale: "vn",
+                    defaultDate: initialValue || null,
+                    onChange: function (selectedDates, dateStr, instance) {
+                        // Cập nhật giá trị vào Alpine.js filters
+                        const fKey = instance.input.getAttribute('data-filter-key');
+                        const fField = instance.input.getAttribute('data-filter-field');
+                        
+                        if (fKey && fField) {
+                            const aEl = instance.input.closest('[x-data]');
+                            if (aEl && aEl._x_dataStack) {
+                                const data = aEl._x_dataStack[0];
+                                if (data && data.filters) {
+                                    // Cập nhật giá trị theo format Y-m-d
+                                    data.filters[`${fKey}_${fField}`] = dateStr;
+                                }
+                            }
+                        }
 
-                    if (fromInput && toInput) {
-                        const fromPicker = fromInput._flatpickr;
-                        const toPicker = toInput._flatpickr;
-                        if (fromPicker && toPicker) {
-                            if (fromPicker.selectedDates[0] && toPicker.selectedDates[0]) {
-                                const from = fromPicker.selectedDates[0];
-                                const to = toPicker.selectedDates[0];
-                                if (from > to) toPicker.clear();
-                            }
-                            if (fromPicker.selectedDates[0]) {
-                                toPicker.set('minDate', fromPicker.selectedDates[0]);
-                            }
-                            if (toPicker.selectedDates[0]) {
-                                fromPicker.set('maxDate', toPicker.selectedDates[0]);
+                        const parent = instance.input.closest('[x-show]');
+                        if (!parent) return;
+
+                        const fromInput = parent.querySelector('input[data-filter-field="from"]');
+                        const toInput = parent.querySelector('input[data-filter-field="to"]');
+
+                        if (fromInput && toInput) {
+                            const fromPicker = fromInput._flatpickr;
+                            const toPicker = toInput._flatpickr;
+                            if (fromPicker && toPicker) {
+                                if (fromPicker.selectedDates[0] && toPicker.selectedDates[0]) {
+                                    const from = fromPicker.selectedDates[0];
+                                    const to = toPicker.selectedDates[0];
+                                    if (from > to) toPicker.clear();
+                                }
+                                if (fromPicker.selectedDates[0]) {
+                                    toPicker.set('minDate', fromPicker.selectedDates[0]);
+                                }
+                                if (toPicker.selectedDates[0]) {
+                                    fromPicker.set('maxDate', toPicker.selectedDates[0]);
+                                }
                             }
                         }
                     }
-                }
+                });
+
+                el.setAttribute('data-fp', '1');
+                el._flatpickr = fp;
             });
-            el.setAttribute('data-fp', '1');
-        });
+        }, 150);
     };
 
     // 3. Hàm openFlatpickr (click icon)

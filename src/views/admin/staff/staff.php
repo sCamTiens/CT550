@@ -25,6 +25,7 @@ $items = $items ?? [];
                 <thead>
                     <tr class="bg-gray-50 text-slate-600">
                         <th class="py-2 px-4 text-center">Thao tác</th>
+                        <th class="py-2 px-4 whitespace-nowrap text-center">Ảnh đại diện</th>
                         <?= textFilterPopover('username', 'Tài khoản') ?>
                         <?= textFilterPopover('full_name', 'Họ tên') ?>
                         <?= textFilterPopover('staff_role', 'Vai trò') ?>
@@ -34,9 +35,9 @@ $items = $items ?? [];
                         <?= dateFilterPopover('hired_at', 'Ngày vào làm') ?>
                         <?= textFilterPopover('note', 'Ghi chú') ?>
                         <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
-                        <?= textFilterPopover('created_by_name', 'Người tạo') ?>
+                        <?= textFilterPopover('created_by', 'Người tạo') ?>
                         <?= dateFilterPopover('updated_at', 'Thời gian cập nhật') ?>
-                        <?= textFilterPopover('updated_by_name', 'Người cập nhật') ?>
+                        <?= textFilterPopover('updated_by', 'Người cập nhật') ?>
                     </tr>
                 </thead>
                 <tbody>
@@ -71,6 +72,22 @@ $items = $items ?? [];
                                     </svg>
                                 </button>
                             </td>
+                            <td class="py-2 px-4 text-center">
+                                <div class="flex flex-col items-center gap-1">
+                                    <!-- Hiển thị ảnh nếu có avatar_url -->
+                                    <img x-show="s.avatar_url" :src="'/assets/images/avatar/' + s.avatar_url" :alt="s.full_name"
+                                        class="w-12 h-12 rounded-full object-cover border-2 border-gray-200">
+                                    <!-- Icon mặc định nếu không có avatar_url -->
+                                    <div x-show="!s.avatar_url"
+                                        class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
+                                            viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line uppercase" x-text="s.username"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.full_name"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.staff_role"></td>
@@ -82,7 +99,8 @@ $items = $items ?? [];
                                 <span x-text="s.is_active ? 'Hoạt động' : 'Khóa'"
                                     :class="s.is_active ? 'text-green-600' : 'text-red-600'"></span>
                             </td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="formatDate(s.hired_at) || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-right"
+                                x-text="formatDate(s.hired_at) || '—'"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line"
                                 :class="(s.note || '—') === '—' ? 'text-center' : 'text-right'" x-text="s.note || '—'">
                             </td>
@@ -114,9 +132,9 @@ $items = $items ?? [];
         </div>
     </div>
     <!-- MODAL: Create -->
-    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openAdd"
+    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openAdd"
         x-transition.opacity style="display:none">
-        <div class="bg-white w-full max-w-3xl rounded-xl shadow" @click.outside="openAdd=false">
+        <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster" @click.outside="openAdd=false">
             <div class="px-5 py-3 border-b flex justify-center items-center relative">
                 <h3 class="font-semibold text-2xl text-[#002975]">Thêm nhân viên</h3>
                 <button class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
@@ -135,9 +153,9 @@ $items = $items ?? [];
     </div>
 
     <!-- MODAL: Edit -->
-    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openEdit"
+    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openEdit"
         x-transition.opacity style="display:none">
-        <div class="bg-white w-full max-w-3xl rounded-xl shadow" @click.outside="openEdit=false">
+        <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster" @click.outside="openEdit=false">
             <div class="px-5 py-3 border-b flex justify-center items-center relative">
                 <h3 class="font-semibold text-2xl text-[#002975]">Sửa nhân viên</h3>
                 <button class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>
@@ -155,9 +173,9 @@ $items = $items ?? [];
     </div>
 
     <!-- MODAL: Đổi mật khẩu -->
-    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openChangePassword"
+    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openChangePassword"
         x-transition.opacity style="display:none">
-        <div class="bg-white w-full max-w-md rounded-xl shadow" @click.outside="openChangePassword=false">
+        <div class="bg-white w-full max-w-md rounded-xl shadow animate__animated animate__zoomIn animate__faster" @click.outside="openChangePassword=false">
             <div class="px-5 py-3 border-b flex justify-center items-center relative">
                 <h3 class="font-semibold text-2xl text-[#002975]">Đổi mật khẩu</h3>
                 <button class="text-slate-500 absolute right-5" @click="openChangePassword=false">✕</button>
@@ -216,6 +234,7 @@ $items = $items ?? [];
     <!-- Toast lỗi nổi -->
     <div id="toast-container" class="z-[60]"></div>
 
+    <!-- Pagination -->
     <div class="flex items-center justify-center mt-4 px-4 gap-6">
         <div class="text-sm text-slate-600">
             Tổng cộng <span x-text="filtered().length"></span> bản ghi
@@ -371,7 +390,7 @@ $items = $items ?? [];
             // Filter popover state
             openFilter: {
                 username: false, full_name: false, staff_role: false, email: false, phone: false, is_active: false, hired_at: false, note: false,
-                created_at: false, created_by_name: false, updated_at: false, updated_by_name: false
+                created_at: false, created_by: false, updated_at: false, updated_by: false
             },
             // Filter values
             filters: {
@@ -384,9 +403,9 @@ $items = $items ?? [];
                 hired_at_type: '', hired_at_value: '', hired_at_from: '', hired_at_to: '',
                 note: '',
                 created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
-                created_by_name: '',
+                created_by: '',
                 updated_at_type: '', updated_at_value: '', updated_at_from: '', updated_at_to: '',
-                updated_by_name: ''
+                updated_by: ''
             },
 
             async init() {
@@ -423,7 +442,8 @@ $items = $items ?? [];
                             msg = 'Email không hợp lệ';
                         break;
                     case 'phone':
-                        if (value && !/^0\d{9}$/.test(value))
+                        if (!value) msg = 'Số điện thoại không được để trống';
+                        else if (value && !/^0\d{9}$/.test(value))
                             msg = 'Số điện thoại phải bắt đầu bằng số 0 và có 10 chữ số';
                         break;
                     case 'staff_role':
@@ -457,126 +477,87 @@ $items = $items ?? [];
                 return arr.filter(s => s && s.user_id != null);
             },
 
-            // Hàm chuẩn hóa ngày: chuyển về dạng YYYY-MM-DD
-            normalizeDateStr(dateStr) {
-                if (!dateStr) return '';
-                const s = String(dateStr).trim();
-                // Nếu dạng d/m/Y
-                if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
-                    const [d, m, y] = s.split(/[\s\/]/);
-                    return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+            // Chuẩn hóa ngày cho so sánh (loại bỏ phần giờ)
+            applyDateFilter(val, type, value, from, to) {
+                if (!type) return true; // Không lọc nếu không chọn kiểu
+                const normalizeDate = (d) => {
+                    if (!d) return null;
+                    // Nếu d là dạng d/m/Y => chuyển về Y-m-d
+                    let s = String(d).trim();
+                    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
+                        const [dd, mm, yy] = s.split(/[\s\/]/);
+                        s = `${yy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+                    }
+                    // Nếu có dạng Y-m-d H:i:s => lấy phần ngày
+                    if (/^\d{4}-\d{1,2}-\d{1,2}/.test(s)) {
+                        s = s.substring(0, 10);
+                    }
+                    const parsed = new Date(s);
+                    if (isNaN(parsed)) return null;
+                    // Chỉ lấy phần ngày (không giờ)
+                    return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+                };
+                const itemDate = normalizeDate(val);
+                if (!itemDate) return false;
+                if (type === 'eq') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate.getTime() === compareDate.getTime();
                 }
-                // Nếu dạng Y-m-d hoặc Y-m-d H:i:s
-                if (/^\d{4}-\d{1,2}-\d{1,2}/.test(s)) {
-                    return s.substring(0, 10);
+                if (type === 'between') {
+                    if (!from || !to) return true;
+                    const fromDate = normalizeDate(from);
+                    const toDate = normalizeDate(to);
+                    if (!fromDate || !toDate) return false;
+                    return itemDate >= fromDate && itemDate <= toDate;
                 }
-                return s;
+                if (type === 'lt') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate < compareDate;
+                }
+                if (type === 'gt') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate > compareDate;
+                }
+                if (type === 'lte') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate <= compareDate;
+                }
+                if (type === 'gte') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate >= compareDate;
+                }
+                return true;
             },
 
-            // Filter logic giống productPage
+            // Filter logic
             filtered() {
-                let data = this.items;
+                const fn = (v) => (v ?? '').toString().toLowerCase();
                 const f = this.filters;
-                const fn = v => (v ?? '').toString().toLowerCase();
-                if (f.username) data = data.filter(s => fn(s.username).includes(fn(f.username)));
-                if (f.full_name) data = data.filter(s => fn(s.full_name).includes(fn(f.full_name)));
-                if (f.staff_role) data = data.filter(s => fn(s.staff_role).includes(fn(f.staff_role)));
-                if (f.email) data = data.filter(s => fn(s.email).includes(fn(f.email)));
-                if (f.phone) data = data.filter(s => fn(s.phone).includes(fn(f.phone)));
-                if (f.is_active !== '' && f.is_active !== undefined) data = data.filter(s => String(s.is_active) === String(f.is_active));
-                if (f.note) data = data.filter(s => fn(s.note).includes(fn(f.note)));
-                if (f.created_by_name) data = data.filter(s => fn(s.created_by_name).includes(fn(f.created_by_name)));
-                if (f.updated_by_name) data = data.filter(s => fn(s.updated_by_name).includes(fn(f.updated_by_name)));
-                // Date filter: hired_at
-                if (f.hired_at_type === 'eq' && f.hired_at_value) {
-                    const val = this.normalizeDateStr(f.hired_at_value);
-                    data = data.filter(s => this.normalizeDateStr(s.hired_at) === val);
-                }
-                if (f.hired_at_type === 'between' && f.hired_at_from && f.hired_at_to) {
-                    const from = this.normalizeDateStr(f.hired_at_from);
-                    const to = this.normalizeDateStr(f.hired_at_to);
-                    data = data.filter(s => {
-                        const d = this.normalizeDateStr(s.hired_at);
-                        return d >= from && d <= to;
-                    });
-                }
-                if (f.hired_at_type === 'lt' && f.hired_at_value) {
-                    const val = this.normalizeDateStr(f.hired_at_value);
-                    data = data.filter(s => this.normalizeDateStr(s.hired_at) < val);
-                }
-                if (f.hired_at_type === 'gt' && f.hired_at_value) {
-                    const val = this.normalizeDateStr(f.hired_at_value);
-                    data = data.filter(s => this.normalizeDateStr(s.hired_at) > val);
-                }
-                if (f.hired_at_type === 'lte' && f.hired_at_value) {
-                    const val = this.normalizeDateStr(f.hired_at_value);
-                    data = data.filter(s => this.normalizeDateStr(s.hired_at) <= val);
-                }
-                if (f.hired_at_type === 'gte' && f.hired_at_value) {
-                    const val = this.normalizeDateStr(f.hired_at_value);
-                    data = data.filter(s => this.normalizeDateStr(s.hired_at) >= val);
-                }
-
-                // Date filter: created_at
-                if (f.created_at_type === 'eq' && f.created_at_value) {
-                    const val = this.normalizeDateStr(f.created_at_value);
-                    data = data.filter(s => this.normalizeDateStr(s.created_at) === val);
-                }
-                if (f.created_at_type === 'between' && f.created_at_from && f.created_at_to) {
-                    const from = this.normalizeDateStr(f.created_at_from);
-                    const to = this.normalizeDateStr(f.created_at_to);
-                    data = data.filter(s => {
-                        const d = this.normalizeDateStr(s.created_at);
-                        return d >= from && d <= to;
-                    });
-                }
-                if (f.created_at_type === 'lt' && f.created_at_value) {
-                    const val = this.normalizeDateStr(f.created_at_value);
-                    data = data.filter(s => this.normalizeDateStr(s.created_at) < val);
-                }
-                if (f.created_at_type === 'gt' && f.created_at_value) {
-                    const val = this.normalizeDateStr(f.created_at_value);
-                    data = data.filter(s => this.normalizeDateStr(s.created_at) > val);
-                }
-                if (f.created_at_type === 'lte' && f.created_at_value) {
-                    const val = this.normalizeDateStr(f.created_at_value);
-                    data = data.filter(s => this.normalizeDateStr(s.created_at) <= val);
-                }
-                if (f.created_at_type === 'gte' && f.created_at_value) {
-                    const val = this.normalizeDateStr(f.created_at_value);
-                    data = data.filter(s => this.normalizeDateStr(s.created_at) >= val);
-                }
-
-                // Date filter: updated_at
-                if (f.updated_at_type === 'eq' && f.updated_at_value) {
-                    const val = this.normalizeDateStr(f.updated_at_value);
-                    data = data.filter(s => this.normalizeDateStr(s.updated_at) === val);
-                }
-                if (f.updated_at_type === 'between' && f.updated_at_from && f.updated_at_to) {
-                    const from = this.normalizeDateStr(f.updated_at_from);
-                    const to = this.normalizeDateStr(f.updated_at_to);
-                    data = data.filter(s => {
-                        const d = this.normalizeDateStr(s.updated_at);
-                        return d >= from && d <= to;
-                    });
-                }
-                if (f.updated_at_type === 'lt' && f.updated_at_value) {
-                    const val = this.normalizeDateStr(f.updated_at_value);
-                    data = data.filter(s => this.normalizeDateStr(s.updated_at) < val);
-                }
-                if (f.updated_at_type === 'gt' && f.updated_at_value) {
-                    const val = this.normalizeDateStr(f.updated_at_value);
-                    data = data.filter(s => this.normalizeDateStr(s.updated_at) > val);
-                }
-                if (f.updated_at_type === 'lte' && f.updated_at_value) {
-                    const val = this.normalizeDateStr(f.updated_at_value);
-                    data = data.filter(s => this.normalizeDateStr(s.updated_at) <= val);
-                }
-                if (f.updated_at_type === 'gte' && f.updated_at_value) {
-                    const val = this.normalizeDateStr(f.updated_at_value);
-                    data = data.filter(s => this.normalizeDateStr(s.updated_at) >= val);
-                }
-                return data;
+                return this.items.filter(s => {
+                    if (f.username && !fn(s.username).includes(fn(f.username))) return false;
+                    if (f.full_name && !fn(s.full_name).includes(fn(f.full_name))) return false;
+                    if (f.staff_role && !fn(s.staff_role).includes(fn(f.staff_role))) return false;
+                    if (f.email && !fn(s.email).includes(fn(f.email))) return false;
+                    if (f.phone && !fn(s.phone).includes(fn(f.phone))) return false;
+                    if (f.is_active !== '' && f.is_active !== undefined && String(s.is_active) !== String(f.is_active)) return false;
+                    if (f.note && !fn(s.note).includes(fn(f.note))) return false;
+                    if (f.created_by && !fn(s.created_by_name || '').includes(fn(f.created_by))) return false;
+                    if (f.updated_by && !fn(s.updated_by_name || '').includes(fn(f.updated_by))) return false;
+                    if (!this.applyDateFilter(s.hired_at, f.hired_at_type, f.hired_at_value, f.hired_at_from, f.hired_at_to)) return false;
+                    if (!this.applyDateFilter(s.created_at, f.created_at_type, f.created_at_value, f.created_at_from, f.created_at_to)) return false;
+                    if (!this.applyDateFilter(s.updated_at, f.updated_at_type, f.updated_at_value, f.updated_at_from, f.updated_at_to)) return false;
+                    return true;
+                });
             },
 
             totalPages() {

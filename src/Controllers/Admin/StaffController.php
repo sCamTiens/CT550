@@ -69,6 +69,7 @@ class StaffController extends Controller
                     'hired_at' => $r['hired_at'] ?? null,
                     'is_active' => $r['is_active'] ?? 1,
                     'note' => $r['note'] ?? '',
+                    'avatar_url' => $r['avatar_url'] ?? '',
                     'created_by_name' => $r['created_by_name'] ?? '',
                     'updated_by_name' => $r['updated_by_name'] ?? '',
                     'created_at' => $r['created_at'] ?? '',

@@ -85,10 +85,11 @@ try {
     
     logMessage("");
     logMessage("--- RESULTS ---");
-    logMessage("Reset old notifications: {$result['reset_old_notifications']}");
+    logMessage("Deleted old notifications: {$result['deleted_old_notifications']}");
     logMessage("Out of stock products: {$result['out_of_stock_products']}");
     logMessage("Low stock products: {$result['low_stock_products']}");
     logMessage("Total notifications created: {$result['notifications_created']}");
+    logMessage("Old notifications cleaned (>30 days): " . ($result['old_notifications_cleaned'] ?? 0));
     logMessage("Timestamp: {$result['timestamp']}");
     
     // Lấy thống kê tổng quan

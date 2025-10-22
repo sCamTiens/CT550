@@ -34,6 +34,14 @@ $items = $items ?? [];
                         ]) ?>
                         <?= textFilterPopover('order_code', 'Mã đơn hàng') ?>
                         <?= textFilterPopover('customer_name', 'Khách hàng') ?>
+                        <th class="py-2 px-4 text-center align-top" style="min-width: 500px; width: 500px;">
+                            <div class="mb-2 text-base font-bold">Chi tiết xuất kho (theo lô)</div>
+                            <div class="grid grid-cols-[2.5fr_1fr_1fr] gap-3 border-t pt-2">
+                                <div class="text-sm font-semibold text-gray-700">Sản phẩm - Mã lô</div>
+                                <div class="text-sm font-semibold text-gray-700">Số lượng</div>
+                                <div class="text-sm font-semibold text-gray-700">Đơn giá</div>
+                            </div>
+                        </th>
                         <?= selectFilterPopover('status', 'Trạng thái', [
                             '' => '-- Tất cả --',
                             'pending' => 'Chờ duyệt',
@@ -45,19 +53,19 @@ $items = $items ?? [];
                         <?= numberFilterPopover('total_amount', 'Tổng tiền') ?>
                         <?= textFilterPopover('note', 'Ghi chú') ?>
                         <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
-                        <?= textFilterPopover('created_by_name', 'Người tạo') ?>
+                        <?= textFilterPopover('created_by', 'Người tạo') ?>
                     </tr>
                 </thead>
                 <tbody>
                     <template x-for="(s, idx) in paginated()" :key="s.id">
                         <tr>
                             <td class="py-2 px-4 text-center space-x-2">
-                                <button @click="openEditModal(s)"
+                                <button @click="openViewModal(s)"
                                     class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
-                                    title="Sửa">
-                                    <i class="fa-solid fa-pen"></i>
+                                    title="Xem chi tiết">
+                                    <i class="fa-solid fa-eye"></i>
                                 </button>
-                                <button @click="remove(s.id)"
+                                <button x-show="s.status !== 'completed'" @click="remove(s.id)"
                                     class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
                                     title="Xóa">
                                     <i class="fa-solid fa-trash"></i>
@@ -87,8 +95,51 @@ $items = $items ?? [];
                             </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line" x-text="s.order_code || '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line" x-text="s.customer_name || '—'"></td>
+
+                            <!-- Cột Chi tiết xuất kho theo lô -->
+                            <td class="px-3 py-2 align-top" style="min-width: 800px; width: 800px;">
+                                <div class="space-y-2">
+                                    <!-- Hiển thị danh sách sản phẩm theo lô -->
+                                    <template x-if="s.items && s.items.length > 0">
+                                        <div class="space-y-2">
+                                            <template x-for="(item, itemIdx) in s.items" :key="itemIdx">
+                                                <div class="grid grid-cols-[2.5fr_1fr_1fr] gap-3 p-2">
+                                                    <!-- Tên sản phẩm - Mã lô -->
+                                                    <div>
+                                                        <div>
+                                                            <span x-text="item.product_name || '—'"></span>
+                                                            <span> - </span>
+                                                            <span x-text="item.batch_code || '—'"></span>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Số lượng -->
+                                                    <div class="text-center">
+                                                        <div x-text="item.qty || 0"></div>
+                                                    </div>
+
+                                                    <!-- Đơn giá -->
+                                                    <div class="text-right">
+                                                        <div x-text="formatCurrency(item.unit_price || 0)"></div>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+
+                                    <!-- Trạng thái rỗng -->
+                                    <template x-if="!s.items || s.items.length === 0">
+                                        <div
+                                            class="text-center text-gray-400 text-sm py-4 bg-gray-50 rounded border border-dashed">
+                                            Chưa có sản phẩm
+                                        </div>
+                                    </template>
+                                </div>
+                            </td>
+
                             <td class="px-3 py-2 text-center align-middle">
-                                <div class="px-2 py-[3px] rounded text-xs font-medium" class="flex justify-center items-center h-full">
+                                <div class="px-2 py-[3px] rounded text-xs font-medium"
+                                    class="flex justify-center items-center h-full">
                                     <span :class="{
                                     'px-2 py-1 rounded text-xs': true,
                                     'bg-yellow-100 text-yellow-800': s.status === 'pending',
@@ -110,7 +161,7 @@ $items = $items ?? [];
                         </tr>
                     </template>
                     <tr x-show="!loading && filtered().length===0">
-                        <td colspan="11" class="py-12 text-center text-slate-500">
+                        <td colspan="12" class="py-12 text-center text-slate-500">
                             <div class="flex flex-col items-center justify-center">
                                 <img src="/assets/images/Null.png" alt="Trống" class="w-40 h-24 mb-3 opacity-80">
                                 <div class="text-lg text-slate-300">Trống</div>
@@ -122,9 +173,9 @@ $items = $items ?? [];
         </div>
 
         <!-- MODAL: Create -->
-        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openAdd"
+        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openAdd"
             x-transition.opacity style="display:none">
-            <div class="bg-white w-full max-w-3xl rounded-xl shadow max-h-[90vh] overflow-y-auto"
+            <div class="bg-white w-full max-w-3xl rounded-xl shadow max-h-[90vh] overflow-y-auto animate__animated animate__zoomIn animate__faster"
                 @click.outside="openAdd=false">
                 <div class="px-5 py-3 border-b flex justify-center items-center relative sticky top-0 bg-white z-10">
                     <h3 class="font-semibold text-2xl text-[#002975]">Thêm phiếu xuất kho</h3>
@@ -142,24 +193,122 @@ $items = $items ?? [];
             </div>
         </div>
 
-        <!-- MODAL: Edit -->
-        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openEdit"
+        <!-- MODAL: View (Chi tiết) -->
+        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openView"
             x-transition.opacity style="display:none">
-            <div class="bg-white w-full max-w-3xl rounded-xl shadow max-h-[90vh] overflow-y-auto"
-                @click.outside="openEdit=false">
-                <div class="px-5 py-3 border-b flex justify-center items-center relative sticky top-0 bg-white z-10">
-                    <h3 class="font-semibold text-2xl text-[#002975]">Sửa phiếu xuất kho</h3>
-                    <button class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>
+            <div class="bg-white w-full max-w-4xl rounded-xl shadow max-h-[90vh] flex flex-col"
+                @click.outside="openView=false">
+                <div class="px-5 py-3 border-b flex justify-center items-center relative flex-shrink-0">
+                    <h3 class="font-semibold text-2xl text-[#002975]">Chi tiết phiếu xuất kho</h3>
+                    <button class="text-slate-500 absolute right-5" @click="openView=false">✕</button>
                 </div>
-                <form class="p-5 space-y-4" @submit.prevent="submitUpdate()">
-                    <?php require __DIR__ . '/form.php'; ?>
-                    <div class="pt-2 flex justify-end gap-3 sticky bottom-0 bg-white border-t py-3">
-                        <button type="button" @click="openEdit=false"
-                            class="px-4 py-2 border rounded text-sm">Hủy</button>
-                        <button class="px-4 py-2 bg-[#002975] text-white rounded text-sm" :disabled="submitting"
-                            x-text="submitting ? 'Đang lưu...' : 'Cập nhật'"></button>
+                <div class="flex-1 overflow-y-auto p-5 space-y-4">
+                    <!-- Thông tin phiếu xuất -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-900 mb-1">Mã phiếu</label>
+                            <div class="px-3 py-2 bg-gray-50 rounded border" x-text="viewItem.code"></div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-900 mb-1">Loại xuất</label>
+                            <div class="px-3 py-2 bg-gray-50 rounded border" x-text="getTypeText(viewItem.type)"></div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-900 mb-1">Mã đơn hàng</label>
+                            <div class="px-3 py-2 bg-gray-50 rounded border" x-text="viewItem.order_code || '—'"></div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-900 mb-1">Khách hàng</label>
+                            <div class="px-3 py-2 bg-gray-50 rounded border" x-text="viewItem.customer_name || '—'"></div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-900 mb-1">Trạng thái</label>
+                            <div class="px-3 py-2 bg-gray-50 rounded border">
+                                <span class="px-2 py-1 rounded text-xs font-medium" :class="{
+                                    'bg-yellow-100 text-yellow-800': viewItem.status === 'pending',
+                                    'bg-blue-100 text-blue-800': viewItem.status === 'approved',
+                                    'bg-green-100 text-green-800': viewItem.status === 'completed',
+                                    'bg-red-100 text-red-800': viewItem.status === 'cancelled'
+                                }" x-text="getStatusText(viewItem.status)"></span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-900 mb-1">Ngày xuất</label>
+                            <div class="px-3 py-2 bg-gray-50 rounded border" x-text="viewItem.out_date ? viewItem.out_date.substring(0, 10) : '—'"></div>
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-900 mb-1">Ghi chú</label>
+                            <div class="px-3 py-2 bg-gray-50 rounded border min-h-[60px]" x-text="viewItem.note || '—'"></div>
+                        </div>
                     </div>
-                </form>
+
+                    <!-- Chi tiết sản phẩm theo lô -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-900 mb-2">Chi tiết sản phẩm</label>
+                        <div class="border rounded-lg overflow-hidden">
+                            <table class="w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left text-sm font-semibold text-gray-700">Sản phẩm - Mã lô</th>
+                                        <th class="px-3 py-2 text-center text-sm font-semibold text-gray-700">NSX/HSD</th>
+                                        <th class="px-3 py-2 text-center text-sm font-semibold text-gray-700">Số lượng</th>
+                                        <th class="px-3 py-2 text-right text-sm font-semibold text-gray-700">Đơn giá</th>
+                                        <th class="px-3 py-2 text-right text-sm font-semibold text-gray-700">Thành tiền</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-if="viewItem.items && viewItem.items.length > 0">
+                                        <template x-for="(item, idx) in viewItem.items" :key="idx">
+                                            <tr class="border-t">
+                                                <td class="px-3 py-2">
+                                                    <div class="font-medium" x-text="item.product_name"></div>
+                                                    <div class="text-xs">Lô: <span x-text="item.batch_code"></span></div>
+                                                </td>
+                                                <td class="px-3 py-2 text-center text-xs text-gray-600">
+                                                    <div x-show="item.mfg_date">NSX: <span x-text="item.mfg_date"></span></div>
+                                                    <div x-show="item.exp_date">
+                                                        HSD: <span x-text="item.exp_date"></span>
+                                                    </div>
+                                                </td>
+                                                <td class="px-3 py-2 text-center font-semibold" x-text="item.qty"></td>
+                                                <td class="px-3 py-2 text-right" x-text="formatCurrency(item.unit_price)"></td>
+                                                <td class="px-3 py-2 text-right font-semibold" x-text="formatCurrency(item.qty * item.unit_price)"></td>
+                                            </tr>
+                                        </template>
+                                    </template>
+                                    <template x-if="!viewItem.items || viewItem.items.length === 0">
+                                        <tr>
+                                            <td colspan="5" class="px-3 py-8 text-center text-gray-400">
+                                                Chưa có sản phẩm
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                                <tfoot class="bg-gray-50 border-t-2">
+                                    <tr>
+                                        <td colspan="4" class="px-3 py-2 text-right font-semibold">Tổng cộng:</td>
+                                        <td class="px-3 py-2 text-right font-bold text-lg text-[#002975]" x-text="formatCurrency(viewItem.total_amount)"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Thông tin người tạo -->
+                    <div class="grid grid-cols-2 gap-4 pt-4 border-t">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Người tạo</label>
+                            <div class="px-3 py-2 bg-gray-50 rounded border text-sm" x-text="viewItem.created_by_name || '—'"></div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Thời gian tạo</label>
+                            <div class="px-3 py-2 bg-gray-50 rounded border text-sm" x-text="viewItem.created_at || '—'"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-5 pb-5 pt-2 flex justify-end gap-3 border-t bg-white flex-shrink-0">
+                    <button type="button" class="px-4 py-2 border rounded text-sm" @click="openView=false">Đóng</button>
+                </div>
             </div>
         </div>
 
@@ -218,7 +367,8 @@ $items = $items ?? [];
             loading: true,
             submitting: false,
             openAdd: false,
-            openEdit: false,
+            openView: false,
+            viewItem: {},
             order_id: null,
             orders: [],
             items: <?= json_encode($items ?? [], JSON_UNESCAPED_UNICODE) ?>,
@@ -268,6 +418,9 @@ $items = $items ?? [];
                     const res = await fetch(api.list);
                     const data = await res.json();
                     this.items = data.items || [];
+
+                    // Load chi tiết lô hàng cho mỗi phiếu xuất
+                    await this.loadStockOutItems();
                 } catch (e) {
                     this.showToast('Không thể tải dữ liệu phiếu xuất kho');
                 } finally {
@@ -275,53 +428,194 @@ $items = $items ?? [];
                 }
             },
 
-            // ===== FILTERS =====
-            openFilter: {},
-            filters: {},
+            async loadStockOutItems() {
+                // Load danh sách sản phẩm và lô hàng cho tất cả phiếu xuất
+                const promises = this.items.map(async (stockOut) => {
+                    try {
+                        console.log('Fetching items for stock-out ID:', stockOut.id);
+                        const res = await fetch(`/admin/api/stock-outs/${stockOut.id}/items`);
+                        console.log('Response status:', res.status);
 
-            // Hàm chuẩn hóa ngày: chuyển về dạng YYYY-MM-DD
-            normalizeDateStr(dateStr) {
-                if (!dateStr) return '';
-                const s = String(dateStr).trim();
-                // Nếu dạng d/m/Y
-                if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
-                    const [d, m, y] = s.split(/[\s\/]/);
-                    return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+                        if (res.ok) {
+                            const data = await res.json();
+                            console.log('Items data for stock-out', stockOut.id, ':', data);
+
+                            stockOut.items = (data.items || []).map(item => {
+                                // Kiểm tra xem lô có gần hết hạn không (còn 30 ngày)
+                                const today = new Date();
+                                const expDate = item.exp_date ? new Date(item.exp_date) : null;
+                                const daysUntilExpiry = expDate ? Math.floor((expDate - today) / (1000 * 60 * 60 * 24)) : null;
+
+                                return {
+                                    ...item,
+                                    is_near_expiry: daysUntilExpiry !== null && daysUntilExpiry <= 30 && daysUntilExpiry >= 0,
+                                    is_oldest_batch: item.is_oldest_batch || false,
+                                    days_until_expiry: daysUntilExpiry
+                                };
+                            });
+                            console.log('Processed items:', stockOut.items);
+                        } else {
+                            const errorText = await res.text();
+                            console.error('Failed to fetch items:', errorText);
+                            stockOut.items = [];
+                        }
+                    } catch (e) {
+                        console.error('Error loading items for stock-out', stockOut.id, ':', e);
+                        stockOut.items = [];
+                    }
+                });
+
+                await Promise.all(promises);
+                console.log('All stock-outs with items:', this.items);
+            },
+
+            // ===== FILTERS =====
+            openFilter: {
+                code: false, customer_name: false, order_id: false, reason: false,
+                status: false, out_date: false, total_amount: false, note: false,
+                created_at: false, created_by: false
+            },
+            filters: {
+                code: '',
+                customer_name: '',
+                order_id: '',
+                reason: '',
+                status: '',
+                out_date_type: '', out_date_value: '', out_date_from: '', out_date_to: '',
+                total_amount_type: '', total_amount_value: '', total_amount_from: '', total_amount_to: '',
+                note: '',
+                created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
+                created_by: ''
+            },
+
+            // Chuẩn hóa ngày cho so sánh (loại bỏ phần giờ)
+            applyDateFilter(val, type, value, from, to) {
+                if (!type) return true;
+                const normalizeDate = (d) => {
+                    if (!d) return null;
+                    let s = String(d).trim();
+                    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
+                        const [dd, mm, yy] = s.split(/[\s\/]/);
+                        s = `${yy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+                    }
+                    if (/^\d{4}-\d{1,2}-\d{1,2}/.test(s)) {
+                        s = s.substring(0, 10);
+                    }
+                    const parsed = new Date(s);
+                    if (isNaN(parsed)) return null;
+                    return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+                };
+                const itemDate = normalizeDate(val);
+                if (!itemDate) return false;
+                if (type === 'eq') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate.getTime() === compareDate.getTime();
                 }
-                // Nếu dạng Y-m-d hoặc Y-m-d H:i:s
-                if (/^\d{4}-\d{1,2}-\d{1,2}/.test(s)) {
-                    return s.substring(0, 10);
+                if (type === 'between') {
+                    if (!from || !to) return true;
+                    const fromDate = normalizeDate(from);
+                    const toDate = normalizeDate(to);
+                    if (!fromDate || !toDate) return false;
+                    return itemDate >= fromDate && itemDate <= toDate;
                 }
-                return s;
+                if (type === 'lt') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate < compareDate;
+                }
+                if (type === 'gt') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate > compareDate;
+                }
+                if (type === 'lte') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate <= compareDate;
+                }
+                if (type === 'gte') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate >= compareDate;
+                }
+                return true;
+            },
+
+            applyNumberFilter(val, type, value, from, to) {
+                const num = Number(val);
+                if (isNaN(num)) return false;
+                if (!type) return true;
+                if (type === 'eq') {
+                    if (!value && value !== 0) return true;
+                    return num === Number(value);
+                }
+                if (type === 'between') {
+                    if ((!from && from !== 0) || (!to && to !== 0)) return true;
+                    return num >= Number(from) && num <= Number(to);
+                }
+                if (type === 'lt') {
+                    if (!value && value !== 0) return true;
+                    return num < Number(value);
+                }
+                if (type === 'gt') {
+                    if (!value && value !== 0) return true;
+                    return num > Number(value);
+                }
+                if (type === 'lte') {
+                    if (!value && value !== 0) return true;
+                    return num <= Number(value);
+                }
+                if (type === 'gte') {
+                    if (!value && value !== 0) return true;
+                    return num >= Number(value);
+                }
+                return true;
             },
 
             filtered() {
-                let data = this.items;
-
-                for (const key in this.filters) {
-                    const val = this.filters[key];
-                    if (!val) continue;
-
-                    if (['total_amount'].includes(key)) {
-                        data = data.filter(r => Number(r[key]) === Number(val));
-                    } else if (['created_at', 'out_date'].includes(key)) {
-                        const normalizedVal = this.normalizeDateStr(val);
-                        data = data.filter(r => this.normalizeDateStr(r[key]) === normalizedVal);
-                    } else {
-                        data = data.filter(r => (r[key] || '').toLowerCase().includes(val.toLowerCase()));
-                    }
-                }
-
-                return data;
+                const fn = (v) => (v ?? '').toString().toLowerCase();
+                const f = this.filters;
+                return this.items.filter(r => {
+                    if (f.code && !fn(r.code).includes(fn(f.code))) return false;
+                    if (f.customer_name && !fn(r.customer_name).includes(fn(f.customer_name))) return false;
+                    if (f.order_id && !fn(r.order_id).includes(fn(f.order_id))) return false;
+                    if (f.reason && !fn(r.reason).includes(fn(f.reason))) return false;
+                    if (f.status && !fn(r.status).includes(fn(f.status))) return false;
+                    if (f.note && !fn(r.note).includes(fn(f.note))) return false;
+                    if (f.created_by && !fn(r.created_by_name || '').includes(fn(f.created_by))) return false;
+                    if (!this.applyNumberFilter(r.total_amount, f.total_amount_type, f.total_amount_value, f.total_amount_from, f.total_amount_to)) return false;
+                    if (!this.applyDateFilter(r.out_date, f.out_date_type, f.out_date_value, f.out_date_from, f.out_date_to)) return false;
+                    if (!this.applyDateFilter(r.created_at, f.created_at_type, f.created_at_value, f.created_at_from, f.created_at_to)) return false;
+                    return true;
+                });
             },
 
             toggleFilter(key) {
-                for (const k in this.openFilter) this.openFilter[k] = false;
-                this.openFilter[key] = true;
+                Object.keys(this.openFilter).forEach(k => this.openFilter[k] = (k === key ? !this.openFilter[k] : false));
             },
-            applyFilter(key) { this.openFilter[key] = false; },
+            applyFilter(key) {
+                this.openFilter[key] = false;
+            },
             resetFilter(key) {
-                delete this.filters[key];
+                if (['out_date', 'created_at'].includes(key)) {
+                    this.filters[`${key}_type`] = '';
+                    this.filters[`${key}_value`] = '';
+                    this.filters[`${key}_from`] = '';
+                    this.filters[`${key}_to`] = '';
+                } else if (['total_amount'].includes(key)) {
+                    this.filters[`${key}_type`] = '';
+                    this.filters[`${key}_value`] = '';
+                    this.filters[`${key}_from`] = '';
+                    this.filters[`${key}_to`] = '';
+                } else {
+                    this.filters[key] = '';
+                }
                 this.openFilter[key] = false;
             },
 
@@ -451,16 +745,38 @@ $items = $items ?? [];
                 }
             },
 
-            async openEditModal(s) {
-                this.resetForm();
-                await this.fetchOrders();
-                this.form = {
+            async openViewModal(s) {                
+                // Copy dữ liệu và đảm bảo items được load
+                this.viewItem = {
                     ...s,
-                    order_id: s?.order_id ? String(s.order_id) : '',  // thêm dấu ? để tránh undefined
-                    out_date: s.out_date ? s.out_date.substring(0, 10) : '',
-                    total_amountFormatted: s.total_amount ? s.total_amount.toLocaleString('en-US') : '',
+                    items: s.items || []
                 };
-                this.openEdit = true;
+
+                // Nếu chưa có items, load lại
+                if (!this.viewItem.items || this.viewItem.items.length === 0) {
+                    try {
+                        const res = await fetch(`/admin/api/stock-outs/${s.id}/items`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            this.viewItem.items = (data.items || []).map(item => {
+                                const today = new Date();
+                                const expDate = item.exp_date ? new Date(item.exp_date) : null;
+                                const daysUntilExpiry = expDate ? Math.floor((expDate - today) / (1000 * 60 * 60 * 24)) : null;
+                                
+                                return {
+                                    ...item,
+                                    is_near_expiry: daysUntilExpiry !== null && daysUntilExpiry <= 30 && daysUntilExpiry >= 0,
+                                    is_oldest_batch: item.is_oldest_batch || false,
+                                    days_until_expiry: daysUntilExpiry
+                                };
+                            });
+                        }
+                    } catch (e) {
+                        this.viewItem.items = [];
+                    }
+                }
+
+                this.openView = true;
             },
 
             async submitCreate() {

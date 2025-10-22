@@ -150,6 +150,26 @@ class OrderController extends BaseAdminController
         exit;
     }
 
+    /** GET /admin/orders/{id}/print - In hóa đơn */
+    public function print($id)
+    {
+        $orderObj = $this->orderRepo->findOne($id);
+        if (!$orderObj) {
+            http_response_code(404);
+            echo "Đơn hàng không tồn tại";
+            exit;
+        }
+
+        // Convert object sang array để sử dụng trong view
+        $order = json_decode(json_encode($orderObj), true);
+        $items = $this->orderRepo->getOrderItems($id);
+        
+        return $this->view('admin/orders/invoice-template', [
+            'order' => $order,
+            'items' => $items
+        ]);
+    }
+
     private function currentUserId(): ?int
     {
         return $_SESSION['user']['id'] ?? null;

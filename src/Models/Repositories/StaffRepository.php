@@ -38,7 +38,8 @@ class StaffRepository
                     uu.full_name AS updated_by_name,
                     s.staff_role,
                     s.hired_at,
-                    s.note
+                    s.note,
+                    u.avatar_url
                 FROM {$this->userTable} u
                 INNER JOIN {$this->staffTable} s ON u.id = s.user_id
                 LEFT JOIN {$this->userTable} cu ON cu.id = u.created_by
@@ -64,7 +65,8 @@ class StaffRepository
                     uu.full_name AS updated_by_name,
                     s.staff_role,
                     s.hired_at,
-                    s.note
+                    s.note,
+                    u.avatar_url
                 FROM {$this->userTable} u
                 INNER JOIN {$this->staffTable} s ON u.id = s.user_id
                 LEFT JOIN {$this->userTable} cu ON cu.id = u.created_by
@@ -85,6 +87,45 @@ class StaffRepository
         if (str_contains($msg, 'email') || str_contains($msg, 'users.email')) {
             return 'Email đã tồn tại trong hệ thống';
         }
+        if (str_contains($msg, 'phone') || str_contains($msg, 'users.phone')) {
+            return 'Số điện thoại đã tồn tại trong hệ thống';
+        }
+        return false;
+    }
+    
+    /** Kiểm tra email hoặc phone đã tồn tại chưa (trừ user hiện tại) */
+    private function checkDuplicateContact(string|null $email, string|null $phone, int|string|null $excludeUserId = null): string|false
+    {
+        // Kiểm tra email
+        if (!empty($email)) {
+            $sql = "SELECT id FROM {$this->userTable} WHERE email = ? AND is_deleted = 0";
+            $params = [$email];
+            if ($excludeUserId) {
+                $sql .= " AND id != ?";
+                $params[] = $excludeUserId;
+            }
+            $stmt = DB::pdo()->prepare($sql);
+            $stmt->execute($params);
+            if ($stmt->fetch()) {
+                return 'Email đã tồn tại trong hệ thống';
+            }
+        }
+        
+        // Kiểm tra phone
+        if (!empty($phone)) {
+            $sql = "SELECT id FROM {$this->userTable} WHERE phone = ? AND is_deleted = 0";
+            $params = [$phone];
+            if ($excludeUserId) {
+                $sql .= " AND id != ?";
+                $params[] = $excludeUserId;
+            }
+            $stmt = DB::pdo()->prepare($sql);
+            $stmt->execute($params);
+            if ($stmt->fetch()) {
+                return 'Số điện thoại đã tồn tại trong hệ thống';
+            }
+        }
+        
         return false;
     }
 
@@ -98,6 +139,12 @@ class StaffRepository
             $fullName = trim($data['full_name'] ?? '');
             $email = $data['email'] ?? null;
             $phone = $data['phone'] ?? null;
+            
+            // Kiểm tra trùng email/phone trước khi insert
+            if ($err = $this->checkDuplicateContact($email, $phone)) {
+                DB::pdo()->rollBack();
+                return $err;
+            }
 
             $passwordHash = password_hash('123456', PASSWORD_BCRYPT);
 
@@ -176,6 +223,13 @@ class StaffRepository
                 'staff_role' => $beforeData['staff_role'] ?? null,
                 'is_active' => $beforeData['is_active'] ?? null
             ];
+        }
+        
+        // Kiểm tra trùng email/phone (loại trừ user hiện tại)
+        $email = $data['email'] ?? null;
+        $phone = $data['phone'] ?? null;
+        if ($err = $this->checkDuplicateContact($email, $phone, $id)) {
+            return $err;
         }
         
         try {

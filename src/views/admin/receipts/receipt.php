@@ -43,7 +43,7 @@ $items = $items ?? [];
                         <?= dateFilterPopover('bank_time', 'Xác nhận giao dịch') ?>
                         <?= textFilterPopover('note', 'Ghi chú') ?>
                         <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
-                        <?= textFilterPopover('created_by_name', 'Người tạo') ?>
+                        <?= textFilterPopover('created_by', 'Người tạo') ?>
                     </tr>
                 </thead>
                 <tbody>
@@ -115,9 +115,9 @@ $items = $items ?? [];
         </div>
 
         <!-- MODAL: Create -->
-        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openAdd"
+        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openAdd"
             x-transition.opacity style="display:none">
-            <div class="bg-white w-full max-w-3xl rounded-xl shadow max-h-[90vh] flex flex-col"
+            <div class="bg-white w-full max-w-3xl rounded-xl shadow max-h-[90vh] flex flex-col animate__animated animate__zoomIn animate__faster"
                 @click.outside="openAdd=false">
                 <div class="px-5 py-3 border-b flex justify-center items-center relative flex-shrink-0">
                     <h3 class="font-semibold text-2xl text-[#002975]">Thêm phiếu thu</h3>
@@ -140,9 +140,9 @@ $items = $items ?? [];
         </div>
 
         <!-- MODAL: Edit -->
-        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openEdit"
+        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openEdit"
             x-transition.opacity style="display:none">
-            <div class="bg-white w-full max-w-3xl rounded-xl shadow max-h-[90vh] flex flex-col"
+            <div class="bg-white w-full max-w-3xl rounded-xl shadow max-h-[90vh] flex flex-col animate__animated animate__zoomIn animate__faster"
                 @click.outside="openEdit=false">
                 <div class="px-5 py-3 border-b flex justify-center items-center relative flex-shrink-0">
                     <h3 class="font-semibold text-2xl text-[#002975]">Sửa phiếu thu</h3>
@@ -165,6 +165,7 @@ $items = $items ?? [];
         <!-- Toast lỗi nổi -->
         <div id="toast-container" class="z-[60]"></div>
     </div>
+    
     <!-- Pagination -->
     <div class="flex items-center justify-center mt-4 px-4 gap-6">
         <div class="text-sm text-slate-600">
@@ -280,35 +281,158 @@ $items = $items ?? [];
             },
 
             // ===== FILTERS =====
-            openFilter: {},
-            filters: {},
+            openFilter: {
+                code: false, payer_user_name: false, order_id: false, method: false,
+                amount: false, payment_id: false, received_by: false, received_at: false,
+                txn_ref: false, bank_time: false, note: false, created_at: false, created_by: false
+            },
+            filters: {
+                code: '',
+                payer_user_name: '',
+                order_id: '',
+                method: '',
+                amount_type: '', amount_value: '', amount_from: '', amount_to: '',
+                payment_id: '',
+                received_by: '',
+                received_at_type: '', received_at_value: '', received_at_from: '', received_at_to: '',
+                txn_ref: '',
+                bank_time_type: '', bank_time_value: '', bank_time_from: '', bank_time_to: '',
+                note: '',
+                created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
+                created_by: ''
+            },
+
+            // Chuẩn hóa ngày cho so sánh (loại bỏ phần giờ)
+            applyDateFilter(val, type, value, from, to) {
+                if (!type) return true;
+                const normalizeDate = (d) => {
+                    if (!d) return null;
+                    let s = String(d).trim();
+                    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
+                        const [dd, mm, yy] = s.split(/[\s\/]/);
+                        s = `${yy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+                    }
+                    if (/^\d{4}-\d{1,2}-\d{1,2}/.test(s)) {
+                        s = s.substring(0, 10);
+                    }
+                    const parsed = new Date(s);
+                    if (isNaN(parsed)) return null;
+                    return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+                };
+                const itemDate = normalizeDate(val);
+                if (!itemDate) return false;
+                if (type === 'eq') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate.getTime() === compareDate.getTime();
+                }
+                if (type === 'between') {
+                    if (!from || !to) return true;
+                    const fromDate = normalizeDate(from);
+                    const toDate = normalizeDate(to);
+                    if (!fromDate || !toDate) return false;
+                    return itemDate >= fromDate && itemDate <= toDate;
+                }
+                if (type === 'lt') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate < compareDate;
+                }
+                if (type === 'gt') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate > compareDate;
+                }
+                if (type === 'lte') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate <= compareDate;
+                }
+                if (type === 'gte') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate >= compareDate;
+                }
+                return true;
+            },
+
+            applyNumberFilter(val, type, value, from, to) {
+                const num = Number(val);
+                if (isNaN(num)) return false;
+                if (!type) return true;
+                if (type === 'eq') {
+                    if (!value && value !== 0) return true;
+                    return num === Number(value);
+                }
+                if (type === 'between') {
+                    if ((!from && from !== 0) || (!to && to !== 0)) return true;
+                    return num >= Number(from) && num <= Number(to);
+                }
+                if (type === 'lt') {
+                    if (!value && value !== 0) return true;
+                    return num < Number(value);
+                }
+                if (type === 'gt') {
+                    if (!value && value !== 0) return true;
+                    return num > Number(value);
+                }
+                if (type === 'lte') {
+                    if (!value && value !== 0) return true;
+                    return num <= Number(value);
+                }
+                if (type === 'gte') {
+                    if (!value && value !== 0) return true;
+                    return num >= Number(value);
+                }
+                return true;
+            },
 
             filtered() {
-                let data = this.items;
-
-                for (const key in this.filters) {
-                    const val = this.filters[key];
-                    if (!val) continue;
-
-                    if (['amount'].includes(key)) {
-                        data = data.filter(r => Number(r.amount) === Number(val));
-                    } else if (['received_at', 'created_at', 'bank_time'].includes(key)) {
-                        data = data.filter(r => (r[key] || '').startsWith(val));
-                    } else {
-                        data = data.filter(r => (r[key] || '').toLowerCase().includes(val.toLowerCase()));
-                    }
-                }
-
-                return data;
+                const fn = (v) => (v ?? '').toString().toLowerCase();
+                const f = this.filters;
+                return this.items.filter(r => {
+                    if (f.code && !fn(r.code).includes(fn(f.code))) return false;
+                    if (f.payer_user_name && !fn(r.payer_user_name).includes(fn(f.payer_user_name))) return false;
+                    if (f.order_id && !fn(r.order_id).includes(fn(f.order_id))) return false;
+                    if (f.method && !fn(r.method).includes(fn(f.method))) return false;
+                    if (f.payment_id && !fn(r.payment_id).includes(fn(f.payment_id))) return false;
+                    if (f.received_by && !fn(r.received_by).includes(fn(f.received_by))) return false;
+                    if (f.txn_ref && !fn(r.txn_ref).includes(fn(f.txn_ref))) return false;
+                    if (f.note && !fn(r.note).includes(fn(f.note))) return false;
+                    if (f.created_by && !fn(r.created_by_name || '').includes(fn(f.created_by))) return false;
+                    if (!this.applyNumberFilter(r.amount, f.amount_type, f.amount_value, f.amount_from, f.amount_to)) return false;
+                    if (!this.applyDateFilter(r.received_at, f.received_at_type, f.received_at_value, f.received_at_from, f.received_at_to)) return false;
+                    if (!this.applyDateFilter(r.bank_time, f.bank_time_type, f.bank_time_value, f.bank_time_from, f.bank_time_to)) return false;
+                    if (!this.applyDateFilter(r.created_at, f.created_at_type, f.created_at_value, f.created_at_from, f.created_at_to)) return false;
+                    return true;
+                });
             },
 
             toggleFilter(key) {
-                for (const k in this.openFilter) this.openFilter[k] = false;
-                this.openFilter[key] = true;
+                Object.keys(this.openFilter).forEach(k => this.openFilter[k] = (k === key ? !this.openFilter[k] : false));
             },
-            applyFilter(key) { this.openFilter[key] = false; },
+            applyFilter(key) { 
+                this.openFilter[key] = false; 
+            },
             resetFilter(key) {
-                delete this.filters[key];
+                if (['received_at', 'bank_time', 'created_at'].includes(key)) {
+                    this.filters[`${key}_type`] = '';
+                    this.filters[`${key}_value`] = '';
+                    this.filters[`${key}_from`] = '';
+                    this.filters[`${key}_to`] = '';
+                } else if (['amount'].includes(key)) {
+                    this.filters[`${key}_type`] = '';
+                    this.filters[`${key}_value`] = '';
+                    this.filters[`${key}_from`] = '';
+                    this.filters[`${key}_to`] = '';
+                } else {
+                    this.filters[key] = '';
+                }
                 this.openFilter[key] = false;
             },
 

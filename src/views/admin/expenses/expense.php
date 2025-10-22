@@ -25,7 +25,7 @@ $items = $items ?? [];
                     <tr class="bg-gray-50 text-slate-600">
                         <th class="py-2 px-4 text-center">Thao tác</th>
                         <?= textFilterPopover('code', 'Mã phiếu chi') ?>
-                        <?= textFilterPopover('purchase_order_id', 'Phiếu nhập') ?>
+                        <?= textFilterPopover('purchase_order_code', 'Phiếu nhập') ?>
                         <?= textFilterPopover('supplier_name', 'Nhà cung cấp') ?>
                         <?= selectFilterPopover('method', 'Phương thức', [
                             '' => '-- Tất cả --',
@@ -39,18 +39,13 @@ $items = $items ?? [];
                         <?= dateFilterPopover('bank_time', 'Xác nhận NH') ?>
                         <?= textFilterPopover('note', 'Ghi chú') ?>
                         <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
-                        <?= textFilterPopover('created_by_name', 'Người tạo') ?>
+                        <?= textFilterPopover('created_by', 'Người tạo') ?>
                     </tr>
                 </thead>
                 <tbody>
                     <template x-for="(e, idx) in paginated()" :key="e.id">
                         <tr>
                             <td class="py-2 px-4 text-center space-x-2">
-                                <button @click="openEditModal(e)"
-                                    class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
-                                    title="Sửa">
-                                    <i class="fa-solid fa-pen"></i>
-                                </button>
                                 <button @click="remove(e.id)"
                                     class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
                                     title="Xóa">
@@ -59,7 +54,7 @@ $items = $items ?? [];
                             </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line" x-text="e.code"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line"
-                                :class="(e.purchase_order_code || '—') === '—' ? 'text-center' : 'text-right'"
+                                :class="(e.purchase_order_code || '—') === '—' ? 'text-center' : 'text-left'"
                                 x-text="e.purchase_order_code || '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
                                 :class="(e.supplier_name || '—') === '—' ? 'text-center' : 'text-left'"
@@ -103,9 +98,9 @@ $items = $items ?? [];
         </div>
 
         <!-- MODAL: Create -->
-        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openAdd"
+        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openAdd"
             x-transition.opacity style="display:none">
-            <div class="bg-white w-full max-w-2xl rounded-xl shadow" @click.outside="openAdd=false">
+            <div class="bg-white w-full max-w-2xl rounded-xl shadow animate__animated animate__zoomIn animate__faster" @click.outside="openAdd=false">
                 <div class="px-5 py-3 border-b flex justify-center items-center relative">
                     <h3 class="font-semibold text-2xl text-[#002975]">Thêm phiếu chi</h3>
                     <button class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
@@ -122,15 +117,15 @@ $items = $items ?? [];
         </div>
 
         <!-- MODAL: Edit -->
-        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openEdit"
+        <!-- <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openEdit"
             x-transition.opacity style="display:none">
-            <div class="bg-white w-full max-w-2xl rounded-xl shadow" @click.outside="openEdit=false">
+            <div class="bg-white w-full max-w-2xl rounded-xl shadow animate__animated animate__zoomIn animate__faster" @click.outside="openEdit=false">
                 <div class="px-5 py-3 border-b flex justify-center items-center relative">
                     <h3 class="font-semibold text-2xl text-[#002975]">Sửa phiếu chi</h3>
                     <button class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>
                 </div>
                 <form class="p-5 space-y-4" @submit.prevent="submitUpdate()">
-                    <?php require __DIR__ . '/form.php'; ?>
+                    
                     <div class="pt-2 flex justify-end gap-3">
                         <button type="button" class="px-4 py-2 border rounded" @click="openEdit=false">Hủy</button>
                         <button type="submit" class="px-4 py-2 bg-[#002975] text-white rounded"
@@ -138,11 +133,12 @@ $items = $items ?? [];
                     </div>
                 </form>
             </div>
-        </div>
+        </div> -->
 
         <!-- Toast lỗi nổi -->
         <div id="toast-container" class="z-[60]"></div>
     </div>
+    
     <!-- Pagination -->
     <div class="flex items-center justify-center mt-4 px-4 gap-6">
         <div class="text-sm text-slate-600">
@@ -262,52 +258,156 @@ $items = $items ?? [];
             },
 
             // ===== FILTERS =====
-            openFilter: {},
-            filters: {},
+            openFilter: {
+                code: false, purchase_order_id: false, supplier_name: false, method: false,
+                amount: false, paid_by_name: false, paid_at: false, txn_ref: false,
+                bank_time: false, note: false, created_at: false, created_by: false
+            },
+            filters: {
+                code: '',
+                purchase_order_id: '',
+                supplier_name: '',
+                method: '',
+                amount_type: '', amount_value: '', amount_from: '', amount_to: '',
+                paid_by_name: '',
+                paid_at_type: '', paid_at_value: '', paid_at_from: '', paid_at_to: '',
+                txn_ref: '',
+                bank_time_type: '', bank_time_value: '', bank_time_from: '', bank_time_to: '',
+                note: '',
+                created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
+                created_by: ''
+            },
 
-            // Hàm chuẩn hóa ngày: chuyển về dạng YYYY-MM-DD
-            normalizeDateStr(dateStr) {
-                if (!dateStr) return '';
-                const s = String(dateStr).trim();
-                // Nếu dạng d/m/Y
-                if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
-                    const [d, m, y] = s.split(/[\s\/]/);
-                    return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+            // Chuẩn hóa ngày cho so sánh (loại bỏ phần giờ)
+            applyDateFilter(val, type, value, from, to) {
+                if (!type) return true;
+                const normalizeDate = (d) => {
+                    if (!d) return null;
+                    let s = String(d).trim();
+                    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
+                        const [dd, mm, yy] = s.split(/[\s\/]/);
+                        s = `${yy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+                    }
+                    if (/^\d{4}-\d{1,2}-\d{1,2}/.test(s)) {
+                        s = s.substring(0, 10);
+                    }
+                    const parsed = new Date(s);
+                    if (isNaN(parsed)) return null;
+                    return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+                };
+                const itemDate = normalizeDate(val);
+                if (!itemDate) return false;
+                if (type === 'eq') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate.getTime() === compareDate.getTime();
                 }
-                // Nếu dạng Y-m-d hoặc Y-m-d H:i:s
-                if (/^\d{4}-\d{1,2}-\d{1,2}/.test(s)) {
-                    return s.substring(0, 10);
+                if (type === 'between') {
+                    if (!from || !to) return true;
+                    const fromDate = normalizeDate(from);
+                    const toDate = normalizeDate(to);
+                    if (!fromDate || !toDate) return false;
+                    return itemDate >= fromDate && itemDate <= toDate;
                 }
-                return s;
+                if (type === 'lt') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate < compareDate;
+                }
+                if (type === 'gt') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate > compareDate;
+                }
+                if (type === 'lte') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate <= compareDate;
+                }
+                if (type === 'gte') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate >= compareDate;
+                }
+                return true;
+            },
+
+            applyNumberFilter(val, type, value, from, to) {
+                const num = Number(val);
+                if (isNaN(num)) return false;
+                if (!type) return true;
+                if (type === 'eq') {
+                    if (!value && value !== 0) return true;
+                    return num === Number(value);
+                }
+                if (type === 'between') {
+                    if ((!from && from !== 0) || (!to && to !== 0)) return true;
+                    return num >= Number(from) && num <= Number(to);
+                }
+                if (type === 'lt') {
+                    if (!value && value !== 0) return true;
+                    return num < Number(value);
+                }
+                if (type === 'gt') {
+                    if (!value && value !== 0) return true;
+                    return num > Number(value);
+                }
+                if (type === 'lte') {
+                    if (!value && value !== 0) return true;
+                    return num <= Number(value);
+                }
+                if (type === 'gte') {
+                    if (!value && value !== 0) return true;
+                    return num >= Number(value);
+                }
+                return true;
             },
 
             filtered() {
-                let data = this.items;
-
-                for (const key in this.filters) {
-                    const val = this.filters[key];
-                    if (!val) continue;
-
-                    if (['amount'].includes(key)) {
-                        data = data.filter(e => Number(e.amount) === Number(val));
-                    } else if (['paid_at', 'created_at', 'bank_time'].includes(key)) {
-                        const normalizedVal = this.normalizeDateStr(val);
-                        data = data.filter(e => this.normalizeDateStr(e[key]) === normalizedVal);
-                    } else {
-                        data = data.filter(e => (e[key] || '').toLowerCase().includes(val.toLowerCase()));
-                    }
-                }
-
-                return data;
+                const fn = (v) => (v ?? '').toString().toLowerCase();
+                const f = this.filters;
+                return this.items.filter(e => {
+                    if (f.code && !fn(e.code).includes(fn(f.code))) return false;
+                    if (f.purchase_order_id && !fn(e.purchase_order_id).includes(fn(f.purchase_order_id))) return false;
+                    if (f.supplier_name && !fn(e.supplier_name).includes(fn(f.supplier_name))) return false;
+                    if (f.method && !fn(e.method).includes(fn(f.method))) return false;
+                    if (f.paid_by_name && !fn(e.paid_by_name).includes(fn(f.paid_by_name))) return false;
+                    if (f.txn_ref && !fn(e.txn_ref).includes(fn(f.txn_ref))) return false;
+                    if (f.note && !fn(e.note).includes(fn(f.note))) return false;
+                    if (f.created_by && !fn(e.created_by_name || '').includes(fn(f.created_by))) return false;
+                    if (!this.applyNumberFilter(e.amount, f.amount_type, f.amount_value, f.amount_from, f.amount_to)) return false;
+                    if (!this.applyDateFilter(e.paid_at, f.paid_at_type, f.paid_at_value, f.paid_at_from, f.paid_at_to)) return false;
+                    if (!this.applyDateFilter(e.bank_time, f.bank_time_type, f.bank_time_value, f.bank_time_from, f.bank_time_to)) return false;
+                    if (!this.applyDateFilter(e.created_at, f.created_at_type, f.created_at_value, f.created_at_from, f.created_at_to)) return false;
+                    return true;
+                });
             },
 
             toggleFilter(key) {
-                for (const k in this.openFilter) this.openFilter[k] = false;
-                this.openFilter[key] = true;
+                Object.keys(this.openFilter).forEach(k => this.openFilter[k] = (k === key ? !this.openFilter[k] : false));
             },
-            applyFilter(key) { this.openFilter[key] = false; },
+            applyFilter(key) {
+                this.openFilter[key] = false;
+            },
             resetFilter(key) {
-                delete this.filters[key];
+                if (['paid_at', 'bank_time', 'created_at'].includes(key)) {
+                    this.filters[`${key}_type`] = '';
+                    this.filters[`${key}_value`] = '';
+                    this.filters[`${key}_from`] = '';
+                    this.filters[`${key}_to`] = '';
+                } else if (['amount'].includes(key)) {
+                    this.filters[`${key}_type`] = '';
+                    this.filters[`${key}_value`] = '';
+                    this.filters[`${key}_from`] = '';
+                    this.filters[`${key}_to`] = '';
+                } else {
+                    this.filters[key] = '';
+                }
                 this.openFilter[key] = false;
             },
 
@@ -345,10 +445,13 @@ $items = $items ?? [];
                     this.errors.paid_at = 'Vui lòng chọn ngày chi';
                 }
                 if (field === 'amount') {
-                    if (!this.form.amount || this.form.amount <= 0)
+                    if (!this.form.amount || this.form.amount <= 0) {
                         this.errors.amount = 'Số tiền phải lớn hơn 0';
-                    else if (this.form.amount > MAX_AMOUNT)
+                    } else if (this.form.amount > MAX_AMOUNT) {
                         this.errors.amount = 'Số tiền quá lớn';
+                    } else if (this.selectedPurchaseOrderDebt > 0 && this.form.amount > this.selectedPurchaseOrderDebt) {
+                        this.errors.amount = 'Số tiền không được lớn hơn công nợ còn lại (' + this.formatCurrency(this.selectedPurchaseOrderDebt) + ')';
+                    }
                 }
                 if (field === 'paid_by' && !this.form.paid_by) {
                     this.errors.paid_by = 'Vui lòng chọn người chi';
@@ -424,6 +527,13 @@ $items = $items ?? [];
                 return this.purchaseOrders.filter(po => String(po.supplier_id) === String(this.form.supplier_id));
             },
 
+            // ===== CÔNG NỢ CỦA PHIẾU NHẬP ĐƯỢC CHỌN =====
+            get selectedPurchaseOrderDebt() {
+                if (!this.form.purchase_order_id) return 0;
+                const selected = this.purchaseOrders.find(po => String(po.id) === String(this.form.purchase_order_id));
+                return selected ? (selected.remaining_debt || 0) : 0;
+            },
+
             // ===== CRUD =====
             async openCreate() {
                 this.resetForm();
@@ -477,13 +587,22 @@ $items = $items ?? [];
                         body: JSON.stringify(this.form)
                     });
                     if (res.ok) {
+                        const data = await res.json();
+                        // Cập nhật items từ response thay vì fetch lại
+                        if (data.items) {
+                            this.items = data.items;
+                        } else {
+                            await this.fetchAll();
+                        }
                         this.showToast('Thêm phiếu chi thành công!', 'success');
                         this.openAdd = false;
-                        await this.fetchAll();
                     } else {
+                        const error = await res.json();
+                        console.error('Server error:', error);
                         this.showToast('Không thể thêm phiếu chi');
                     }
                 } catch (e) {
+                    console.error('Request error:', e);
                     this.showToast('Không thể thêm phiếu chi');
                 } finally {
                     this.submitting = false;
@@ -521,7 +640,8 @@ $items = $items ?? [];
                         this.items = this.items.filter(e => e.id !== id);
                         this.showToast('Xóa phiếu chi thành công!', 'success');
                     } else {
-                        this.showToast('Không thể xóa phiếu chi');
+                        const error = await res.json();
+                        this.showToast(error.error || 'Không thể xóa phiếu chi');
                     }
                 } catch (e) {
                     this.showToast('Không thể xóa phiếu chi');

@@ -191,6 +191,31 @@ class StockOutRepository
     }
 
     /**
+     * Lấy danh sách sản phẩm trong phiếu xuất kho theo lô
+     */
+    public function getItems(int $stockOutId): array
+    {
+        $pdo = DB::pdo();
+        $sql = "
+            SELECT 
+                soi.*,
+                p.name as product_name, 
+                p.sku as product_sku,
+                pb.batch_code,
+                pb.mfg_date,
+                pb.exp_date
+            FROM stock_out_items soi
+            LEFT JOIN products p ON p.id = soi.product_id
+            LEFT JOIN product_batches pb ON pb.id = soi.batch_id
+            WHERE soi.stock_out_id = ?
+            ORDER BY soi.id
+        ";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$stockOutId]);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    /**
      * Duyệt phiếu xuất kho
      */
     public function approve(int $id, int $currentUser): void

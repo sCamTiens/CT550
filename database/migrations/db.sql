@@ -12,7 +12,7 @@ CREATE TABLE roles (
 
 INSERT IGNORE INTO roles (id, name) VALUES
  (1,'Khách hàng'),
- (2,'Quản trị viên'),
+ (2,'Quản trị viên');
 
 CREATE TABLE users (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -511,8 +511,8 @@ CREATE TABLE receipt_vouchers (
   payment_id BIGINT NULL,            -- bản ghi thanh toán (nếu đã tạo payment)
   payer_user_id BIGINT NULL,         -- KH nội bộ (nếu có user)
   payer_name VARCHAR(250) NULL,  
-  txn_ref VARCHAR(250) NULL AFTER method, -- mã giao dịch từ cổng/nhà cung cấp (nếu có)
-  bank_time DATETIME NULL AFTER received_at,  -- thời gian giao dịch bên ngân hàng (nếu có)
+  txn_ref VARCHAR(250) NULL, -- mã giao dịch từ cổng/nhà cung cấp (nếu có)
+  bank_time DATETIME NULL,  -- thời gian giao dịch bên ngân hàng (nếu có)
   method ENUM(
     'Tiền mặt','Chuyển khoản','Quẹt thẻ',
     'PayPal','Thanh toán khi nhận hàng (COD)'
@@ -526,8 +526,6 @@ CREATE TABLE receipt_vouchers (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   created_by BIGINT NULL,
   CONSTRAINT fk_rv_created_by FOREIGN KEY(created_by) REFERENCES users(id),
-  CONSTRAINT fk_rv_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
-
   CONSTRAINT fk_rv_order     FOREIGN KEY(order_id)     REFERENCES orders(id)    ON DELETE SET NULL,
   CONSTRAINT fk_rv_payment   FOREIGN KEY(payment_id)   REFERENCES payments(id)  ON DELETE SET NULL,
   CONSTRAINT fk_rv_payer     FOREIGN KEY(payer_user_id) REFERENCES users(id)    ON DELETE SET NULL,
@@ -1042,7 +1040,7 @@ CREATE INDEX idx_prod_cat ON products(category_id);
 
 INSERT INTO users (role_id, username, email, phone, password_hash, full_name, is_active)
 VALUES (
-    4,                    -- admin (Chủ cửa hàng)
+    2,                    -- admin (Chủ cửa hàng)
     'admin',              -- ĐĂNG NHẬP BẰNG CÁI NÀY
     'thicamtien2003@gmail.com',
     '0909000000',
@@ -1150,3 +1148,26 @@ CREATE TABLE IF NOT EXISTS notifications (
   INDEX idx_notif_user_read (user_id, is_read),
   INDEX idx_notif_created (created_at)
 ) ENGINE=InnoDB;
+
+
+-- Kiểm tra và tạo thông báo cho các sản phẩm đã có tồn kho thấp
+INSERT INTO notifications (user_id, type, title, message, link)
+SELECT 
+    u.id,
+    'warning',
+    'Cảnh báo tồn kho thấp',
+    CONCAT('Sản phẩm "', p.name, '" chỉ còn ', s.qty, ' (mức an toàn: ', s.safety_stock, ')'),
+    '/admin/stocks'
+FROM stocks s
+JOIN products p ON p.id = s.product_id
+CROSS JOIN users u
+LEFT JOIN staff_profiles sp ON sp.user_id = u.id
+WHERE s.qty <= s.safety_stock 
+  AND s.qty >= 0
+  AND (u.role_id IN (2, 3, 4) OR sp.staff_role IN ('Kho', 'Admin'))
+  AND NOT EXISTS (
+    SELECT 1 FROM notifications n 
+    WHERE n.user_id = u.id 
+      AND n.title LIKE CONCAT('%', p.name, '%')
+      AND n.created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)
+  );

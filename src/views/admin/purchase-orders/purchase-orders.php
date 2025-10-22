@@ -38,18 +38,15 @@ $items = $items ?? [];
                             '2' => 'Đã thanh toán hết'
                         ]) ?>
                         <?= dateFilterPopover('received_at', 'Thời gian tạo') ?>
-                        <?= textFilterPopover('created_by_name', 'Người tạo') ?>
+                        <?= textFilterPopover('created_by', 'Người tạo') ?>
                     </tr>
                 </thead>
                 <tbody>
                     <template x-for="po in paginated()" :key="po.id">
                         <tr class="border-t">
                             <td class="py-2 px-4 text-center space-x-2">
-                                <!-- Debug: hiện giá trị payment_status -->
-                                <!-- <span x-text="'Status: ' + po.payment_status" class="text-xs"></span> -->
-
-                                <!-- Hiện nút sửa/xóa nếu KHÔNG phải đã thanh toán (0 hoặc 2) -->
-                                <template x-if="po.payment_status != '0' && po.payment_status != '2'">
+                                <!-- Hiện nút sửa/xóa dựa trên trạng thái thanh toán -->
+                                <template x-if="statusLabel(po) === 'Chưa đối soát'">
                                     <div class="inline-flex space-x-2">
                                         <button @click="openEditModal(po)"
                                             class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
@@ -63,7 +60,12 @@ $items = $items ?? [];
                                         </button>
                                     </div>
                                 </template>
-                                <template x-if="po.payment_status == '0' || po.payment_status == '2'">
+                                <!-- Chỉ hiện nút xóa nếu đã thanh toán một phần -->
+                                <template x-if="statusLabel(po) === 'Đã thanh toán một phần'">
+                                    <span class="text-slate-400 text-sm">—</span>
+                                </template>
+                                <!-- Không hiện gì nếu đã thanh toán hết -->
+                                <template x-if="statusLabel(po) === 'Đã thanh toán hết'">
                                     <span class="text-slate-400 text-sm">—</span>
                                 </template>
                             </td>
@@ -80,12 +82,14 @@ $items = $items ?? [];
                                 :class="(po.note || '—') === '—' ? 'text-center' : 'text-left'" x-text="po.note || '—'">
                             </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line text-center">
-                                <span x-text="statusLabel(po.payment_status)" :class="statusLabel(po.payment_status) === 'Đã thanh toán hết' 
+                                <div class="flex justify-center items-center h-full">
+                                    <span x-text="statusLabel(po)" :class="statusLabel(po) === 'Đã thanh toán hết' 
                                     ? 'text-green-600 font-semibold'
-                                    : (statusLabel(po.payment_status) === 'Đã thanh toán một phần' 
+                                    : (statusLabel(po) === 'Đã thanh toán một phần' 
                                         ? 'text-orange-600 font-semibold' 
                                         : 'text-red-600 font-semibold')">
-                                </span>
+                                    </span>
+                                </div>
                             </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line"
                                 :class="(po.received_at || '—') === '—' ? 'text-center' : 'text-right'"
@@ -110,9 +114,9 @@ $items = $items ?? [];
     </div>
 
     <!-- MODAL: Create -->
-    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openAdd"
+    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openAdd"
         x-transition.opacity style="display:none">
-        <div class="bg-white w-full max-w-5xl rounded-xl shadow" @click.outside="openAdd=false">
+        <div class="bg-white w-full max-w-5xl rounded-xl shadow animate__animated animate__zoomIn animate__faster" @click.outside="openAdd=false">
             <div class="px-5 py-3 border-b flex justify-center items-center relative">
                 <h3 class="font-semibold text-2xl text-[#002975]">Thêm phiếu nhập</h3>
                 <button class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
@@ -123,9 +127,9 @@ $items = $items ?? [];
         </div>
     </div>
     <!-- MODAL: Edit -->
-    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openEdit"
+    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openEdit"
         x-transition.opacity style="display:none">
-        <div class="bg-white w-full max-w-5xl rounded-xl shadow" @click.outside="openEdit=false">
+        <div class="bg-white w-full max-w-5xl rounded-xl shadow animate__animated animate__zoomIn animate__faster" @click.outside="openEdit=false">
             <div class="px-5 py-3 border-b flex justify-center items-center relative">
                 <h3 class="font-semibold text-2xl text-[#002975]">Sửa phiếu nhập</h3>
                 <button class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>
@@ -331,94 +335,142 @@ $items = $items ?? [];
             },
 
             // filters
-            openFilter: {},
-            filters: {},
+            openFilter: {
+                code: false, supplier_name: false, total_amount: false, paid_amount: false,
+                due_date: false, note: false, payment_status: false, received_at: false, created_by: false
+            },
+            filters: {
+                code: '',
+                supplier_name: '',
+                total_amount_type: '', total_amount_value: '', total_amount_from: '', total_amount_to: '',
+                paid_amount_type: '', paid_amount_value: '', paid_amount_from: '', paid_amount_to: '',
+                due_date_type: '', due_date_value: '', due_date_from: '', due_date_to: '',
+                note: '',
+                payment_status: '',
+                received_at_type: '', received_at_value: '', received_at_from: '', received_at_to: '',
+                created_by: ''
+            },
 
-            statusLabel(s) {
-                // NULL hoặc undefined = Chưa đối soát
-                if (s === null || s === undefined || s === '' || s === '1') {
+            statusLabel(po) {
+                // Tính toán trạng thái dựa trên paid_amount và total_amount
+                const paidAmount = parseFloat(po.paid_amount || 0);
+                const totalAmount = parseFloat(po.total_amount || 0);
+
+                if (paidAmount === 0) {
                     return 'Chưa đối soát';
-                }
-
-                switch (String(s)) {
-                    case '0': return 'Đã thanh toán một phần';
-                    case '2': return 'Đã thanh toán hết';
-                    default: return 'Chưa đối soát';
+                } else if (paidAmount >= totalAmount) {
+                    return 'Đã thanh toán hết';
+                } else {
+                    return 'Đã thanh toán một phần';
                 }
             },
 
             // lọc client-side
-            // Hàm chuẩn hóa ngày: chuyển về dạng YYYY-MM-DD
-            normalizeDateStr(dateStr) {
-                if (!dateStr) return '';
-                const s = String(dateStr).trim();
-                // Nếu dạng d/m/Y
-                if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
-                    const [d, m, y] = s.split(/[\s\/]/);
-                    return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+            // Chuẩn hóa ngày cho so sánh (loại bỏ phần giờ)
+            applyDateFilter(val, type, value, from, to) {
+                if (!type) return true;
+                const normalizeDate = (d) => {
+                    if (!d) return null;
+                    let s = String(d).trim();
+                    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
+                        const [dd, mm, yy] = s.split(/[\s\/]/);
+                        s = `${yy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+                    }
+                    if (/^\d{4}-\d{1,2}-\d{1,2}/.test(s)) {
+                        s = s.substring(0, 10);
+                    }
+                    const parsed = new Date(s);
+                    if (isNaN(parsed)) return null;
+                    return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+                };
+                const itemDate = normalizeDate(val);
+                if (!itemDate) return false;
+                if (type === 'eq') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate.getTime() === compareDate.getTime();
                 }
-                // Nếu dạng Y-m-d hoặc Y-m-d H:i:s
-                if (/^\d{4}-\d{1,2}-\d{1,2}/.test(s)) {
-                    return s.substring(0, 10);
+                if (type === 'between') {
+                    if (!from || !to) return true;
+                    const fromDate = normalizeDate(from);
+                    const toDate = normalizeDate(to);
+                    if (!fromDate || !toDate) return false;
+                    return itemDate >= fromDate && itemDate <= toDate;
                 }
-                return s;
+                if (type === 'lt') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate < compareDate;
+                }
+                if (type === 'gt') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate > compareDate;
+                }
+                if (type === 'lte') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate <= compareDate;
+                }
+                if (type === 'gte') {
+                    if (!value) return true;
+                    const compareDate = normalizeDate(value);
+                    if (!compareDate) return false;
+                    return itemDate >= compareDate;
+                }
+                return true;
+            },
+
+            applyNumberFilter(val, type, value, from, to) {
+                const num = Number(val);
+                if (isNaN(num)) return false;
+                if (!type) return true;
+                if (type === 'eq') {
+                    if (!value && value !== 0) return true;
+                    return num === Number(value);
+                }
+                if (type === 'between') {
+                    if ((!from && from !== 0) || (!to && to !== 0)) return true;
+                    return num >= Number(from) && num <= Number(to);
+                }
+                if (type === 'lt') {
+                    if (!value && value !== 0) return true;
+                    return num < Number(value);
+                }
+                if (type === 'gt') {
+                    if (!value && value !== 0) return true;
+                    return num > Number(value);
+                }
+                if (type === 'lte') {
+                    if (!value && value !== 0) return true;
+                    return num <= Number(value);
+                }
+                if (type === 'gte') {
+                    if (!value && value !== 0) return true;
+                    return num >= Number(value);
+                }
+                return true;
             },
 
             filtered() {
-                let data = this.items;
-                if (this.filters.code) {
-                    data = data.filter(p => (p.code || '').toLowerCase().includes(this.filters.code.toLowerCase()));
-                }
-                if (this.filters.supplier_name) {
-                    data = data.filter(p => (p.supplier_name || '').toLowerCase().includes(this.filters.supplier_name.toLowerCase()));
-                }
-                if (this.filters.total_amount) {
-                    const val = Number(this.filters.total_amount);
-                    if (!isNaN(val)) data = data.filter(p => Number(p.total_amount) === val);
-                }
-                if (this.filters.paid_amount) {
-                    const val = Number(this.filters.paid_amount);
-                    if (!isNaN(val)) data = data.filter(p => Number(p.paid_amount) === val);
-                }
-                if (this.filters.payment_status !== undefined && this.filters.payment_status !== '') {
-                    data = data.filter(p => String(p.payment_status) === String(this.filters.payment_status));
-                }
-                if (this.filters.note) {
-                    data = data.filter(p => (p.note || '').toLowerCase().includes(this.filters.note.toLowerCase()));
-                }
-                if (this.filters.created_by_name) {
-                    data = data.filter(p => (p.created_by_name || '').toLowerCase().includes(this.filters.created_by_name.toLowerCase()));
-                }
-
-                // lọc ngày tạo
-                if (this.filters.received_at_value && this.filters.received_at_type === 'eq') {
-                    const val = this.normalizeDateStr(this.filters.received_at_value);
-                    data = data.filter(p => this.normalizeDateStr(p.received_at) === val);
-                }
-                if (this.filters.received_at_from && this.filters.received_at_to && this.filters.received_at_type === 'between') {
-                    const from = this.normalizeDateStr(this.filters.received_at_from);
-                    const to = this.normalizeDateStr(this.filters.received_at_to);
-                    data = data.filter(p => {
-                        const d = this.normalizeDateStr(p.received_at);
-                        return d >= from && d <= to;
-                    });
-                }
-
-                // lọc ngày hẹn thanh toán
-                if (this.filters.due_date_value && this.filters.due_date_type === 'eq') {
-                    const val = this.normalizeDateStr(this.filters.due_date_value);
-                    data = data.filter(p => this.normalizeDateStr(p.due_date) === val);
-                }
-                if (this.filters.due_date_from && this.filters.due_date_to && this.filters.due_date_type === 'between') {
-                    const from = this.normalizeDateStr(this.filters.due_date_from);
-                    const to = this.normalizeDateStr(this.filters.due_date_to);
-                    data = data.filter(p => {
-                        const d = this.normalizeDateStr(p.due_date);
-                        return d >= from && d <= to;
-                    });
-                }
-
-                return data;
+                const fn = (v) => (v ?? '').toString().toLowerCase();
+                const f = this.filters;
+                return this.items.filter(p => {
+                    if (f.code && !fn(p.code).includes(fn(f.code))) return false;
+                    if (f.supplier_name && !fn(p.supplier_name).includes(fn(f.supplier_name))) return false;
+                    if (f.note && !fn(p.note).includes(fn(f.note))) return false;
+                    if (f.payment_status !== '' && f.payment_status !== undefined && String(p.payment_status) !== String(f.payment_status)) return false;
+                    if (f.created_by && !fn(p.created_by_name || '').includes(fn(f.created_by))) return false;
+                    if (!this.applyNumberFilter(p.total_amount, f.total_amount_type, f.total_amount_value, f.total_amount_from, f.total_amount_to)) return false;
+                    if (!this.applyNumberFilter(p.paid_amount, f.paid_amount_type, f.paid_amount_value, f.paid_amount_from, f.paid_amount_to)) return false;
+                    if (!this.applyDateFilter(p.due_date, f.due_date_type, f.due_date_value, f.due_date_from, f.due_date_to)) return false;
+                    if (!this.applyDateFilter(p.received_at, f.received_at_type, f.received_at_value, f.received_at_from, f.received_at_to)) return false;
+                    return true;
+                });
             },
 
             paginated() {
@@ -693,16 +745,25 @@ $items = $items ?? [];
 
             // Filter popover logic
             toggleFilter(key) {
-                for (const k in this.openFilter) this.openFilter[k] = false;
-                this.openFilter[key] = true;
+                Object.keys(this.openFilter).forEach(k => this.openFilter[k] = (k === key ? !this.openFilter[k] : false));
             },
-            applyFilter(key) { this.openFilter[key] = false; },
+            applyFilter(key) {
+                this.openFilter[key] = false;
+            },
             resetFilter(key) {
-                this.filters[key] = '';
-                this.filters[key + '_type'] = '';
-                this.filters[key + '_value'] = '';
-                this.filters[key + '_from'] = '';
-                this.filters[key + '_to'] = '';
+                if (['due_date', 'received_at'].includes(key)) {
+                    this.filters[`${key}_type`] = '';
+                    this.filters[`${key}_value`] = '';
+                    this.filters[`${key}_from`] = '';
+                    this.filters[`${key}_to`] = '';
+                } else if (['total_amount', 'paid_amount'].includes(key)) {
+                    this.filters[`${key}_type`] = '';
+                    this.filters[`${key}_value`] = '';
+                    this.filters[`${key}_from`] = '';
+                    this.filters[`${key}_to`] = '';
+                } else {
+                    this.filters[key] = '';
+                }
                 this.openFilter[key] = false;
             },
 

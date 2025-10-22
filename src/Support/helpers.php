@@ -39,10 +39,10 @@ if (!function_exists('textFilterPopover')) {
   /**
    * Render filter text input (ví dụ: name, slug, created_by...)
    */
-  function textFilterPopover(string $key, string $label): string
+  function textFilterPopover(string $key, string $label, int $minWidth = 150): string
   {
     return <<<HTML
-<th class="py-2 px-4 relative min-w-[150px] text-center align-middle">
+<th class="py-2 px-4 relative text-center align-middle" style="min-width: {$minWidth}px;">
   <div class="flex items-center justify-center gap-2">
     <span>{$label}</span>
     <button @click.stop="toggleFilter('{$key}')" class="p-1 rounded hover:bg-gray-100" title="Tìm theo {$label}">
@@ -71,10 +71,10 @@ if (!function_exists('numberFilterPopover')) {
   /**
    * Render filter số (ví dụ sort_order)
    */
-  function numberFilterPopover(string $key, string $label): string
+  function numberFilterPopover(string $key, string $label, int $minWidth = 120): string
   {
     return <<<HTML
-<th class="py-2 px-4 relative min-w-[150px] text-center align-middle">
+<th class="py-2 px-4 relative text-center align-middle" style="min-width: {$minWidth}px;">
   <div class="flex items-center justify-center gap-2">
     <span>{$label}</span>
     <button @click.stop="toggleFilter('{$key}')" class="p-1 rounded hover:bg-gray-100" title="Tìm theo {$label}">
@@ -105,15 +105,16 @@ if (!function_exists('dateFilterPopover')) {
    *
    * @param string $key   Tên filter (vd: created_at, updated_at)
    * @param string $label Label hiển thị
+   * @param int $minWidth Độ rộng tối thiểu (mặc định 140px)
    * @return string
    */
-  function dateFilterPopover(string $key, string $label): string
+  function dateFilterPopover(string $key, string $label, int $minWidth = 140): string
   {
     $labelEsc = htmlspecialchars($label, ENT_QUOTES, 'UTF-8');
     $keyEsc = htmlspecialchars($key, ENT_QUOTES, 'UTF-8');
 
     return <<<HTML
-<th class="py-2 px-4 relative min-w-[150px] text-center align-middle">
+<th class="py-2 px-4 relative text-center align-middle" style="min-width: {$minWidth}px;">
   <div class="flex items-center justify-center gap-2">
     <span>{$labelEsc}</span>
     <button @click.stop="toggleFilter('{$keyEsc}')" class="p-1 rounded hover:bg-[#002975] hover:text-white" title="Lọc theo {$labelEsc}">
@@ -123,7 +124,8 @@ if (!function_exists('dateFilterPopover')) {
     </button>
   </div>
 
-  <div x-show="openFilter.{$keyEsc}" x-transition x-effect="openFilter.{$keyEsc} && (window.__initFlatpickr && window.__initFlatpickr(\$el))"
+  <div x-show="openFilter.{$keyEsc}" x-transition
+       x-effect="if(openFilter.{$keyEsc} && window.__initFlatpickr) window.__initFlatpickr(\$el)"
        @click.outside="openFilter.{$keyEsc}=false"
        class="absolute z-40 mt-2 w-80 bg-white rounded-lg shadow border p-3 space-y-3 text-left"
        style="position:absolute;">
@@ -143,8 +145,10 @@ if (!function_exists('dateFilterPopover')) {
     <!-- Kiểu lọc: ngày đơn -->
     <div x-show="filters.{$keyEsc}_type==='eq'">
       <div class="relative">
-        <input type="text" x-model="filters.{$keyEsc}_value" placeholder="dd/mm/yyyy"
-               autocomplete="off" class="flatpickr w-full border rounded px-3 py-2 pr-10">
+        <input type="text" placeholder="dd/mm/yyyy"
+               autocomplete="off" class="flatpickr w-full border rounded px-3 py-2 pr-10"
+               data-filter-key="{$keyEsc}" data-filter-field="value"
+               :value="filters.{$keyEsc}_value">
         <span @click.stop="openFlatpickr(this)"
               class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer">
           <i class="fa-regular fa-calendar-days"></i>
@@ -155,18 +159,22 @@ if (!function_exists('dateFilterPopover')) {
     <!-- Kiểu lọc: khoảng ngày -->
     <div x-show="filters.{$keyEsc}_type==='between'" class="flex gap-2">
       <div class="relative flex-1">
-        <input type="text" x-model="filters.{$keyEsc}_from" placeholder="Từ ngày"
+        <input type="text" placeholder="Từ ngày"
                autocomplete="off" :max="filters.{$keyEsc}_to || null"
-               class="flatpickr w-full border rounded px-3 py-2 pr-10">
+               class="flatpickr w-full border rounded px-3 py-2 pr-10"
+               data-filter-key="{$keyEsc}" data-filter-field="from"
+               :value="filters.{$keyEsc}_from">
         <span @click.stop="openFlatpickr(this)"
               class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer">
           <i class="fa-regular fa-calendar-days"></i>
         </span>
       </div>
       <div class="relative flex-1">
-        <input type="text" x-model="filters.{$keyEsc}_to" placeholder="Đến ngày"
+        <input type="text" placeholder="Đến ngày"
                autocomplete="off" :min="filters.{$keyEsc}_from || null"
-               class="flatpickr w-full border rounded px-3 py-2 pr-10">
+               class="flatpickr w-full border rounded px-3 py-2 pr-10"
+               data-filter-key="{$keyEsc}" data-filter-field="to"
+               :value="filters.{$keyEsc}_to">
         <span @click.stop="openFlatpickr(this)"
               class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer">
           <i class="fa-regular fa-calendar-days"></i>
@@ -177,8 +185,10 @@ if (!function_exists('dateFilterPopover')) {
     <!-- Kiểu lọc: so sánh -->
     <div x-show="['lt','gt','lte','gte'].includes(filters.{$keyEsc}_type)">
       <div class="relative">
-        <input type="text" x-model="filters.{$keyEsc}_value" placeholder="dd/mm/yyyy"
-               autocomplete="off" class="flatpickr w-full border rounded px-3 py-2 pr-10">
+        <input type="text" placeholder="dd/mm/yyyy"
+               autocomplete="off" class="flatpickr w-full border rounded px-3 py-2 pr-10"
+               data-filter-key="{$keyEsc}" data-filter-field="value"
+               :value="filters.{$keyEsc}_value">
         <span @click.stop="openFlatpickr(this)"
               class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer">
           <i class="fa-regular fa-calendar-days"></i>
@@ -205,9 +215,10 @@ if (!function_exists('selectFilterPopover')) {
    * @param string $key    Tên filter (vd: status, role_id)
    * @param string $label  Label hiển thị
    * @param array  $options Mảng option (value => text)
+   * @param int $minWidth Độ rộng tối thiểu (mặc định 120px)
    * @return string
    */
-  function selectFilterPopover(string $key, string $label, array $options): string
+  function selectFilterPopover(string $key, string $label, array $options, int $minWidth = 120): string
   {
     $optHtml = '';
     foreach ($options as $val => $text) {
@@ -215,7 +226,7 @@ if (!function_exists('selectFilterPopover')) {
     }
 
     return <<<HTML
-    <th class="py-2 px-4 relative min-w-[150px] text-center align-middle">
+    <th class="py-2 px-4 relative text-center align-middle" style="min-width: {$minWidth}px;">
       <div class="flex items-center justify-center gap-2">
         <span>{$label}</span>
         <button @click.stop="toggleFilter('{$key}')" class="p-1 rounded hover:bg-gray-100" title="Lọc theo {$label}">

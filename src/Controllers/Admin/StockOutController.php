@@ -99,6 +99,15 @@ class StockOutController extends BaseAdminController
         exit;
     }
 
+    /** GET /admin/api/stock-outs/{id}/items */
+    public function getItems($id)
+    {
+        $items = $this->stockOutRepo->getItems($id);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['items' => $items], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     /** POST /admin/api/stock-outs/{id}/approve */
     public function approve($id)
     {

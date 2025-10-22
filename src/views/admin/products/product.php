@@ -111,9 +111,11 @@ $items = $items ?? [];
     </div>
 
     <!-- MODAL: Create -->
-    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openAdd"
-      x-transition.opacity style="display:none">
-      <div class="bg-white w-full max-w-3xl rounded-xl shadow" @click.outside="openAdd=false">
+    <div
+      class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
+      x-show="openAdd" x-transition.opacity style="display:none">
+      <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster"
+        @click.outside="openAdd=false">
         <div class="px-5 py-3 border-b flex justify-center items-center relative">
           <h3 class="font-semibold text-2xl text-[#002975]">Thêm sản phẩm</h3>
           <button class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
@@ -133,9 +135,11 @@ $items = $items ?? [];
     </div>
 
     <!-- MODAL: Edit -->
-    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openEdit"
-      x-transition.opacity style="display:none">
-      <div class="bg-white w-full max-w-3xl rounded-xl shadow" @click.outside="openEdit=false">
+    <div
+      class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
+      x-show="openEdit" x-transition.opacity style="display:none">
+      <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster"
+        @click.outside="openEdit=false">
         <div class="px-5 py-3 border-b flex justify-center items-center relative">
           <h3 class="font-semibold text-2xl text-[#002975]">Sửa sản phẩm</h3>
           <button class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>
@@ -154,9 +158,8 @@ $items = $items ?? [];
 
     <!-- Toast lỗi nổi -->
     <div id="toast-container" class="z-[60]"></div>
-
-
   </div>
+
   <!-- Pagination -->
   <div class="flex items-center justify-center mt-4 px-4 gap-6">
     <div class="text-sm text-slate-600">
@@ -276,78 +279,118 @@ $items = $items ?? [];
       openFilter: {},    // trạng thái mở filter popup
       filters: {},       // dữ liệu filter
 
+      // ===== helper riêng cho date filter =====
+      applyDateFilter(val, type, value, from, to) {
+        if (!val) return true;
+        if (!type) return true;
+
+        const normalizeDate = (dateStr) => {
+          if (!dateStr) return null;
+          const d = new Date(dateStr);
+          if (isNaN(d.getTime())) return null;
+          return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        };
+
+        const d = normalizeDate(val);
+        if (!d) return true;
+
+        if (type === 'eq') {
+          if (!value) return true;
+          const compareDate = normalizeDate(value);
+          return compareDate ? d.getTime() === compareDate.getTime() : true;
+        }
+
+        if (type === 'between') {
+          if (!from || !to) return true;
+          const fromDate = normalizeDate(from);
+          const toDate = normalizeDate(to);
+          return fromDate && toDate ? (d >= fromDate && d <= toDate) : true;
+        }
+
+        if (type === 'lt') {
+          if (!value) return true;
+          const compareDate = normalizeDate(value);
+          return compareDate ? d < compareDate : true;
+        }
+
+        if (type === 'gt') {
+          if (!value) return true;
+          const compareDate = normalizeDate(value);
+          return compareDate ? d > compareDate : true;
+        }
+
+        if (type === 'lte') {
+          if (!value) return true;
+          const compareDate = normalizeDate(value);
+          return compareDate ? d <= compareDate : true;
+        }
+
+        if (type === 'gte') {
+          if (!value) return true;
+          const compareDate = normalizeDate(value);
+          return compareDate ? d >= compareDate : true;
+        }
+
+        return true;
+      },
+
       // lọc client-side
       filtered() {
-        let data = this.items;
+        const fn = (v) => (v ?? '').toString().toLowerCase();
+        const f = this.filters;
 
-        if (this.filters.sku) {
-          data = data.filter(p => (p.sku || '').toLowerCase().includes(this.filters.sku.toLowerCase()));
-        }
-        if (this.filters.name) {
-          data = data.filter(p => (p.name || '').toLowerCase().includes(this.filters.name.toLowerCase()));
-        }
-        if (this.filters.unit) {
-          data = data.filter(p => (p.unit_name || '').toLowerCase().includes(this.filters.unit.toLowerCase()));
-        }
-        if (this.filters.brand) {
-          data = data.filter(p => (p.brand_name || '').toLowerCase().includes(this.filters.brand.toLowerCase()));
-        }
-        if (this.filters.category) {
-          data = data.filter(p => (p.category_name || '').toLowerCase().includes(this.filters.category.toLowerCase()));
-        }
-        if (this.filters.sale_price) {
-          const val = Number(this.filters.sale_price);
-          if (!isNaN(val)) data = data.filter(p => Number(p.sale_price) === val);
-        }
-        if (this.filters.cost_price) {
-          const val = Number(this.filters.cost_price);
-          if (!isNaN(val)) data = data.filter(p => Number(p.cost_price) === val);
-        }
-        if (this.filters.status !== undefined && this.filters.status !== '') {
-          data = data.filter(p => String(p.is_active) === String(this.filters.status));
-        }
-        if (this.filters.created_by) {
-          data = data.filter(p => (p.created_by_name || '').toLowerCase().includes(this.filters.created_by.toLowerCase()));
-        }
-        if (this.filters.updated_by) {
-          data = data.filter(p => (p.updated_by_name || '').toLowerCase().includes(this.filters.updated_by.toLowerCase()));
-        }
-        if (this.filters.stock_qty) {
-          const val = Number(this.filters.stock_qty);
-          if (!isNaN(val)) data = data.filter(p => Number(p.stock_qty) === val);
-        }
+        return this.items.filter(p => {
+          if (f.sku && !fn(p.sku).includes(fn(f.sku))) return false;
+          if (f.name && !fn(p.name).includes(fn(f.name))) return false;
+          if (f.unit && !fn(p.unit_name || '').includes(fn(f.unit))) return false;
+          if (f.brand && !fn(p.brand_name || '').includes(fn(f.brand))) return false;
+          if (f.category && !fn(p.category_name || '').includes(fn(f.category))) return false;
 
-        // lọc ngày tạo
-        if (this.filters.created_at_value && this.filters.created_at_type === 'eq') {
-          data = data.filter(p => (p.created_at || '').startsWith(this.filters.created_at_value));
-        }
-        if (this.filters.created_at_from && this.filters.created_at_to && this.filters.created_at_type === 'between') {
-          data = data.filter(p => p.created_at >= this.filters.created_at_from && p.created_at <= this.filters.created_at_to);
-        }
+          if (f.sale_price !== '' && f.sale_price !== null) {
+            const val = Number(f.sale_price);
+            if (!isNaN(val) && Number(p.sale_price) !== val) return false;
+          }
 
-        // lọc ngày cập nhật
-        if (this.filters.updated_at_value && this.filters.updated_at_type === 'eq') {
-          data = data.filter(p => (p.updated_at || '').startsWith(this.filters.updated_at_value));
-        }
-        if (this.filters.updated_at_from && this.filters.updated_at_to && this.filters.updated_at_type === 'between') {
-          data = data.filter(p => p.updated_at >= this.filters.updated_at_from && p.updated_at <= this.filters.updated_at_to);
-        }
+          if (f.cost_price !== '' && f.cost_price !== null) {
+            const val = Number(f.cost_price);
+            if (!isNaN(val) && Number(p.cost_price) !== val) return false;
+          }
 
-        return data;
+          if (f.status !== undefined && f.status !== '') {
+            if (String(p.is_active) !== String(f.status)) return false;
+          }
+
+          if (f.created_by && !fn(p.created_by_name || '').includes(fn(f.created_by))) return false;
+          if (f.updated_by && !fn(p.updated_by_name || '').includes(fn(f.updated_by))) return false;
+
+          if (f.stock_qty !== '' && f.stock_qty !== null) {
+            const val = Number(f.stock_qty);
+            if (!isNaN(val) && Number(p.stock_qty) !== val) return false;
+          }
+
+          if (!this.applyDateFilter(p.created_at, f.created_at_type, f.created_at_value, f.created_at_from, f.created_at_to)) return false;
+          if (!this.applyDateFilter(p.updated_at, f.updated_at_type, f.updated_at_value, f.updated_at_from, f.updated_at_to)) return false;
+
+          return true;
+        });
       },
 
       // toggle popup filter
       toggleFilter(key) {
-        for (const k in this.openFilter) this.openFilter[k] = false;
-        this.openFilter[key] = true;
+        Object.keys(this.openFilter).forEach(k => this.openFilter[k] = (k === key ? !this.openFilter[k] : false));
       },
-      applyFilter(key) { this.openFilter[key] = false; },
+      applyFilter(key) {
+        this.openFilter[key] = false;
+      },
       resetFilter(key) {
-        this.filters[key] = '';
-        this.filters[key + '_type'] = '';
-        this.filters[key + '_value'] = '';
-        this.filters[key + '_from'] = '';
-        this.filters[key + '_to'] = '';
+        if (['created_at', 'updated_at'].includes(key)) {
+          this.filters[`${key}_type`] = '';
+          this.filters[`${key}_value`] = '';
+          this.filters[`${key}_from`] = '';
+          this.filters[`${key}_to`] = '';
+        } else {
+          this.filters[key] = '';
+        }
         this.openFilter[key] = false;
       },
 
