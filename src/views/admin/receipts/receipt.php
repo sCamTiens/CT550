@@ -48,7 +48,7 @@ $items = $items ?? [];
                 </thead>
                 <tbody>
                     <template x-for="(r, idx) in paginated()" :key="r.id">
-                        <tr>
+                        <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
                             <td class="py-2 px-4 text-center space-x-2">
                                 <button @click="openEditModal(r)"
                                     class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
@@ -115,8 +115,8 @@ $items = $items ?? [];
         </div>
 
         <!-- MODAL: Create -->
-        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openAdd"
-            x-transition.opacity style="display:none">
+        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
+            x-show="openAdd" x-transition.opacity style="display:none">
             <div class="bg-white w-full max-w-3xl rounded-xl shadow max-h-[90vh] flex flex-col animate__animated animate__zoomIn animate__faster"
                 @click.outside="openAdd=false">
                 <div class="px-5 py-3 border-b flex justify-center items-center relative flex-shrink-0">
@@ -140,8 +140,8 @@ $items = $items ?? [];
         </div>
 
         <!-- MODAL: Edit -->
-        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openEdit"
-            x-transition.opacity style="display:none">
+        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
+            x-show="openEdit" x-transition.opacity style="display:none">
             <div class="bg-white w-full max-w-3xl rounded-xl shadow max-h-[90vh] flex flex-col animate__animated animate__zoomIn animate__faster"
                 @click.outside="openEdit=false">
                 <div class="px-5 py-3 border-b flex justify-center items-center relative flex-shrink-0">
@@ -165,7 +165,7 @@ $items = $items ?? [];
         <!-- Toast lỗi nổi -->
         <div id="toast-container" class="z-[60]"></div>
     </div>
-    
+
     <!-- Pagination -->
     <div class="flex items-center justify-center mt-4 px-4 gap-6">
         <div class="text-sm text-slate-600">
@@ -416,8 +416,8 @@ $items = $items ?? [];
             toggleFilter(key) {
                 Object.keys(this.openFilter).forEach(k => this.openFilter[k] = (k === key ? !this.openFilter[k] : false));
             },
-            applyFilter(key) { 
-                this.openFilter[key] = false; 
+            applyFilter(key) {
+                this.openFilter[key] = false;
             },
             resetFilter(key) {
                 if (['received_at', 'bank_time', 'created_at'].includes(key)) {

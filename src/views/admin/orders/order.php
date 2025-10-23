@@ -129,18 +129,20 @@ $items = $items ?? [];
                         </th>
                         <?= selectFilterPopover('status', 'Trạng thái', [
                             '' => '-- Tất cả --',
-                            'pending' => 'Chờ xác nhận',
-                            'confirmed' => 'Đã xác nhận',
-                            'preparing' => 'Đang chuẩn bị',
-                            'shipping' => 'Đang giao',
-                            'delivered' => 'Hoàn tất',
-                            'cancelled' => 'Đã hủy',
-                            'returned' => 'Hoàn trả'
+                            'Chờ xử lý' => 'Chờ xử lý',
+                            'Đang xử lý' => 'Đang xử lý',
+                            'Đang giao' => 'Đang giao',
+                            'Hoàn tất' => 'Hoàn tất',
+                            'Đã hủy' => 'Đã hủy',
                         ]) ?>
                         <?= numberFilterPopover('subtotal', 'Tạm tính') ?>
                         <?= numberFilterPopover('discount_amount', 'Giảm giá') ?>
                         <?= numberFilterPopover('total_amount', 'Tổng tiền') ?>
-                        <?= textFilterPopover('payment_method', 'PT thanh toán') ?>
+                        <?= selectFilterPopover('payment_method', 'PT thanh toán', [
+                            '' => '-- Tất cả --',
+                            'Tiền mặt' => 'Tiền mặt',
+                            'Chuyển khoản' => 'Chuyển khoản',
+                        ]) ?>
                         <?= textFilterPopover('shipping_address', 'Địa chỉ giao') ?>
                         <?= textFilterPopover('note', 'Ghi chú') ?>
                         <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
@@ -149,7 +151,7 @@ $items = $items ?? [];
                 </thead>
                 <tbody>
                     <template x-for="(o, idx) in paginated()" :key="o.id">
-                        <tr>
+                        <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
                             <td class="py-2 px-4 text-center space-x-2">
                                 <!-- Nút Xem chi tiết -->
                                 <button @click.stop="openViewModal(o)"
@@ -219,13 +221,11 @@ $items = $items ?? [];
                             <td class="px-3 py-2 text-center align-middle">
                                 <div class="flex justify-center items-center h-full">
                                     <span class="px-2 py-[3px] rounded text-xs font-medium" :class="{
-                                        'bg-yellow-100 text-yellow-800': o.status === 'Chờ xác nhận',
-                                        'bg-blue-100 text-blue-800': o.status === 'Đã xác nhận',
-                                        'bg-purple-100 text-purple-800': o.status === 'Đang chuẩn bị',
+                                        'bg-yellow-100 text-yellow-800': o.status === 'Chờ xử lý',
+                                        'bg-blue-100 text-blue-800': o.status === 'Đang xử lý',
                                         'bg-orange-100 text-orange-800': o.status === 'Đang giao',
                                         'bg-green-100 text-green-800': o.status === 'Hoàn tất',
                                         'bg-red-100 text-red-800': o.status === 'Đã hủy',
-                                        'bg-gray-100 text-gray-800': o.status === 'Hoàn trả'
                                     }" x-text="getStatusText(o.status)"></span>
                                 </div>
                             </td>
@@ -235,9 +235,17 @@ $items = $items ?? [];
                                 x-text="formatCurrency(o.discount_amount || 0)"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line text-right font-semibold"
                                 x-text="formatCurrency(o.total_amount || 0)"></td>
-                            <td class="px-3 py-2 break-words whitespace-pre-line"
+                            <!-- <td class="px-3 py-2 break-words whitespace-pre-line"
                                 :class="(o.payment_method || '—') === '—' ? 'text-center' : 'text-left'"
-                                x-text="o.payment_method || '—'"></td>
+                                x-text="o.payment_method || '—'"></td> -->
+                            <td class="px-3 py-2 text-center align-middle">
+                                <div class="flex justify-center items-center h-full">
+                                    <span class="px-2 py-[3px] rounded text-xs font-medium" :class="{
+                                        'bg-green-100 text-green-800': o.payment_method === 'Tiền mặt',
+                                        'bg-red-100 text-orange-800': o.payment_method === 'Chuyển khoản',
+                                    }" x-text="getPaymentMethodText(o.payment_method)"></span>
+                                </div>
+                            </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line" x-text="o.shipping_address || '—'">
                             </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line" x-text="o.note || '—'"></td>
@@ -527,10 +535,25 @@ $items = $items ?? [];
                 let raw = e.target.value.replace(/[^\d]/g, '');
                 let val = Number(raw);
                 if (Number.isNaN(val)) val = 0;
+
+                // Cập nhật model
                 this.form[field] = val;
-                this.form[field + 'Formatted'] = val.toLocaleString('en-US');
+
+                // Format số
+                const formatted = val.toLocaleString('en-US');
+                this.form[field + 'Formatted'] = formatted;
+
+                // Cập nhật lại hiển thị trong input
+                e.target.value = formatted;
+
+                // Force Alpine cập nhật model (vì input đang x-model đến discount_amountFormatted)
+                this.$nextTick(() => {
+                    this.form[field + 'Formatted'] = formatted;
+                });
+
                 this.calculateTotal();
             },
+
 
             calculateTotal() {
                 // Tính tổng tiền từ danh sách sản phẩm
@@ -542,10 +565,59 @@ $items = $items ?? [];
                 this.form.subtotalFormatted = subtotal.toLocaleString('en-US');
 
                 const discount = Number(this.form.discount_amount) || 0;
-                const total = subtotal - discount;
+                const total = Math.max(0, subtotal - discount);
 
                 this.form.total_amount = total;
                 this.form.total_amountFormatted = total.toLocaleString('en-US');
+            },
+
+            async applyCoupon() {
+                if (!this.form.coupon_code || !this.form.coupon_code.trim()) {
+                    this.showToast('Vui lòng nhập mã giảm giá', 'error');
+                    return;
+                }
+
+                if (this.form.subtotal <= 0) {
+                    this.showToast('Vui lòng chọn sản phẩm trước khi áp dụng mã giảm giá', 'error');
+                    return;
+                }
+
+                try {
+                    const res = await fetch(`/admin/api/coupons/validate`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            code: this.form.coupon_code.toUpperCase(),
+                            order_amount: this.form.subtotal
+                        })
+                    });
+
+                    const data = await res.json();
+
+                    if (res.ok && data.valid) {
+                        // Làm tròn trước khi format
+                        const discount = Math.round(Number(data.discount_amount)) || 0;
+
+                        this.form.discount_amount = discount;
+                        this.form.discount_amountFormatted = discount.toLocaleString('en-US');
+
+                        // ép Alpine cập nhật lại input
+                        this.$nextTick(() => {
+                            this.form.discount_amountFormatted = discount.toLocaleString('en-US');
+                        });
+
+                        this.calculateTotal();
+                        this.showToast(
+                            `Áp dụng mã giảm giá thành công! Giảm ${this.formatCurrency(discount)}`,
+                            'success'
+                        );
+                    } else {
+                        this.showToast(data.message || 'Mã giảm giá không hợp lệ', 'error');
+                        this.form.coupon_code = '';
+                    }
+                } catch (e) {
+                    this.showToast('Không thể kiểm tra mã giảm giá', 'error');
+                }
             },
 
             addItem() {
@@ -587,15 +659,21 @@ $items = $items ?? [];
 
             getStatusText(status) {
                 const map = {
-                    'pending': 'Chờ xử lý',
-                    'confirmed': 'Đã xác nhận',
-                    'preparing': 'Đang chuẩn bị',
-                    'shipping': 'Đang giao',
-                    'delivered': 'Đã giao',
-                    'cancelled': 'Đã hủy',
-                    'returned': 'Đã trả'
+                    'Chờ xử lý': 'Chờ xử lý',
+                    'Đang xử lý': 'Đang xử lý',
+                    'Đang giao': 'Đang giao',
+                    'Hoàn tất': 'Hoàn tất',
+                    'Đã hủy': 'Đã hủy',
                 };
                 return map[status] || status;
+            },
+
+            getPaymentMethodText(payment_method) {
+                const map = {
+                    'Tiền mặt': 'Tiền mặt',
+                    'Chuyển khoản': 'Chuyển khoản',
+                };
+                return map[payment_method] || payment_method;       
             },
 
             getPaymentStatusText(status) {
@@ -667,6 +745,7 @@ $items = $items ?? [];
                     id: null,
                     code: '',
                     customer_id: null,
+                    coupon_code: '',
                     payment_method: 'cash',
                     payment_status: 'paid',
                     subtotal: 0,
@@ -722,7 +801,6 @@ $items = $items ?? [];
 
             // ===== CRUD =====
             async openCreate() {
-                console.log('➕ Opening create modal');
                 this.resetForm();
 
                 // Fetch next code trước
@@ -741,12 +819,7 @@ $items = $items ?? [];
                     unit_price: 0
                 }];
 
-                console.log('✅ Setting openAdd to true');
                 this.openAdd = true;
-
-                setTimeout(() => {
-                    console.log('🔎 Current openAdd state:', this.openAdd);
-                }, 100);
             },
 
             async fetchNextCode() {

@@ -844,8 +844,6 @@ require __DIR__ . '/partials/layout-start.php';
                         period = this.filterYear.toString();
                     }
 
-                    console.log('Filter:', this.filterType, 'Period:', period, 'Week:', this.selectedWeek);
-
                     // Thêm week parameter nếu filter type là week và đã chọn tuần cụ thể
                     let url = `/admin/api/dashboard/revenue-expense?type=${this.filterType}&period=${period}`;
                     if (this.filterType === 'week' && this.selectedWeek > 0) {
@@ -855,7 +853,6 @@ require __DIR__ . '/partials/layout-start.php';
                     const res = await fetch(url);
                     if (res.ok) {
                         const newData = await res.json();
-                        console.log('Received data:', newData);
 
                         // Cập nhật từng property thay vì gán cả object
                         this.chartData.labels = newData.labels;

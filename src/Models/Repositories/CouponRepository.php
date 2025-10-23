@@ -3,12 +3,16 @@ namespace App\Models\Repositories;
 
 use App\Core\DB;
 use App\Support\Auditable;
+use App\Models\Entities\Coupon;
+use PDO;
 
 class CouponRepository
 {
     use Auditable;
+
     /**
      * Lấy toàn bộ danh sách mã giảm giá
+     * @return Coupon[]
      */
     public function all(): array
     {
@@ -22,21 +26,23 @@ class CouponRepository
             LEFT JOIN users uu ON uu.id = c.updated_by
             ORDER BY c.id DESC
         ";
-        $items = $pdo->query($sql)->fetchAll(\PDO::FETCH_ASSOC);
-        
-        // Convert discount_type từ tiếng Việt sang tiếng Anh cho frontend
-        foreach ($items as &$item) {
-            $item['description'] = $item['name'];  // Thêm field description
-            $item['discount_type'] = ($item['discount_type'] === 'Phần trăm') ? 'percentage' : 'fixed';
+        $rows = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+
+        $coupons = [];
+        foreach ($rows as $row) {
+            // Convert discount_type sang chuẩn Anh - Việt
+            $row['description'] = $row['name'];
+            $row['discount_type'] = ($row['discount_type'] === 'Phần trăm') ? 'percentage' : 'fixed';
+            $coupons[] = new Coupon($row);
         }
-        
-        return $items;
+
+        return $coupons;
     }
 
     /**
      * Tìm mã giảm giá theo ID
      */
-    public function findOne(int $id): ?array
+    public function findOne(int $id): ?Coupon
     {
         $pdo = DB::pdo();
         $sql = "
@@ -50,15 +56,14 @@ class CouponRepository
         ";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$id]);
-        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
-        
-        if ($row) {
-            // Convert discount_type từ tiếng Việt sang tiếng Anh cho frontend
-            $row['description'] = $row['name'];
-            $row['discount_type'] = ($row['discount_type'] === 'Phần trăm') ? 'percentage' : 'fixed';
-        }
-        
-        return $row ?: null;
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row) return null;
+
+        $row['description'] = $row['name'];
+        $row['discount_type'] = ($row['discount_type'] === 'Phần trăm') ? 'percentage' : 'fixed';
+
+        return new Coupon($row);
     }
 
     /**
@@ -67,38 +72,31 @@ class CouponRepository
     private function convertDate(?string $date): ?string
     {
         if (!$date) return null;
-        
-        // Nếu đã đúng định dạng Y-m-d
         if (preg_match('/^\d{4}-\d{2}-\d{2}/', $date)) {
             return substr($date, 0, 10);
         }
-        
-        // Nếu là định dạng d/m/Y
         if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})/', $date, $matches)) {
             return sprintf('%04d-%02d-%02d', $matches[3], $matches[2], $matches[1]);
         }
-        
         return null;
     }
 
     /**
      * Tạo mã giảm giá mới
      */
-    public function create(array $data, int $currentUser): int
+    public function create(Coupon $coupon, int $currentUser): int
     {
         $pdo = DB::pdo();
-        
-        // Convert dates
-        $startsAt = $this->convertDate($data['starts_at'] ?? null);
-        $endsAt = $this->convertDate($data['ends_at'] ?? null);
-        
-        // Convert discount_type từ tiếng Anh sang tiếng Việt (khớp với ENUM trong database)
+
+        $startsAt = $this->convertDate($coupon->starts_at);
+        $endsAt = $this->convertDate($coupon->ends_at);
+
         $discountTypeMap = [
             'percentage' => 'Phần trăm',
             'fixed' => 'Số tiền'
         ];
-        $discountType = $discountTypeMap[$data['discount_type'] ?? 'percentage'] ?? 'Phần trăm';
-        
+        $discountType = $discountTypeMap[$coupon->discount_type ?? 'percentage'] ?? 'Phần trăm';
+
         $stmt = $pdo->prepare("
             INSERT INTO coupons (
                 code, name, discount_type, discount_value,
@@ -113,53 +111,46 @@ class CouponRepository
             )
         ");
 
-        $params = [
-            ':code' => strtoupper($data['code']),
-            ':name' => $data['description'] ?? null,
+        $stmt->execute([
+            ':code' => strtoupper($coupon->code),
+            ':name' => $coupon->description,
             ':discount_type' => $discountType,
-            ':discount_value' => $data['discount_value'] ?? 0,
-            ':min_order_value' => $data['min_order_value'] ?? 0,
-            ':max_discount' => $data['max_discount'] ?? 0,  // Thêm max_discount
-            ':max_uses' => !empty($data['max_uses']) ? $data['max_uses'] : 0,
+            ':discount_value' => $coupon->discount_value ?? 0,
+            ':min_order_value' => $coupon->min_order_value ?? 0,
+            ':max_discount' => $coupon->max_discount ?? 0,
+            ':max_uses' => $coupon->max_uses ?? 0,
             ':starts_at' => $startsAt,
             ':ends_at' => $endsAt,
-            ':is_active' => $data['is_active'] ?? 1,
+            ':is_active' => $coupon->is_active ?? 1,
             ':created_by' => $currentUser,
             ':updated_by' => $currentUser,
-        ];
-        
-        $stmt->execute($params);
+        ]);
 
         $id = (int) $pdo->lastInsertId();
-        
-        // Log audit (with error handling)
+
         try {
-            $this->logCreate('coupons', $id, $data, $currentUser);
+            $this->logCreate('coupons', $id, (array)$coupon, $currentUser);
         } catch (\Exception $e) {
-            // Silent fail - không để lỗi audit log chặn việc tạo coupon
             error_log("Audit log failed: " . $e->getMessage());
         }
-        
+
         return $id;
     }
 
     /**
      * Cập nhật mã giảm giá
      */
-    public function update(int $id, array $data, int $currentUser): void
+    public function update(int $id, Coupon $coupon, int $currentUser): void
     {
         $pdo = DB::pdo();
-        
-        // Lấy dữ liệu trước khi update
         $beforeData = $this->findOne($id);
-        
-        // Convert discount_type từ tiếng Anh sang tiếng Việt
+
         $discountTypeMap = [
             'percentage' => 'Phần trăm',
             'fixed' => 'Số tiền'
         ];
-        $discountType = $discountTypeMap[$data['discount_type'] ?? 'percentage'] ?? 'Phần trăm';
-        
+        $discountType = $discountTypeMap[$coupon->discount_type ?? 'percentage'] ?? 'Phần trăm';
+
         $stmt = $pdo->prepare("
             UPDATE coupons SET
                 code = :code,
@@ -178,24 +169,23 @@ class CouponRepository
         ");
 
         $stmt->execute([
-            ':code' => strtoupper($data['code']),
-            ':name' => $data['description'] ?? null,
+            ':code' => strtoupper($coupon->code),
+            ':name' => $coupon->description,
             ':discount_type' => $discountType,
-            ':discount_value' => $data['discount_value'] ?? 0,
-            ':min_order_value' => $data['min_order_value'] ?? 0,
-            ':max_discount' => $data['max_discount'] ?? 0,  // Thêm max_discount
-            ':max_uses' => !empty($data['max_uses']) ? $data['max_uses'] : 0,
-            ':starts_at' => $this->convertDate($data['starts_at'] ?? null),
-            ':ends_at' => $this->convertDate($data['ends_at'] ?? null),
-            ':is_active' => $data['is_active'] ?? 1,
+            ':discount_value' => $coupon->discount_value ?? 0,
+            ':min_order_value' => $coupon->min_order_value ?? 0,
+            ':max_discount' => $coupon->max_discount ?? 0,
+            ':max_uses' => $coupon->max_uses ?? 0,
+            ':starts_at' => $this->convertDate($coupon->starts_at),
+            ':ends_at' => $this->convertDate($coupon->ends_at),
+            ':is_active' => $coupon->is_active ?? 1,
             ':updated_by' => $currentUser,
             ':id' => $id,
         ]);
-        
-        // Log audit (with error handling)
+
         if ($beforeData) {
             try {
-                $this->logUpdate('coupons', $id, $beforeData, $data, $currentUser);
+                $this->logUpdate('coupons', $id, (array)$beforeData, (array)$coupon, $currentUser);
             } catch (\Exception $e) {
                 error_log("Audit log failed: " . $e->getMessage());
             }
@@ -208,11 +198,8 @@ class CouponRepository
     public function delete(int $id, ?int $currentUser = null): void
     {
         $pdo = DB::pdo();
-        
-        // Lấy dữ liệu trước khi xóa
+
         $beforeData = $this->findOne($id);
-        
-        // Kiểm tra xem mã đã được sử dụng chưa
         $stmt = $pdo->prepare("SELECT used_count FROM coupons WHERE id = ?");
         $stmt->execute([$id]);
         $usedCount = $stmt->fetchColumn();
@@ -222,14 +209,67 @@ class CouponRepository
         }
 
         $pdo->prepare("DELETE FROM coupons WHERE id = ?")->execute([$id]);
-        
-        // Log audit (with error handling)
+
         if ($beforeData) {
             try {
-                $this->logDelete('coupons', $id, $beforeData, $currentUser);
+                $this->logDelete('coupons', $id, (array)$beforeData, $currentUser);
             } catch (\Exception $e) {
                 error_log("Audit log failed: " . $e->getMessage());
             }
         }
+    }
+
+    /**
+     * Validate mã giảm giá khi áp dụng vào đơn hàng
+     */
+    public function validateCoupon(string $code, float $orderAmount): array
+    {
+        $pdo = DB::pdo();
+        $stmt = $pdo->prepare("
+            SELECT * FROM coupons WHERE UPPER(code) = UPPER(:code)
+        ");
+        $stmt->execute([':code' => $code]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row) throw new \Exception('Mã giảm giá không tồn tại');
+        $coupon = new Coupon($row);
+
+        if (!$coupon->is_active) throw new \Exception('Mã giảm giá không còn hiệu lực');
+
+        $now = date('Y-m-d');
+        $startsAt = $coupon->starts_at ? date('Y-m-d', strtotime($coupon->starts_at)) : null;
+        $endsAt = $coupon->ends_at ? date('Y-m-d', strtotime($coupon->ends_at)) : null;
+
+        if ($startsAt && $now < $startsAt)
+            throw new \Exception('Mã giảm giá chưa đến ngày áp dụng');
+        if ($endsAt && $now > $endsAt)
+            throw new \Exception('Mã giảm giá đã hết hạn');
+        if ($coupon->max_uses > 0 && $coupon->used_count >= $coupon->max_uses)
+            throw new \Exception('Mã giảm giá đã hết lượt sử dụng');
+        if ($coupon->min_order_value > 0 && $orderAmount < $coupon->min_order_value) {
+            $minFormatted = number_format($coupon->min_order_value, 0, ',', '.');
+            throw new \Exception("Đơn hàng phải có giá trị tối thiểu {$minFormatted} để áp dụng mã này");
+        }
+
+        $discountAmount = 0;
+        if ($coupon->discount_type === 'Phần trăm') {
+            $discountAmount = $orderAmount * ($coupon->discount_value / 100);
+            if ($coupon->max_discount > 0 && $discountAmount > $coupon->max_discount)
+                $discountAmount = $coupon->max_discount;
+        } else {
+            $discountAmount = $coupon->discount_value;
+        }
+
+        if ($discountAmount > $orderAmount)
+            $discountAmount = $orderAmount;
+
+        return [
+            'valid' => true,
+            'discount_amount' => $discountAmount,
+            'message' => 'Áp dụng mã giảm giá thành công',
+            'coupon_id' => $coupon->id,
+            'coupon_code' => $coupon->code,
+            'coupon_name' => $coupon->name
+        ];
     }
 }

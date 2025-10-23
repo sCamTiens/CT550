@@ -43,7 +43,7 @@ $items = $items ?? [];
                 </thead>
                 <tbody>
                     <template x-for="po in paginated()" :key="po.id">
-                        <tr class="border-t">
+                        <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
                             <td class="py-2 px-4 text-center space-x-2">
                                 <!-- Hiện nút sửa/xóa dựa trên trạng thái thanh toán -->
                                 <template x-if="statusLabel(po) === 'Chưa đối soát'">

@@ -235,11 +235,27 @@
                         readonly>
                 </div>
 
-                <!-- Giảm giá -->
+                <!-- Mã giảm giá -->
+                <div class="flex items-center gap-4">
+                    <label class="text-sm text-black font-semibold w-48">Mã giảm giá:</label>
+                    <div class="flex-1 flex gap-2">
+                        <input x-model="form.coupon_code" 
+                            class="flex-1 border rounded px-3 py-2" 
+                            placeholder="Nhập mã giảm giá (VD: MINIGO)">
+                        <button type="button" 
+                            @click="applyCoupon()"
+                            class="px-4 py-2 bg-[#002975] text-white rounded hover:opacity-90 whitespace-nowrap">
+                            Áp dụng
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Giảm giá (hiển thị số tiền giảm sau khi áp mã hoặc nhập thủ công) -->
                 <div class="flex items-center gap-4">
                     <label class="text-sm text-black font-semibold w-48">Giảm giá:</label>
                     <input x-model="form.discount_amountFormatted" @input="onAmountInput('discount_amount', $event)"
-                        class="flex-1 border rounded px-3 py-2" placeholder="Nhập giảm giá (nếu có)">
+                        class="flex-1 border rounded px-3 py-2" 
+                        placeholder="Hoặc nhập số tiền giảm thủ công">
                 </div>
 
                 <!-- Tổng tiền -->

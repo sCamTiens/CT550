@@ -27,7 +27,7 @@ $items = $items ?? [];
         </thead>
         <tbody>
           <template x-for="s in paginated()" :key="s.id">
-            <tr class="border-t">
+            <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.id"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.created_by_name"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.created_at"></td>

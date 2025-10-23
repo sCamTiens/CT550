@@ -30,7 +30,7 @@ $items = $items ?? [];
         </thead>
         <tbody>
           <template x-for="s in paginated()" :key="s.product_id">
-            <tr class="border-t">
+            <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
               <td class="py-2 px-4 break-words whitespace-pre-line text-center" x-text="s.product_sku"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.product_name"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.unit_name"></td>

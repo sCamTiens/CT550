@@ -259,7 +259,7 @@ $items = $items ?? [];
                                 <tbody>
                                     <template x-if="viewItem.items && viewItem.items.length > 0">
                                         <template x-for="(item, idx) in viewItem.items" :key="idx">
-                                            <tr class="border-t">
+                                            <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
                                                 <td class="px-3 py-2">
                                                     <div class="font-medium" x-text="item.product_name"></div>
                                                     <div class="text-xs">Lô: <span x-text="item.batch_code"></span></div>

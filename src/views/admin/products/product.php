@@ -48,7 +48,7 @@ $items = $items ?? [];
 
         <tbody>
           <template x-for="p in paginated()" :key="p.id">
-            <tr class="border-t">
+            <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
               <td class="py-2 px-4 space-x-2 text-center">
                 <button @click="openEditModal(p)" class="p-2 rounded hover:bg-gray-100 text-[#002975]" title="Sửa">
                   <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"

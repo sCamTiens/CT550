@@ -38,7 +38,7 @@ $items = $items ?? [];
 
                 <tbody>
                     <template x-for="s in paginated()" :key="s.id">
-                        <tr class="border-t">
+                        <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
                             <td class="py-2 px-4 space-x-2 text-center">
                                 <button @click="openEditModal(s)" class="p-2 rounded hover:bg-gray-100 text-[#002975]"
                                     title="Sửa">

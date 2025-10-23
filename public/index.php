@@ -192,6 +192,7 @@ $router->group('/admin', function (Router $r): void {
     // Coupons (Mã giảm giá)
     $r->get('/coupons', [AdminCoupon::class, 'index']);
     $r->get('/api/coupons', [AdminCoupon::class, 'apiIndex']);
+    $r->post('/api/coupons/validate', [AdminCoupon::class, 'validate']);
     $r->post('/coupons', [AdminCoupon::class, 'store']);
     $r->put('/coupons/{id}', [AdminCoupon::class, 'update']);
     $r->delete('/coupons/{id}', [AdminCoupon::class, 'destroy']);

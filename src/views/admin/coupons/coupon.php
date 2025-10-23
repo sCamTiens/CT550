@@ -49,7 +49,7 @@ $items = $items ?? [];
                 </thead>
                 <tbody>
                     <template x-for="c in paginated()" :key="c.id">
-                        <tr class="border-t">
+                        <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
                             <td class="py-2 px-4 text-center space-x-2">
                                 <button @click="openEdit(c)"
                                     class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"

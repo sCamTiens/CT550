@@ -90,6 +90,28 @@ class CouponController extends BaseAdminController
         exit;
     }
 
+    /** POST /admin/api/coupons/validate */
+    public function validate()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        $code = $data['code'] ?? '';
+        $orderAmount = floatval($data['order_amount'] ?? 0);
+
+        try {
+            $result = $this->couponRepo->validateCoupon($code, $orderAmount);
+            echo json_encode($result, JSON_UNESCAPED_UNICODE);
+        } catch (\Exception $e) {
+            http_response_code(400);
+            echo json_encode([
+                'valid' => false,
+                'message' => $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE);
+        }
+        exit;
+    }
+
     private function currentUserId(): ?int
     {
         return $_SESSION['admin_user']['id'] ?? $_SESSION['user']['id'] ?? null;
