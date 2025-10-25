@@ -18,7 +18,7 @@ $items = $items ?? [];
   <!-- Table -->
   <div class="bg-white rounded-xl shadow pb-4">
     <div style="overflow-x:auto; max-width:100%;" class="pb-40">
-      <table style="width:100%; min-width:1250px; border-collapse:collapse;">
+      <table :style="`width:${filtered().length === 0 ? '140%' : '100%'}; min-width:1250px; border-collapse:collapse;`">
         <thead>
           <tr class="bg-gray-50 text-slate-600">
             <?= textFilterPopover('product_sku', 'SKU') ?>
@@ -36,7 +36,7 @@ $items = $items ?? [];
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.unit_name"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.qty"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line"
-              :class="(s.updated_at || '—') === '—' ? 'text-center' : 'text-right'" x-text="s.updated_at || '—'"></td>
+                :class="(s.updated_at || '—') === '—' ? 'text-center' : 'text-right'" x-text="s.updated_at || '—'"></td>
             </tr>
           </template>
           <tr x-show="!loading && filtered().length===0">
@@ -51,7 +51,7 @@ $items = $items ?? [];
       </table>
     </div>
   </div>
-  
+
   <!-- Pagination -->
   <div class="flex items-center justify-center mt-4 px-4 gap-6">
     <div class="text-sm text-slate-600">
@@ -105,101 +105,183 @@ $items = $items ?? [];
         if (page > this.totalPages()) page = this.totalPages();
         this.currentPage = page;
       },
-      filters: {},
-      openFilter: {},
-      
-      // ===== helper riêng cho date filter =====
-      applyDateFilter(val, type, value, from, to) {
-        if (!val) return true;
-        if (!type) return true;
-        
-        const normalizeDate = (dateStr) => {
-          if (!dateStr) return null;
-          const d = new Date(dateStr);
-          if (isNaN(d.getTime())) return null;
-          return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-        };
-        
-        const d = normalizeDate(val);
-        if (!d) return true;
-        
-        if (type === 'eq') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d.getTime() === compareDate.getTime() : true;
+
+      // ===== FILTERS =====
+      openFilter: {
+        product_sku: false,
+        product_name: false,
+        unit_name: false,
+        qty: false,
+        updated_at: false
+      },
+
+      filters: {
+        product_sku: '',
+        product_name: '',
+        unit_name: '',
+        qty_type: '', qty_value: '', qty_from: '', qty_to: '',
+        updated_at_type: '', updated_at_value: '', updated_at_from: '', updated_at_to: ''
+      },
+
+      // -------------------------------------------
+      // Hàm lọc tổng quát, hỗ trợ text / number / date
+      // -------------------------------------------
+      applyFilter(val, type, { value, from, to, dataType }) {
+        if (val == null) return false;
+
+        // ---------------- TEXT ----------------
+        if (dataType === 'text') {
+          const hasAccent = (s) => /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(s);
+
+          const normalize = (str) => String(str || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '') // xóa dấu
+            .trim();
+
+          const raw = String(val || '').toLowerCase();
+          const str = normalize(val);
+          const query = String(value || '').toLowerCase();
+          const queryNoAccent = normalize(value);
+
+          if (!query) return true;
+
+          if (type === 'eq') return hasAccent(query)
+            ? raw === query  // có dấu → so đúng dấu
+            : str === queryNoAccent; // không dấu → so không dấu
+
+          if (type === 'contains' || type === 'like') {
+            if (hasAccent(query)) {
+              // Có dấu → tìm chính xác theo dấu
+              return raw.includes(query);
+            } else {
+              // Không dấu → tìm theo không dấu
+              return str.includes(queryNoAccent);
+            }
+          }
+
+          return true;
         }
-        
-        if (type === 'between') {
-          if (!from || !to) return true;
-          const fromDate = normalizeDate(from);
-          const toDate = normalizeDate(to);
-          return fromDate && toDate ? (d >= fromDate && d <= toDate) : true;
+
+        // ---------------- NUMBER ----------------
+        if (dataType === 'number') {
+          const parseNum = (v) => {
+            if (v === '' || v === null || v === undefined) return null;
+            const s = String(v).replace(/[^\d.-]/g, '');
+            const n = Number(s);
+            return isNaN(n) ? null : n;
+          };
+
+          const num = parseNum(val);
+          const v = parseNum(value);
+          const f = parseNum(from);
+          const t = parseNum(to);
+
+          if (num === null) return false;
+          if (!type) return true;
+
+          if (type === 'eq') return v === null ? true : num === v;
+          if (type === 'lt') return v === null ? true : num < v;
+          if (type === 'gt') return v === null ? true : num > v;
+          if (type === 'lte') return v === null ? true : num <= v;
+          if (type === 'gte') return v === null ? true : num >= v;
+          if (type === 'between') return f === null || t === null ? true : num >= f && num <= t;
+
+          // --- Lọc “mờ” theo chuỗi số ---
+          if (type === 'like') {
+            const raw = String(val).replace(/[^\d]/g, '');
+            const query = String(value || '').replace(/[^\d]/g, '');
+            return raw.includes(query);
+          }
+
+          return true;
         }
-        
-        if (type === 'lt') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d < compareDate : true;
+
+        // ---------------- DATE ----------------
+        if (dataType === 'date') {
+          if (!val) return false;
+          const d = new Date(val);
+          const v = value ? new Date(value) : null;
+          const f = from ? new Date(from) : null;
+          const t = to ? new Date(to) : null;
+
+          if (type === 'eq') return v ? d.toDateString() === v.toDateString() : true;
+          if (type === 'lt') return v ? d < v : true;
+          if (type === 'gt') {
+            if (!v) return true;
+            // So sánh chỉ theo ngày, bỏ qua giờ phút giây
+            return d.setHours(0, 0, 0, 0) > v.setHours(0, 0, 0, 0);
+          }
+          if (type === 'lte') {
+            if (!v) return true;
+            const nextDay = new Date(v);
+            nextDay.setDate(v.getDate() + 1);
+            return d < nextDay; // <= nghĩa là nhỏ hơn ngày kế tiếp
+          }
+          if (type === 'gte') return v ? d >= v : true;
+          if (type === 'between') return f && t ? d >= f && d <= t : true;
+
+          return true;
         }
-        
-        if (type === 'gt') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d > compareDate : true;
-        }
-        
-        if (type === 'lte') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d <= compareDate : true;
-        }
-        
-        if (type === 'gte') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d >= compareDate : true;
-        }
-        
+
         return true;
       },
-      
+
+      // ==============================
+      // LỌC DỮ LIỆU
+      // ==============================
       filtered() {
-        const fn = (v) => (v ?? '').toString().toLowerCase();
-        const f = this.filters;
-        
-        return this.items.filter(s => {
-          if (f.product_sku && !fn(s.product_sku).includes(fn(f.product_sku))) return false;
-          if (f.product_name && !fn(s.product_name).includes(fn(f.product_name))) return false;
-          if (f.unit_name && !fn(s.unit_name).includes(fn(f.unit_name))) return false;
-          
-          if (f.qty !== '' && f.qty !== null) {
-            const val = Number(f.qty);
-            if (!isNaN(val) && Number(s.qty) !== val) return false;
+        let data = this.items;
+
+        // --- TEXT ---
+        ['product_sku', 'product_name', 'unit_name'].forEach(key => {
+          if (this.filters[key]) {
+            data = data.filter(o =>
+              this.applyFilter(o[key], 'contains', {
+                value: this.filters[key],
+                dataType: 'text'
+              })
+            );
           }
-          
-          if (f.min_qty !== '' && f.min_qty !== null) {
-            const val = Number(f.min_qty);
-            if (!isNaN(val) && Number(s.min_qty) !== val) return false;
-          }
-          
-          if (f.max_qty !== '' && f.max_qty !== null) {
-            const val = Number(f.max_qty);
-            if (!isNaN(val) && Number(s.max_qty) !== val) return false;
-          }
-          
-          if (!this.applyDateFilter(s.updated_at, f.updated_at_type, f.updated_at_value, f.updated_at_from, f.updated_at_to)) return false;
-          
-          return true;
         });
+
+        // --- NUMBER ---
+        if (this.filters.qty_type) {
+          data = data.filter(o =>
+            this.applyFilter(o.qty, this.filters.qty_type, {
+              value: this.filters.qty_value,
+              from: this.filters.qty_from,
+              to: this.filters.qty_to,
+              dataType: 'number'
+            })
+          );
+        }
+
+        // --- DATE ---
+        if (this.filters.updated_at_type) {
+          data = data.filter(o =>
+            this.applyFilter(o.updated_at, this.filters.updated_at_type, {
+              value: this.filters.updated_at_value,
+              from: this.filters.updated_at_from,
+              to: this.filters.updated_at_to,
+              dataType: 'date'
+            })
+          );
+        }
+
+        return data;
       },
+
+      // ==============================
+      // BẬT/TẮT & RESET FILTER
+      // ==============================
       toggleFilter(key) {
-        Object.keys(this.openFilter).forEach(k => this.openFilter[k] = (k === key ? !this.openFilter[k] : false));
+        for (const k in this.openFilter) this.openFilter[k] = false;
+        this.openFilter[key] = true;
       },
-      applyFilter(key) { 
-        this.openFilter[key] = false; 
-      },
+      closeFilter(key) { this.openFilter[key] = false; },
       resetFilter(key) {
-        if (['created_at', 'updated_at'].includes(key)) {
+        if (['qty', 'updated_at'].includes(key)) {
           this.filters[`${key}_type`] = '';
           this.filters[`${key}_value`] = '';
           this.filters[`${key}_from`] = '';
@@ -209,6 +291,7 @@ $items = $items ?? [];
         }
         this.openFilter[key] = false;
       },
+
       async init() {
         this.loading = true;
         try {

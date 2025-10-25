@@ -36,10 +36,151 @@ $items = $items ?? [];
                         <?= textFilterPopover('customer_name', 'Khách hàng') ?>
                         <th class="py-2 px-4 text-center align-top" style="min-width: 500px; width: 500px;">
                             <div class="mb-2 text-base font-bold">Chi tiết xuất kho (theo lô)</div>
-                            <div class="grid grid-cols-[2.5fr_1fr_1fr] gap-3 border-t pt-2">
-                                <div class="text-sm font-semibold text-gray-700">Sản phẩm - Mã lô</div>
-                                <div class="text-sm font-semibold text-gray-700">Số lượng</div>
-                                <div class="text-sm font-semibold text-gray-700">Đơn giá</div>
+
+                            <div class="grid grid-cols-3 gap-3 border-t pt-2">
+                                <!-- Tên sản phẩm - Mã lô -->
+                                <div class="relative">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <span class="text-sm font-semibold text-gray-700">Sản phẩm - Mã lô</span>
+                                        <button @click.stop="toggleFilter('item_product')"
+                                            class="p-1 rounded hover:bg-gray-100" title="Tìm theo Sản phẩm hoặc Mã lô">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" />
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    <div x-show="openFilter.item_product" x-transition
+                                        @click.outside="openFilter.item_product=false"
+                                        class="absolute z-40 mt-2 w-64 bg-white rounded-lg shadow-lg border p-3 text-left left-0">
+                                        <div class="font-semibold mb-2">Tìm theo "Sản phẩm hoặc Mã lô"</div>
+                                        <input x-model.trim="filters.item_product"
+                                            class="w-full border rounded px-3 py-2" placeholder="Nhập tên hoặc mã lô">
+                                        <div class="mt-3 flex gap-2 justify-end">
+                                            <button @click="closeFilter('item_product')"
+                                                class="px-3 py-1 text-xs rounded bg-[#002975] text-white hover:opacity-90">Tìm</button>
+                                            <button @click="resetFilter('item_product')"
+                                                class="px-3 py-1 text-xs rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Làm
+                                                mới</button>
+                                            <button @click="openFilter.item_product=false"
+                                                class="px-3 py-1 text-xs rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Đóng</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Số lượng -->
+                                <div class="relative">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <span class="text-sm font-semibold text-gray-700">Số lượng</span>
+                                        <button @click.stop="toggleFilter('item_qty')"
+                                            class="p-1 rounded hover:bg-gray-100" title="Tìm theo Số lượng">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" />
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    <div x-show="openFilter.item_qty" x-transition
+                                        @click.outside="openFilter.item_qty=false"
+                                        class="absolute z-40 mt-2 w-64 bg-white rounded-lg shadow-lg border p-3 text-left left-0">
+                                        <div class="font-semibold mb-2">Tìm theo "Số lượng"</div>
+                                        <select x-model="filters.item_qty_type"
+                                            class="border rounded px-3 py-2 text-sm w-full">
+                                            <option value="">-- Chọn kiểu lọc --</option>
+                                            <option value="eq">Bằng</option>
+                                            <option value="gt">Lớn hơn</option>
+                                            <option value="lt">Nhỏ hơn</option>
+                                            <option value="gte">Lớn hơn hoặc bằng</option>
+                                            <option value="lte">Nhỏ hơn hoặc bằng</option>
+                                            <option value="between">Trong khoảng</option>
+                                        </select>
+
+                                        <div class="flex flex-col gap-2 mt-2">
+                                            <input type="number" x-model.number="filters.item_qty_value"
+                                                x-show="filters.item_qty_type && filters.item_qty_type !== 'between'"
+                                                class="w-full border rounded px-3 py-2" placeholder="Nhập giá trị">
+
+                                            <template x-if="filters.item_qty_type === 'between'">
+                                                <div class="flex gap-2">
+                                                    <input type="number" x-model.number="filters.item_qty_from"
+                                                        class="w-1/2 border rounded px-3 py-2" placeholder="Từ">
+                                                    <input type="number" x-model.number="filters.item_qty_to"
+                                                        class="w-1/2 border rounded px-3 py-2" placeholder="Đến">
+                                                </div>
+                                            </template>
+                                        </div>
+
+                                        <div class="mt-3 flex gap-2 justify-end">
+                                            <button @click="closeFilter('item_qty')"
+                                                class="px-3 py-1 text-xs rounded bg-[#002975] text-white hover:opacity-90">Tìm</button>
+                                            <button @click="resetFilter('item_qty')"
+                                                class="px-3 py-1 text-xs rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Làm
+                                                mới</button>
+                                            <button @click="openFilter.item_qty=false"
+                                                class="px-3 py-1 text-xs rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Đóng</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Đơn giá -->
+                                <div class="relative">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <span class="text-sm font-semibold text-gray-700">Đơn giá</span>
+                                        <button @click.stop="toggleFilter('item_price')"
+                                            class="p-1 rounded hover:bg-gray-100" title="Tìm theo Đơn giá">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" />
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    <div x-show="openFilter.item_price" x-transition
+                                        @click.outside="openFilter.item_price=false"
+                                        class="absolute z-40 mt-2 w-64 bg-white rounded-lg shadow-lg border p-3 text-left left-0">
+                                        <div class="font-semibold mb-2">Tìm theo "Đơn giá"</div>
+                                        <select x-model="filters.item_price_type"
+                                            class="border rounded px-3 py-2 text-sm w-full">
+                                            <option value="">-- Chọn kiểu lọc --</option>
+                                            <option value="eq">Bằng</option>
+                                            <option value="gt">Lớn hơn</option>
+                                            <option value="lt">Nhỏ hơn</option>
+                                            <option value="gte">Lớn hơn hoặc bằng</option>
+                                            <option value="lte">Nhỏ hơn hoặc bằng</option>
+                                            <option value="between">Trong khoảng</option>
+                                        </select>
+
+                                        <div class="flex flex-col gap-2 mt-2">
+                                            <input type="number" x-model.number="filters.item_price_value"
+                                                x-show="filters.item_price_type && filters.item_price_type !== 'between'"
+                                                class="w-full border rounded px-3 py-2" placeholder="Nhập giá trị">
+
+                                            <template x-if="filters.item_price_type === 'between'">
+                                                <div class="flex gap-2">
+                                                    <input type="number" x-model.number="filters.item_price_from"
+                                                        class="w-1/2 border rounded px-3 py-2" placeholder="Từ">
+                                                    <input type="number" x-model.number="filters.item_price_to"
+                                                        class="w-1/2 border rounded px-3 py-2" placeholder="Đến">
+                                                </div>
+                                            </template>
+                                        </div>
+
+                                        <div class="mt-3 flex gap-2 justify-end">
+                                            <button @click="closeFilter('item_price')"
+                                                class="px-3 py-1 text-xs rounded bg-[#002975] text-white hover:opacity-90">Tìm</button>
+                                            <button @click="resetFilter('item_price')"
+                                                class="px-3 py-1 text-xs rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Làm
+                                                mới</button>
+                                            <button @click="openFilter.item_price=false"
+                                                class="px-3 py-1 text-xs rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Đóng</button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </th>
                         <?= selectFilterPopover('status', 'Trạng thái', [
@@ -53,7 +194,7 @@ $items = $items ?? [];
                         <?= numberFilterPopover('total_amount', 'Tổng tiền') ?>
                         <?= textFilterPopover('note', 'Ghi chú') ?>
                         <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
-                        <?= textFilterPopover('created_by', 'Người tạo') ?>
+                        <?= textFilterPopover('created_by_name', 'Người tạo') ?>
                     </tr>
                 </thead>
                 <tbody>
@@ -173,8 +314,8 @@ $items = $items ?? [];
         </div>
 
         <!-- MODAL: Create -->
-        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openAdd"
-            x-transition.opacity style="display:none">
+        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
+            x-show="openAdd" x-transition.opacity style="display:none">
             <div class="bg-white w-full max-w-3xl rounded-xl shadow max-h-[90vh] overflow-y-auto animate__animated animate__zoomIn animate__faster"
                 @click.outside="openAdd=false">
                 <div class="px-5 py-3 border-b flex justify-center items-center relative sticky top-0 bg-white z-10">
@@ -219,7 +360,8 @@ $items = $items ?? [];
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-900 mb-1">Khách hàng</label>
-                            <div class="px-3 py-2 bg-gray-50 rounded border" x-text="viewItem.customer_name || '—'"></div>
+                            <div class="px-3 py-2 bg-gray-50 rounded border" x-text="viewItem.customer_name || '—'">
+                            </div>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-900 mb-1">Trạng thái</label>
@@ -234,11 +376,13 @@ $items = $items ?? [];
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-900 mb-1">Ngày xuất</label>
-                            <div class="px-3 py-2 bg-gray-50 rounded border" x-text="viewItem.out_date ? viewItem.out_date.substring(0, 10) : '—'"></div>
+                            <div class="px-3 py-2 bg-gray-50 rounded border"
+                                x-text="viewItem.out_date ? viewItem.out_date.substring(0, 10) : '—'"></div>
                         </div>
                         <div class="col-span-2">
                             <label class="block text-sm font-medium text-gray-900 mb-1">Ghi chú</label>
-                            <div class="px-3 py-2 bg-gray-50 rounded border min-h-[60px]" x-text="viewItem.note || '—'"></div>
+                            <div class="px-3 py-2 bg-gray-50 rounded border min-h-[60px]" x-text="viewItem.note || '—'">
+                            </div>
                         </div>
                     </div>
 
@@ -249,11 +393,16 @@ $items = $items ?? [];
                             <table class="w-full">
                                 <thead class="bg-gray-50">
                                     <tr>
-                                        <th class="px-3 py-2 text-left text-sm font-semibold text-gray-700">Sản phẩm - Mã lô</th>
-                                        <th class="px-3 py-2 text-center text-sm font-semibold text-gray-700">NSX/HSD</th>
-                                        <th class="px-3 py-2 text-center text-sm font-semibold text-gray-700">Số lượng</th>
-                                        <th class="px-3 py-2 text-right text-sm font-semibold text-gray-700">Đơn giá</th>
-                                        <th class="px-3 py-2 text-right text-sm font-semibold text-gray-700">Thành tiền</th>
+                                        <th class="px-3 py-2 text-left text-sm font-semibold text-gray-700">Sản phẩm -
+                                            Mã lô</th>
+                                        <th class="px-3 py-2 text-center text-sm font-semibold text-gray-700">NSX/HSD
+                                        </th>
+                                        <th class="px-3 py-2 text-center text-sm font-semibold text-gray-700">Số lượng
+                                        </th>
+                                        <th class="px-3 py-2 text-right text-sm font-semibold text-gray-700">Đơn giá
+                                        </th>
+                                        <th class="px-3 py-2 text-right text-sm font-semibold text-gray-700">Thành tiền
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -262,17 +411,21 @@ $items = $items ?? [];
                                             <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
                                                 <td class="px-3 py-2">
                                                     <div class="font-medium" x-text="item.product_name"></div>
-                                                    <div class="text-xs">Lô: <span x-text="item.batch_code"></span></div>
+                                                    <div class="text-xs">Lô: <span x-text="item.batch_code"></span>
+                                                    </div>
                                                 </td>
                                                 <td class="px-3 py-2 text-center text-xs text-gray-600">
-                                                    <div x-show="item.mfg_date">NSX: <span x-text="item.mfg_date"></span></div>
+                                                    <div x-show="item.mfg_date">NSX: <span
+                                                            x-text="item.mfg_date"></span></div>
                                                     <div x-show="item.exp_date">
                                                         HSD: <span x-text="item.exp_date"></span>
                                                     </div>
                                                 </td>
                                                 <td class="px-3 py-2 text-center font-semibold" x-text="item.qty"></td>
-                                                <td class="px-3 py-2 text-right" x-text="formatCurrency(item.unit_price)"></td>
-                                                <td class="px-3 py-2 text-right font-semibold" x-text="formatCurrency(item.qty * item.unit_price)"></td>
+                                                <td class="px-3 py-2 text-right"
+                                                    x-text="formatCurrency(item.unit_price)"></td>
+                                                <td class="px-3 py-2 text-right font-semibold"
+                                                    x-text="formatCurrency(item.qty * item.unit_price)"></td>
                                             </tr>
                                         </template>
                                     </template>
@@ -287,7 +440,8 @@ $items = $items ?? [];
                                 <tfoot class="bg-gray-50 border-t-2">
                                     <tr>
                                         <td colspan="4" class="px-3 py-2 text-right font-semibold">Tổng cộng:</td>
-                                        <td class="px-3 py-2 text-right font-bold text-lg text-[#002975]" x-text="formatCurrency(viewItem.total_amount)"></td>
+                                        <td class="px-3 py-2 text-right font-bold text-lg text-[#002975]"
+                                            x-text="formatCurrency(viewItem.total_amount)"></td>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -298,11 +452,13 @@ $items = $items ?? [];
                     <div class="grid grid-cols-2 gap-4 pt-4 border-t">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Người tạo</label>
-                            <div class="px-3 py-2 bg-gray-50 rounded border text-sm" x-text="viewItem.created_by_name || '—'"></div>
+                            <div class="px-3 py-2 bg-gray-50 rounded border text-sm"
+                                x-text="viewItem.created_by_name || '—'"></div>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Thời gian tạo</label>
-                            <div class="px-3 py-2 bg-gray-50 rounded border text-sm" x-text="viewItem.created_at || '—'"></div>
+                            <div class="px-3 py-2 bg-gray-50 rounded border text-sm"
+                                x-text="viewItem.created_at || '—'"></div>
                         </div>
                     </div>
                 </div>
@@ -471,151 +627,249 @@ $items = $items ?? [];
 
             // ===== FILTERS =====
             openFilter: {
-                code: false, customer_name: false, order_id: false, reason: false,
-                status: false, out_date: false, total_amount: false, note: false,
-                created_at: false, created_by: false
+                code: false, customer_name: false, item_product: false,
+                item_qty: false, item_price: false,
+                order_code: false, type: false,
+                status: false, out_date: false,
+                total_amount: false, note: false, created_at: false, created_by_name: false
             },
+
             filters: {
-                code: '',
-                customer_name: '',
-                order_id: '',
-                reason: '',
-                status: '',
-                out_date_type: '', out_date_value: '', out_date_from: '', out_date_to: '',
+                code: '', customer_name: '', type: '', note: '', status: '', created_by_name: '', order_code: '',
+
+                item_product: '',
+
+                item_qty_type: '', item_qty_value: '', item_qty_from: '', item_qty_to: '',
+                item_price_type: '', item_price_value: '', item_price_from: '', item_price_to: '',
+
                 total_amount_type: '', total_amount_value: '', total_amount_from: '', total_amount_to: '',
-                note: '',
-                created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
-                created_by: ''
+                out_date_type: '', out_date_value: '', out_date_from: '', out_date_to: '',
+                created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: ''
             },
 
-            // Chuẩn hóa ngày cho so sánh (loại bỏ phần giờ)
-            applyDateFilter(val, type, value, from, to) {
-                if (!type) return true;
-                const normalizeDate = (d) => {
-                    if (!d) return null;
-                    let s = String(d).trim();
-                    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
-                        const [dd, mm, yy] = s.split(/[\s\/]/);
-                        s = `${yy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+            // ------------------------------------------------------------------
+            // Hàm lọc tổng quát — hỗ trợ TEXT, NUMBER, DATE
+            // ------------------------------------------------------------------
+            applyFilter(val, type, { value, from, to, dataType }) {
+                if (val == null) return false;
+
+                // -------- TEXT --------
+                if (dataType === 'text') {
+                    const hasAccent = (s) => /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(s);
+                    const normalize = (str) => String(str || '')
+                        .toLowerCase()
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '')
+                        .trim();
+
+                    const raw = String(val || '').toLowerCase();
+                    const str = normalize(val);
+                    const query = String(value || '').toLowerCase();
+                    const queryNoAccent = normalize(value);
+
+                    if (!query) return true;
+
+                    if (type === 'eq') return hasAccent(query)
+                        ? raw === query
+                        : str === queryNoAccent;
+
+                    if (type === 'contains' || type === 'like') {
+                        return hasAccent(query)
+                            ? raw.includes(query)
+                            : str.includes(queryNoAccent);
                     }
-                    if (/^\d{4}-\d{1,2}-\d{1,2}/.test(s)) {
-                        s = s.substring(0, 10);
-                    }
-                    const parsed = new Date(s);
-                    if (isNaN(parsed)) return null;
-                    return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
-                };
-                const itemDate = normalizeDate(val);
-                if (!itemDate) return false;
-                if (type === 'eq') {
-                    if (!value) return true;
-                    const compareDate = normalizeDate(value);
-                    if (!compareDate) return false;
-                    return itemDate.getTime() === compareDate.getTime();
-                }
-                if (type === 'between') {
-                    if (!from || !to) return true;
-                    const fromDate = normalizeDate(from);
-                    const toDate = normalizeDate(to);
-                    if (!fromDate || !toDate) return false;
-                    return itemDate >= fromDate && itemDate <= toDate;
-                }
-                if (type === 'lt') {
-                    if (!value) return true;
-                    const compareDate = normalizeDate(value);
-                    if (!compareDate) return false;
-                    return itemDate < compareDate;
-                }
-                if (type === 'gt') {
-                    if (!value) return true;
-                    const compareDate = normalizeDate(value);
-                    if (!compareDate) return false;
-                    return itemDate > compareDate;
-                }
-                if (type === 'lte') {
-                    if (!value) return true;
-                    const compareDate = normalizeDate(value);
-                    if (!compareDate) return false;
-                    return itemDate <= compareDate;
-                }
-                if (type === 'gte') {
-                    if (!value) return true;
-                    const compareDate = normalizeDate(value);
-                    if (!compareDate) return false;
-                    return itemDate >= compareDate;
-                }
-                return true;
-            },
 
-            applyNumberFilter(val, type, value, from, to) {
-                const num = Number(val);
-                if (isNaN(num)) return false;
-                if (!type) return true;
-                if (type === 'eq') {
-                    if (!value && value !== 0) return true;
-                    return num === Number(value);
-                }
-                if (type === 'between') {
-                    if ((!from && from !== 0) || (!to && to !== 0)) return true;
-                    return num >= Number(from) && num <= Number(to);
-                }
-                if (type === 'lt') {
-                    if (!value && value !== 0) return true;
-                    return num < Number(value);
-                }
-                if (type === 'gt') {
-                    if (!value && value !== 0) return true;
-                    return num > Number(value);
-                }
-                if (type === 'lte') {
-                    if (!value && value !== 0) return true;
-                    return num <= Number(value);
-                }
-                if (type === 'gte') {
-                    if (!value && value !== 0) return true;
-                    return num >= Number(value);
-                }
-                return true;
-            },
-
-            filtered() {
-                const fn = (v) => (v ?? '').toString().toLowerCase();
-                const f = this.filters;
-                return this.items.filter(r => {
-                    if (f.code && !fn(r.code).includes(fn(f.code))) return false;
-                    if (f.customer_name && !fn(r.customer_name).includes(fn(f.customer_name))) return false;
-                    if (f.order_id && !fn(r.order_id).includes(fn(f.order_id))) return false;
-                    if (f.reason && !fn(r.reason).includes(fn(f.reason))) return false;
-                    if (f.status && !fn(r.status).includes(fn(f.status))) return false;
-                    if (f.note && !fn(r.note).includes(fn(f.note))) return false;
-                    if (f.created_by && !fn(r.created_by_name || '').includes(fn(f.created_by))) return false;
-                    if (!this.applyNumberFilter(r.total_amount, f.total_amount_type, f.total_amount_value, f.total_amount_from, f.total_amount_to)) return false;
-                    if (!this.applyDateFilter(r.out_date, f.out_date_type, f.out_date_value, f.out_date_from, f.out_date_to)) return false;
-                    if (!this.applyDateFilter(r.created_at, f.created_at_type, f.created_at_value, f.created_at_from, f.created_at_to)) return false;
                     return true;
-                });
+                }
+
+                // -------- NUMBER --------
+                if (dataType === 'number') {
+                    const parseNum = (v) => {
+                        if (v === '' || v === null || v === undefined) return null;
+                        const s = String(v).replace(/[^\d.-]/g, '');
+                        const n = Number(s);
+                        return isNaN(n) ? null : n;
+                    };
+
+                    const num = parseNum(val);
+                    const v = parseNum(value);
+                    const f = parseNum(from);
+                    const t = parseNum(to);
+
+                    if (num === null) return false;
+                    if (!type) return true;
+
+                    if (type === 'eq') return v === null ? true : num === v;
+                    if (type === 'lt') return v === null ? true : num < v;
+                    if (type === 'gt') return v === null ? true : num > v;
+                    if (type === 'lte') return v === null ? true : num <= v;
+                    if (type === 'gte') return v === null ? true : num >= v;
+                    if (type === 'between') return f === null || t === null ? true : num >= f && num <= t;
+
+                    if (type === 'like') {
+                        const raw = String(val).replace(/[^\d]/g, '');
+                        const query = String(value || '').replace(/[^\d]/g, '');
+                        return raw.includes(query);
+                    }
+
+                    return true;
+                }
+
+                // -------- DATE --------
+                if (dataType === 'date') {
+                    if (!val) return false;
+                    const d = new Date(val);
+                    const v = value ? new Date(value) : null;
+                    const f = from ? new Date(from) : null;
+                    const t = to ? new Date(to) : null;
+
+                    if (type === 'eq') return v ? d.toDateString() === v.toDateString() : true;
+                    if (type === 'lt') return v ? d < v : true;
+                    if (type === 'gt') {
+                        if (!v) return true;
+                        return d.setHours(0, 0, 0, 0) > v.setHours(0, 0, 0, 0);
+                    }
+                    if (type === 'lte') {
+                        if (!v) return true;
+                        const nextDay = new Date(v);
+                        nextDay.setDate(v.getDate() + 1);
+                        return d < nextDay;
+                    }
+                    if (type === 'gte') return v ? d >= v : true;
+                    if (type === 'between') return f && t ? d >= f && d <= t : true;
+
+                    return true;
+                }
+
+                return true;
             },
 
+            // ------------------------------------------------------------------
+            // Áp dụng filter cho toàn bộ bảng
+            // ------------------------------------------------------------------
+            filtered() {
+                let data = this.items; // đây là mảng danh sách phiếu xuất (s)
+
+                // --- TEXT: các cột cấp phiếu ---
+                ['code', 'customer_name', 'type', 'note', 'created_by_name', 'order_code'].forEach(key => {
+                    if (this.filters[key]) {
+                        data = data.filter(s =>
+                            this.applyFilter(s[key], 'contains', {
+                                value: this.filters[key],
+                                dataType: 'text'
+                            })
+                        );
+                    }
+                });
+
+                // --- STATUS ---
+                if (this.filters.status) {
+                    data = data.filter(s =>
+                        this.applyFilter(s.status, 'eq', {
+                            value: this.filters.status,
+                            dataType: 'text'
+                        })
+                    );
+                }
+
+                // Sản phẩm hoặc Mã lô
+                if (this.filters.item_product) {
+                    const keyword = this.filters.item_product.toLowerCase();
+                    data = data.filter(s => s.items?.some(it =>
+                        (it.product_name && it.product_name.toLowerCase().includes(keyword)) ||
+                        (it.batch_code && it.batch_code.toLowerCase().includes(keyword))
+                    ));
+                }
+
+                // Số lượng
+                if (this.filters.item_qty_type) {
+                    data = data.filter(s => s.items?.some(it =>
+                        this.applyFilter(it.qty, this.filters.item_qty_type, {
+                            value: this.filters.item_qty_value,
+                            from: this.filters.item_qty_from,
+                            to: this.filters.item_qty_to,
+                            dataType: 'number'
+                        })
+                    ));
+                }
+
+                // Đơn giá
+                if (this.filters.item_price_type) {
+                    data = data.filter(s => s.items?.some(it =>
+                        this.applyFilter(it.unit_price, this.filters.item_price_type, {
+                            value: this.filters.item_price_value,
+                            from: this.filters.item_price_from,
+                            to: this.filters.item_price_to,
+                            dataType: 'number'
+                        })
+                    ));
+                }
+
+                // Tổng tiền
+                if (this.filters.total_amount_type) {
+                    data = data.filter(s =>
+                        this.applyFilter(s.total_amount, this.filters.total_amount_type, {
+                            value: this.filters.total_amount_value,
+                            from: this.filters.total_amount_from,
+                            to: this.filters.total_amount_to,
+                            dataType: 'number'
+                        })
+                    );
+                }
+
+                // Ngày xuất, Ngày tạo
+                ['out_date', 'created_at'].forEach(key => {
+                    if (this.filters[`${key}_type`]) {
+                        data = data.filter(s =>
+                            this.applyFilter(s[key], this.filters[`${key}_type`], {
+                                value: this.filters[`${key}_value`],
+                                from: this.filters[`${key}_from`],
+                                to: this.filters[`${key}_to`],
+                                dataType: 'date'
+                            })
+                        );
+                    }
+                });
+
+                return data;
+            },
+
+            // ------------------------------------------------------------------
+            // Mở / đóng / reset filter
+            // ------------------------------------------------------------------
             toggleFilter(key) {
-                Object.keys(this.openFilter).forEach(k => this.openFilter[k] = (k === key ? !this.openFilter[k] : false));
+                for (const k in this.openFilter) this.openFilter[k] = false;
+                this.openFilter[key] = true;
             },
-            applyFilter(key) {
-                this.openFilter[key] = false;
-            },
+            closeFilter(key) { this.openFilter[key] = false; },
             resetFilter(key) {
-                if (['out_date', 'created_at'].includes(key)) {
+                // --- Date type ---
+                if (['created_at', 'out_date'].includes(key)) {
                     this.filters[`${key}_type`] = '';
                     this.filters[`${key}_value`] = '';
                     this.filters[`${key}_from`] = '';
                     this.filters[`${key}_to`] = '';
-                } else if (['total_amount'].includes(key)) {
+                }
+
+                // --- Number type ---
+                else if (['price', 'total_amount', 'qty', 'item_qty', 'item_price'].includes(key)) {
                     this.filters[`${key}_type`] = '';
                     this.filters[`${key}_value`] = '';
                     this.filters[`${key}_from`] = '';
                     this.filters[`${key}_to`] = '';
-                } else {
+                }
+
+                // --- Select type (status) ---
+                else if (key === 'status') {
+                    this.filters.status = '';
+                }
+
+                // --- Text type (code, customer_name, product_name, batch_code, type, note, created_by_name) ---
+                else {
                     this.filters[key] = '';
                 }
+
+                // --- Close dropdown ---
                 this.openFilter[key] = false;
             },
 
@@ -745,7 +999,7 @@ $items = $items ?? [];
                 }
             },
 
-            async openViewModal(s) {                
+            async openViewModal(s) {
                 // Copy dữ liệu và đảm bảo items được load
                 this.viewItem = {
                     ...s,
@@ -762,7 +1016,7 @@ $items = $items ?? [];
                                 const today = new Date();
                                 const expDate = item.exp_date ? new Date(item.exp_date) : null;
                                 const daysUntilExpiry = expDate ? Math.floor((expDate - today) / (1000 * 60 * 60 * 24)) : null;
-                                
+
                                 return {
                                     ...item,
                                     is_near_expiry: daysUntilExpiry !== null && daysUntilExpiry <= 30 && daysUntilExpiry >= 0,

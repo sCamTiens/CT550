@@ -115,6 +115,8 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/stocks', [AdminStock::class, 'index']);
     $r->get('/api/stocks', [AdminStock::class, 'apiIndex']);
     $r->get('/stocktakes', [AdminStocktake::class, 'index']);
+    $r->get('/api/stocktakes', [AdminStocktake::class, 'apiIndex']);
+    $r->post('/api/stocktakes', [AdminStocktake::class, 'store']);
 
     // Product Batches (Inventory lots)
     $r->get('/product-batches', [AdminProductBatch::class, 'index']);

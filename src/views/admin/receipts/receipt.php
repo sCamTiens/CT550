@@ -27,16 +27,13 @@ $items = $items ?? [];
                         <?= textFilterPopover('code', 'Mã phiếu thu') ?>
                         <?= textFilterPopover('payer_user_name', 'Khách hàng') ?>
                         <?= textFilterPopover('order_id', 'Mã đơn hàng') ?>
-                        <?= selectFilterPopover('method', 'Phương thức thanh toán', [
+                        <?= selectFilterPopover('method', 'PT thanh toán', [
                             '' => '-- Tất cả --',
                             'Tiền mặt' => 'Tiền mặt',
                             'Chuyển khoản' => 'Chuyển khoản',
-                            'Quẹt thẻ' => 'Quẹt thẻ',
-                            'PayPal' => 'PayPal',
-                            'Thanh toán khi nhận hàng (COD)' => 'Thanh toán khi nhận hàng (COD)'
                         ]) ?>
                         <?= numberFilterPopover('amount', 'Số tiền') ?>
-                        <?= textFilterPopover('payment_id', 'Bản ghi thanh toán') ?>
+                        <?= textFilterPopover('payment_id', 'Bản ghi TT') ?>
                         <?= textFilterPopover('received_by', 'Người thu') ?>
                         <?= dateFilterPopover('received_at', 'Ngày thu') ?>
                         <?= textFilterPopover('txn_ref', 'Mã giao dịch') ?>
@@ -65,14 +62,19 @@ $items = $items ?? [];
                                 :class="(r.code || '—') === '—' ? 'text-center' : 'text-left'" x-text="r.code || '—'">
                             </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
-                                :class="(r.payer_name || '—') === '—' ? 'text-center' : 'text-left'"
-                                x-text="r.payer_name || '—'"></td>
+                                :class="(r.payer_user_name || '—') === '—' ? 'text-center' : 'text-left'"
+                                x-text="r.payer_user_name || '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
-                                :class="(r.order_id || '—') === '—' ? 'text-center' : 'text-right'"
+                                :class="(r.order_id || '—') === '—' ? 'text-center' : 'text-center'"
                                 x-text="r.order_id || '—'"></td>
-                            <td class="px-3 py-2 break-words whitespace-pre-line"
-                                :class="(r.method || '—') === '—' ? 'text-center' : 'text-left'"
-                                x-text="r.method || '—'"></td>
+                            <td class="px-3 py-2 text-center align-middle">
+                                <div class="flex justify-center items-center h-full">
+                                    <span class="px-2 py-[3px] rounded text-xs font-medium" :class="{
+                                        'bg-green-100 text-green-800': r.method === 'Tiền mặt',
+                                        'bg-red-100 text-orange-800': r.method === 'Chuyển khoản',
+                                    }" x-text="getPaymentMethodText(r.method)"></span>
+                                </div>
+                            </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line text-right"
                                 x-text="formatCurrency(r.amount)">
                             </td>
@@ -86,7 +88,7 @@ $items = $items ?? [];
                                 :class="(r.received_at || '—') === '—' ? 'text-center' : 'text-right'"
                                 x-text="r.received_at ? r.received_at : '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
-                                :class="(r.txn_ref || '—') === '—' ? 'text-center' : 'text-right'"
+                                :class="(r.txn_ref || '—') === '—' ? 'text-center' : 'text-left'"
                                 x-text="r.txn_ref || '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
                                 :class="(r.bank_time || '—') === '—' ? 'text-center' : 'text-right'"
@@ -272,12 +274,19 @@ $items = $items ?? [];
                     const res = await fetch(api.list);
                     const data = await res.json();
                     this.items = data.items || [];
-                    console.log('DATA ITEMS', this.items);
                 } catch (e) {
                     this.showToast('Không thể tải dữ liệu phiếu thu');
                 } finally {
                     this.loading = false;
                 }
+            },
+
+            getPaymentMethodText(payment_method) {
+                const map = {
+                    'Tiền mặt': 'Tiền mặt',
+                    'Chuyển khoản': 'Chuyển khoản',
+                };
+                return map[payment_method] || payment_method;
             },
 
             // ===== FILTERS =====
@@ -302,125 +311,177 @@ $items = $items ?? [];
                 created_by: ''
             },
 
-            // Chuẩn hóa ngày cho so sánh (loại bỏ phần giờ)
-            applyDateFilter(val, type, value, from, to) {
-                if (!type) return true;
-                const normalizeDate = (d) => {
-                    if (!d) return null;
-                    let s = String(d).trim();
-                    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
-                        const [dd, mm, yy] = s.split(/[\s\/]/);
-                        s = `${yy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
-                    }
-                    if (/^\d{4}-\d{1,2}-\d{1,2}/.test(s)) {
-                        s = s.substring(0, 10);
-                    }
-                    const parsed = new Date(s);
-                    if (isNaN(parsed)) return null;
-                    return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
-                };
-                const itemDate = normalizeDate(val);
-                if (!itemDate) return false;
-                if (type === 'eq') {
-                    if (!value) return true;
-                    const compareDate = normalizeDate(value);
-                    if (!compareDate) return false;
-                    return itemDate.getTime() === compareDate.getTime();
-                }
-                if (type === 'between') {
-                    if (!from || !to) return true;
-                    const fromDate = normalizeDate(from);
-                    const toDate = normalizeDate(to);
-                    if (!fromDate || !toDate) return false;
-                    return itemDate >= fromDate && itemDate <= toDate;
-                }
-                if (type === 'lt') {
-                    if (!value) return true;
-                    const compareDate = normalizeDate(value);
-                    if (!compareDate) return false;
-                    return itemDate < compareDate;
-                }
-                if (type === 'gt') {
-                    if (!value) return true;
-                    const compareDate = normalizeDate(value);
-                    if (!compareDate) return false;
-                    return itemDate > compareDate;
-                }
-                if (type === 'lte') {
-                    if (!value) return true;
-                    const compareDate = normalizeDate(value);
-                    if (!compareDate) return false;
-                    return itemDate <= compareDate;
-                }
-                if (type === 'gte') {
-                    if (!value) return true;
-                    const compareDate = normalizeDate(value);
-                    if (!compareDate) return false;
-                    return itemDate >= compareDate;
-                }
-                return true;
-            },
+            // -------------------------------------------
+            // Hàm lọc tổng quát, hỗ trợ text / number / date
+            // -------------------------------------------
+            applyFilter(val, type, { value, from, to, dataType }) {
+                if (val == null) return false;
 
-            applyNumberFilter(val, type, value, from, to) {
-                const num = Number(val);
-                if (isNaN(num)) return false;
-                if (!type) return true;
-                if (type === 'eq') {
-                    if (!value && value !== 0) return true;
-                    return num === Number(value);
+                // ---------------- TEXT ----------------
+                if (dataType === 'text') {
+                    const hasAccent = (s) => /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(s);
+
+                    const normalize = (str) => String(str || '')
+                        .toLowerCase()
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '') // xóa dấu
+                        .trim();
+
+                    const raw = String(val || '').toLowerCase();
+                    const str = normalize(val);
+                    const query = String(value || '').toLowerCase();
+                    const queryNoAccent = normalize(value);
+
+                    if (!query) return true;
+
+                    if (type === 'eq') return hasAccent(query)
+                        ? raw === query  // có dấu → so đúng dấu
+                        : str === queryNoAccent; // không dấu → so không dấu
+
+                    if (type === 'contains' || type === 'like') {
+                        if (hasAccent(query)) {
+                            // Có dấu → tìm chính xác theo dấu
+                            return raw.includes(query);
+                        } else {
+                            // Không dấu → tìm theo không dấu
+                            return str.includes(queryNoAccent);
+                        }
+                    }
+
+                    return true;
                 }
-                if (type === 'between') {
-                    if ((!from && from !== 0) || (!to && to !== 0)) return true;
-                    return num >= Number(from) && num <= Number(to);
+
+                // ---------------- NUMBER ----------------
+                if (dataType === 'number') {
+                    const parseNum = (v) => {
+                        if (v === '' || v === null || v === undefined) return null;
+                        const s = String(v).replace(/[^\d.-]/g, '');
+                        const n = Number(s);
+                        return isNaN(n) ? null : n;
+                    };
+
+                    const num = parseNum(val);
+                    const v = parseNum(value);
+                    const f = parseNum(from);
+                    const t = parseNum(to);
+
+                    if (num === null) return false;
+                    if (!type) return true;
+
+                    if (type === 'eq') return v === null ? true : num === v;
+                    if (type === 'lt') return v === null ? true : num < v;
+                    if (type === 'gt') return v === null ? true : num > v;
+                    if (type === 'lte') return v === null ? true : num <= v;
+                    if (type === 'gte') return v === null ? true : num >= v;
+                    if (type === 'between') return f === null || t === null ? true : num >= f && num <= t;
+
+                    // --- Lọc “mờ” theo chuỗi số ---
+                    if (type === 'like') {
+                        const raw = String(val).replace(/[^\d]/g, '');
+                        const query = String(value || '').replace(/[^\d]/g, '');
+                        return raw.includes(query);
+                    }
+
+                    return true;
                 }
-                if (type === 'lt') {
-                    if (!value && value !== 0) return true;
-                    return num < Number(value);
+
+                // ---------------- DATE ----------------
+                if (dataType === 'date') {
+                    if (!val) return false;
+                    const d = new Date(val);
+                    const v = value ? new Date(value) : null;
+                    const f = from ? new Date(from) : null;
+                    const t = to ? new Date(to) : null;
+
+                    if (type === 'eq') return v ? d.toDateString() === v.toDateString() : true;
+                    if (type === 'lt') return v ? d < v : true;
+                    if (type === 'gt') {
+                        if (!v) return true;
+                        // So sánh chỉ theo ngày, bỏ qua giờ phút giây
+                        return d.setHours(0, 0, 0, 0) > v.setHours(0, 0, 0, 0);
+                    }
+                    if (type === 'lte') {
+                        if (!v) return true;
+                        const nextDay = new Date(v);
+                        nextDay.setDate(v.getDate() + 1);
+                        return d < nextDay; // <= nghĩa là nhỏ hơn ngày kế tiếp
+                    }
+                    if (type === 'gte') return v ? d >= v : true;
+                    if (type === 'between') return f && t ? d >= f && d <= t : true;
+
+                    return true;
                 }
-                if (type === 'gt') {
-                    if (!value && value !== 0) return true;
-                    return num > Number(value);
-                }
-                if (type === 'lte') {
-                    if (!value && value !== 0) return true;
-                    return num <= Number(value);
-                }
-                if (type === 'gte') {
-                    if (!value && value !== 0) return true;
-                    return num >= Number(value);
-                }
+
                 return true;
             },
 
             filtered() {
-                const fn = (v) => (v ?? '').toString().toLowerCase();
-                const f = this.filters;
-                return this.items.filter(r => {
-                    if (f.code && !fn(r.code).includes(fn(f.code))) return false;
-                    if (f.payer_user_name && !fn(r.payer_user_name).includes(fn(f.payer_user_name))) return false;
-                    if (f.order_id && !fn(r.order_id).includes(fn(f.order_id))) return false;
-                    if (f.method && !fn(r.method).includes(fn(f.method))) return false;
-                    if (f.payment_id && !fn(r.payment_id).includes(fn(f.payment_id))) return false;
-                    if (f.received_by && !fn(r.received_by).includes(fn(f.received_by))) return false;
-                    if (f.txn_ref && !fn(r.txn_ref).includes(fn(f.txn_ref))) return false;
-                    if (f.note && !fn(r.note).includes(fn(f.note))) return false;
-                    if (f.created_by && !fn(r.created_by_name || '').includes(fn(f.created_by))) return false;
-                    if (!this.applyNumberFilter(r.amount, f.amount_type, f.amount_value, f.amount_from, f.amount_to)) return false;
-                    if (!this.applyDateFilter(r.received_at, f.received_at_type, f.received_at_value, f.received_at_from, f.received_at_to)) return false;
-                    if (!this.applyDateFilter(r.bank_time, f.bank_time_type, f.bank_time_value, f.bank_time_from, f.bank_time_to)) return false;
-                    if (!this.applyDateFilter(r.created_at, f.created_at_type, f.created_at_value, f.created_at_from, f.created_at_to)) return false;
-                    return true;
+                let data = this.items;
+
+                // --- Lọc theo chuỗi ---
+                ['code', 'payer_user_name', 'order_id', 'payment_id', 'received_by', 'txn_ref', 'note', 'created_by'].forEach(key => {
+                    if (this.filters[key]) {
+                        const field = key === 'created_by' ? 'created_by_name' : key;
+                        data = data.filter(o =>
+                            this.applyFilter(o[field], 'contains', {
+                                value: this.filters[key],
+                                dataType: 'text'
+                            })
+                        );
+                    }
                 });
+
+                // --- Lọc theo select ---
+                ['method'].forEach(key => {
+                    if (this.filters[key]) {
+                        data = data.filter(o =>
+                            this.applyFilter(o[key], 'eq', {
+                                value: this.filters[key],
+                                dataType: 'text'
+                            })
+                        );
+                    }
+                });
+
+                // --- Lọc các trường số thông thường ---
+                ['amount'].forEach(key => {
+                    if (this.filters[`${key}_type`]) {
+                        data = data.filter(o =>
+                            this.applyFilter(o[key], this.filters[`${key}_type`], {
+                                value: this.filters[`${key}_value`],
+                                from: this.filters[`${key}_from`],
+                                to: this.filters[`${key}_to`],
+                                dataType: 'number'
+                            })
+                        );
+                    }
+                });
+
+                // --- Lọc theo ngày ---
+                // Ngày xuất, Ngày tạo
+                ['bank_time', 'received_at', 'created_at'].forEach(key => {
+                    if (this.filters[`${key}_type`]) {
+                        data = data.filter(s =>
+                            this.applyFilter(s[key], this.filters[`${key}_type`], {
+                                value: this.filters[`${key}_value`],
+                                from: this.filters[`${key}_from`],
+                                to: this.filters[`${key}_to`],
+                                dataType: 'date'
+                            })
+                        );
+                    }
+                });
+
+                return data;
             },
 
             toggleFilter(key) {
-                Object.keys(this.openFilter).forEach(k => this.openFilter[k] = (k === key ? !this.openFilter[k] : false));
+                for (const k in this.openFilter) this.openFilter[k] = false;
+                this.openFilter[key] = true;
             },
-            applyFilter(key) {
-                this.openFilter[key] = false;
-            },
+            closeFilter(key) { this.openFilter[key] = false; },
             resetFilter(key) {
-                if (['received_at', 'bank_time', 'created_at'].includes(key)) {
+                if (['created_at', 'bank_time', 'received_at'].includes(key)) {
                     this.filters[`${key}_type`] = '';
                     this.filters[`${key}_value`] = '';
                     this.filters[`${key}_from`] = '';
@@ -719,7 +780,7 @@ $items = $items ?? [];
                     <div class="flex-1">${msg}</div>
                 `;
 
-                box.appendChild(toast);
+                                box.appendChild(toast);
                 setTimeout(() => toast.remove(), 3000);
             },
         };

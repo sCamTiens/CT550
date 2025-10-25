@@ -17,15 +17,20 @@ class ProductBatch
     public $updated_at;
     public $created_by;
     public $updated_by;
-    
+
     // Thêm các field từ JOIN với bảng products
     public $product_name;
     public $product_sku;
 
+    // Thêm các filed từ JOIN với bảng users
+    public $created_by_name;
+    public $updated_by_name;
+
     public function __construct(array $data)
     {
         foreach ($data as $k => $v) {
-            if (property_exists($this, $k)) $this->$k = $v;
+            if (property_exists($this, $k))
+                $this->$k = $v;
         }
     }
 }

@@ -54,7 +54,7 @@ $items = $items ?? [];
                                         <input x-model.trim="filters.product_name"
                                             class="w-full border rounded px-3 py-2" placeholder="Nhập tên sản phẩm">
                                         <div class="mt-3 flex gap-2 justify-end">
-                                            <button @click="applyFilter('product_name')"
+                                            <button @click="closeFilter('product_name')"
                                                 class="px-3 py-1 text-xs rounded bg-[#002975] text-white hover:opacity-90">Tìm</button>
                                             <button @click="resetFilter('product_name')"
                                                 class="px-3 py-1 text-xs rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Làm
@@ -81,10 +81,39 @@ $items = $items ?? [];
                                     <div x-show="openFilter.qty" x-transition @click.outside="openFilter.qty=false"
                                         class="absolute z-40 mt-2 w-64 bg-white rounded-lg shadow-lg border p-3 text-left left-0">
                                         <div class="font-semibold mb-2">Tìm theo "Số lượng"</div>
-                                        <input type="number" x-model.number="filters.qty"
-                                            class="w-full border rounded px-3 py-2" placeholder="Nhập số lượng">
+
+                                        <div class="flex flex-col gap-2">
+                                            <!-- Dòng chọn kiểu lọc -->
+                                            <select x-model="filters.qty_type"
+                                                class="border rounded px-3 py-2 text-sm w-full">
+                                                <option value="">-- Chọn kiểu lọc --</option>
+                                                <option value="eq">Bằng</option>
+                                                <option value="gt">Lớn hơn</option>
+                                                <option value="lt">Nhỏ hơn</option>
+                                                <option value="gte">Lớn hơn hoặc bằng</option>
+                                                <option value="lte">Nhỏ hơn hoặc bằng</option>
+                                                <option value="between">Trong khoảng</option>
+                                            </select>
+
+                                            <!-- Dòng nhập giá trị -->
+                                            <div class="flex gap-2 items-center">
+                                                <input type="number" x-model.number="filters.qty_value"
+                                                    x-show="filters.qty_type && filters.qty_type !== 'between'"
+                                                    class="flex-1 border rounded px-3 py-2" placeholder="Nhập giá trị">
+
+                                                <template x-if="filters.qty_type === 'between'">
+                                                    <div class="flex gap-2 w-full">
+                                                        <input type="number" x-model.number="filters.qty_from"
+                                                            class="w-1/2 border rounded px-3 py-2" placeholder="Từ">
+                                                        <input type="number" x-model.number="filters.qty_to"
+                                                            class="w-1/2 border rounded px-3 py-2" placeholder="Đến">
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+
                                         <div class="mt-3 flex gap-2 justify-end">
-                                            <button @click="applyFilter('qty')"
+                                            <button @click="closeFilter('qty')"
                                                 class="px-3 py-1 text-xs rounded bg-[#002975] text-white hover:opacity-90">Tìm</button>
                                             <button @click="resetFilter('qty')"
                                                 class="px-3 py-1 text-xs rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Làm
@@ -108,14 +137,45 @@ $items = $items ?? [];
                                             </svg>
                                         </button>
                                     </div>
+
+                                    <!-- Popup lọc -->
                                     <div x-show="openFilter.unit_price" x-transition
                                         @click.outside="openFilter.unit_price=false"
                                         class="absolute z-40 mt-2 w-64 bg-white rounded-lg shadow-lg border p-3 text-left right-0">
                                         <div class="font-semibold mb-2">Tìm theo "Đơn giá"</div>
-                                        <input type="number" x-model.number="filters.unit_price"
-                                            class="w-full border rounded px-3 py-2" placeholder="Nhập đơn giá">
+
+                                        <div class="flex flex-col gap-2">
+                                            <!-- Dòng chọn kiểu lọc -->
+                                            <select x-model="filters.unit_price_type"
+                                                class="border rounded px-3 py-2 text-sm w-full">
+                                                <option value="">-- Chọn kiểu lọc --</option>
+                                                <option value="eq">Bằng</option>
+                                                <option value="gt">Lớn hơn</option>
+                                                <option value="lt">Nhỏ hơn</option>
+                                                <option value="gte">Lớn hơn hoặc bằng</option>
+                                                <option value="lte">Nhỏ hơn hoặc bằng</option>
+                                                <option value="between">Trong khoảng</option>
+                                            </select>
+
+                                            <!-- Dòng nhập giá trị -->
+                                            <div class="flex gap-2 items-center">
+                                                <input type="number" x-model.number="filters.unit_price_value"
+                                                    x-show="filters.unit_price_type && filters.unit_price_type !== 'between'"
+                                                    class="flex-1 border rounded px-3 py-2" placeholder="Nhập giá trị">
+
+                                                <template x-if="filters.unit_price_type === 'between'">
+                                                    <div class="flex gap-2 w-full">
+                                                        <input type="number" x-model.number="filters.unit_price_from"
+                                                            class="w-1/2 border rounded px-3 py-2" placeholder="Từ">
+                                                        <input type="number" x-model.number="filters.unit_price_to"
+                                                            class="w-1/2 border rounded px-3 py-2" placeholder="Đến">
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+
                                         <div class="mt-3 flex gap-2 justify-end">
-                                            <button @click="applyFilter('unit_price')"
+                                            <button @click="closeFilter('unit_price')"
                                                 class="px-3 py-1 text-xs rounded bg-[#002975] text-white hover:opacity-90">Tìm</button>
                                             <button @click="resetFilter('unit_price')"
                                                 class="px-3 py-1 text-xs rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Làm
@@ -468,45 +528,222 @@ $items = $items ?? [];
             },
 
             // ===== FILTERS =====
-            openFilter: {},
-            filters: {},
+            openFilter: {
+                id: false, code: false, customer_name: false, product_name: false, qty: false,
+                unit_price: false, status: false, subtotal: false, discount_amount: false,
+                total_amount: false, payment_method: false, shipping_address: false, note: false, created_at: false, created_by: false
+            },
+            filters: {
+                id: '',
+                code: '',
+                customer_name: '',
+                product_name: '',
+                qty_type: '', qty_value: '', qty_from: '', qty_to: '',
+                unit_price_type: '', unit_price_value: '', unit_price_from: '', unit_price_to: '',
+                status: '',
+                subtotal_type: '', subtotal_value: '', subtotal_from: '', subtotal_to: '',
+                discount_amount_type: '', discount_amount_value: '', discount_amount_from: '', discount_amount_to: '',
+                total_amount_type: '', total_amount_value: '', total_amount_from: '', total_amount_to: '',
+                payment_method: '',
+                shipping_address: '',
+                note: '',
+                created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
+                created_by: ''
+            },
+
+            // -------------------------------------------
+            // Hàm lọc tổng quát, hỗ trợ text / number / date
+            // -------------------------------------------
+            applyFilter(val, type, { value, from, to, dataType }) {
+                if (val == null) return false;
+
+                // ---------------- TEXT ----------------
+                if (dataType === 'text') {
+                    const hasAccent = (s) => /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(s);
+
+                    const normalize = (str) => String(str || '')
+                        .toLowerCase()
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '') // xóa dấu
+                        .trim();
+
+                    const raw = String(val || '').toLowerCase();
+                    const str = normalize(val);
+                    const query = String(value || '').toLowerCase();
+                    const queryNoAccent = normalize(value);
+
+                    if (!query) return true;
+
+                    if (type === 'eq') return hasAccent(query)
+                        ? raw === query  // có dấu → so đúng dấu
+                        : str === queryNoAccent; // không dấu → so không dấu
+
+                    if (type === 'contains' || type === 'like') {
+                        if (hasAccent(query)) {
+                            // Có dấu → tìm chính xác theo dấu
+                            return raw.includes(query);
+                        } else {
+                            // Không dấu → tìm theo không dấu
+                            return str.includes(queryNoAccent);
+                        }
+                    }
+
+                    return true;
+                }
+
+                // ---------------- NUMBER ----------------
+                if (dataType === 'number') {
+                    const parseNum = (v) => {
+                        if (v === '' || v === null || v === undefined) return null;
+                        const s = String(v).replace(/[^\d.-]/g, '');
+                        const n = Number(s);
+                        return isNaN(n) ? null : n;
+                    };
+
+                    const num = parseNum(val);
+                    const v = parseNum(value);
+                    const f = parseNum(from);
+                    const t = parseNum(to);
+
+                    if (num === null) return false;
+                    if (!type) return true;
+
+                    if (type === 'eq') return v === null ? true : num === v;
+                    if (type === 'lt') return v === null ? true : num < v;
+                    if (type === 'gt') return v === null ? true : num > v;
+                    if (type === 'lte') return v === null ? true : num <= v;
+                    if (type === 'gte') return v === null ? true : num >= v;
+                    if (type === 'between') return f === null || t === null ? true : num >= f && num <= t;
+
+                    // --- Lọc “mờ” theo chuỗi số ---
+                    if (type === 'like') {
+                        const raw = String(val).replace(/[^\d]/g, '');
+                        const query = String(value || '').replace(/[^\d]/g, '');
+                        return raw.includes(query);
+                    }
+
+                    return true;
+                }
+
+                // ---------------- DATE ----------------
+                if (dataType === 'date') {
+                    if (!val) return false;
+                    const d = new Date(val);
+                    const v = value ? new Date(value) : null;
+                    const f = from ? new Date(from) : null;
+                    const t = to ? new Date(to) : null;
+
+                    if (type === 'eq') return v ? d.toDateString() === v.toDateString() : true;
+                    if (type === 'lt') return v ? d < v : true;
+                    if (type === 'gt') {
+                        if (!v) return true;
+                        // So sánh chỉ theo ngày, bỏ qua giờ phút giây
+                        return d.setHours(0, 0, 0, 0) > v.setHours(0, 0, 0, 0);
+                    }
+                    if (type === 'lte') {
+                        if (!v) return true;
+                        const nextDay = new Date(v);
+                        nextDay.setDate(v.getDate() + 1);
+                        return d < nextDay; // <= nghĩa là nhỏ hơn ngày kế tiếp
+                    }
+                    if (type === 'gte') return v ? d >= v : true;
+                    if (type === 'between') return f && t ? d >= f && d <= t : true;
+
+                    return true;
+                }
+
+                return true;
+            },
 
             filtered() {
                 let data = this.items;
 
-                for (const key in this.filters) {
-                    const val = this.filters[key];
-                    if (!val) continue;
+                // --- Lọc theo chuỗi ---
+                ['code', 'customer_name', 'shipping_address', 'note', 'created_by'].forEach(key => {
+                    if (this.filters[key]) {
+                        const field = key === 'created_by' ? 'created_by_name' : key;
+                        data = data.filter(o =>
+                            this.applyFilter(o[field], 'contains', {
+                                value: this.filters[key],
+                                dataType: 'text'
+                            })
+                        );
+                    }
+                });
 
-                    // Filter theo các trường trong order items (product_name, qty, unit_price)
-                    if (['product_name', 'qty', 'unit_price'].includes(key)) {
-                        data = data.filter(order => {
-                            if (!order.items || order.items.length === 0) return false;
+                // --- Lọc theo select ---
+                ['status', 'payment_method'].forEach(key => {
+                    if (this.filters[key]) {
+                        data = data.filter(o =>
+                            this.applyFilter(o[key], 'eq', {
+                                value: this.filters[key],
+                                dataType: 'text'
+                            })
+                        );
+                    }
+                });
 
-                            return order.items.some(item => {
-                                if (key === 'product_name') {
-                                    return (item.product_name || '').toLowerCase().includes(val.toLowerCase());
-                                } else if (key === 'qty') {
-                                    return Number(item.qty) === Number(val);
-                                } else if (key === 'unit_price') {
-                                    return Number(item.unit_price) === Number(val);
-                                }
-                                return false;
-                            });
+                // --- Lọc theo số ---
+                if (this.filters.qty_type) {
+                    data = data.filter(o => {
+                        const allQty = o.items?.map(i => Number(i.qty) || 0) || [];
+                        const totalQty = allQty.reduce((a, b) => a + b, 0);
+                        return this.applyFilter(totalQty, this.filters.qty_type, {
+                            value: this.filters.qty_value,
+                            from: this.filters.qty_from,
+                            to: this.filters.qty_to,
+                            dataType: 'number'
                         });
+                    });
+                }
+
+                // --- Lọc các trường số thông thường ---
+                ['subtotal', 'discount_amount', 'total_amount'].forEach(key => {
+                    if (this.filters[`${key}_type`]) {
+                        data = data.filter(o =>
+                            this.applyFilter(o[key], this.filters[`${key}_type`], {
+                                value: this.filters[`${key}_value`],
+                                from: this.filters[`${key}_from`],
+                                to: this.filters[`${key}_to`],
+                                dataType: 'number'
+                            })
+                        );
                     }
-                    // Filter theo các trường số tiền
-                    else if (['subtotal', 'discount_amount', 'shipping_fee', 'total_amount'].includes(key)) {
-                        data = data.filter(r => Number(r[key]) === Number(val));
-                    }
-                    // Filter theo ngày
-                    else if (['created_at'].includes(key)) {
-                        data = data.filter(r => (r[key] || '').startsWith(val));
-                    }
-                    // Filter theo text
-                    else {
-                        data = data.filter(r => (r[key] || '').toLowerCase().includes(val.toLowerCase()));
-                    }
+                });
+
+                // --- Lọc theo đơn giá trong từng sản phẩm của đơn ---
+                if (this.filters.unit_price_type) {
+                    data = data.filter(o =>
+                        o.items?.some(i =>
+                            this.applyFilter(i.unit_price, this.filters.unit_price_type, {
+                                value: this.filters.unit_price_value,
+                                from: this.filters.unit_price_from,
+                                to: this.filters.unit_price_to,
+                                dataType: 'number'
+                            })
+                        )
+                    );
+                }
+
+
+                // --- Lọc theo ngày ---
+                if (this.filters.created_at_type) {
+                    data = data.filter(o =>
+                        this.applyFilter(o.created_at, this.filters.created_at_type, {
+                            value: this.filters.created_at_value,
+                            from: this.filters.created_at_from,
+                            to: this.filters.created_at_to,
+                            dataType: 'date'
+                        })
+                    );
+                }
+
+                // --- Lọc theo tên sản phẩm trong items ---
+                if (this.filters.product_name) {
+                    const keyword = this.filters.product_name.toLowerCase();
+                    data = data.filter(o =>
+                        o.items?.some(i => (i.product_name || '').toLowerCase().includes(keyword))
+                    );
                 }
 
                 return data;
@@ -516,9 +753,21 @@ $items = $items ?? [];
                 for (const k in this.openFilter) this.openFilter[k] = false;
                 this.openFilter[key] = true;
             },
-            applyFilter(key) { this.openFilter[key] = false; },
+            closeFilter(key) { this.openFilter[key] = false; },
             resetFilter(key) {
-                delete this.filters[key];
+                if (['created_at'].includes(key)) {
+                    this.filters[`${key}_type`] = '';
+                    this.filters[`${key}_value`] = '';
+                    this.filters[`${key}_from`] = '';
+                    this.filters[`${key}_to`] = '';
+                } else if (['discount_amount', 'total_amount', 'qty', 'unit_price', 'subtotal'].includes(key)) {
+                    this.filters[`${key}_type`] = '';
+                    this.filters[`${key}_value`] = '';
+                    this.filters[`${key}_from`] = '';
+                    this.filters[`${key}_to`] = '';
+                } else {
+                    this.filters[key] = '';
+                }
                 this.openFilter[key] = false;
             },
 
@@ -673,7 +922,7 @@ $items = $items ?? [];
                     'Tiền mặt': 'Tiền mặt',
                     'Chuyển khoản': 'Chuyển khoản',
                 };
-                return map[payment_method] || payment_method;       
+                return map[payment_method] || payment_method;
             },
 
             getPaymentStatusText(status) {

@@ -279,115 +279,222 @@ $items = $items ?? [];
         }
       },
 
-      // filters
-      openFilter: {},    // trạng thái mở filter popup
-      filters: {},       // dữ liệu filter
+      // ===== FILTERS =====
+      openFilter: {
+        sku: false, barcode: false, name: false, slug: false,
+        brand: false, category: false, sale_price: false, cost_price: false,
+        unit: false, status: false, created_at: false, created_by: false,
+        updated_at: false, updated_by: false
+      },
 
-      // ===== helper riêng cho date filter =====
-      applyDateFilter(val, type, value, from, to) {
-        if (!val) return true;
-        if (!type) return true;
+      filters: {
+        sku: '', barcode: '', name: '', slug: '',
+        brand: '', category: '',
+        sale_price_type: '', sale_price_value: '', sale_price_from: '', sale_price_to: '',
+        cost_price_type: '', cost_price_value: '', cost_price_from: '', cost_price_to: '',
+        unit: '', status: '',
+        created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
+        created_by: '',
+        updated_at_type: '', updated_at_value: '', updated_at_from: '', updated_at_to: '',
+        updated_by: ''
+      },
 
-        const normalizeDate = (dateStr) => {
-          if (!dateStr) return null;
-          const d = new Date(dateStr);
-          if (isNaN(d.getTime())) return null;
-          return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-        };
+      // ------------------------------------------------------------------
+      // Hàm lọc tổng quát — hỗ trợ TEXT, NUMBER, DATE
+      // ------------------------------------------------------------------
+      applyFilter(val, type, { value, from, to, dataType }) {
+        if (val == null) return false;
 
-        const d = normalizeDate(val);
-        if (!d) return true;
+        // ---------------- TEXT ----------------
+        if (dataType === 'text') {
+          const hasAccent = (s) => /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(s);
+          const normalize = (str) => String(str || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim();
 
-        if (type === 'eq') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d.getTime() === compareDate.getTime() : true;
+          const raw = String(val || '').toLowerCase();
+          const str = normalize(val);
+          const query = String(value || '').toLowerCase();
+          const queryNoAccent = normalize(value);
+
+          if (!query) return true;
+
+          if (type === 'eq') return hasAccent(query)
+            ? raw === query
+            : str === queryNoAccent;
+
+          if (type === 'contains' || type === 'like') {
+            return hasAccent(query)
+              ? raw.includes(query)
+              : str.includes(queryNoAccent);
+          }
+
+          return true;
         }
 
-        if (type === 'between') {
-          if (!from || !to) return true;
-          const fromDate = normalizeDate(from);
-          const toDate = normalizeDate(to);
-          return fromDate && toDate ? (d >= fromDate && d <= toDate) : true;
+        // ---------------- NUMBER ----------------
+        if (dataType === 'number') {
+          const parseNum = (v) => {
+            if (v === '' || v === null || v === undefined) return null;
+            const s = String(v).replace(/[^\d.-]/g, '');
+            const n = Number(s);
+            return isNaN(n) ? null : n;
+          };
+
+          const num = parseNum(val);
+          const v = parseNum(value);
+          const f = parseNum(from);
+          const t = parseNum(to);
+
+          if (num === null) return false;
+          if (!type) return true;
+
+          if (type === 'eq') return v === null ? true : num === v;
+          if (type === 'lt') return v === null ? true : num < v;
+          if (type === 'gt') return v === null ? true : num > v;
+          if (type === 'lte') return v === null ? true : num <= v;
+          if (type === 'gte') return v === null ? true : num >= v;
+          if (type === 'between') return f === null || t === null ? true : num >= f && num <= t;
+
+          if (type === 'like') {
+            const raw = String(val).replace(/[^\d]/g, '');
+            const query = String(value || '').replace(/[^\d]/g, '');
+            return raw.includes(query);
+          }
+
+          return true;
         }
 
-        if (type === 'lt') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d < compareDate : true;
-        }
+        // ---------------- DATE ----------------
+        if (dataType === 'date') {
+          if (!val) return false;
+          const d = new Date(val);
+          const v = value ? new Date(value) : null;
+          const f = from ? new Date(from) : null;
+          const t = to ? new Date(to) : null;
 
-        if (type === 'gt') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d > compareDate : true;
-        }
+          if (type === 'eq') return v ? d.toDateString() === v.toDateString() : true;
+          if (type === 'lt') return v ? d < v : true;
+          if (type === 'gt') {
+            if (!v) return true;
+            return d.setHours(0, 0, 0, 0) > v.setHours(0, 0, 0, 0);
+          }
+          if (type === 'lte') {
+            if (!v) return true;
+            const nextDay = new Date(v);
+            nextDay.setDate(v.getDate() + 1);
+            return d < nextDay; // cộng thêm 1 ngày
+          }
+          if (type === 'gte') return v ? d >= v : true;
+          if (type === 'between') return f && t ? d >= f && d <= t : true;
 
-        if (type === 'lte') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d <= compareDate : true;
-        }
-
-        if (type === 'gte') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d >= compareDate : true;
+          return true;
         }
 
         return true;
       },
 
-      // lọc client-side
+      // ------------------------------------------------------------------
+      // Áp dụng filter cho toàn bộ bảng
+      // ------------------------------------------------------------------
       filtered() {
-        const fn = (v) => (v ?? '').toString().toLowerCase();
-        const f = this.filters;
+        let data = this.items;
 
-        return this.items.filter(p => {
-          if (f.sku && !fn(p.sku).includes(fn(f.sku))) return false;
-          if (f.name && !fn(p.name).includes(fn(f.name))) return false;
-          if (f.unit && !fn(p.unit_name || '').includes(fn(f.unit))) return false;
-          if (f.brand && !fn(p.brand_name || '').includes(fn(f.brand))) return false;
-          if (f.category && !fn(p.category_name || '').includes(fn(f.category))) return false;
-
-          if (f.sale_price !== '' && f.sale_price !== null) {
-            const val = Number(f.sale_price);
-            if (!isNaN(val) && Number(p.sale_price) !== val) return false;
+        // --- Lọc theo text ---
+        // Bao gồm các trường hiển thị tên như brand_name, category_name, created_by_name, updated_by_name
+        ['sku', 'barcode', 'name', 'slug'].forEach(key => {
+          if (this.filters[key]) {
+            data = data.filter(o =>
+              this.applyFilter(o[key], 'contains', {
+                value: this.filters[key],
+                dataType: 'text'
+              })
+            );
           }
-
-          if (f.cost_price !== '' && f.cost_price !== null) {
-            const val = Number(f.cost_price);
-            if (!isNaN(val) && Number(p.cost_price) !== val) return false;
-          }
-
-          if (f.status !== undefined && f.status !== '') {
-            if (String(p.is_active) !== String(f.status)) return false;
-          }
-
-          if (f.created_by && !fn(p.created_by_name || '').includes(fn(f.created_by))) return false;
-          if (f.updated_by && !fn(p.updated_by_name || '').includes(fn(f.updated_by))) return false;
-
-          if (f.stock_qty !== '' && f.stock_qty !== null) {
-            const val = Number(f.stock_qty);
-            if (!isNaN(val) && Number(p.stock_qty) !== val) return false;
-          }
-
-          if (!this.applyDateFilter(p.created_at, f.created_at_type, f.created_at_value, f.created_at_from, f.created_at_to)) return false;
-          if (!this.applyDateFilter(p.updated_at, f.updated_at_type, f.updated_at_value, f.updated_at_from, f.updated_at_to)) return false;
-
-          return true;
         });
+
+        // --- Lọc theo thương hiệu và loại (text hiển thị) ---
+        ['brand', 'category', 'unit'].forEach(key => {
+          if (this.filters[key]) {
+            const field = key === 'brand' ? 'brand_name'
+              : key === 'category' ? 'category_name'
+                : key === 'unit' ? 'unit_name'
+                  : key;
+            data = data.filter(o =>
+              this.applyFilter(o[field], 'contains', {
+                value: this.filters[key],
+                dataType: 'text'
+              })
+            );
+          }
+        });
+
+        // --- Lọc theo người tạo / người cập nhật ---
+        ['created_by', 'updated_by'].forEach(key => {
+          if (this.filters[key]) {
+            const field = `${key}_name`;
+            data = data.filter(o =>
+              this.applyFilter(o[field], 'contains', {
+                value: this.filters[key],
+                dataType: 'text'
+              })
+            );
+          }
+        });
+
+        // --- Lọc theo select ---
+        if (this.filters.status) {
+          data = data.filter(o =>
+            this.applyFilter(o.is_active ? '1' : '0', 'eq', {
+              value: this.filters.status,
+              dataType: 'text'
+            })
+          );
+        }
+
+        // --- Lọc theo số ---
+        ['sale_price', 'cost_price'].forEach(key => {
+          if (this.filters[`${key}_type`]) {
+            data = data.filter(o =>
+              this.applyFilter(o[key], this.filters[`${key}_type`], {
+                value: this.filters[`${key}_value`],
+                from: this.filters[`${key}_from`],
+                to: this.filters[`${key}_to`],
+                dataType: 'number'
+              })
+            );
+          }
+        });
+
+        // --- Lọc theo ngày ---
+        ['created_at', 'updated_at'].forEach(key => {
+          if (this.filters[`${key}_type`]) {
+            data = data.filter(o =>
+              this.applyFilter(o[key], this.filters[`${key}_type`], {
+                value: this.filters[`${key}_value`],
+                from: this.filters[`${key}_from`],
+                to: this.filters[`${key}_to`],
+                dataType: 'date'
+              })
+            );
+          }
+        });
+
+        return data;
       },
 
-      // toggle popup filter
+      // ------------------------------------------------------------------
+      // Mở / đóng / reset filter
+      // ------------------------------------------------------------------
       toggleFilter(key) {
-        Object.keys(this.openFilter).forEach(k => this.openFilter[k] = (k === key ? !this.openFilter[k] : false));
+        for (const k in this.openFilter) this.openFilter[k] = false;
+        this.openFilter[key] = true;
       },
-      applyFilter(key) {
-        this.openFilter[key] = false;
-      },
+      closeFilter(key) { this.openFilter[key] = false; },
       resetFilter(key) {
-        if (['created_at', 'updated_at'].includes(key)) {
+        if (['created_at', 'updated_at', 'sale_price', 'cost_price'].includes(key)) {
           this.filters[`${key}_type`] = '';
           this.filters[`${key}_value`] = '';
           this.filters[`${key}_from`] = '';

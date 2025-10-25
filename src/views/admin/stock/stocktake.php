@@ -47,7 +47,7 @@ $items = $items ?? [];
       </table>
     </div>
   </div>
-<!-- Pagination -->
+  <!-- Pagination -->
   <div class="flex items-center justify-center mt-4 px-4 gap-6">
     <div class="text-sm text-slate-600">
       Tổng cộng <span x-text="filtered().length"></span> bản ghi
@@ -100,95 +100,174 @@ $items = $items ?? [];
         if (page > this.totalPages()) page = this.totalPages();
         this.currentPage = page;
       },
-      filters: {},
-      openFilter: {},
 
-      // ===== helper riêng cho date filter =====
-      applyDateFilter(val, type, value, from, to) {
-        if (!val) return true;
-        if (!type) return true;
+      // ===== FILTERS =====
+      openFilter: {
+        id: false, note: false, created_at: false, created_by_name: false
+      },
 
-        const normalizeDate = (dateStr) => {
-          if (!dateStr) return null;
-          const d = new Date(dateStr);
-          if (isNaN(d.getTime())) return null;
-          return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-        };
+      filters: {
+        id: '', note: '', created_by_name: '',
+        created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: ''
+      },
 
-        const d = normalizeDate(val);
-        if (!d) return true;
+      // ------------------------------------------------------------------
+      // Hàm lọc tổng quát — hỗ trợ TEXT, NUMBER, DATE
+      // ------------------------------------------------------------------
+      applyFilter(val, type, { value, from, to, dataType }) {
+        if (val == null) return false;
 
-        if (type === 'eq') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d.getTime() === compareDate.getTime() : true;
+        // -------- TEXT --------
+        if (dataType === 'text') {
+          const hasAccent = (s) => /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(s);
+          const normalize = (str) => String(str || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim();
+
+          const raw = String(val || '').toLowerCase();
+          const str = normalize(val);
+          const query = String(value || '').toLowerCase();
+          const queryNoAccent = normalize(value);
+
+          if (!query) return true;
+
+          if (type === 'eq') return hasAccent(query)
+            ? raw === query
+            : str === queryNoAccent;
+
+          if (type === 'contains' || type === 'like') {
+            return hasAccent(query)
+              ? raw.includes(query)
+              : str.includes(queryNoAccent);
+          }
+
+          return true;
         }
 
-        if (type === 'between') {
-          if (!from || !to) return true;
-          const fromDate = normalizeDate(from);
-          const toDate = normalizeDate(to);
-          return fromDate && toDate ? (d >= fromDate && d <= toDate) : true;
+        // -------- NUMBER --------
+        if (dataType === 'number') {
+          const parseNum = (v) => {
+            if (v === '' || v === null || v === undefined) return null;
+            const s = String(v).replace(/[^\d.-]/g, '');
+            const n = Number(s);
+            return isNaN(n) ? null : n;
+          };
+
+          const num = parseNum(val);
+          const v = parseNum(value);
+          const f = parseNum(from);
+          const t = parseNum(to);
+
+          if (num === null) return false;
+          if (!type) return true;
+
+          if (type === 'eq') return v === null ? true : num === v;
+          if (type === 'lt') return v === null ? true : num < v;
+          if (type === 'gt') return v === null ? true : num > v;
+          if (type === 'lte') return v === null ? true : num <= v;
+          if (type === 'gte') return v === null ? true : num >= v;
+          if (type === 'between') return f === null || t === null ? true : num >= f && num <= t;
+
+          if (type === 'like') {
+            const raw = String(val).replace(/[^\d]/g, '');
+            const query = String(value || '').replace(/[^\d]/g, '');
+            return raw.includes(query);
+          }
+
+          return true;
         }
 
-        if (type === 'lt') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d < compareDate : true;
-        }
+        // -------- DATE --------
+        if (dataType === 'date') {
+          if (!val) return false;
+          const d = new Date(val);
+          const v = value ? new Date(value) : null;
+          const f = from ? new Date(from) : null;
+          const t = to ? new Date(to) : null;
 
-        if (type === 'gt') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d > compareDate : true;
-        }
+          if (type === 'eq') return v ? d.toDateString() === v.toDateString() : true;
+          if (type === 'lt') return v ? d < v : true;
+          if (type === 'gt') {
+            if (!v) return true;
+            return d.setHours(0, 0, 0, 0) > v.setHours(0, 0, 0, 0);
+          }
+          if (type === 'lte') {
+            if (!v) return true;
+            const nextDay = new Date(v);
+            nextDay.setDate(v.getDate() + 1);
+            return d < nextDay;
+          }
+          if (type === 'gte') return v ? d >= v : true;
+          if (type === 'between') return f && t ? d >= f && d <= t : true;
 
-        if (type === 'lte') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d <= compareDate : true;
-        }
-
-        if (type === 'gte') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d >= compareDate : true;
+          return true;
         }
 
         return true;
       },
 
+      // ------------------------------------------------------------------
+      // Áp dụng filter cho toàn bộ bảng
+      // ------------------------------------------------------------------
       filtered() {
-        const fn = (v) => (v ?? '').toString().toLowerCase();
-        const f = this.filters;
+        let data = this.items; // đây là mảng danh sách phiếu xuất (s)
 
-        return this.items.filter(s => {
-          if (f.id && !String(s.id).includes(f.id)) return false;
-          if (f.created_by && !fn(s.created_by_name || '').includes(fn(f.created_by))) return false;
-          if (f.note && !fn(s.note).includes(fn(f.note))) return false;
-
-          if (!this.applyDateFilter(s.created_at, f.created_at_type, f.created_at_value, f.created_at_from, f.created_at_to)) return false;
-
-          return true;
+        // --- TEXT: các cột cấp phiếu ---
+        ['id', 'note', 'created_by_name'].forEach(key => {
+          if (this.filters[key]) {
+            data = data.filter(s =>
+              this.applyFilter(s[key], 'contains', {
+                value: this.filters[key],
+                dataType: 'text'
+              })
+            );
+          }
         });
+
+        // Ngày tạo, 
+        ['created_at'].forEach(key => {
+          if (this.filters[`${key}_type`]) {
+            data = data.filter(s =>
+              this.applyFilter(s[key], this.filters[`${key}_type`], {
+                value: this.filters[`${key}_value`],
+                from: this.filters[`${key}_from`],
+                to: this.filters[`${key}_to`],
+                dataType: 'date'
+              })
+            );
+          }
+        });
+
+        return data;
       },
+
+      // ------------------------------------------------------------------
+      // Mở / đóng / reset filter
+      // ------------------------------------------------------------------
       toggleFilter(key) {
-        Object.keys(this.openFilter).forEach(k => this.openFilter[k] = (k === key ? !this.openFilter[k] : false));
+        for (const k in this.openFilter) this.openFilter[k] = false;
+        this.openFilter[key] = true;
       },
-      applyFilter(key) {
-        this.openFilter[key] = false;
-      },
+      closeFilter(key) { this.openFilter[key] = false; },
       resetFilter(key) {
-        if (['created_at', 'updated_at'].includes(key)) {
+        // --- Date type ---
+        if (['created_at'].includes(key)) {
           this.filters[`${key}_type`] = '';
           this.filters[`${key}_value`] = '';
           this.filters[`${key}_from`] = '';
           this.filters[`${key}_to`] = '';
-        } else {
-          this.filters[key] = '';
         }
+
+        // --- Text type 
+        this.filters[key] = '';
+      
+
+        // --- Close dropdown ---
         this.openFilter[key] = false;
       },
+      
       async init() {
         this.loading = true;
         try {

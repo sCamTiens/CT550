@@ -49,8 +49,9 @@ class PurchaseOrderRepository
             $code = $data['code'] ?? ('PO-' . time());
 
             // Convert ngày nhập từ d/m/Y sang Y-m-d
-            // $receivedAt = $this->convertDateFormat($data['created_at'] ?? null);
-            $receivedAt = $this->convertDateFormat($data['created_at'] ?? null);
+            $receivedAtDate = $this->convertDateFormat($data['created_at'] ?? null);
+            $receivedAt = $receivedAtDate ? ($receivedAtDate . ' ' . date('H:i:s')) : date('Y-m-d H:i:s');
+
             error_log("Received date: " . ($data['created_at'] ?? 'NULL'));
             error_log("Converted date: " . ($receivedAt ?? 'NULL'));
 
@@ -89,8 +90,8 @@ class PurchaseOrderRepository
 
             $stmt = $pdo->prepare("
                 INSERT INTO purchase_orders 
-                (code, supplier_id, total_amount, paid_amount, payment_status, due_date, note, received_at, created_by, created_at) 
-                VALUES (:code, :supplier_id, :total_amount, :paid_amount, :payment_status, :due_date, :note, :received_at, :created_by, NOW())
+                (code, supplier_id, total_amount, paid_amount, payment_status, due_date, note, received_at, created_by, created_at, updated_at, updated_by) 
+                VALUES (:code, :supplier_id, :total_amount, :paid_amount, :payment_status, :due_date, :note, :received_at, :created_by, NOW(), NOW(), :updated_by)
             ");
             $stmt->execute([
                 ':code' => $code,
@@ -102,6 +103,7 @@ class PurchaseOrderRepository
                 ':note' => $data['note'] ?? null,
                 ':received_at' => $receivedAt,
                 ':created_by' => $currentUser,
+                ':updated_by' => $currentUser,
             ]);
 
             $poId = (int) $pdo->lastInsertId();
@@ -140,8 +142,10 @@ class PurchaseOrderRepository
                             'initial_qty' => $bqty,
                             'current_qty' => $bqty,
                             'purchase_order_id' => $poId,
-                            'note' => $bline['note'] ?? ($ln['note'] ?? null),
+                            'note' => ($bline['note'] ?? '') . " Tạo từ phiếu nhập #" . $code,
                             'unit_cost' => $bline['unit_cost'] ?? $unitCost,
+                            'created_by' => $currentUser,
+                            'created_at' => date('Y-m-d H:i:s')
                         ];
                         $batchId = $batchRepo->create($batchData, $currentUser);
 
@@ -178,8 +182,10 @@ class PurchaseOrderRepository
                         'initial_qty' => $qty,
                         'current_qty' => $qty,
                         'purchase_order_id' => $poId,
-                        'note' => $ln['note'] ?? null,
+                        'note' => ($ln['note'] ?? '') . " Tạo từ phiếu nhập #" . $code,
                         'unit_cost' => $unitCost,
+                        'created_by' => $currentUser,
+                        'created_at' => date('Y-m-d H:i:s')
                     ];
                     $batchId = $batchRepo->create($batchData, $currentUser);
 
@@ -279,13 +285,17 @@ class PurchaseOrderRepository
     public function all(int $limit = 200)
     {
         $pdo = DB::pdo();
-        $sql = "SELECT po.*, s.name AS supplier_name, u.full_name AS created_by_name
+        $sql = "SELECT 
+                    po.*, 
+                    s.name AS supplier_name, 
+                    u.full_name AS created_by_name,
+                    u2.full_name AS updated_by_name
                 FROM purchase_orders po
                 LEFT JOIN suppliers s ON s.id = po.supplier_id
                 LEFT JOIN users u ON u.id = po.created_by
+                LEFT JOIN users u2 ON u2.id = po.updated_by
                 ORDER BY po.created_at DESC
-                LIMIT ?
-                ";
+                LIMIT ?";
         $st = $pdo->prepare($sql);
         $st->bindValue(1, (int) $limit, \PDO::PARAM_INT);
         $st->execute();
@@ -295,12 +305,17 @@ class PurchaseOrderRepository
     public function findById(int $id)
     {
         $pdo = DB::pdo();
-        $sql = "SELECT po.*, s.name AS supplier_name, u.full_name AS created_by_name
+        $sql = "SELECT 
+                    po.*, 
+                    s.name AS supplier_name, 
+                    u.full_name AS created_by_name,
+                    u2.full_name AS updated_by_name
                 FROM purchase_orders po
                 LEFT JOIN suppliers s ON s.id = po.supplier_id
                 LEFT JOIN users u ON u.id = po.created_by
-                WHERE po.id = ?
-                ";
+                LEFT JOIN users u2 ON u2.id = po.updated_by
+                ORDER BY po.created_at DESC
+                LIMIT ?";
         $st = $pdo->prepare($sql);
         $st->execute([$id]);
         return $st->fetch(\PDO::FETCH_ASSOC);
@@ -380,7 +395,7 @@ class PurchaseOrderRepository
 
         // Lấy dữ liệu cũ trước khi update
         $po = $this->findById($id);
-        
+
         // Kiểm tra xem phiếu nhập đã thanh toán một phần chưa
         if ($po && ($po['payment_status'] === '0' || $po['payment_status'] === '2')) {
             throw new \Exception("Không thể sửa phiếu nhập kho đã thanh toán một phần hoặc thanh toán hết");
@@ -424,7 +439,7 @@ class PurchaseOrderRepository
             if (!$po) {
                 throw new \Exception('Không tìm thấy phiếu nhập');
             }
-            
+
             // Kiểm tra xem phiếu nhập đã thanh toán hết chưa
             if ($po['payment_status'] === '2') {
                 throw new \Exception('Không thể xóa phiếu nhập kho đã thanh toán hết');

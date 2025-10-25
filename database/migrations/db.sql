@@ -634,7 +634,10 @@ CREATE TABLE purchase_orders (
   received_at DATETIME NULL,   -- Ngày nhận hàng thực tế (tùy chọn)
   created_by BIGINT NOT NULL,  -- Người tạo phiếu
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  updated_by BIGINT NULL,
+  
+  CONSTRAINT fk_po_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
   CONSTRAINT fk_po_sup   FOREIGN KEY(supplier_id) REFERENCES suppliers(id),
   CONSTRAINT fk_po_user  FOREIGN KEY(created_by)  REFERENCES users(id),
 

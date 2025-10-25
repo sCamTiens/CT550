@@ -185,14 +185,147 @@ $items = $items ?? [];
       errors: { name: '', slug: '' },
       touched: { name: false, slug: false },
 
-      filters: {
-        name: '', slug: '',
-        created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
-        updated_at_type: '', updated_at_value: '', updated_at_from: '', updated_at_to: '',
-      },
+      // ===== FILTERS =====
       openFilter: {
         name: false, slug: false,
-        created_at: false, created_by: false, updated_at: false, updated_by: false,
+        created_at: false, created_by: false,
+        updated_at: false, updated_by: false
+      },
+
+      filters: {
+        name: '',
+        slug: '',
+        created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
+        created_by: '',
+        updated_at_type: '', updated_at_value: '', updated_at_from: '', updated_at_to: '',
+        updated_by: ''
+      },
+
+      // -------------------------------------------
+      // Hàm lọc tổng quát, hỗ trợ text / number / date
+      // (Giữ nguyên giống mẫu chuẩn bạn gửi)
+      // -------------------------------------------
+      applyFilter(val, type, { value, from, to, dataType }) {
+        if (val == null) return false;
+
+        // ---------------- TEXT ----------------
+        if (dataType === 'text') {
+          const hasAccent = (s) => /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(s);
+
+          const normalize = (str) => String(str || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '') // xóa dấu
+            .trim();
+
+          const raw = String(val || '').toLowerCase();
+          const str = normalize(val);
+          const query = String(value || '').toLowerCase();
+          const queryNoAccent = normalize(value);
+
+          if (!query) return true;
+
+          if (type === 'eq') return hasAccent(query)
+            ? raw === query
+            : str === queryNoAccent;
+
+          if (type === 'contains' || type === 'like') {
+            if (hasAccent(query)) {
+              // Có dấu → tìm chính xác theo dấu
+              return raw.includes(query);
+            } else {
+              // Không dấu → tìm theo không dấu
+              return str.includes(queryNoAccent);
+            }
+          }
+
+          return true;
+        }
+
+        // ---------------- DATE ----------------
+        if (dataType === 'date') {
+          if (!val) return false;
+          const d = new Date(val);
+          const v = value ? new Date(value) : null;
+          const f = from ? new Date(from) : null;
+          const t = to ? new Date(to) : null;
+
+          if (type === 'eq') return v ? d.toDateString() === v.toDateString() : true;
+          if (type === 'lt') return v ? d < v : true;
+          if (type === 'gt') {
+            if (!v) return true;
+            // So sánh chỉ theo ngày, bỏ qua giờ phút giây
+            return d.setHours(0, 0, 0, 0) > v.setHours(0, 0, 0, 0);
+          }
+          if (type === 'lte') {
+            if (!v) return true;
+            const nextDay = new Date(v);
+            nextDay.setDate(v.getDate() + 1);
+            return d < nextDay; // <= nghĩa là nhỏ hơn ngày kế tiếp
+          }
+          if (type === 'gte') return v ? d >= v : true;
+          if (type === 'between') return f && t ? d >= f && d <= t : true;
+
+          return true;
+        }
+
+        return true;
+      },
+
+      // -------------------------------------------
+      // Lọc dữ liệu cho bảng
+      // -------------------------------------------
+      filtered() {
+        let data = this.items;
+
+        // --- Lọc theo chuỗi ---
+        ['name', 'slug', 'created_by', 'updated_by'].forEach(key => {
+          if (this.filters[key]) {
+            const field = key.endsWith('_by') ? key + '_name' : key; // ví dụ: created_by → created_by_name
+            data = data.filter(o =>
+              this.applyFilter(o[field], 'contains', {
+                value: this.filters[key],
+                dataType: 'text'
+              })
+            );
+          }
+        });
+
+        // --- Lọc theo ngày ---
+        ['created_at', 'updated_at'].forEach(key => {
+          if (this.filters[`${key}_type`]) {
+            data = data.filter(o =>
+              this.applyFilter(o[key], this.filters[`${key}_type`], {
+                value: this.filters[`${key}_value`],
+                from: this.filters[`${key}_from`],
+                to: this.filters[`${key}_to`],
+                dataType: 'date'
+              })
+            );
+          }
+        });
+
+        return data;
+      },
+
+      // -------------------------------------------
+      // Bật/tắt/reset filter
+      // -------------------------------------------
+      toggleFilter(key) {
+        for (const k in this.openFilter) this.openFilter[k] = false;
+        this.openFilter[key] = true;
+      },
+      closeFilter(key) { this.openFilter[key] = false; },
+      resetFilter(key) {
+        if (['created_at', 'updated_at'].includes(key)) {
+          this.filters[`${key}_type`] = '';
+          this.filters[`${key}_value`] = '';
+          this.filters[`${key}_from`] = '';
+          this.filters[`${key}_to`] = '';
+        } else {
+          this.filters[key] = '';
+        }
+        this.openFilter[key] = false;
       },
 
       async init() { await this.fetchAll(); },
@@ -240,60 +373,6 @@ $items = $items ?? [];
         if (this.errors.slug) { this.showToast(this.errors.slug); return false; }
         if (!this.form.slug) this.form.slug = this.slugify(this.form.name);
         return true;
-      },
-
-      // ===== filters =====
-      toggleFilter(k) { Object.keys(this.openFilter).forEach(x => this.openFilter[x] = (x === k ? !this.openFilter[x] : false)); },
-      applyFilter(k) { this.openFilter[k] = false },
-      resetFilter(k) {
-        if (['created_at', 'updated_at'].includes(k)) {
-          this.filters[`${k}_type`] = ''; this.filters[`${k}_value`] = ''; this.filters[`${k}_from`] = ''; this.filters[`${k}_to`] = '';
-        } else { this.filters[k] = ''; }
-        this.openFilter[k] = false;
-      },
-      applyDateFilter(val, type, value, from, to) {
-        if (!val) return true;
-        
-        // Chuẩn hóa format về YYYY-MM-DD để so sánh
-        const normalize = (dateStr) => {
-          if (!dateStr) return null;
-          const parts = dateStr.split(/[-/\s]/);
-          if (parts.length >= 3) {
-            // Nếu format Y-m-d (2025-01-17)
-            if (parts[0].length === 4) return dateStr.split(' ')[0];
-            // Nếu format d/m/Y (17/01/2025)
-            if (parts[0].length <= 2) return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
-          }
-          return dateStr.split(' ')[0];
-        };
-
-        const valNorm = normalize(val);
-        if (!valNorm) return true;
-
-        if (type === 'eq' && value) {
-          return valNorm === normalize(value);
-        }
-        if (type === 'between' && from && to) {
-          const fromNorm = normalize(from);
-          const toNorm = normalize(to);
-          return valNorm >= fromNorm && valNorm <= toNorm;
-        }
-        if (type === 'lt' && value) return valNorm < normalize(value);
-        if (type === 'gt' && value) return valNorm > normalize(value);
-        if (type === 'lte' && value) return valNorm <= normalize(value);
-        if (type === 'gte' && value) return valNorm >= normalize(value);
-        return true;
-      },
-      filtered() {
-        const fn = v => (v ?? '').toString().toLowerCase();
-        const f = this.filters;
-        return this.items.filter(b => {
-          if (f.name && !fn(b.name).includes(fn(f.name))) return false;
-          if (f.slug && !fn(b.slug).includes(fn(f.slug))) return false;
-          if (!this.applyDateFilter(b.created_at, f.created_at_type, f.created_at_value, f.created_at_from, f.created_at_to)) return false;
-          if (!this.applyDateFilter(b.updated_at, f.updated_at_type, f.updated_at_value, f.updated_at_from, f.updated_at_to)) return false;
-          return true;
-        });
       },
 
       resetForm() { this.form = { id: null, name: '', slug: '' }; this.errors = { name: '', slug: '' }; this.touched = { name: false, slug: false }; },

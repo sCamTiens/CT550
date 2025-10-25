@@ -12,9 +12,21 @@ class ProductBatchRepository
     public function all(int $limit = 500): array
     {
         $pdo = DB::pdo();
-        $sql = "SELECT pb.*, p.name AS product_name, p.sku AS product_sku FROM product_batches pb JOIN products p ON pb.product_id = p.id WHERE pb.is_active = 1 ORDER BY pb.exp_date ASC, pb.id DESC LIMIT ?";
+        $sql = "SELECT pb.*, 
+                    p.name AS product_name, 
+                    p.sku AS product_sku,
+                    u1.full_name AS created_by_name,
+                    u2.full_name AS updated_by_name
+                FROM product_batches pb
+                JOIN products p ON pb.product_id = p.id
+                LEFT JOIN users u1 ON pb.created_by = u1.id
+                LEFT JOIN users u2 ON pb.updated_by = u2.id
+                WHERE pb.is_active = 1
+                ORDER BY pb.created_at DESC
+                LIMIT ?
+                ";
         $st = $pdo->prepare($sql);
-        $st->bindValue(1, (int)$limit, \PDO::PARAM_INT);
+        $st->bindValue(1, (int) $limit, \PDO::PARAM_INT);
         $st->execute();
         $rows = $st->fetchAll(\PDO::FETCH_ASSOC);
         return array_map(fn($r) => new ProductBatch($r), $rows);
@@ -22,9 +34,19 @@ class ProductBatchRepository
 
     public function findOne(int $id): ?ProductBatch
     {
-        $st = DB::pdo()->prepare("SELECT * FROM product_batches WHERE id = ? AND is_active = 1");
+        $sql = "SELECT 
+                    pb.*, 
+                    p.name AS product_name,
+                    u.full_name AS created_by_name
+                FROM product_batches pb
+                LEFT JOIN products p ON p.id = pb.product_id
+                LEFT JOIN users u ON u.id = pb.created_by
+                WHERE pb.id = ? AND pb.is_active = 1
+            ";
+        $st = DB::pdo()->prepare($sql);
         $st->execute([$id]);
         $row = $st->fetch(\PDO::FETCH_ASSOC);
+
         return $row ? new ProductBatch($row) : null;
     }
 
@@ -42,12 +64,12 @@ class ProductBatchRepository
             ':purchase_order_id' => $data['purchase_order_id'] ?: null,
             ':note' => $data['note'] ?? null,
             ':unit_cost' => $data['unit_cost'] ?? 0,
-            ':is_active' => isset($data['is_active']) ? (int)$data['is_active'] : 1,
+            ':is_active' => isset($data['is_active']) ? (int) $data['is_active'] : 1,
             ':created_by' => $currentUser,
             ':updated_by' => $currentUser,
         ]);
-        $id = (int)DB::pdo()->lastInsertId();
-        
+        $id = (int) DB::pdo()->lastInsertId();
+
         // Log audit
         $this->logCreate('product_batches', $id, [
             'product_id' => $data['product_id'],
@@ -56,7 +78,7 @@ class ProductBatchRepository
             'exp_date' => $data['exp_date'] ?: null,
             'initial_qty' => $data['initial_qty'] ?? 0
         ]);
-        
+
         return $id;
     }
 
@@ -74,7 +96,7 @@ class ProductBatchRepository
                 'current_qty' => $beforeBatch->current_qty
             ];
         }
-        
+
         $pdo = DB::pdo();
         $stmt = $pdo->prepare("UPDATE product_batches SET product_id = :product_id, batch_code = :batch_code, mfg_date = :mfg_date, exp_date = :exp_date, initial_qty = :initial_qty, current_qty = :current_qty, purchase_order_id = :purchase_order_id, note = :note, unit_cost = :unit_cost, updated_by = :updated_by, updated_at = NOW() WHERE id = :id");
         $stmt->execute([
@@ -90,7 +112,7 @@ class ProductBatchRepository
             ':unit_cost' => $data['unit_cost'] ?? 0,
             ':updated_by' => $currentUser,
         ]);
-        
+
         // Log audit
         if ($beforeArray) {
             $afterArray = [
@@ -116,11 +138,11 @@ class ProductBatchRepository
                 'current_qty' => $beforeBatch->current_qty
             ];
         }
-        
+
         // soft-delete
         $pdo = DB::pdo();
         $pdo->prepare("UPDATE product_batches SET is_active = 0, updated_at = NOW() WHERE id = ?")->execute([$id]);
-        
+
         // Log audit
         if ($beforeArray) {
             $this->logDelete('product_batches', $id, $beforeArray);

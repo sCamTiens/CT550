@@ -24,17 +24,19 @@ $products = $products ?? [];
     <!-- Table -->
     <div class="bg-white rounded-xl shadow pb-4">
         <div style="overflow-x:auto; max-width:100%;" class="pb-40">
-            <table style="width:100%; min-width:1250px; border-collapse:collapse;">
+            <table style="width:140%; min-width:1250px; border-collapse:collapse;">
                 <thead>
                     <tr class="bg-gray-50 text-slate-600">
                         <!-- <th class="py-2 px-4 whitespace-nowrap text-center">Thao tác</th> -->
                         <?= textFilterPopover('product_name', 'Sản phẩm') ?>
                         <?= textFilterPopover('batch_code', 'Mã lô') ?>
-                        <?= textFilterPopover('mfg_date', 'Ngày sản xuất') ?>
-                        <?= textFilterPopover('exp_date', 'HSD') ?>
+                        <?= dateFilterPopover('mfg_date', 'Ngày sản xuất') ?>
+                        <?= dateFilterPopover('exp_date', 'HSD') ?>
                         <?= numberFilterPopover('current_qty', 'Tồn hiện tại') ?>
                         <?= numberFilterPopover('unit_cost', 'Giá nhập') ?>
                         <?= textFilterPopover('note', 'Ghi chú') ?>
+                        <?= dateFilterPopover('created_at', 'Ngày tạo') ?>
+                        <?= textFilterPopover('created_by', 'Người tạo') ?>
                     </tr>
                 </thead>
                 <tbody>
@@ -74,16 +76,28 @@ $products = $products ?? [];
                                 </template>
                             </td> -->
 
-                            <td class="py-2 px-4" x-text="b.product_name || b.product_sku"></td>
-                            <td class="py-2 px-4" x-text="b.batch_code"></td>
-                            <td class="py-2 px-4" :class="(b.mfg_date || '—') === '—' ? 'text-center' : 'text-right'"
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
+                                x-text="b.product_name || b.product_sku"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="b.batch_code"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
+                                :class="(b.mfg_date || '—') === '—' ? 'text-center' : 'text-right'"
                                 x-text="b.mfg_date || '—'"></td>
-                            <td class="py-2 px-4" :class="(b.exp_date || '—') === '—' ? 'text-center' : 'text-right'"
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
+                                :class="(b.exp_date || '—') === '—' ? 'text-center' : 'text-right'"
                                 x-text="b.exp_date || '—'"></td>
-                            <td class="py-2 px-4 text-right" x-text="b.current_qty"></td>
-                            <td class="py-2 px-4 text-right" x-text="formatCurrency(b.unit_cost)"></td>
-                            <td class="py-2 px-4" :class="(b.note || '—') === '—' ? 'text-center' : 'text-left'"
-                                x-text="b.note || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="b.current_qty">
+                            </td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-right"
+                                x-text="formatCurrency(b.unit_cost)"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
+                                :class="(b.note || '—') === '—' ? 'text-center' : 'text-left'" x-text="b.note || '—'">
+                            </td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
+                                :class="(b.created_at || '—') === '—' ? 'text-center' : 'text-right'"
+                                x-text="b.created_at || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
+                                :class="(b.created_by_name || '—') === '—' ? 'text-center' : 'text-left'"
+                                x-text="b.created_by_name || '—'"></td>
                         </tr>
                     </template>
 
@@ -100,9 +114,10 @@ $products = $products ?? [];
         </div>
 
         <!-- Modal Create/Edit -->
-        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openForm"
-            x-transition.opacity style="display:none">
-            <div class="bg-white w-full max-w-2xl rounded-xl shadow animate__animated animate__zoomIn animate__faster" @click.outside="openForm=false">
+        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
+            x-show="openForm" x-transition.opacity style="display:none">
+            <div class="bg-white w-full max-w-2xl rounded-xl shadow animate__animated animate__zoomIn animate__faster"
+                @click.outside="openForm=false">
                 <div class="px-5 py-3 border-b flex justify-center items-center relative">
                     <h3 class="font-semibold text-2xl text-[#002975]" x-text="form.id? 'Sửa lô':'Thêm lô'"></h3>
                     <button class="text-slate-500 absolute right-5" @click="openForm=false">✕</button>
@@ -187,42 +202,213 @@ $products = $products ?? [];
                 this.currentPage = page;
             },
 
-            // --- filters ---
+            // ===== FILTERS =====
+            openFilter: {
+                product_name: false, batch_code: false, mfg_date: false,
+                exp_date: false, current_qty: false,
+                unit_cost: false, note: false,
+                created_at: false, created_by: false,
+            },
+
+            filters: {
+                product_name: '', batch_code: '',
+                mfg_date_type: '', mfg_date_value: '', mfg_date_from: '', mfg_date_to: '',
+                exp_date_type: '', exp_date_value: '', exp_date_from: '', exp_date_to: '',
+                current_qty_type: '', current_qty_value: '', current_qty_from: '', current_qty_to: '',
+                unit_cost_type: '', unit_cost_value: '', unit_cost_from: '', unit_cost_to: '',
+                note: '',
+                created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
+                created_by: '',
+            },
+
+            // ------------------------------------------------------------------
+            // Hàm lọc tổng quát — hỗ trợ TEXT, NUMBER, DATE
+            // ------------------------------------------------------------------
+            applyFilter(val, type, { value, from, to, dataType }) {
+                if (val == null) return false;
+
+                // -------- TEXT --------
+                if (dataType === 'text') {
+                    const hasAccent = (s) => /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(s);
+                    const normalize = (str) => String(str || '')
+                        .toLowerCase()
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '')
+                        .trim();
+
+                    const raw = String(val || '').toLowerCase();
+                    const str = normalize(val);
+                    const query = String(value || '').toLowerCase();
+                    const queryNoAccent = normalize(value);
+
+                    if (!query) return true;
+
+                    if (type === 'eq') return hasAccent(query)
+                        ? raw === query
+                        : str === queryNoAccent;
+
+                    if (type === 'contains' || type === 'like') {
+                        return hasAccent(query)
+                            ? raw.includes(query)
+                            : str.includes(queryNoAccent);
+                    }
+
+                    return true;
+                }
+
+                // -------- NUMBER --------
+                if (dataType === 'number') {
+                    const parseNum = (v) => {
+                        if (v === '' || v === null || v === undefined) return null;
+                        const s = String(v).replace(/[^\d.-]/g, '');
+                        const n = Number(s);
+                        return isNaN(n) ? null : n;
+                    };
+
+                    const num = parseNum(val);
+                    const v = parseNum(value);
+                    const f = parseNum(from);
+                    const t = parseNum(to);
+
+                    if (num === null) return false;
+                    if (!type) return true;
+
+                    if (type === 'eq') return v === null ? true : num === v;
+                    if (type === 'lt') return v === null ? true : num < v;
+                    if (type === 'gt') return v === null ? true : num > v;
+                    if (type === 'lte') return v === null ? true : num <= v;
+                    if (type === 'gte') return v === null ? true : num >= v;
+                    if (type === 'between') return f === null || t === null ? true : num >= f && num <= t;
+
+                    if (type === 'like') {
+                        const raw = String(val).replace(/[^\d]/g, '');
+                        const query = String(value || '').replace(/[^\d]/g, '');
+                        return raw.includes(query);
+                    }
+
+                    return true;
+                }
+
+                // -------- DATE --------
+                if (dataType === 'date') {
+                    if (!val) return false;
+                    const d = new Date(val);
+                    const v = value ? new Date(value) : null;
+                    const f = from ? new Date(from) : null;
+                    const t = to ? new Date(to) : null;
+
+                    if (type === 'eq') return v ? d.toDateString() === v.toDateString() : true;
+                    if (type === 'lt') return v ? d < v : true;
+                    if (type === 'gt') {
+                        if (!v) return true;
+                        return d.setHours(0, 0, 0, 0) > v.setHours(0, 0, 0, 0);
+                    }
+                    if (type === 'lte') {
+                        if (!v) return true;
+                        const nextDay = new Date(v);
+                        nextDay.setDate(v.getDate() + 1);
+                        return d < nextDay;
+                    }
+                    if (type === 'gte') return v ? d >= v : true;
+                    if (type === 'between') return f && t ? d >= f && d <= t : true;
+
+                    return true;
+                }
+
+                return true;
+            },
+
+            // ------------------------------------------------------------------
+            // Áp dụng filter cho toàn bộ bảng
+            // ------------------------------------------------------------------
             filtered() {
-                let data = this.items;
-                if (this.filters.product_name) {
-                    data = data.filter(b => (b.product_name || '').toLowerCase().includes(this.filters.product_name.toLowerCase()));
+                let data = this.items; // đây là mảng danh sách phiếu xuất (s)
+
+                // --- TEXT: các cột cấp phiếu ---
+                ['product_name', 'batch_code', 'note', 'created_by'].forEach(key => {
+                    if (this.filters[key]) {
+                        data = data.filter(s =>
+                            this.applyFilter(s[key], 'contains', {
+                                value: this.filters[key],
+                                dataType: 'text'
+                            })
+                        );
+                    }
+                });
+
+                // --- NUMBER ---
+                // Tồn hiện tại
+                if (this.filters.current_qty_type) {
+                    data = data.filter(s =>
+                        this.applyFilter(s.current_qty, this.filters.current_qty_type, {
+                            value: this.filters.current_qty_value,
+                            from: this.filters.current_qty_from,
+                            to: this.filters.current_qty_to,
+                            dataType: 'number'
+                        })
+                    );
                 }
-                if (this.filters.batch_code) {
-                    data = data.filter(b => (b.batch_code || '').toLowerCase().includes(this.filters.batch_code.toLowerCase()));
+
+                // Giá nhập
+                if (this.filters.unit_cost_type) {
+                    data = data.filter(s =>
+                        this.applyFilter(s.unit_cost, this.filters.unit_cost_type, {
+                            value: this.filters.unit_cost_value,
+                            from: this.filters.unit_cost_from,
+                            to: this.filters.unit_cost_to,
+                            dataType: 'number'
+                        })
+                    );
                 }
-                if (this.filters.mfg_date) {
-                    data = data.filter(b => (b.mfg_date || '').toLowerCase().includes(this.filters.mfg_date.toLowerCase()));
-                }
-                if (this.filters.exp_date) {
-                    data = data.filter(b => (b.exp_date || '').toLowerCase().includes(this.filters.exp_date.toLowerCase()));
-                }
-                if (this.filters.current_qty) {
-                    const val = Number(this.filters.current_qty);
-                    if (!isNaN(val)) data = data.filter(b => Number(b.current_qty) === val);
-                }
-                if (this.filters.unit_cost) {
-                    const val = Number(this.filters.unit_cost);
-                    if (!isNaN(val)) data = data.filter(b => Number(b.unit_cost) === val);
-                }
-                if (this.filters.note) {
-                    data = data.filter(b => (b.note || '').toLowerCase().includes(this.filters.note.toLowerCase()));
-                }
+
+                // --- DATE ---
+                ['mfg_date', 'exp_date', 'created_at'].forEach(key => {
+                    if (this.filters[`${key}_type`]) {
+                        data = data.filter(s =>
+                            this.applyFilter(s[key], this.filters[`${key}_type`], {
+                                value: this.filters[`${key}_value`],
+                                from: this.filters[`${key}_from`],
+                                to: this.filters[`${key}_to`],
+                                dataType: 'date'
+                            })
+                        );
+                    }
+                });
+
                 return data;
             },
 
+            // ------------------------------------------------------------------
+            // Mở / đóng / reset filter
+            // ------------------------------------------------------------------
             toggleFilter(key) {
                 for (const k in this.openFilter) this.openFilter[k] = false;
                 this.openFilter[key] = true;
             },
-            applyFilter(key) { this.openFilter[key] = false; },
+            closeFilter(key) { this.openFilter[key] = false; },
             resetFilter(key) {
-                this.filters[key] = '';
+                // --- Date type ---
+                if (['created_at', 'mfg_date', 'exp_date'].includes(key)) {
+                    this.filters[`${key}_type`] = '';
+                    this.filters[`${key}_value`] = '';
+                    this.filters[`${key}_from`] = '';
+                    this.filters[`${key}_to`] = '';
+                }
+
+                // --- Number type ---
+                else if (['unit_cost', 'current_qty'].includes(key)) {
+                    this.filters[`${key}_type`] = '';
+                    this.filters[`${key}_value`] = '';
+                    this.filters[`${key}_from`] = '';
+                    this.filters[`${key}_to`] = '';
+                }
+
+                // --- Text type 
+                else {
+                    this.filters[key] = '';
+                }
+
+                // --- Close dropdown ---
                 this.openFilter[key] = false;
             },
 

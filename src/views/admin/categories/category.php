@@ -21,7 +21,7 @@ $items = $items ?? [];
   <!-- Table -->
   <div class="bg-white rounded-xl shadow pb-4">
     <div style="overflow-x:auto; max-width:100%;" class="pb-40">
-      <table style="width:150%; min-width:1200px; border-collapse:collapse;">
+      <table :style="`width:${filtered().length === 0 ? '168%' : '150%'}; min-width:1250px; border-collapse:collapse;`">
         <thead>
           <tr class="bg-gray-50 text-slate-600">
             <th class="py-2 px-4 text-center">Thao tác</th>
@@ -29,7 +29,6 @@ $items = $items ?? [];
             <?= textFilterPopover('name', 'Tên') ?>
             <?= textFilterPopover('slug', 'Slug') ?>
             <?= textFilterPopover('parent', 'Cấp cha') ?>
-            <!-- <?= numberFilterPopover('sort', 'Thứ tự') ?> -->
             <?= selectFilterPopover('status', 'Trạng thái', [
               '' => '-- Tất cả --',
               '1' => 'Hiển thị',
@@ -106,9 +105,11 @@ $items = $items ?? [];
     </div>
   </div>
   <!-- MODAL: Create -->
-  <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openAdd" x-transition.opacity
-    style="display:none">
-    <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster" @click.outside="openAdd=false">
+  <div
+    class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
+    x-show="openAdd" x-transition.opacity style="display:none">
+    <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster"
+      @click.outside="openAdd=false">
       <div class="px-5 py-3 border-b flex justify-center items-center relative">
         <h3 class="font-semibold text-2xl text-[#002975]">Thêm loại sản phẩm</h3>
         <button class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
@@ -127,9 +128,11 @@ $items = $items ?? [];
   </div>
 
   <!-- MODAL: Edit -->
-  <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openEdit"
-    x-transition.opacity style="display:none">
-    <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster" @click.outside="openEdit=false">
+  <div
+    class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
+    x-show="openEdit" x-transition.opacity style="display:none">
+    <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster"
+      @click.outside="openEdit=false">
       <div class="px-5 py-3 border-b flex justify-center items-center relative">
         <h3 class="font-semibold text-2xl text-[#002975]">Sửa loại sản phẩm</h3>
         <button class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>
@@ -237,35 +240,190 @@ $items = $items ?? [];
 
       clearError(field) { this.errors[field] = ''; },
 
-      // filters trên từng cột
+      async init() { await this.fetchAll(); },
+
+      // ===== FILTERS =====
+      openFilter: {
+        name: false,
+        slug: false,
+        parent: false,
+        // sort: false, // tạm tắt vì cột bị comment
+        status: false,
+        created_at: false,
+        created_by: false,
+        updated_at: false,
+        updated_by: false
+      },
+
       filters: {
         name: '',
         slug: '',
         parent: '',
-        sort: '',
+        // sort_type: '', sort_value: '', sort_from: '', sort_to: '',
         status: '',
         created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
         created_by: '',
         updated_at_type: '', updated_at_value: '', updated_at_from: '', updated_at_to: '',
-        updated_by: '',
+        updated_by: ''
       },
 
-      openFilter: {
-        name: false, slug: false, parent: false, sort: false, status: false,
-        created_at: false, created_by: false, updated_at: false, updated_by: false,
+      // -------------------------------------------
+      // Hàm lọc tổng quát, hỗ trợ text / number / date
+      // -------------------------------------------
+      applyFilter(val, type, { value, from, to, dataType }) {
+        if (val == null) return false;
+
+        // ---------------- TEXT ----------------
+        if (dataType === 'text') {
+          const hasAccent = (s) => /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(s);
+
+          const normalize = (str) => String(str || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '') // xóa dấu
+            .trim();
+
+          const raw = String(val || '').toLowerCase();
+          const str = normalize(val);
+          const query = String(value || '').toLowerCase();
+          const queryNoAccent = normalize(value);
+
+          if (!query) return true;
+
+          if (type === 'eq') return hasAccent(query)
+            ? raw === query  // có dấu → so đúng dấu
+            : str === queryNoAccent; // không dấu → so không dấu
+
+          if (type === 'contains' || type === 'like') {
+            if (hasAccent(query)) {
+              // Có dấu → tìm chính xác theo dấu
+              return raw.includes(query);
+            } else {
+              // Không dấu → tìm theo không dấu
+              return str.includes(queryNoAccent);
+            }
+          }
+
+          return true;
+        }
+
+        // ---------------- NUMBER ----------------
+        if (dataType === 'number') {
+          const parseNum = (v) => {
+            if (v === '' || v === null || v === undefined) return null;
+            const s = String(v).replace(/[^\d.-]/g, '');
+            const n = Number(s);
+            return isNaN(n) ? null : n;
+          };
+
+          const num = parseNum(val);
+          const v = parseNum(value);
+          const f = parseNum(from);
+          const t = parseNum(to);
+
+          if (num === null) return false;
+          if (!type) return true;
+
+          if (type === 'eq') return v === null ? true : num === v;
+          if (type === 'lt') return v === null ? true : num < v;
+          if (type === 'gt') return v === null ? true : num > v;
+          if (type === 'lte') return v === null ? true : num <= v;
+          if (type === 'gte') return v === null ? true : num >= v;
+          if (type === 'between') return f === null || t === null ? true : num >= f && num <= t;
+
+          // --- Lọc “mờ” theo chuỗi số ---
+          if (type === 'like') {
+            const raw = String(val).replace(/[^\d]/g, '');
+            const query = String(value || '').replace(/[^\d]/g, '');
+            return raw.includes(query);
+          }
+
+          return true;
+        }
+
+        // ---------------- DATE ----------------
+        if (dataType === 'date') {
+          if (!val) return false;
+          const d = new Date(val);
+          const v = value ? new Date(value) : null;
+          const f = from ? new Date(from) : null;
+          const t = to ? new Date(to) : null;
+
+          if (type === 'eq') return v ? d.toDateString() === v.toDateString() : true;
+          if (type === 'lt') return v ? d < v : true;
+          if (type === 'gt') {
+            if (!v) return true;
+            // So sánh chỉ theo ngày, bỏ qua giờ phút giây
+            return d.setHours(0, 0, 0, 0) > v.setHours(0, 0, 0, 0);
+          }
+          if (type === 'lte') {
+            if (!v) return true;
+            const nextDay = new Date(v);
+            nextDay.setDate(v.getDate() + 1);
+            return d < nextDay; // <= nghĩa là nhỏ hơn ngày kế tiếp
+          }
+          if (type === 'gte') return v ? d >= v : true;
+          if (type === 'between') return f && t ? d >= f && d <= t : true;
+
+          return true;
+        }
+
+        return true;
       },
 
-      async init() { await this.fetchAll(); },
+      filtered() {
+        let data = this.items;
 
-      // ===== filtering helpers =====
+        // --- Lọc theo chuỗi ---
+        ['name', 'slug', 'parent', 'created_by', 'updated_by'].forEach(key => {
+          if (this.filters[key]) {
+            const field =
+              key === 'created_by' ? 'created_by_name' :
+                key === 'updated_by' ? 'updated_by_name' :
+                  key === 'parent' ? 'parent_name' : key;
+
+            data = data.filter(o =>
+              this.applyFilter(o[field], 'contains', {
+                value: this.filters[key],
+                dataType: 'text'
+              })
+            );
+          }
+        });
+
+        // --- Lọc theo select ---
+        if (this.filters.status) {
+          data = data.filter(o =>
+            this.applyFilter(
+              o.is_active ? '1' : '0',
+              'eq',
+              { value: this.filters.status, dataType: 'text' }
+            )
+          );
+        }
+
+        // --- Lọc theo ngày ---
+        ['created_at', 'updated_at'].forEach(key => {
+          if (this.filters[`${key}_type`]) {
+            data = data.filter(o =>
+              this.applyFilter(o[key], this.filters[`${key}_type`], {
+                value: this.filters[`${key}_value`],
+                from: this.filters[`${key}_from`],
+                to: this.filters[`${key}_to`],
+                dataType: 'date'
+              })
+            );
+          }
+        });
+
+        return data;
+      },
+
       toggleFilter(key) {
-        Object.keys(this.openFilter).forEach(k => this.openFilter[k] = (k === key ? !this.openFilter[k] : false));
+        for (const k in this.openFilter) this.openFilter[k] = false;
+        this.openFilter[key] = true;
       },
-      applyFilter(key) { 
-        // Chỉ đóng popup, không reload trang
-        this.openFilter[key] = false; 
-      },
-
+      closeFilter(key) { this.openFilter[key] = false; },
       resetFilter(key) {
         if (['created_at', 'updated_at'].includes(key)) {
           this.filters[`${key}_type`] = '';
@@ -335,89 +493,6 @@ $items = $items ?? [];
         if (!pid) return '—';
         const p = this.items.find(x => String(x.id) === String(pid));
         return p ? p.name : '—';
-      },
-
-      // ===== helper riêng cho date filter =====
-      applyDateFilter(val, type, value, from, to) {
-        if (!val) return true;
-        if (!type) return true; // Không có kiểu lọc
-        
-        // Chuẩn hóa ngày về dạng YYYY-MM-DD (bỏ thời gian)
-        const normalizeDate = (dateStr) => {
-          if (!dateStr) return null;
-          const d = new Date(dateStr);
-          if (isNaN(d.getTime())) return null;
-          return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-        };
-        
-        const d = normalizeDate(val);
-        if (!d) return true;
-        
-        // Debug - uncomment để kiểm tra
-        // console.log('applyDateFilter:', { val, type, value, from, to, d, normalizedValue: normalizeDate(value) });
-        
-        if (type === 'eq') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d.getTime() === compareDate.getTime() : true;
-        }
-        
-        if (type === 'between') {
-          if (!from || !to) return true;
-          const fromDate = normalizeDate(from);
-          const toDate = normalizeDate(to);
-          return fromDate && toDate ? (d >= fromDate && d <= toDate) : true;
-        }
-        
-        if (type === 'lt') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d < compareDate : true;
-        }
-        
-        if (type === 'gt') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d > compareDate : true;
-        }
-        
-        if (type === 'lte') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d <= compareDate : true;
-        }
-        
-        if (type === 'gte') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d >= compareDate : true;
-        }
-        
-        return true;
-      },
-
-      filtered() {
-        const fn = (v) => (v ?? '').toString().toLowerCase();
-        const f = this.filters;
-        return this.items.filter(c => {
-          if (f.name && !fn(c.name).includes(fn(f.name))) return false;
-          if (f.slug && !fn(c.slug).includes(fn(f.slug))) return false;
-          if (f.parent) {
-            const pn = fn(this.parentName(c.parent_id));
-            if (!pn.includes(fn(f.parent))) return false;
-          }
-          if (f.sort !== '' && f.sort !== null) {
-            if (Number(c.sort_order ?? 0) !== Number(f.sort)) return false;
-          }
-          if (f.status !== '') {
-            if (Boolean(c.is_active) !== (f.status === '1')) return false;
-          }
-          if (f.created_by && !fn(c.created_by_name || '').includes(fn(f.created_by))) return false;
-          if (f.updated_by && !fn(c.updated_by_name || '').includes(fn(f.updated_by))) return false;
-          if (!this.applyDateFilter(c.created_at, f.created_at_type, f.created_at_value, f.created_at_from, f.created_at_to)) return false;
-          if (!this.applyDateFilter(c.updated_at, f.updated_at_type, f.updated_at_value, f.updated_at_from, f.updated_at_to)) return false;
-          return true;
-        });
       },
 
       resetForm() {
