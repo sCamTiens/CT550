@@ -24,63 +24,141 @@ $pageTitle = 'Lịch Sử Thao Tác';
     <!-- Filters -->
     <div class="bg-white rounded-lg shadow-md p-4 mb-6">
         <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <!-- Search -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Tìm kiếm</label>
-                <input type="text" x-model="filters.search" @input="fetchLogs()" placeholder="Tìm theo tên, nội dung..."
-                    class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+            <!-- NGƯỜI THỰC HIỆN -->
+            <div class="relative">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Người Thực Hiện
+                </label>
+                <div class="relative">
+                    <select x-model="filters.user_id" @change="fetchLogs()"
+                        class="appearance-none w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="">-- Tất cả nhân viên --</option>
+                        <template x-for="staff in staffList" :key="staff.id">
+                            <option :value="staff.id" x-text="staff.full_name + ' (' + staff.username + ')'"></option>
+                        </template>
+                    </select>
+
+                    <!-- Nút X (clear) -->
+                    <button x-show="filters.user_id" @click="filters.user_id = ''; fetchLogs();"
+                        class="absolute right-7 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+
+                    <!-- Mũi tên giả -->
+                    <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                        fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
             </div>
 
-            <!-- Entity Type -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Loại Đối Tượng</label>
-                <select x-model="filters.entity_type" @change="fetchLogs()"
-                    class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
-                    <option value="">-- Tất cả --</option>
-                    <option value="products">Sản phẩm</option>
-                    <option value="categories">Danh mục</option>
-                    <option value="brands">Thương hiệu</option>
-                    <option value="suppliers">Nhà cung cấp</option>
-                    <option value="orders">Đơn hàng</option>
-                    <option value="users">Người dùng</option>
-                    <option value="coupons">Mã giảm giá</option>
-                    <option value="promotions">Khuyến mãi</option>
-                    <option value="purchase_orders">Phiếu nhập</option>
-                    <option value="product_batches">Lô hàng</option>
-                </select>
+            <!-- LOẠI ĐỐI TƯỢNG -->
+            <div class="relative">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Loại Đối Tượng
+                </label>
+                <div class="relative">
+                    <select x-model="filters.entity_type" @change="fetchLogs()"
+                        class="appearance-none w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="">-- Tất cả --</option>
+                        <option value="products">Sản phẩm</option>
+                        <option value="categories">Danh mục</option>
+                        <option value="brands">Thương hiệu</option>
+                        <option value="suppliers">Nhà cung cấp</option>
+                        <option value="orders">Đơn hàng</option>
+                        <option value="staff">Nhân viên</option>
+                        <option value="customers">Khách hàng</option>
+                        <option value="coupons">Mã giảm giá</option>
+                        <option value="promotions">Khuyến mãi</option>
+                        <option value="purchase_orders">Phiếu nhập</option>
+                        <option value="product_batches">Lô hàng</option>
+                    </select>
+
+                    <!-- Nút X -->
+                    <button x-show="filters.entity_type" @click="filters.entity_type = ''; fetchLogs();"
+                        class="absolute right-7 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+
+                    <!-- Mũi tên giả -->
+                    <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                        fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
             </div>
 
-            <!-- Action -->
-            <div>
+            <!-- Hành động -->
+            <div class="relative">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Hành Động</label>
-                <select x-model="filters.action" @change="fetchLogs()"
-                    class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
-                    <option value="">-- Tất cả --</option>
-                    <option value="create">Thêm mới</option>
-                    <option value="update">Cập nhật</option>
-                    <option value="delete">Xóa</option>
-                    <option value="restore">Khôi phục</option>
-                    <option value="status_change">Đổi trạng thái</option>
-                </select>
+                <div class="relative">
+                    <select x-model="filters.action" @change="fetchLogs()"
+                        class="appearance-none w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="">-- Tất cả --</option>
+                        <option value="create">Thêm mới</option>
+                        <option value="update">Cập nhật</option>
+                        <option value="delete">Xóa</option>
+                    </select>
+
+                    <!-- Nút X (clear) -->
+                    <button x-show="filters.action" @click="filters.action = ''; fetchLogs();"
+                        class="absolute right-7 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+
+                    <!-- Mũi tên giả -->
+                    <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                        fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
             </div>
 
-            <!-- From Date -->
-            <div>
+            <!-- Từ ngày -->
+            <div class="relative">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Từ Ngày</label>
-                <input type="date" x-model="filters.from_date" @change="fetchLogs()"
-                    class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                <div class="relative">
+                    <input type="text" x-ref="fromDate" placeholder="Chọn ngày"
+                        class="w-full px-3 py-2 pr-8 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <button x-show="filters.from_date" @click="clearFromDate()"
+                        class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
             </div>
 
-            <!-- To Date -->
-            <div>
+            <!-- Đến ngày -->
+            <div class="relative">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Đến Ngày</label>
-                <input type="date" x-model="filters.to_date" @change="fetchLogs()"
-                    class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                <div class="relative">
+                    <input type="text" x-ref="toDate" placeholder="Chọn ngày"
+                        class="w-full px-3 py-2 pr-8 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <button x-show="filters.to_date" @click="clearToDate()"
+                        class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
 
-        <div class="mt-3 flex justify-end">
-            <button @click="resetFilters()" class="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
+        <!-- Nút xóa bộ lọc -->
+        <div class="mt-4 text-right">
+            <button @click="resetFilters()" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">
                 Xóa Bộ Lọc
             </button>
         </div>
@@ -128,6 +206,18 @@ $pageTitle = 'Lịch Sử Thao Tác';
                                     </svg>
                                     Xem
                                 </button>
+                            </td>
+                        </tr>
+                    </template>
+
+                    <!-- Khi rỗng -->
+                    <template x-if="filteredLogs.length === 0">
+                        <tr>
+                            <td colspan="6" class="py-12 text-center text-gray-500">
+                                <div class="flex flex-col items-center justify-center">
+                                    <img src="/assets/images/Null.png" class="h-24 opacity-70 mb-2">
+                                    <div>Không có dữ liệu</div>
+                                </div>
                             </td>
                         </tr>
                     </template>
@@ -281,12 +371,28 @@ $pageTitle = 'Lịch Sử Thao Tác';
                         </template>
                     </div>
 
-                    <!-- Stats by User -->
+                    <!-- Stats by Staff -->
                     <div class="bg-purple-50 p-4 rounded-lg">
-                        <h4 class="font-bold mb-3">Top Người Dùng</h4>
-                        <template x-if="stats.byUser.length">
+                        <h4 class="font-bold mb-3">Theo Nhân viên</h4>
+                        <template x-if="stats.staff.length">
                             <div class="space-y-2">
-                                <template x-for="item in stats.byUser.slice(0, 10)" :key="item.actor_user_id">
+                                <template x-for="item in stats.staff.slice(0, 10)" :key="item.actor_user_id">
+                                    <div class="flex justify-between">
+                                        <span class="truncate"
+                                            x-text="item.full_name + (item.staff_role ? ' (' + item.staff_role + ')' : '')"></span>
+                                        <span class="font-bold" x-text="item.total_actions"></span>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Stats by Customer -->
+                    <div class="bg-orange-50 p-4 rounded-lg">
+                        <h4 class="font-bold mb-3">Theo Khách hàng</h4>
+                        <template x-if="stats.customer.length">
+                            <div class="space-y-2">
+                                <template x-for="item in stats.customer.slice(0, 10)" :key="item.actor_user_id">
                                     <div class="flex justify-between">
                                         <span class="truncate" x-text="item.full_name"></span>
                                         <span class="font-bold" x-text="item.total_actions"></span>
@@ -305,8 +411,10 @@ $pageTitle = 'Lịch Sử Thao Tác';
     function auditLogPage() {
         return {
             logs: [],
+            staffList: [],
             filters: {
                 search: '',
+                user_id: '',
                 entity_type: '',
                 action: '',
                 from_date: '',
@@ -321,45 +429,152 @@ $pageTitle = 'Lịch Sử Thao Tác';
             stats: {
                 byAction: [],
                 byEntity: [],
-                byUser: [],
+                staff: [],
+                customer: [],
             },
 
             init() {
+                this.fetchStaffList();
                 this.fetchLogs();
+
+                // Initialize Flatpickr for date inputs
+                this.$nextTick(() => {
+                    const self = this;
+
+                    flatpickr(this.$refs.fromDate, {
+                        dateFormat: 'd/m/Y',
+                        locale: 'vn',
+                        onChange: function (selectedDates, dateStr) {
+                            self.filters.from_date = dateStr;
+
+                            // Nếu từ ngày > đến ngày, tự động điều chỉnh đến ngày
+                            if (selectedDates[0] && self.$refs.toDate._flatpickr) {
+                                const toDate = self.$refs.toDate._flatpickr.selectedDates[0];
+                                if (toDate && selectedDates[0] > toDate) {
+                                    self.$refs.toDate._flatpickr.setDate(selectedDates[0]);
+                                    self.filters.to_date = dateStr;
+                                }
+                                // Set minDate cho "Đến ngày"
+                                self.$refs.toDate._flatpickr.set('minDate', selectedDates[0]);
+                            }
+
+                            self.fetchLogs();
+                        }
+                    });
+
+                    flatpickr(this.$refs.toDate, {
+                        dateFormat: 'd/m/Y',
+                        locale: 'vn',
+                        onChange: function (selectedDates, dateStr) {
+                            self.filters.to_date = dateStr;
+
+                            // Nếu đến ngày < từ ngày, tự động điều chỉnh từ ngày
+                            if (selectedDates[0] && self.$refs.fromDate._flatpickr) {
+                                const fromDate = self.$refs.fromDate._flatpickr.selectedDates[0];
+                                if (fromDate && selectedDates[0] < fromDate) {
+                                    self.$refs.fromDate._flatpickr.setDate(selectedDates[0]);
+                                    self.filters.from_date = dateStr;
+                                }
+                                // Set maxDate cho "Từ ngày"
+                                self.$refs.fromDate._flatpickr.set('maxDate', selectedDates[0]);
+                            }
+
+                            self.fetchLogs();
+                        }
+                    });
+                });
+
+                // Watch showStats để tự động load stats khi mở modal
+                this.$watch('showStats', (value) => {
+                    if (value) {
+                        this.fetchStats();
+                    }
+                });
+            },
+
+            clearFromDate() {
+                this.filters.from_date = '';
+                if (this.$refs.fromDate._flatpickr) {
+                    this.$refs.fromDate._flatpickr.clear();
+                    // Xóa maxDate constraint
+                    if (this.$refs.toDate._flatpickr) {
+                        this.$refs.toDate._flatpickr.set('minDate', null);
+                    }
+                }
+                this.fetchLogs();
+            },
+
+            clearToDate() {
+                this.filters.to_date = '';
+                if (this.$refs.toDate._flatpickr) {
+                    this.$refs.toDate._flatpickr.clear();
+                    // Xóa minDate constraint
+                    if (this.$refs.fromDate._flatpickr) {
+                        this.$refs.fromDate._flatpickr.set('maxDate', null);
+                    }
+                }
+                this.fetchLogs();
+            },
+
+            async fetchStaffList() {
+                try {
+                    const res = await fetch('/admin/api/audit-logs/staff-list');
+                    const data = await res.json();
+                    this.staffList = data.staff || [];
+                } catch (err) {
+                    console.error('Lỗi tải danh sách nhân viên:', err);
+                }
             },
 
             async fetchLogs() {
                 try {
                     const params = new URLSearchParams();
+
+                    if (this.filters.entity_type) {
+                        params.append('entity_type', this.filters.entity_type);
+                    }
+
+                    // Duyệt các filter khác
                     Object.keys(this.filters).forEach(key => {
-                        if (this.filters[key]) params.append(key, this.filters[key]);
+                        if (!['entity_type'].includes(key) && this.filters[key]) {
+                            params.append(key, this.filters[key]);
+                        }
                     });
 
                     const res = await fetch(`/admin/api/audit-logs?${params}`);
                     const data = await res.json();
+
                     this.logs = data.items || [];
                     this.currentPage = 1;
-                } catch (err) {
+                }
+                catch (err) {
+                    console.error('Lỗi tải dữ liệu:', err);
                     alert('Lỗi tải dữ liệu: ' + err.message);
                 }
             },
 
             async fetchStats() {
                 try {
+                    console.log('Fetching stats...');
                     const params = new URLSearchParams();
                     if (this.filters.from_date) params.append('from_date', this.filters.from_date);
                     if (this.filters.to_date) params.append('to_date', this.filters.to_date);
 
-                    const [resAction, resEntity, resUser] = await Promise.all([
+                    const [resAction, resEntity, resStaff, resCustomer] = await Promise.all([
                         fetch(`/admin/api/audit-logs/stats/action?${params}`),
                         fetch(`/admin/api/audit-logs/stats/entity?${params}`),
-                        fetch(`/admin/api/audit-logs/stats/user?${params}`),
+                        fetch(`/admin/api/audit-logs/stats/staff?${params}`),
+                        fetch(`/admin/api/audit-logs/stats/customer?${params}`),
                     ]);
 
                     this.stats.byAction = (await resAction.json()).stats || [];
                     this.stats.byEntity = (await resEntity.json()).stats || [];
-                    this.stats.byUser = (await resUser.json()).stats || [];
+                    this.stats.staff = (await resStaff.json()).stats || [];
+                    this.stats.customer = (await resCustomer.json()).stats || [];
+
+                    console.log('Stats loaded:', this.stats);
                 } catch (err) {
+                    console.error('Lỗi tải thống kê:', err);
                     alert('Lỗi tải thống kê: ' + err.message);
                 }
             },
@@ -367,11 +582,23 @@ $pageTitle = 'Lịch Sử Thao Tác';
             resetFilters() {
                 this.filters = {
                     search: '',
+                    user_id: '',
                     entity_type: '',
                     action: '',
                     from_date: '',
                     to_date: '',
                 };
+
+                // Clear Flatpickr instances
+                if (this.$refs.fromDate._flatpickr) {
+                    this.$refs.fromDate._flatpickr.clear();
+                    this.$refs.fromDate._flatpickr.set('maxDate', null);
+                }
+                if (this.$refs.toDate._flatpickr) {
+                    this.$refs.toDate._flatpickr.clear();
+                    this.$refs.toDate._flatpickr.set('minDate', null);
+                }
+
                 this.fetchLogs();
             },
 
@@ -390,7 +617,7 @@ $pageTitle = 'Lịch Sử Thao Tác';
             },
 
             get totalPages() {
-                return Math.ceil(this.filteredLogs.length / this.perPage);
+                return Math.ceil(this.filteredLogs.length / this.perPage) || 1;
             },
 
             formatDateTime(dt) {
@@ -428,21 +655,14 @@ $pageTitle = 'Lịch Sử Thao Tác';
                     'brands': 'Thương hiệu',
                     'suppliers': 'Nhà cung cấp',
                     'orders': 'Đơn hàng',
-                    'users': 'Người dùng',
+                    'staff': 'Nhân viên',
+                    'customers': 'Khách hàng',
                     'coupons': 'Mã giảm giá',
                     'promotions': 'Khuyến mãi',
                     'purchase_orders': 'Phiếu nhập',
                     'product_batches': 'Lô hàng',
                 };
                 return map[type] || type;
-            },
-
-            $watch(key, callback) {
-                if (key === 'showStats') {
-                    return (value) => {
-                        if (value) this.fetchStats();
-                    };
-                }
             },
         };
     }

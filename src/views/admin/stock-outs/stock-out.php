@@ -52,7 +52,7 @@ $items = $items ?? [];
                                         </button>
                                     </div>
 
-                                    <div x-show="openFilter.item_product" x-transition
+                                    <div x-cloak x-show="openFilter.item_product" x-transition
                                         @click.outside="openFilter.item_product=false"
                                         class="absolute z-40 mt-2 w-64 bg-white rounded-lg shadow-lg border p-3 text-left left-0">
                                         <div class="font-semibold mb-2">Tìm theo "Sản phẩm hoặc Mã lô"</div>
@@ -84,7 +84,7 @@ $items = $items ?? [];
                                         </button>
                                     </div>
 
-                                    <div x-show="openFilter.item_qty" x-transition
+                                    <div x-cloak x-show="openFilter.item_qty" x-transition
                                         @click.outside="openFilter.item_qty=false"
                                         class="absolute z-40 mt-2 w-64 bg-white rounded-lg shadow-lg border p-3 text-left left-0">
                                         <div class="font-semibold mb-2">Tìm theo "Số lượng"</div>
@@ -140,7 +140,7 @@ $items = $items ?? [];
                                         </button>
                                     </div>
 
-                                    <div x-show="openFilter.item_price" x-transition
+                                    <div x-cloak x-show="openFilter.item_price" x-transition
                                         @click.outside="openFilter.item_price=false"
                                         class="absolute z-40 mt-2 w-64 bg-white rounded-lg shadow-lg border p-3 text-left left-0">
                                         <div class="font-semibold mb-2">Tìm theo "Đơn giá"</div>

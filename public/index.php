@@ -78,6 +78,7 @@ $router->group('/admin', function (Router $r): void {
     // Products
     $r->get('/products', [AdminProduct::class, 'index']);
     $r->get('/api/products', [AdminProduct::class, 'apiIndex']);
+    $r->get('/api/products/stock-list', [AdminProduct::class, 'apiStockList']);
     $r->post('/products', [AdminProduct::class, 'store']);
     $r->put('/products/{id}', [AdminProduct::class, 'update']);
     $r->delete('/products/{id}', [AdminProduct::class, 'destroy']);
@@ -116,7 +117,8 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/api/stocks', [AdminStock::class, 'apiIndex']);
     $r->get('/stocktakes', [AdminStocktake::class, 'index']);
     $r->get('/api/stocktakes', [AdminStocktake::class, 'apiIndex']);
-    $r->post('/api/stocktakes', [AdminStocktake::class, 'store']);
+    $r->post('/api/stocktakes/create', [AdminStocktake::class, 'apiCreate']);
+    $r->get('/api/stocktakes/{id}', [AdminStocktake::class, 'apiDetail']);
 
     // Product Batches (Inventory lots)
     $r->get('/product-batches', [AdminProductBatch::class, 'index']);
@@ -212,7 +214,9 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/api/audit-logs/entity/{type}/{id}', [AdminAuditLog::class, 'apiGetByEntity']);
     $r->get('/api/audit-logs/stats/action', [AdminAuditLog::class, 'apiStatsByAction']);
     $r->get('/api/audit-logs/stats/entity', [AdminAuditLog::class, 'apiStatsByEntity']);
-    $r->get('/api/audit-logs/stats/user', [AdminAuditLog::class, 'apiStatsByUser']);
+    $r->get('/api/audit-logs/stats/staff', [AdminAuditLog::class, 'apiStatsByStaff']);
+    $r->get('/api/audit-logs/stats/customer', [AdminAuditLog::class, 'apiStatsByCustomer']);
+    $r->get('/api/audit-logs/staff-list', [AdminAuditLog::class, 'apiGetStaffList']);
 
     // Notifications (Thông báo)
     $r->get('/api/notifications', [AdminNotification::class, 'index']);

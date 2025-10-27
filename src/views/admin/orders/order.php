@@ -11,7 +11,7 @@ $items = $items ?? [];
 </style>
 
 <nav class="text-sm text-slate-500 mb-4">
-    Admin / Quản lý bán hàng / <span class="text-slate-800 font-medium">Đơn hàng</span>
+    Admin / <span class="text-slate-800 font-medium">Quản lý đơn hàng</span>
 </nav>
 
 <div x-data="orderPage()" x-init="init()">
@@ -47,7 +47,7 @@ $items = $items ?? [];
                                             </svg>
                                         </button>
                                     </div>
-                                    <div x-show="openFilter.product_name" x-transition
+                                    <div x-cloak x-show="openFilter.product_name" x-transition
                                         @click.outside="openFilter.product_name=false"
                                         class="absolute z-40 mt-2 w-64 bg-white rounded-lg shadow-lg border p-3 text-left left-0">
                                         <div class="font-semibold mb-2">Tìm theo "Tên sản phẩm"</div>
@@ -78,7 +78,7 @@ $items = $items ?? [];
                                             </svg>
                                         </button>
                                     </div>
-                                    <div x-show="openFilter.qty" x-transition @click.outside="openFilter.qty=false"
+                                    <div x-cloak x-show="openFilter.qty" x-transition @click.outside="openFilter.qty=false"
                                         class="absolute z-40 mt-2 w-64 bg-white rounded-lg shadow-lg border p-3 text-left left-0">
                                         <div class="font-semibold mb-2">Tìm theo "Số lượng"</div>
 
@@ -139,7 +139,7 @@ $items = $items ?? [];
                                     </div>
 
                                     <!-- Popup lọc -->
-                                    <div x-show="openFilter.unit_price" x-transition
+                                    <div x-cloak x-show="openFilter.unit_price" x-transition
                                         @click.outside="openFilter.unit_price=false"
                                         class="absolute z-40 mt-2 w-64 bg-white rounded-lg shadow-lg border p-3 text-left right-0">
                                         <div class="font-semibold mb-2">Tìm theo "Đơn giá"</div>

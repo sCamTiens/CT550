@@ -17,7 +17,7 @@ class AuditLogRepository
         ?array $afterData = null
     ): int {
         $pdo = DB::pdo();
-        
+
         $stmt = $pdo->prepare("
             INSERT INTO audit_logs (
                 actor_user_id, entity_type, entity_id, action,
@@ -46,7 +46,7 @@ class AuditLogRepository
     public function all(array $filters = []): array
     {
         $pdo = DB::pdo();
-        
+
         $where = ['1=1'];
         $params = [];
 
@@ -56,10 +56,28 @@ class AuditLogRepository
             $params[':user_id'] = $filters['user_id'];
         }
 
-        // Filter theo entity_type
+        // FILTER 1: Theo NGƯỜI THỰC HIỆN (actor_type)
+        if (!empty($filters['actor_type'])) {
+            if ($filters['actor_type'] === 'staff') {
+                $where[] = 'u.role_id = 2';
+            } elseif ($filters['actor_type'] === 'customer') {
+                $where[] = 'u.role_id = 1';
+            }
+        }
+
+        // FILTER 2: Theo LOẠI ĐỐI TƯỢNG (entity_type)
         if (!empty($filters['entity_type'])) {
-            $where[] = 'al.entity_type = :entity_type';
-            $params[':entity_type'] = $filters['entity_type'];
+            if ($filters['entity_type'] === 'staff') {
+                // Lọc logs về thao tác trên NHÂN VIÊN
+                $where[] = 'al.entity_type = "staff"';
+            } elseif ($filters['entity_type'] === 'customer') {
+                // Lọc logs về thao tác trên KHÁCH HÀNG
+                $where[] = 'al.entity_type = "customers"';
+            } else {
+                // Lọc theo entity bình thường
+                $where[] = 'al.entity_type = :entity_type';
+                $params[':entity_type'] = $filters['entity_type'];
+            }
         }
 
         // Filter theo action
@@ -78,7 +96,7 @@ class AuditLogRepository
             $params[':to_date'] = $filters['to_date'];
         }
 
-        // Search trong before_data hoặc after_data
+        // Search
         if (!empty($filters['search'])) {
             $where[] = "(
                 al.before_data LIKE :search 
@@ -90,20 +108,19 @@ class AuditLogRepository
 
         $whereClause = implode(' AND ', $where);
 
-        $sql = "
-            SELECT 
-                al.*,
-                u.full_name AS actor_name,
-                u.username AS actor_username
-            FROM audit_logs al
-            LEFT JOIN users u ON u.id = al.actor_user_id
-            WHERE {$whereClause}
-            ORDER BY al.created_at DESC
-        ";
+        $sql = "SELECT
+                    al.*,
+                    u.full_name AS actor_name,
+                    u.username AS actor_username
+                FROM audit_logs al
+                LEFT JOIN users u ON u.id = al.actor_user_id
+                WHERE {$whereClause}
+                ORDER BY al.created_at DESC
+            ";
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
-        
+
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
@@ -113,7 +130,7 @@ class AuditLogRepository
     public function getByEntity(string $entityType, int $entityId): array
     {
         $pdo = DB::pdo();
-        
+
         $stmt = $pdo->prepare("
             SELECT 
                 al.*,
@@ -135,38 +152,12 @@ class AuditLogRepository
     }
 
     /**
-     * Lấy log theo user
-     */
-    public function getByUser(int $userId, int $limit = 100): array
-    {
-        $pdo = DB::pdo();
-        
-        $stmt = $pdo->prepare("
-            SELECT 
-                al.*,
-                u.full_name AS actor_name,
-                u.username AS actor_username
-            FROM audit_logs al
-            LEFT JOIN users u ON u.id = al.actor_user_id
-            WHERE al.actor_user_id = :user_id
-            ORDER BY al.created_at DESC
-            LIMIT :limit
-        ");
-
-        $stmt->bindValue(':user_id', $userId, \PDO::PARAM_INT);
-        $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
-        $stmt->execute();
-
-        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
-    }
-
-    /**
      * Thống kê logs theo action
      */
     public function statsByAction(?string $fromDate = null, ?string $toDate = null): array
     {
         $pdo = DB::pdo();
-        
+
         $where = '1=1';
         $params = [];
 
@@ -199,7 +190,7 @@ class AuditLogRepository
     public function statsByEntity(?string $fromDate = null, ?string $toDate = null): array
     {
         $pdo = DB::pdo();
-        
+
         $where = '1=1';
         $params = [];
 
@@ -227,13 +218,13 @@ class AuditLogRepository
     }
 
     /**
-     * Lấy thống kê hoạt động theo người dùng
+     * Lấy thống kê hoạt động theo Staff (role_id = 2)
      */
-    public function statsByUser(?string $fromDate = null, ?string $toDate = null, int $limit = 20): array
+    public function statsByStaff(?string $fromDate = null, ?string $toDate = null, int $limit = 20): array
     {
         $pdo = DB::pdo();
-        
-        $where = '1=1';
+
+        $where = 'u.role_id = 2';
         $params = [];
 
         if ($fromDate) {
@@ -245,23 +236,24 @@ class AuditLogRepository
             $params[':to_date'] = $toDate;
         }
 
-        $stmt = $pdo->prepare("
-            SELECT 
-                al.actor_user_id,
-                u.full_name,
-                u.username,
-                COUNT(*) as total_actions,
-                SUM(CASE WHEN al.action = 'create' THEN 1 ELSE 0 END) as creates,
-                SUM(CASE WHEN al.action = 'update' THEN 1 ELSE 0 END) as updates,
-                SUM(CASE WHEN al.action = 'delete' THEN 1 ELSE 0 END) as deletes,
-                MAX(al.created_at) as last_action_at
-            FROM audit_logs al
-            LEFT JOIN users u ON u.id = al.actor_user_id
-            WHERE {$where}
-            GROUP BY al.actor_user_id, u.full_name, u.username
-            ORDER BY total_actions DESC
-            LIMIT :limit
-        ");
+        $stmt = $pdo->prepare("  SELECT 
+                                            al.actor_user_id,
+                                            u.full_name,
+                                            u.username,
+                                            sp.staff_role,
+                                            COUNT(*) as total_actions,
+                                            SUM(CASE WHEN al.action = 'create' THEN 1 ELSE 0 END) as creates,
+                                            SUM(CASE WHEN al.action = 'update' THEN 1 ELSE 0 END) as updates,
+                                            SUM(CASE WHEN al.action = 'delete' THEN 1 ELSE 0 END) as deletes,
+                                            MAX(al.created_at) as last_action_at
+                                        FROM audit_logs al
+                                        INNER JOIN users u ON u.id = al.actor_user_id
+                                        LEFT JOIN staff_profiles sp ON sp.user_id = u.id
+                                        WHERE {$where}
+                                        GROUP BY al.actor_user_id, u.full_name, u.username, sp.staff_role
+                                        ORDER BY total_actions DESC
+                                        LIMIT :limit
+                                ");
 
         foreach ($params as $key => $value) {
             $stmt->bindValue($key, $value);
@@ -269,6 +261,75 @@ class AuditLogRepository
         $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
         $stmt->execute();
 
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Lấy thống kê hoạt động theo Customer (role_id = 1)
+     */
+    public function statsByCustomer(?string $fromDate = null, ?string $toDate = null, int $limit = 20): array
+    {
+        $pdo = DB::pdo();
+
+        $where = 'u.role_id = 1';
+        $params = [];
+
+        if ($fromDate) {
+            $where .= ' AND DATE(al.created_at) >= :from_date';
+            $params[':from_date'] = $fromDate;
+        }
+        if ($toDate) {
+            $where .= ' AND DATE(al.created_at) <= :to_date';
+            $params[':to_date'] = $toDate;
+        }
+
+        $stmt = $pdo->prepare("  SELECT 
+                                            al.actor_user_id,
+                                            u.full_name,
+                                            u.username,
+                                            COUNT(*) as total_actions,
+                                            SUM(CASE WHEN al.action = 'create' THEN 1 ELSE 0 END) as creates,
+                                            SUM(CASE WHEN al.action = 'update' THEN 1 ELSE 0 END) as updates,
+                                            SUM(CASE WHEN al.action = 'delete' THEN 1 ELSE 0 END) as deletes,
+                                            MAX(al.created_at) as last_action_at
+                                        FROM audit_logs al
+                                        INNER JOIN users u ON u.id = al.actor_user_id
+                                        WHERE {$where}
+                                        GROUP BY al.actor_user_id, u.full_name, u.username
+                                        ORDER BY total_actions DESC
+                                        LIMIT :limit
+                                    ");
+
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Lấy danh sách nhân viên đã có hoạt động
+     */
+    public function getActiveStaff(): array
+    {
+        $pdo = DB::pdo();
+
+        $stmt = $pdo->prepare("
+            SELECT DISTINCT
+                u.id,
+                u.full_name,
+                u.username,
+                sp.staff_role
+            FROM audit_logs al
+            INNER JOIN users u ON u.id = al.actor_user_id
+            LEFT JOIN staff_profiles sp ON sp.user_id = u.id
+            WHERE u.role_id = 2
+            ORDER BY u.full_name ASC
+        ");
+
+        $stmt->execute();
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 }

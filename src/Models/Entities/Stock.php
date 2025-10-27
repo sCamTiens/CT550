@@ -14,6 +14,9 @@ class Stock
     public $updated_at;
     public $updated_by;
 
+    // Thêm các filed từ JOIN với bảng users
+    public $updated_by_name;
+
     public function __construct(array $data = [])
     {
         foreach ($data as $key => $value) {

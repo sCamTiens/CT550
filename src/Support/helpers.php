@@ -52,7 +52,7 @@ if (!function_exists('textFilterPopover')) {
     </button>
   </div>
 
-  <div x-show="openFilter.{$key}" x-transition @click.outside="openFilter.{$key}=false"
+  <div x-cloak x-show="openFilter.{$key}" x-transition @click.outside="openFilter.{$key}=false"
     class="absolute z-40 mt-2 w-64 bg-white rounded-lg shadow border p-3 text-left" style="position: absolute;">
     <div class="font-semibold mb-2">Tìm kiếm theo "{$label}"</div>
     <input x-model.trim="filters.{$key}" class="w-full border rounded px-3 py-2" placeholder="Nhập {$label}">
@@ -87,7 +87,7 @@ if (!function_exists('numberFilterPopover')) {
     </button>
   </div>
 
-  <div x-show="openFilter.{$keyEsc}" x-transition @click.outside="openFilter.{$keyEsc}=false"
+  <div x-cloak x-show="openFilter.{$keyEsc}" x-transition @click.outside="openFilter.{$keyEsc}=false"
        class="absolute z-40 mt-2 w-72 bg-white rounded-lg shadow border p-3 text-left" style="position:absolute;">
     <div class="font-semibold mb-2">Tìm kiếm theo "{$labelEsc}"</div>
 
@@ -155,7 +155,7 @@ if (!function_exists('dateFilterPopover')) {
     </button>
   </div>
 
-  <div x-show="openFilter.{$keyEsc}" x-transition
+  <div x-cloak x-show="openFilter.{$keyEsc}" x-transition
        x-effect="if(openFilter.{$keyEsc} && window.__initFlatpickr) window.__initFlatpickr(\$el)"
        @click.outside="openFilter.{$keyEsc}=false"
        class="absolute z-40 mt-2 w-80 bg-white rounded-lg shadow border p-3 space-y-3 text-left"
@@ -267,7 +267,7 @@ if (!function_exists('selectFilterPopover')) {
         </button>
       </div>
 
-    <div x-show="openFilter.{$key}" x-transition @click.outside="openFilter.{$key}=false"
+    <div x-cloak x-show="openFilter.{$key}" x-transition @click.outside="openFilter.{$key}=false"
       class="absolute z-40 mt-2 w-64 bg-white rounded-lg shadow border p-3 space-y-3 text-left" style="position: absolute;">
         <div class="font-semibold mb-1">Tìm theo "{$label}"</div>
         <select x-model="filters.{$key}" class="w-full border rounded px-3 py-2">{$optHtml}</select>

@@ -28,7 +28,13 @@ $items = $items ?? [];
                         <th class="py-2 px-4 whitespace-nowrap text-center">Ảnh đại diện</th>
                         <?= textFilterPopover('username', 'Tài khoản') ?>
                         <?= textFilterPopover('full_name', 'Họ tên') ?>
-                        <?= textFilterPopover('staff_role', 'Vai trò') ?>
+                        <?= selectFilterPopover('staff_role', 'Vai trò', [
+                            '' => '-- Tất cả --',
+                            'Admin' => 'Quản trị viên',
+                            'Kho' => 'Kho',
+                            'Thu ngân' => 'Thu ngân',
+                            'Hỗ trợ trực tuyến' => 'Hỗ trợ trực tuyến'
+                        ]) ?>
                         <?= textFilterPopover('email', 'Email') ?>
                         <?= textFilterPopover('phone', 'Số điện thoại') ?>
                         <?= selectFilterPopover('is_active', 'Trạng thái', ['' => '-- Tất cả --', '1' => 'Hoạt động', '0' => 'Khóa']) ?>
@@ -75,7 +81,8 @@ $items = $items ?? [];
                             <td class="py-2 px-4 text-center">
                                 <div class="flex flex-col items-center gap-1">
                                     <!-- Hiển thị ảnh nếu có avatar_url -->
-                                    <img x-show="s.avatar_url" :src="'/assets/images/avatar/' + s.avatar_url" :alt="s.full_name"
+                                    <img x-show="s.avatar_url" :src="'/assets/images/avatar/' + s.avatar_url"
+                                        :alt="s.full_name"
                                         class="w-12 h-12 rounded-full object-cover border-2 border-gray-200">
                                     <!-- Icon mặc định nếu không có avatar_url -->
                                     <div x-show="!s.avatar_url"
@@ -90,7 +97,16 @@ $items = $items ?? [];
                             </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line uppercase" x-text="s.username"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.full_name"></td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.staff_role"></td>
+                            <td class="px-3 py-2 text-center align-middle">
+                                <div class="flex justify-center items-center h-full">
+                                    <span class="px-2 py-[3px] rounded text-xs font-medium" :class="{
+                                        'bg-green-100 text-green-800': s.staff_role === 'Kho',
+                                        'bg-red-100 text-orange-800': s.staff_role === 'Thu ngân',
+                                        'bg-blue-100 text-blue-800': s.staff_role === 'Hỗ trợ trực tuyến',
+                                        'bg-purple-100 text-purple-800': s.staff_role === 'Admin',
+                                    }" x-text="getStaffRoleText(s.staff_role)"></span>
+                                </div>
+                            </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.email"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line"
                                 :class="(s.phone || '—') === '—' ? 'text-center' : 'text-right'"
@@ -132,9 +148,10 @@ $items = $items ?? [];
         </div>
     </div>
     <!-- MODAL: Create -->
-    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openAdd"
-        x-transition.opacity style="display:none">
-        <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster" @click.outside="openAdd=false">
+    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
+        x-show="openAdd" x-transition.opacity style="display:none">
+        <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster"
+            @click.outside="openAdd=false">
             <div class="px-5 py-3 border-b flex justify-center items-center relative">
                 <h3 class="font-semibold text-2xl text-[#002975]">Thêm nhân viên</h3>
                 <button class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
@@ -153,9 +170,10 @@ $items = $items ?? [];
     </div>
 
     <!-- MODAL: Edit -->
-    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openEdit"
-        x-transition.opacity style="display:none">
-        <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster" @click.outside="openEdit=false">
+    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
+        x-show="openEdit" x-transition.opacity style="display:none">
+        <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster"
+            @click.outside="openEdit=false">
             <div class="px-5 py-3 border-b flex justify-center items-center relative">
                 <h3 class="font-semibold text-2xl text-[#002975]">Sửa nhân viên</h3>
                 <button class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>
@@ -173,9 +191,10 @@ $items = $items ?? [];
     </div>
 
     <!-- MODAL: Đổi mật khẩu -->
-    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openChangePassword"
-        x-transition.opacity style="display:none">
-        <div class="bg-white w-full max-w-md rounded-xl shadow animate__animated animate__zoomIn animate__faster" @click.outside="openChangePassword=false">
+    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
+        x-show="openChangePassword" x-transition.opacity style="display:none">
+        <div class="bg-white w-full max-w-md rounded-xl shadow animate__animated animate__zoomIn animate__faster"
+            @click.outside="openChangePassword=false">
             <div class="px-5 py-3 border-b flex justify-center items-center relative">
                 <h3 class="font-semibold text-2xl text-[#002975]">Đổi mật khẩu</h3>
                 <button class="text-slate-500 absolute right-5" @click="openChangePassword=false">✕</button>
@@ -387,18 +406,28 @@ $items = $items ?? [];
                 this.validateField('password_confirm');
             },
 
-            // Filter popover state
+            getStaffRoleText(staff_role) {
+                const map = {
+                    'Admin': 'Quản trị viên',
+                    'Kho': 'Kho',
+                    'Thu ngân': 'Thu ngân',
+                    'Hỗ trợ trực tuyến': 'Hỗ trợ trực tuyến'
+                };
+                return map[staff_role] || staff_role;
+            },
+
+            // ===== FILTERS =====
             openFilter: {
                 username: false, full_name: false, staff_role: false, email: false, phone: false, is_active: false, hired_at: false, note: false,
                 created_at: false, created_by: false, updated_at: false, updated_by: false
             },
-            // Filter values
+
             filters: {
                 username: '',
                 full_name: '',
                 staff_role: '',
                 email: '',
-                phone: '',
+                phone_type: '', phone_value: '', phone_from: '', phone_to: '',
                 is_active: '',
                 hired_at_type: '', hired_at_value: '', hired_at_from: '', hired_at_to: '',
                 note: '',
@@ -406,6 +435,191 @@ $items = $items ?? [];
                 created_by: '',
                 updated_at_type: '', updated_at_value: '', updated_at_from: '', updated_at_to: '',
                 updated_by: ''
+            },
+
+            // -------------------------------------------
+            // Hàm lọc tổng quát, hỗ trợ text / number / date
+            // -------------------------------------------
+            applyFilter(val, type, { value, from, to, dataType }) {
+                if (val == null) return false;
+
+                // ---------------- TEXT ----------------
+                if (dataType === 'text') {
+                    const hasAccent = (s) => /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(s);
+
+                    const normalize = (str) => String(str || '')
+                        .toLowerCase()
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '') // xóa dấu
+                        .trim();
+
+                    const raw = String(val || '').toLowerCase();
+                    const str = normalize(val);
+                    const query = String(value || '').toLowerCase();
+                    const queryNoAccent = normalize(value);
+
+                    if (!query) return true;
+
+                    if (type === 'eq') return hasAccent(query)
+                        ? raw === query  // có dấu → so đúng dấu
+                        : str === queryNoAccent; // không dấu → so không dấu
+
+                    if (type === 'contains' || type === 'like') {
+                        if (hasAccent(query)) {
+                            // Có dấu → tìm chính xác theo dấu
+                            return raw.includes(query);
+                        } else {
+                            // Không dấu → tìm theo không dấu
+                            return str.includes(queryNoAccent);
+                        }
+                    }
+
+                    return true;
+                }
+
+                // ---------------- NUMBER ----------------
+                if (dataType === 'number') {
+                    const parseNum = (v) => {
+                        if (v === '' || v === null || v === undefined) return null;
+                        const s = String(v).replace(/[^\d.-]/g, '');
+                        const n = Number(s);
+                        return isNaN(n) ? null : n;
+                    };
+
+                    const num = parseNum(val);
+                    const v = parseNum(value);
+                    const f = parseNum(from);
+                    const t = parseNum(to);
+
+                    if (num === null) return false;
+                    if (!type) return true;
+
+                    if (type === 'eq') return v === null ? true : num === v;
+                    if (type === 'lt') return v === null ? true : num < v;
+                    if (type === 'gt') return v === null ? true : num > v;
+                    if (type === 'lte') return v === null ? true : num <= v;
+                    if (type === 'gte') return v === null ? true : num >= v;
+                    if (type === 'between') return f === null || t === null ? true : num >= f && num <= t;
+
+                    // --- Lọc “mờ” theo chuỗi số ---
+                    if (type === 'like') {
+                        const raw = String(val).replace(/[^\d]/g, '');
+                        const query = String(value || '').replace(/[^\d]/g, '');
+                        return raw.includes(query);
+                    }
+
+                    return true;
+                }
+
+                // ---------------- DATE ----------------
+                if (dataType === 'date') {
+                    if (!val) return false;
+                    const d = new Date(val);
+                    const v = value ? new Date(value) : null;
+                    const f = from ? new Date(from) : null;
+                    const t = to ? new Date(to) : null;
+
+                    if (type === 'eq') return v ? d.toDateString() === v.toDateString() : true;
+                    if (type === 'lt') return v ? d < v : true;
+                    if (type === 'gt') {
+                        if (!v) return true;
+                        // So sánh chỉ theo ngày, bỏ qua giờ phút giây
+                        return d.setHours(0, 0, 0, 0) > v.setHours(0, 0, 0, 0);
+                    }
+                    if (type === 'lte') {
+                        if (!v) return true;
+                        const nextDay = new Date(v);
+                        nextDay.setDate(v.getDate() + 1);
+                        return d < nextDay; // <= nghĩa là nhỏ hơn ngày kế tiếp
+                    }
+                    if (type === 'gte') return v ? d >= v : true;
+                    if (type === 'between') return f && t ? d >= f && d <= t : true;
+
+                    return true;
+                }
+
+                return true;
+            },
+
+            filtered() {
+                let data = this.items;
+
+                // --- Lọc theo chuỗi ---
+                ['username', 'full_name', 'created_by', 'email', 'updated_by'].forEach(key => {
+                    if (this.filters[key]) {
+                        const field = key === 'created_by' ? 'created_by_name' : key;
+                        data = data.filter(o =>
+                            this.applyFilter(o[field], 'contains', {
+                                value: this.filters[key],
+                                dataType: 'text'
+                            })
+                        );
+                    }
+                });
+
+                // --- Lọc theo select ---
+                ['is_active', 'staff_role'].forEach(key => {
+                    if (this.filters[key]) {
+                        data = data.filter(o =>
+                            this.applyFilter(o[key], 'eq', {
+                                value: this.filters[key],
+                                dataType: 'text'
+                            })
+                        );
+                    }
+                });
+
+                // --- Lọc theo số ---
+                ['phone'].forEach(key => {
+                    if (this.filters[`${key}_type`]) {
+                        data = data.filter(o =>
+                            this.applyFilter(o[key], this.filters[`${key}_type`], {
+                                value: this.filters[`${key}_value`],
+                                from: this.filters[`${key}_from`],
+                                to: this.filters[`${key}_to`],
+                                dataType: 'number'
+                            })
+                        );
+                    }
+                });
+
+                // --- Lọc theo ngày ---
+                ['hired_at', 'created_at', 'updated_at'].forEach(key => {
+                    if (this.filters[`${key}_type`]) {
+                        data = data.filter(o =>
+                            this.applyFilter(o[key], this.filters[`${key}_type`], {
+                                value: this.filters[`${key}_value`],
+                                from: this.filters[`${key}_from`],
+                                to: this.filters[`${key}_to`],
+                                dataType: 'date'
+                            })
+                        );
+                    }
+                });
+
+                return data;
+            },
+
+            toggleFilter(key) {
+                for (const k in this.openFilter) this.openFilter[k] = false;
+                this.openFilter[key] = true;
+            },
+            closeFilter(key) { this.openFilter[key] = false; },
+            resetFilter(key) {
+                if (['hired_at', 'updated_at', 'created_at'].includes(key)) {
+                    this.filters[`${key}_type`] = '';
+                    this.filters[`${key}_value`] = '';
+                    this.filters[`${key}_from`] = '';
+                    this.filters[`${key}_to`] = '';
+                } else if (['phone'].includes(key)) {
+                    this.filters[`${key}_type`] = '';
+                    this.filters[`${key}_value`] = '';
+                    this.filters[`${key}_from`] = '';
+                    this.filters[`${key}_to`] = '';
+                } else {
+                    this.filters[key] = '';
+                }
+                this.openFilter[key] = false;
             },
 
             async init() {
@@ -477,88 +691,6 @@ $items = $items ?? [];
                 return arr.filter(s => s && s.user_id != null);
             },
 
-            // Chuẩn hóa ngày cho so sánh (loại bỏ phần giờ)
-            applyDateFilter(val, type, value, from, to) {
-                if (!type) return true; // Không lọc nếu không chọn kiểu
-                const normalizeDate = (d) => {
-                    if (!d) return null;
-                    // Nếu d là dạng d/m/Y => chuyển về Y-m-d
-                    let s = String(d).trim();
-                    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
-                        const [dd, mm, yy] = s.split(/[\s\/]/);
-                        s = `${yy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
-                    }
-                    // Nếu có dạng Y-m-d H:i:s => lấy phần ngày
-                    if (/^\d{4}-\d{1,2}-\d{1,2}/.test(s)) {
-                        s = s.substring(0, 10);
-                    }
-                    const parsed = new Date(s);
-                    if (isNaN(parsed)) return null;
-                    // Chỉ lấy phần ngày (không giờ)
-                    return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
-                };
-                const itemDate = normalizeDate(val);
-                if (!itemDate) return false;
-                if (type === 'eq') {
-                    if (!value) return true;
-                    const compareDate = normalizeDate(value);
-                    if (!compareDate) return false;
-                    return itemDate.getTime() === compareDate.getTime();
-                }
-                if (type === 'between') {
-                    if (!from || !to) return true;
-                    const fromDate = normalizeDate(from);
-                    const toDate = normalizeDate(to);
-                    if (!fromDate || !toDate) return false;
-                    return itemDate >= fromDate && itemDate <= toDate;
-                }
-                if (type === 'lt') {
-                    if (!value) return true;
-                    const compareDate = normalizeDate(value);
-                    if (!compareDate) return false;
-                    return itemDate < compareDate;
-                }
-                if (type === 'gt') {
-                    if (!value) return true;
-                    const compareDate = normalizeDate(value);
-                    if (!compareDate) return false;
-                    return itemDate > compareDate;
-                }
-                if (type === 'lte') {
-                    if (!value) return true;
-                    const compareDate = normalizeDate(value);
-                    if (!compareDate) return false;
-                    return itemDate <= compareDate;
-                }
-                if (type === 'gte') {
-                    if (!value) return true;
-                    const compareDate = normalizeDate(value);
-                    if (!compareDate) return false;
-                    return itemDate >= compareDate;
-                }
-                return true;
-            },
-
-            // Filter logic
-            filtered() {
-                const fn = (v) => (v ?? '').toString().toLowerCase();
-                const f = this.filters;
-                return this.items.filter(s => {
-                    if (f.username && !fn(s.username).includes(fn(f.username))) return false;
-                    if (f.full_name && !fn(s.full_name).includes(fn(f.full_name))) return false;
-                    if (f.staff_role && !fn(s.staff_role).includes(fn(f.staff_role))) return false;
-                    if (f.email && !fn(s.email).includes(fn(f.email))) return false;
-                    if (f.phone && !fn(s.phone).includes(fn(f.phone))) return false;
-                    if (f.is_active !== '' && f.is_active !== undefined && String(s.is_active) !== String(f.is_active)) return false;
-                    if (f.note && !fn(s.note).includes(fn(f.note))) return false;
-                    if (f.created_by && !fn(s.created_by_name || '').includes(fn(f.created_by))) return false;
-                    if (f.updated_by && !fn(s.updated_by_name || '').includes(fn(f.updated_by))) return false;
-                    if (!this.applyDateFilter(s.hired_at, f.hired_at_type, f.hired_at_value, f.hired_at_from, f.hired_at_to)) return false;
-                    if (!this.applyDateFilter(s.created_at, f.created_at_type, f.created_at_value, f.created_at_from, f.created_at_to)) return false;
-                    if (!this.applyDateFilter(s.updated_at, f.updated_at_type, f.updated_at_value, f.updated_at_from, f.updated_at_to)) return false;
-                    return true;
-                });
-            },
 
             totalPages() {
                 return Math.ceil(this.filtered().length / this.perPage) || 1;
@@ -670,23 +802,6 @@ $items = $items ?? [];
 
                 box.appendChild(toast);
                 setTimeout(() => toast.remove(), 3000);
-            },
-
-            // Filter popover logic
-            toggleFilter(key) {
-                Object.keys(this.openFilter).forEach(k => this.openFilter[k] = (k === key ? !this.openFilter[k] : false));
-            },
-            applyFilter(key) { this.openFilter[key] = false; },
-            resetFilter(key) {
-                if (["hired_at", "created_at", "updated_at"].includes(key)) {
-                    this.filters[`${key}_type`] = '';
-                    this.filters[`${key}_value`] = '';
-                    this.filters[`${key}_from`] = '';
-                    this.filters[`${key}_to`] = '';
-                } else {
-                    this.filters[key] = '';
-                }
-                this.openFilter[key] = false;
             },
         };
     }

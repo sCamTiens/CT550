@@ -3,15 +3,17 @@ namespace App\Controllers\Admin;
 
 use App\Core\Controller;
 use App\Models\Repositories\UserRepository;
+use App\Services\DailyStockAlertService;
 
 class AuthController extends Controller
 {
     /**
      * Hàm static để chặn truy cập admin khi chưa đổi mật khẩu lần đầu
      */
-    public static function requirePasswordChanged() {
+    public static function requirePasswordChanged()
+    {
         // Chỉ redirect nếu đã đăng nhập (có user id) và force_change_password = 1
-        if (!empty($_SESSION['user']['id']) && !empty($_SESSION['user']['force_change_password']) && (int)$_SESSION['user']['force_change_password'] === 1) {
+        if (!empty($_SESSION['user']['id']) && !empty($_SESSION['user']['force_change_password']) && (int) $_SESSION['user']['force_change_password'] === 1) {
             header('Location: /admin/force-change-password');
             exit;
         }
@@ -22,15 +24,15 @@ class AuthController extends Controller
         if (empty($_SESSION['user']) && !empty($_COOKIE['admin_remember'])) {
             $username = $_COOKIE['admin_remember'];
             $user = UserRepository::findByUsername($username);
-            if ($user && (int)$user->force_change_password === 0) {
+            if ($user && (int) $user->force_change_password === 0) {
                 $_SESSION['admin_user'] = [
-                    'id' => (int)$user->id,
+                    'id' => (int) $user->id,
                     'username' => $user->username,
                     'email' => $user->email ?? null,
                     'full_name' => $user->full_name ?? null,
                     'role' => $user->role_name,
                     'avatar_url' => $user->avatar_url ?? null,
-                    'force_change_password' => (int)$user->force_change_password,
+                    'force_change_password' => (int) $user->force_change_password,
                 ];
                 $_SESSION['user'] = $_SESSION['admin_user'];
             } else {
@@ -40,7 +42,7 @@ class AuthController extends Controller
             }
         }
         // Chỉ redirect nếu đã đăng nhập (có user id) và force_change_password = 1
-        if (!empty($_SESSION['user']['id']) && !empty($_SESSION['user']['force_change_password']) && (int)$_SESSION['user']['force_change_password'] === 1) {
+        if (!empty($_SESSION['user']['id']) && !empty($_SESSION['user']['force_change_password']) && (int) $_SESSION['user']['force_change_password'] === 1) {
             header('Location: /admin/force-change-password');
             exit;
         }
@@ -91,9 +93,9 @@ class AuthController extends Controller
         }
 
 
-    $user = UserRepository::findByUsername($username);
+        $user = UserRepository::findByUsername($username);
 
-    $fail = function (string $msg) use ($isJsonReq) {
+        $fail = function (string $msg) use ($isJsonReq) {
             if ($isJsonReq) {
                 http_response_code(401);
                 header('Content-Type: application/json; charset=utf-8');
@@ -138,10 +140,24 @@ class AuthController extends Controller
             'phone' => $user->phone ?? null,
             'gender' => $user->gender ?? null,
             // force_change_password sẽ được lấy từ DB, nếu có
-            'force_change_password' => isset($user->force_change_password) ? (int)$user->force_change_password : 0,
+            'force_change_password' => isset($user->force_change_password) ? (int) $user->force_change_password : 0,
         ];
         $_SESSION['admin_user'] = $sessData;
         $_SESSION['user'] = $sessData; // để CategoryController dùng
+
+        // Tự động reset thông báo khi đăng nhập (chỉ 1 lần/ngày)
+        $lastRun = $_SESSION['last_stock_check'] ?? null;
+        $today = date('Y-m-d');
+
+        if ($lastRun !== $today) {
+            try {
+                DailyStockAlertService::runDailyCheck();
+                $_SESSION['last_stock_check'] = $today;
+            } catch (\Exception $e) {
+                // Bỏ qua lỗi, không ảnh hưởng đăng nhập
+                error_log("Stock alert error: " . $e->getMessage());
+            }
+        }
 
         if ($remember) {
             setcookie('admin_remember', $user->username, time() + 60 * 60 * 24 * 30, '/', '', false, true);

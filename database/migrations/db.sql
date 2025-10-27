@@ -1178,3 +1178,19 @@ WHERE s.qty <= s.safety_stock
 ALTER TABLE coupons 
 ADD COLUMN max_discount DECIMAL(12,2) DEFAULT 0 COMMENT 'Giảm tối đa (chỉ áp dụng cho loại Phần trăm)' 
 AFTER min_order_value;
+
+-- Bảng stocktake_items: Chi tiết từng sản phẩm trong phiếu kiểm kê
+CREATE TABLE IF NOT EXISTS `stocktake_items` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `stocktake_id` INT UNSIGNED NOT NULL COMMENT 'ID phiếu kiểm kê',
+  `product_id` INT UNSIGNED NOT NULL COMMENT 'ID sản phẩm',
+  `system_quantity` INT NOT NULL DEFAULT 0 COMMENT 'Số lượng tồn kho hệ thống',
+  `actual_quantity` INT NOT NULL DEFAULT 0 COMMENT 'Số lượng kiểm kê thực tế',
+  `difference` INT NOT NULL DEFAULT 0 COMMENT 'Chênh lệch (actual - system)',
+  
+  FOREIGN KEY (`stocktake_id`) REFERENCES `stocktakes`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON DELETE CASCADE,
+  
+  INDEX `idx_stocktake_id` (`stocktake_id`),
+  INDEX `idx_product_id` (`product_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

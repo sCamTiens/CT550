@@ -27,9 +27,18 @@ $items = $items ?? [];
             <?= textFilterPopover('full_name', 'Họ tên') ?>
             <?= textFilterPopover('email', 'Email') ?>
             <?= textFilterPopover('phone', 'SĐT') ?>
-            <?= textFilterPopover('gender', 'Giới tính') ?>
-            <?= textFilterPopover('date_of_birth', 'Ngày sinh') ?>
-            <?= selectFilterPopover('is_active', 'Trạng thái', ['' => '-- Tất cả --', '1' => 'Hoạt động', '0' => 'Khóa']) ?>
+            <?= selectFilterPopover('gender', 'Giới tính', [
+              '' => '-- Tất cả --',
+              'Nam' => 'Nam',
+              'Nữ' => 'Nữ',
+            ]) ?>
+            <?= dateFilterPopover('date_of_birth', 'Ngày sinh') ?>
+            <?= selectFilterPopover('is_active', 'Trạng thái', [
+              '' => '-- Tất cả --',
+              '1' => 'Hoạt động',
+              '0' => 'Khóa'
+            ])
+              ?>
             <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
             <?= textFilterPopover('created_by_name', 'Người tạo') ?>
             <?= dateFilterPopover('updated_at', 'Thời gian cập nhật') ?>
@@ -95,8 +104,9 @@ $items = $items ?? [];
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="c.email"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line"
                 :class="(c.phone || '—') === '—' ? 'text-center' : 'text-right'" x-text="c.phone || '—'"></td>
-              <td class="py-2 px-4 break-words whitespace-pre-line"
-                :class="(c.gender || '—') === '—' ? 'text-center' : 'text-left'" x-text="c.gender || '—'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line">
+                <span x-text="c.gender ? 'Nam' : 'Nữ'" :class="c.gender ? 'text-green-600' : 'text-red-600'"></span>
+              </td>
               <td class="py-2 px-4 break-words whitespace-pre-line"
                 :class="(c.date_of_birth || '—') === '—' ? 'text-center' : 'text-right'"
                 x-text="formatDate(c.date_of_birth) || '—'"></td>
@@ -159,9 +169,11 @@ $items = $items ?? [];
   </div>
 
   <!-- MODAL: Create -->
-  <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openAdd" x-transition.opacity
-    style="display:none">
-    <div class="bg-white w-full max-w-2xl rounded-xl shadow animate__animated animate__zoomIn animate__faster" @click.outside="openAdd=false">
+  <div
+    class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
+    x-show="openAdd" x-transition.opacity style="display:none">
+    <div class="bg-white w-full max-w-2xl rounded-xl shadow animate__animated animate__zoomIn animate__faster"
+      @click.outside="openAdd=false">
       <div class="px-5 py-3 border-b flex justify-center items-center relative">
         <h3 class="font-semibold text-2xl text-[#002975]">Thêm khách hàng</h3>
         <button class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
@@ -181,9 +193,11 @@ $items = $items ?? [];
   </div>
 
   <!-- MODAL: Edit -->
-  <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openEdit"
-    x-transition.opacity style="display:none">
-    <div class="bg-white w-full max-w-2xl rounded-xl shadow animate__animated animate__zoomIn animate__faster" @click.outside="openEdit=false">
+  <div
+    class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
+    x-show="openEdit" x-transition.opacity style="display:none">
+    <div class="bg-white w-full max-w-2xl rounded-xl shadow animate__animated animate__zoomIn animate__faster"
+      @click.outside="openEdit=false">
       <div class="px-5 py-3 border-b flex justify-center items-center relative">
         <h3 class="font-semibold text-2xl text-[#002975]">Sửa khách hàng</h3>
         <button class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>
@@ -201,9 +215,11 @@ $items = $items ?? [];
   </div>
 
   <!-- MODAL: Đổi mật khẩu -->
-  <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster" x-show="openChangePassword"
-    x-transition.opacity style="display:none">
-    <div class="bg-white w-full max-w-md rounded-xl shadow animate__animated animate__zoomIn animate__faster" @click.outside="openChangePassword=false">
+  <div
+    class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
+    x-show="openChangePassword" x-transition.opacity style="display:none">
+    <div class="bg-white w-full max-w-md rounded-xl shadow animate__animated animate__zoomIn animate__faster"
+      @click.outside="openChangePassword=false">
       <div class="px-5 py-3 border-b flex justify-center items-center relative">
         <h3 class="font-semibold text-2xl text-[#002975]">Đổi mật khẩu</h3>
         <button class="text-slate-500 absolute right-5" @click="openChangePassword=false">✕</button>
@@ -255,9 +271,12 @@ $items = $items ?? [];
   </div>
 
   <!-- Modal xem địa chỉ -->
-  <div x-show="openAddress" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate__animated animate__fadeIn animate__faster"
+  <div x-show="openAddress"
+    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate__animated animate__fadeIn animate__faster"
     @click.self="openAddress = false" x-cloak>
-    <div class="bg-white rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto animate__animated animate__zoomIn animate__faster" @click.stop>
+    <div
+      class="bg-white rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto animate__animated animate__zoomIn animate__faster"
+      @click.stop>
       <div class="px-5 pb-3 border-b flex justify-center items-center relative">
         <h3 class="font-semibold text-2xl text-[#002975]">Địa chỉ của khách hàng <span
             x-text="addressCustomerName"></span>
@@ -373,6 +392,7 @@ $items = $items ?? [];
         date_of_birth: '',
         is_active: 1
       },
+
       errors: {
         username: '',
         full_name: '',
@@ -381,6 +401,7 @@ $items = $items ?? [];
         password: '',
         password_confirm: ''
       },
+
       touched: {
         username: false,
         full_name: false,
@@ -389,6 +410,7 @@ $items = $items ?? [];
         password: false,
         password_confirm: false
       },
+
       openChangePassword: false,
       formChangePassword: { user_id: null, password: '', password_confirm: '' },
       showChangePassword: false,
@@ -422,25 +444,6 @@ $items = $items ?? [];
         updated_at: false,
         updated_by_name: false
       },
-      filters: {
-        username: '',
-        full_name: '',
-        email: '',
-        phone: '',
-        gender: '',
-        date_of_birth: '',
-        is_active: '',
-        created_at_type: '',
-        created_at_value: '',
-        created_at_from: '',
-        created_at_to: '',
-        created_by: '',
-        updated_at_type: '',
-        updated_at_value: '',
-        updated_at_from: '',
-        updated_at_to: '',
-        updated_by: ''
-      },
 
       formatDate(d) {
         if (!d || d === '0000-00-00') return '';
@@ -460,6 +463,7 @@ $items = $items ?? [];
         this.changePasswordTouched = false;
         this.openChangePassword = true;
       },
+
       async openAddressModal(customerId, customerName) {
         this.addressCustomerName = customerName;
         this.addresses = [];
@@ -481,6 +485,7 @@ $items = $items ?? [];
           this.loadingAddress = false;
         }
       },
+
       generateChangePassword() {
         const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
         let len = Math.floor(Math.random() * 5) + 8; // 8-12 ký tự
@@ -492,116 +497,198 @@ $items = $items ?? [];
         this.changePasswordTouched = true;
         this.changePasswordErrors = {};
       },
+
       paginated() {
         const start = (this.currentPage - 1) * this.perPage;
         return this.filtered().slice(start, start + this.perPage);
       },
+
       totalPages() {
         return Math.max(1, Math.ceil(this.filtered().length / this.perPage));
       },
+
       goToPage(page) {
         if (page < 1) page = 1;
         if (page > this.totalPages()) page = this.totalPages();
         this.currentPage = page;
       },
-      // Chuẩn hóa ngày về YYYY-MM-DD
-      normalizeDateStr(dateStr) {
-        if (!dateStr) return null;
-        const parts = dateStr.split(/[-/\s]/);
-        if (parts.length >= 3) {
-          if (parts[0].length === 4) return dateStr.split(' ')[0];
-          if (parts[0].length <= 2) return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-        }
-        return dateStr.split(' ')[0];
+
+      // ===== FILTERS =====
+      openFilter: {
+        username: false, full_name: false, email: false, phone: false, gender: false, is_active: false, date_of_birth: false,
+        created_at: false, created_by: false, updated_at: false, updated_by: false
       },
-      // ===== helper riêng cho date filter =====
-      applyDateFilter(val, type, value, from, to) {
-        if (!val) return true;
-        if (!type) return true;
 
-        const normalizeDate = (dateStr) => {
-          if (!dateStr) return null;
-          const d = new Date(dateStr);
-          if (isNaN(d.getTime())) return null;
-          return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-        };
+      filters: {
+        username: '',
+        full_name: '',
+        email: '',
+        phone: '',
+        gender: '',
+        is_active: '',
+        date_of_birth_type: '', date_of_birth_value: '', date_of_birth_from: '', date_of_birth_to: '',
+        created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
+        created_by: '',
+        updated_at_type: '', updated_at_value: '', updated_at_from: '', updated_at_to: '',
+        updated_by: ''
+      },
 
-        const d = normalizeDate(val);
-        if (!d) return true;
+      // -------------------------------------------
+      // Hàm lọc tổng quát, hỗ trợ text / number / date
+      // -------------------------------------------
+      applyFilter(val, type, { value, from, to, dataType }) {
+        if (val == null) return false;
 
-        if (type === 'eq') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d.getTime() === compareDate.getTime() : true;
+        // ---------------- TEXT ----------------
+        if (dataType === 'text') {
+          const hasAccent = (s) => /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(s);
+
+          const normalize = (str) => String(str || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '') // xóa dấu
+            .trim();
+
+          const raw = String(val || '').toLowerCase();
+          const str = normalize(val);
+          const query = String(value || '').toLowerCase();
+          const queryNoAccent = normalize(value);
+
+          if (!query) return true;
+
+          if (type === 'eq') return hasAccent(query)
+            ? raw === query  // có dấu → so đúng dấu
+            : str === queryNoAccent; // không dấu → so không dấu
+
+          if (type === 'contains' || type === 'like') {
+            if (hasAccent(query)) {
+              // Có dấu → tìm chính xác theo dấu
+              return raw.includes(query);
+            } else {
+              // Không dấu → tìm theo không dấu
+              return str.includes(queryNoAccent);
+            }
+          }
+
+          return true;
         }
 
-        if (type === 'between') {
-          if (!from || !to) return true;
-          const fromDate = normalizeDate(from);
-          const toDate = normalizeDate(to);
-          return fromDate && toDate ? (d >= fromDate && d <= toDate) : true;
+        // ---------------- NUMBER ----------------
+        if (dataType === 'number') {
+          const parseNum = (v) => {
+            if (v === '' || v === null || v === undefined) return null;
+            const s = String(v).replace(/[^\d.-]/g, '');
+            const n = Number(s);
+            return isNaN(n) ? null : n;
+          };
+
+          const num = parseNum(val);
+          const v = parseNum(value);
+          const f = parseNum(from);
+          const t = parseNum(to);
+
+          if (num === null) return false;
+          if (!type) return true;
+
+          if (type === 'eq') return v === null ? true : num === v;
+          if (type === 'lt') return v === null ? true : num < v;
+          if (type === 'gt') return v === null ? true : num > v;
+          if (type === 'lte') return v === null ? true : num <= v;
+          if (type === 'gte') return v === null ? true : num >= v;
+          if (type === 'between') return f === null || t === null ? true : num >= f && num <= t;
+
+          // --- Lọc “mờ” theo chuỗi số ---
+          if (type === 'like') {
+            const raw = String(val).replace(/[^\d]/g, '');
+            const query = String(value || '').replace(/[^\d]/g, '');
+            return raw.includes(query);
+          }
+
+          return true;
         }
 
-        if (type === 'lt') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d < compareDate : true;
-        }
+        // ---------------- DATE ----------------
+        if (dataType === 'date') {
+          if (!val) return false;
+          const d = new Date(val);
+          const v = value ? new Date(value) : null;
+          const f = from ? new Date(from) : null;
+          const t = to ? new Date(to) : null;
 
-        if (type === 'gt') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d > compareDate : true;
-        }
+          if (type === 'eq') return v ? d.toDateString() === v.toDateString() : true;
+          if (type === 'lt') return v ? d < v : true;
+          if (type === 'gt') {
+            if (!v) return true;
+            // So sánh chỉ theo ngày, bỏ qua giờ phút giây
+            return d.setHours(0, 0, 0, 0) > v.setHours(0, 0, 0, 0);
+          }
+          if (type === 'lte') {
+            if (!v) return true;
+            const nextDay = new Date(v);
+            nextDay.setDate(v.getDate() + 1);
+            return d < nextDay; // <= nghĩa là nhỏ hơn ngày kế tiếp
+          }
+          if (type === 'gte') return v ? d >= v : true;
+          if (type === 'between') return f && t ? d >= f && d <= t : true;
 
-        if (type === 'lte') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d <= compareDate : true;
-        }
-
-        if (type === 'gte') {
-          if (!value) return true;
-          const compareDate = normalizeDate(value);
-          return compareDate ? d >= compareDate : true;
+          return true;
         }
 
         return true;
       },
 
       filtered() {
-        const fn = (v) => (v ?? '').toString().toLowerCase();
-        const f = this.filters;
+        let data = this.items;
 
-        return this.items.filter(x => {
-          if (f.username && !fn(x.username).includes(fn(f.username))) return false;
-          if (f.full_name && !fn(x.full_name).includes(fn(f.full_name))) return false;
-          if (f.email && !fn(x.email).includes(fn(f.email))) return false;
-          if (f.phone && !fn(x.phone).includes(fn(f.phone))) return false;
-          if (f.gender && !fn(x.gender).includes(fn(f.gender))) return false;
-          if (f.date_of_birth && !fn(x.date_of_birth).includes(fn(f.date_of_birth))) return false;
-
-          if (f.is_active !== '' && f.is_active !== undefined) {
-            if (String(x.is_active) !== String(f.is_active)) return false;
+        // --- Lọc theo chuỗi ---
+        ['username', 'full_name', 'created_by', 'email', 'updated_by', 'phone'].forEach(key => {
+          if (this.filters[key]) {
+            const field = key === 'created_by' ? 'created_by_name' : key;
+            data = data.filter(o =>
+              this.applyFilter(o[field], 'contains', {
+                value: this.filters[key],
+                dataType: 'text'
+              })
+            );
           }
-
-          if (f.created_by && !fn(x.created_by_name || '').includes(fn(f.created_by))) return false;
-          if (f.updated_by && !fn(x.updated_by_name || '').includes(fn(f.updated_by))) return false;
-
-          if (!this.applyDateFilter(x.created_at, f.created_at_type, f.created_at_value, f.created_at_from, f.created_at_to)) return false;
-          if (!this.applyDateFilter(x.updated_at, f.updated_at_type, f.updated_at_value, f.updated_at_from, f.updated_at_to)) return false;
-
-          return true;
         });
+
+        // --- Lọc theo select ---
+        ['is_active', 'gender'].forEach(key => {
+          if (this.filters[key]) {
+            data = data.filter(o =>
+              this.applyFilter(o[key], 'eq', {
+                value: this.filters[key],
+                dataType: 'text'
+              })
+            );
+          }
+        });
+
+        // --- Lọc theo ngày ---
+        ['date_of_birth', 'created_at', 'updated_at'].forEach(key => {
+          if (this.filters[`${key}_type`]) {
+            data = data.filter(o =>
+              this.applyFilter(o[key], this.filters[`${key}_type`], {
+                value: this.filters[`${key}_value`],
+                from: this.filters[`${key}_from`],
+                to: this.filters[`${key}_to`],
+                dataType: 'date'
+              })
+            );
+          }
+        });
+
+        return data;
       },
+
       toggleFilter(key) {
-        Object.keys(this.openFilter).forEach(k => this.openFilter[k] = (k === key ? !this.openFilter[k] : false));
+        for (const k in this.openFilter) this.openFilter[k] = false;
+        this.openFilter[key] = true;
       },
-      applyFilter(key) {
-        this.openFilter[key] = false;
-      },
+      closeFilter(key) { this.openFilter[key] = false; },
       resetFilter(key) {
-        if (['created_at', 'updated_at'].includes(key)) {
+        if (['date_of_birth', 'updated_at', 'created_at'].includes(key)) {
           this.filters[`${key}_type`] = '';
           this.filters[`${key}_value`] = '';
           this.filters[`${key}_from`] = '';
@@ -611,9 +698,11 @@ $items = $items ?? [];
         }
         this.openFilter[key] = false;
       },
+
       async init() {
         await this.fetchAll();
       },
+
       async fetchAll() {
         this.loading = true;
         try {
@@ -628,10 +717,12 @@ $items = $items ?? [];
           this.loading = false;
         }
       },
+
       openCreate() {
         this.resetForm();
         this.openAdd = true;
       },
+
       openEditModal(customer) {
         this.resetForm();
 
@@ -692,6 +783,7 @@ $items = $items ?? [];
         this.errors[field] = msg;
         return msg === '';
       },
+
       generatePassword() {
         const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
         let len = Math.floor(Math.random() * 5) + 8; // 8-12
@@ -707,6 +799,7 @@ $items = $items ?? [];
         this.validateField('password');
         this.validateField('password_confirm');
       },
+
       serializeForm() {
         // Chuyển đổi date_of_birth từ dd/mm/yyyy sang yyyy-mm-dd
         let dateOfBirth = (this.form.date_of_birth || '').trim();
@@ -732,6 +825,7 @@ $items = $items ?? [];
         if (!this.form.id && this.form.password) out.password = this.form.password;
         return out;
       },
+
       validateForm(isCreate = false) {
         const payload = this.serializeForm();
         if (isCreate && payload.username === '') return 'Tài khoản không được để trống';
@@ -749,6 +843,7 @@ $items = $items ?? [];
         }
         return '';
       },
+
       async submitChangePassword() {
         this.changePasswordTouched = true;
         if (!this.validateChangePassword()) return;
@@ -795,6 +890,7 @@ $items = $items ?? [];
           else this.changePasswordErrors.password_confirm = '';
         }
       },
+
       async submitCreate() {
         const error = this.validateForm(true);
         if (error) {
@@ -888,6 +984,7 @@ $items = $items ?? [];
           this.showToast('Không thể xoá khách hàng');
         }
       },
+
       resetForm() {
         this.form = {
           id: null,
@@ -916,6 +1013,7 @@ $items = $items ?? [];
           password_confirm: false
         };
       },
+
       showToast(msg, type = 'error') {
         const box = document.getElementById('toast-container');
         if (!box) return;

@@ -1,3 +1,9 @@
+<style>
+    [x-cloak] {
+        display: none !important;
+    }
+</style>
+
 <!-- Header -->
 <header class="flex items-center justify-between shadow px-6 py-3 bg-blue-50 text-slate-800">
     <!-- Bên trái: tiêu đề -->
@@ -19,7 +25,7 @@
             </button>
 
             <!-- Dropdown thông báo -->
-            <div x-show="isOpen" @click.away="isOpen = false" x-transition
+            <div x-show="isOpen" @click.away="isOpen = false" x-transition x-cloak
                 class="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border z-50 max-h-[500px] overflow-hidden flex flex-col">
 
                 <!-- Header -->
@@ -96,7 +102,7 @@
             $fullName = htmlspecialchars($user['full_name'] ?? 'Admin');
             ?>
             <button id="user-menu-btn" class="flex items-center gap-2 px-3 py-2 bg-white rounded-lg focus:outline-none
-           text-[#002975] hover:bg-[#002975] hover:text-white transition-colors border border-[#002975]">
+                text-[#002975] hover:bg-[#002975] hover:text-white transition-colors border border-[#002975]">
 
                 <!-- Avatar -->
                 <img src="<?= $avatar ?>" alt="avatar"

@@ -53,7 +53,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round"
                     d="M16 19a2 2 0 11-4 0 2 2 0 014 0zm-6 0a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
-            <span>Quản lý bán hàng</span>
+            <span>Quản lý đơn hàng</span>
         </a>
 
         <!-- Danh mục sản phẩm -->

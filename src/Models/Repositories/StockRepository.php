@@ -18,10 +18,13 @@ class StockRepository
                     u.name AS unit_name, 
                     COALESCE(s.qty, 0) AS qty, 
                     COALESCE(s.safety_stock, 0) AS safety_stock, 
-                    s.updated_at
+                    s.updated_at,
+                    s.updated_by,
+                    us.full_name AS updated_by_name
                 FROM products p
                 LEFT JOIN stocks s ON s.product_id = p.id
                 LEFT JOIN units u ON p.unit_id = u.id
+                LEFT JOIN users us ON us.id = s.updated_by
                 WHERE p.is_active = 1
                 ORDER BY p.name ASC
                 LIMIT 500";

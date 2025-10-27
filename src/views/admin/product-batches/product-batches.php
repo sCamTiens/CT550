@@ -1,6 +1,3 @@
-<!-- Flatpickr CSS -->
-<link rel="stylesheet" href="/assets/css/flatpickr.min.css">
-
 <?php
 $items = $items ?? [];
 $products = $products ?? [];

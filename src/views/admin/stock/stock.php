@@ -5,6 +5,28 @@ $items = $items ?? [];
 
 <?php require __DIR__ . '/../partials/layout-start.php'; ?>
 
+<style>
+  [x-cloak] {
+    display: none !important;
+  }
+
+  .stock-out-of-stock {
+    background-color: #fee2e2 !important;
+  }
+
+  .stock-out-of-stock:hover {
+    background-color: #fecaca !important;
+  }
+
+  .stock-low {
+    background-color: #fef3c7 !important;
+  }
+
+  .stock-low:hover {
+    background-color: #fde68a !important;
+  }
+</style>
+
 <!-- Breadcrumb + Title -->
 <nav class="text-sm text-slate-500 mb-4">
   Admin / Quản lý kho / <span class="text-slate-800 font-medium">Tồn kho</span>
@@ -13,6 +35,18 @@ $items = $items ?? [];
 <div x-data="stockPage()" x-init="init()">
   <div class="flex items-center justify-between mb-4">
     <h1 class="text-3xl font-bold text-[#002975]">Quản lý tồn kho</h1>
+
+    <!-- Thống kê cảnh báo -->
+    <div class="flex gap-4 text-sm">
+      <div class="flex items-center gap-2 px-3 py-2 bg-red-50 rounded-lg border border-red-200">
+        <i class="fa-solid fa-exclamation-circle text-red-600"></i>
+        <span class="text-gray-700">Hết hàng: <strong class="text-red-600" x-text="outOfStockCount()"></strong></span>
+      </div>
+      <div class="flex items-center gap-2 px-3 py-2 bg-yellow-50 rounded-lg border border-yellow-200">
+        <i class="fa-solid fa-exclamation-triangle text-yellow-600"></i>
+        <span class="text-gray-700">Cảnh báo: <strong class="text-yellow-600" x-text="lowStockCount()"></strong></span>
+      </div>
+    </div>
   </div>
 
   <!-- Table -->
@@ -25,18 +59,29 @@ $items = $items ?? [];
             <?= textFilterPopover('product_name', 'Tên sản phẩm') ?>
             <?= textFilterPopover('unit_name', 'Đơn vị tính') ?>
             <?= numberFilterPopover('qty', 'Tồn kho') ?>
-            <?= dateFilterPopover('updated_at', 'Cập nhật') ?>
+            <?= dateFilterPopover('updated_at', 'Thời gian cập nhật') ?>
+            <?= textFilterPopover('updated_by', 'Người cập nhật') ?>
           </tr>
         </thead>
         <tbody>
           <template x-for="s in paginated()" :key="s.product_id">
-            <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
+            <tr class="border-t hover:bg-blue-50 transition-colors duration-150" :class="{
+                  'stock-out-of-stock': s.qty === 0,
+                  'stock-low': s.qty > 0 && s.qty < (s.safety_stock || 5),
+                  'hover:bg-blue-50': s.qty >= (s.safety_stock || 5)
+                }">
               <td class="py-2 px-4 break-words whitespace-pre-line text-center" x-text="s.product_sku"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.product_name"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.unit_name"></td>
-              <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.qty"></td>
+              <td class="py-2 px-4 text-center">
+                <span :class="{
+                  'text-red-600 font-bold': s.qty === 0,
+                  'text-yellow-600 font-semibold': s.qty > 0 && s.qty < (s.safety_stock || 5)
+                }" x-text="s.qty"></span>
+              </td>
               <td class="py-2 px-4 break-words whitespace-pre-line"
                 :class="(s.updated_at || '—') === '—' ? 'text-center' : 'text-right'" x-text="s.updated_at || '—'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.updated_by_name || '—'"></td>
             </tr>
           </template>
           <tr x-show="!loading && filtered().length===0">
@@ -106,13 +151,22 @@ $items = $items ?? [];
         this.currentPage = page;
       },
 
+      // ====== Thống kê ======
+      outOfStockCount() {
+        return this.filtered().filter(s => s.qty === 0).length;
+      },
+      lowStockCount() {
+        return this.filtered().filter(s => s.qty > 0 && s.qty < (s.safety_stock || 5)).length;
+      },
+
       // ===== FILTERS =====
       openFilter: {
         product_sku: false,
         product_name: false,
         unit_name: false,
         qty: false,
-        updated_at: false
+        updated_at: false,
+        updated_by: false
       },
 
       filters: {
@@ -120,7 +174,8 @@ $items = $items ?? [];
         product_name: '',
         unit_name: '',
         qty_type: '', qty_value: '', qty_from: '', qty_to: '',
-        updated_at_type: '', updated_at_value: '', updated_at_from: '', updated_at_to: ''
+        updated_at_type: '', updated_at_value: '', updated_at_from: '', updated_at_to: '',
+        updated_by: '',
       },
 
       // -------------------------------------------
@@ -234,7 +289,7 @@ $items = $items ?? [];
         let data = this.items;
 
         // --- TEXT ---
-        ['product_sku', 'product_name', 'unit_name'].forEach(key => {
+        ['product_sku', 'product_name', 'unit_name', 'updated_by'].forEach(key => {
           if (this.filters[key]) {
             data = data.filter(o =>
               this.applyFilter(o[key], 'contains', {
@@ -269,7 +324,20 @@ $items = $items ?? [];
           );
         }
 
-        return data;
+        // SAU KHI LỌC → SẮP XẾP ƯU TIÊN TỒN KHO
+        return data.sort((a, b) => {
+          const aOut = a.qty === 0;
+          const bOut = b.qty === 0;
+          if (aOut && !bOut) return -1;
+          if (!aOut && bOut) return 1;
+
+          const aLow = a.qty > 0 && a.qty < (a.safety_stock || 5);
+          const bLow = b.qty > 0 && b.qty < (b.safety_stock || 5);
+          if (aLow && !bLow) return -1;
+          if (!aLow && bLow) return 1;
+
+          return a.qty - b.qty;
+        });
       },
 
       // ==============================

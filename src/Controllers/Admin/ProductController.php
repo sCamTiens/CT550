@@ -101,4 +101,25 @@ class ProductController extends BaseAdminController
         $text = preg_replace('/[^a-z0-9]+/i', '-', $text);
         return trim($text, '-') ?: uniqid('sp-');
     }
+
+    /** GET /admin/api/products/stock-list - Danh sách sản phẩm với tồn kho cho kiểm kê */
+    public function apiStockList()
+    {
+        $pdo = \App\Core\DB::pdo();
+        $sql = "SELECT 
+                    p.id, 
+                    p.name,
+                    COALESCE(SUM(pb.current_qty), 0) AS stock_quantity
+                FROM products p
+                LEFT JOIN product_batches pb ON pb.product_id = p.id
+                WHERE p.is_active = 1
+                GROUP BY p.id, p.name
+                ORDER BY p.name ASC";
+        $stmt = $pdo->query($sql);
+        $products = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['products' => $products], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 }
