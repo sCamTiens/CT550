@@ -17,9 +17,17 @@ $items = $items ?? [];
 <div x-data="orderPage()" x-init="init()">
     <div class="flex items-center justify-between mb-4">
         <h1 class="text-3xl font-bold text-[#002975]">Quản lý đơn hàng</h1>
-        <button
-            class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
-            @click="openCreate()">+ Thêm đơn hàng</button>
+        <div class="flex gap-2">
+            <button
+                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975] flex items-center gap-2"
+                @click="exportExcel()">
+                <i class="fa-solid fa-file-excel"></i>
+                Xuất Excel
+            </button>
+            <button
+                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
+                @click="openCreate()">+ Thêm đơn hàng</button>
+        </div>
     </div>
 
     <!-- Table -->
@@ -196,6 +204,7 @@ $items = $items ?? [];
                             'Đã hủy' => 'Đã hủy',
                         ]) ?>
                         <?= numberFilterPopover('subtotal', 'Tạm tính') ?>
+                        <?= numberFilterPopover('promotion_discount', 'CT khuyến mãi') ?>
                         <?= numberFilterPopover('discount_amount', 'Giảm giá') ?>
                         <?= numberFilterPopover('total_amount', 'Tổng tiền') ?>
                         <?= selectFilterPopover('payment_method', 'PT thanh toán', [
@@ -292,6 +301,8 @@ $items = $items ?? [];
                             <td class="px-3 py-2 break-words whitespace-pre-line text-right"
                                 x-text="formatCurrency(o.subtotal || 0)"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line text-right"
+                                x-text="formatCurrency(o.promotion_discount || 0)"></td>
+                            <td class="px-3 py-2 break-words whitespace-pre-line text-right"
                                 x-text="formatCurrency(o.discount_amount || 0)"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line text-right font-semibold"
                                 x-text="formatCurrency(o.total_amount || 0)"></td>
@@ -316,7 +327,7 @@ $items = $items ?? [];
                         </tr>
                     </template>
                     <tr x-show="!loading && filtered().length===0">
-                        <td colspan="12" class="py-12 text-center text-slate-500">
+                        <td colspan="13" class="py-12 text-center text-slate-500">
                             <div class="flex flex-col items-center justify-center">
                                 <img src="/assets/images/Null.png" alt="Trống" class="w-40 h-24 mb-3 opacity-80">
                                 <div class="text-lg text-slate-300">Trống</div>
@@ -536,7 +547,7 @@ $items = $items ?? [];
             // ===== FILTERS =====
             openFilter: {
                 id: false, code: false, customer_name: false, product_name: false, qty: false,
-                unit_price: false, status: false, subtotal: false, discount_amount: false,
+                unit_price: false, status: false, subtotal: false, promotion_discount: false, discount_amount: false,
                 total_amount: false, payment_method: false, shipping_address: false, note: false, created_at: false, created_by: false
             },
             filters: {
@@ -548,6 +559,7 @@ $items = $items ?? [];
                 unit_price_type: '', unit_price_value: '', unit_price_from: '', unit_price_to: '',
                 status: '',
                 subtotal_type: '', subtotal_value: '', subtotal_from: '', subtotal_to: '',
+                promotion_discount_type: '', promotion_discount_value: '', promotion_discount_from: '', promotion_discount_to: '',
                 discount_amount_type: '', discount_amount_value: '', discount_amount_from: '', discount_amount_to: '',
                 total_amount_type: '', total_amount_value: '', total_amount_from: '', total_amount_to: '',
                 payment_method: '',
@@ -704,7 +716,7 @@ $items = $items ?? [];
                 }
 
                 // --- Lọc các trường số thông thường ---
-                ['subtotal', 'discount_amount', 'total_amount'].forEach(key => {
+                ['subtotal', 'promotion_discount', 'discount_amount', 'total_amount'].forEach(key => {
                     if (this.filters[`${key}_type`]) {
                         data = data.filter(o =>
                             this.applyFilter(o[key], this.filters[`${key}_type`], {
@@ -766,7 +778,7 @@ $items = $items ?? [];
                     this.filters[`${key}_value`] = '';
                     this.filters[`${key}_from`] = '';
                     this.filters[`${key}_to`] = '';
-                } else if (['discount_amount', 'total_amount', 'qty', 'unit_price', 'subtotal'].includes(key)) {
+                } else if (['discount_amount', 'total_amount', 'qty', 'unit_price', 'subtotal', 'promotion_discount'].includes(key)) {
                     this.filters[`${key}_type`] = '';
                     this.filters[`${key}_value`] = '';
                     this.filters[`${key}_from`] = '';
@@ -1354,6 +1366,7 @@ $items = $items ?? [];
                 try {
                     const payload = {
                         ...this.form,
+                        promotion_discount: this.promotionDiscount,
                         items: this.orderItems.map(item => ({
                             product_id: item.product_id,
                             qty: item.quantity,
@@ -1398,6 +1411,83 @@ $items = $items ?? [];
                 } catch (e) {
                     this.showToast('Không thể xóa đơn hàng');
                 }
+            },
+
+            // ===== EXPORT EXCEL =====
+            exportExcel() {
+                // Lấy dữ liệu đã lọc
+                const data = this.filtered();
+                
+                if (data.length === 0) {
+                    this.showToast('Không có dữ liệu để xuất', 'error');
+                    return;
+                }
+
+                // Tạo tên file với ngày giờ hiện tại
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('vi-VN').replace(/\//g, '-');
+                const timeStr = now.toLocaleTimeString('vi-VN', { hour12: false }).replace(/:/g, '-');
+                const filename = `Don_hang_${dateStr}_${timeStr}.xlsx`;
+
+                // Tìm khoảng thời gian của dữ liệu
+                const dates = data.map(d => new Date(d.created_at)).filter(d => !isNaN(d));
+                const fromDate = dates.length > 0 ? new Date(Math.min(...dates)) : now;
+                const toDate = dates.length > 0 ? new Date(Math.max(...dates)) : now;
+
+                // Chuẩn bị dữ liệu để gửi lên server
+                const exportData = {
+                    orders: data.map(order => ({
+                        code: order.code || '',
+                        customer_name: order.customer_name || 'Khách vãng lai',
+                        items: (order.items || []).map(item => ({
+                            product_name: item.product_name || '',
+                            qty: item.qty || 0,
+                            unit_price: item.unit_price || 0
+                        })),
+                        status: order.status || '',
+                        subtotal: order.subtotal || 0,
+                        promotion_discount: order.promotion_discount || 0,
+                        discount_amount: order.discount_amount || 0,
+                        total_amount: order.total_amount || 0,
+                        payment_method: order.payment_method || '',
+                        shipping_address: order.shipping_address || '',
+                        note: order.note || '',
+                        created_at: order.created_at || '',
+                        created_by_name: order.created_by_name || ''
+                    })),
+                    from_date: fromDate.toLocaleDateString('vi-VN'),
+                    to_date: toDate.toLocaleDateString('vi-VN'),
+                    export_date: now.toLocaleDateString('vi-VN'),
+                    filename: filename
+                };
+
+                // Gửi request đến server để tạo file Excel
+                fetch('/admin/api/orders/export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(exportData)
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Export failed');
+                    return response.blob();
+                })
+                .then(blob => {
+                    // Tạo link download
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    this.showToast('Xuất file Excel thành công!', 'success');
+                })
+                .catch(e => {
+                    console.error('Export error:', e);
+                    this.showToast('Không thể xuất file Excel', 'error');
+                });
             },
 
             // ===== TOAST =====

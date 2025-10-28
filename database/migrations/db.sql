@@ -428,6 +428,7 @@ CREATE TABLE orders (
 
   -- Tiền
   subtotal DECIMAL(12,2) NOT NULL DEFAULT 0,             -- tổng trước giảm
+  promotion_discount DECIMAL(12,2) NOT NULL DEFAULT 0,   -- giảm giá từ chương trình khuyến mãi tự động
   discount_total DECIMAL(12,2) NOT NULL DEFAULT 0,       -- tổng giảm
   shipping_fee DECIMAL(12,2) NOT NULL DEFAULT 0,         -- phí vận chuyển
   cod_amount   DECIMAL(12,2) NOT NULL DEFAULT 0,         -- số tiền COD cần thu (0 nếu trả trước)

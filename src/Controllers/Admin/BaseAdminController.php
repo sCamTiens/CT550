@@ -8,9 +8,6 @@ class BaseAdminController extends Controller
 {
     public function __construct()
     {
-        // DEBUG
-        file_put_contents(__DIR__ . '/../../../debug.log', date('Y-m-d H:i:s') . " - BaseAdminController::__construct() called\n", FILE_APPEND);
-        
         // Nếu chưa đăng nhập admin -> về trang login
         if (empty($_SESSION['admin_user'])) {
             header('Location: /admin/login');
@@ -25,7 +22,6 @@ class BaseAdminController extends Controller
         
         // DEBUG
         $staffRole = $_SESSION['user']['staff_role'] ?? 'NONE';
-        file_put_contents(__DIR__ . '/../../../debug.log', "Path: $requestPath, Role: $staffRole\n", FILE_APPEND);
         
         // Bỏ qua kiểm tra cho các trang không cần quyền đặc biệt
         $publicAdminPaths = [
@@ -54,9 +50,7 @@ class BaseAdminController extends Controller
         
         // Nếu không phải public path thì kiểm tra quyền
         if (!$isPublicPath) {
-            file_put_contents(__DIR__ . '/../../../debug.log', "Calling RoleMiddleware::authorize()\n", FILE_APPEND);
             RoleMiddleware::authorize($requestPath);
-            file_put_contents(__DIR__ . '/../../../debug.log', "After RoleMiddleware::authorize() - SHOULD NOT SEE THIS IF DENIED\n", FILE_APPEND);
         }
     }
 }

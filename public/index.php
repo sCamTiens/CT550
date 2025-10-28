@@ -157,7 +157,6 @@ $router->group('/admin', function (Router $r): void {
     $r->put('/api/customers/{id}/password', [AdminCustomer::class, 'changePassword']);
     $r->get('/api/customers/{id}/addresses', [AdminCustomer::class, 'getAddresses']);
     $r->get('/api/customers/{id}/detail', [AdminCustomer::class, 'getDetail']);
-    $r->get('/api/orders/{id}/items', [AdminCustomer::class, 'getOrderItems']);
     $r->delete('/api/customers/{id}', [AdminCustomer::class, 'destroy']);
 
     // Expense Vouchers
@@ -184,6 +183,7 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/api/orders/{id}/items', [AdminOrder::class, 'getItems']);
     $r->get('/orders/{id}/print', [AdminOrder::class, 'print']);
     $r->post('/orders', [AdminOrder::class, 'store']);
+    $r->post('/api/orders/export', [AdminOrder::class, 'export']);
     $r->delete('/orders/{id}', [AdminOrder::class, 'destroy']);
 
     // Stock Outs (Phiếu xuất kho)

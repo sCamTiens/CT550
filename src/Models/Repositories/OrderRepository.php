@@ -18,6 +18,7 @@ class OrderRepository
         $sql = "
             SELECT o.id, o.code, o.user_id AS payer_user_id, o.order_type, o.status,
                 o.subtotal, 
+                o.promotion_discount,
                 o.discount_total AS discount_amount, 
                 o.shipping_fee, 
                 o.cod_amount, 
@@ -52,6 +53,7 @@ class OrderRepository
         $sql = "
             SELECT o.id, o.code, o.user_id AS payer_user_id, o.order_type, o.status,
                 o.subtotal, 
+                o.promotion_discount,
                 o.discount_total AS discount_amount, 
                 o.shipping_fee, 
                 o.cod_amount, 
@@ -145,12 +147,12 @@ class OrderRepository
             $sql = "
                 INSERT INTO orders
                 (code, user_id, order_type, status, payment_id, payment_method, payment_status,
-                subtotal, discount_total, shipping_fee, cod_amount, grand_total,
+                subtotal, promotion_discount, discount_total, shipping_fee, cod_amount, grand_total,
                 coupon_code, shipping_address_id, note,
                 created_by, created_at)
                 VALUES
                 (:code, :user_id, :order_type, :status, :payment_id, :payment_method, :payment_status,
-                :subtotal, :discount_total, :shipping_fee, :cod_amount, :grand_total,
+                :subtotal, :promotion_discount, :discount_total, :shipping_fee, :cod_amount, :grand_total,
                 :coupon_code, :shipping_address_id, :note,
                 :created_by, NOW())
             ";
@@ -167,6 +169,7 @@ class OrderRepository
                 ':payment_method' => $paymentMethod,
                 ':payment_status' => 'Đã thanh toán',
                 ':subtotal' => $data['subtotal'] ?? 0,
+                ':promotion_discount' => $data['promotion_discount'] ?? 0,
                 // QUAN TRỌNG: Map discount_amount từ frontend -> discount_total trong DB
                 ':discount_total' => $data['discount_amount'] ?? 0,
                 ':shipping_fee' => 0,
@@ -492,6 +495,7 @@ class OrderRepository
                     payment_method = :payment_method,
                     payment_status = :payment_status,
                     subtotal = :subtotal,
+                    promotion_discount = :promotion_discount,
                     discount_total = :discount_total,
                     shipping_fee = :shipping_fee,
                     cod_amount = :cod_amount,
@@ -512,6 +516,7 @@ class OrderRepository
                 ':payment_method' => $paymentMethod,
                 ':payment_status' => 'Đã thanh toán',
                 ':subtotal' => $data['subtotal'] ?? 0,
+                ':promotion_discount' => $data['promotion_discount'] ?? 0,
                 // QUAN TRỌNG: Map discount_amount -> discount_total
                 ':discount_total' => $data['discount_amount'] ?? 0,
                 ':shipping_fee' => 0,

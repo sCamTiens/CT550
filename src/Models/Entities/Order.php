@@ -19,6 +19,7 @@ class Order
     public $payment_method;
     public $payment_status;
     public $subtotal;
+    public $promotion_discount;
     public $discount_amount;
     public $shipping_fee;
     public $tax_amount;
