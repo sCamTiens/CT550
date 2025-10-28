@@ -305,6 +305,108 @@
       class="w-full border rounded px-3 py-2" placeholder="Mô tả sản phẩm"></textarea>
   </div>
 
+  <!-- Hình ảnh sản phẩm -->
+  <div class="md:col-span-2">
+    <label class="block text-sm text-black font-semibold mb-2">Hình ảnh sản phẩm</label>
+
+    <!-- Ảnh chính -->
+    <div class="mb-6">
+      <label class="block text-sm font-semibold text-gray-800 mb-2">
+        Ảnh chính <span class="text-red-500">*</span>
+        <span class="text-xs text-gray-500">(Hiển thị trên danh sách)</span>
+      </label>
+
+      <div class="flex flex-col sm:flex-row items-start gap-5">
+        <!-- Preview ảnh -->
+        <div
+          class="relative w-36 h-36 border-2 border-dashed rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden hover:border-[#002975] transition">
+          <template x-if="form.mainImagePreview">
+            <div class="relative w-full h-full">
+              <img :src="form.mainImagePreview" alt="Preview"
+                class="w-full h-full object-cover rounded-lg transition-transform duration-200 hover:scale-105">
+              <!-- Ảnh chính -->
+              <button type="button" @click="removeMainImage()" class="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 
+                    flex items-center justify-center shadow-md text-sm">✕
+              </button>
+            </div>
+          </template>
+
+          <template x-if="!form.mainImagePreview">
+            <div class="text-center text-gray-400">
+              <svg class="w-10 h-10 mx-auto mb-1" fill="none" stroke="currentColor" stroke-width="2"
+                viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M3 16l4-4a2 2 0 012.828 0L15 16m-2-2l3-3a2 2 0 012.828 0L21 14m-9-4h.01M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <p class="text-xs">Ảnh chính</p>
+            </div>
+          </template>
+        </div>
+
+        <!-- Upload file -->
+        <div class="flex-1 w-full">
+          <label class="block w-full text-sm text-gray-600 cursor-pointer">
+            <input type="file" @change="onMainImageChange($event)" accept="image/png,image/jpeg,image/jpg"
+              class="hidden" />
+            <div
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#002975] text-white text-sm font-medium shadow hover:bg-[#001f63] transition">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 12V4m0 8l3-3m-3 3L9 9" />
+              </svg>
+              Chọn ảnh
+            </div>
+          </label>
+          <p class="text-xs text-gray-500 mt-2">Định dạng: PNG, JPG (tối đa 2MB)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ảnh phụ -->
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-2">
+        Ảnh phụ
+        <span class="text-xs text-gray-500">(Hiển thị trong chi tiết sản phẩm, tối đa 5 ảnh)</span>
+      </label>
+
+      <div class="grid grid-cols-5 gap-3 mb-3">
+        <!-- Preview các ảnh phụ đã chọn -->
+        <template x-for="(img, idx) in form.subImages" :key="idx">
+          <div class="relative w-full h-24 border-2 border-[#002975] rounded-lg overflow-hidden">
+            <img :src="img.preview"
+              class="w-full h-full object-cover rounded-lg transition-transform duration-200 hover:scale-105">
+            <!-- Ảnh phụ -->
+            <button type="button" @click="removeSubImage(idx)" class="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 
+                  flex items-center justify-center shadow-md text-sm">✕
+            </button>
+
+            <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs text-center py-1">
+              <span x-text="'#' + (idx + 2)"></span>
+            </div>
+          </div>
+        </template>
+
+        <!-- Nút thêm ảnh phụ -->
+        <template x-if="form.subImages.length < 5">
+          <label
+            class="w-full h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-[#002975] hover:bg-gray-50">
+            <div class="text-center text-gray-400">
+              <svg class="w-6 h-6 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+              <span class="text-xs">Thêm ảnh</span>
+            </div>
+            <input type="file" @change="onSubImageChange($event)" accept="image/png,image/jpeg,image/jpg" class="hidden"
+              multiple>
+          </label>
+        </template>
+      </div>
+
+      <p class="text-xs text-gray-500">PNG, JPG (max 2MB mỗi ảnh)</p>
+    </div>
+  </div>
+
   <!-- Đang bán -->
   <div class="md:col-span-2 flex items-center gap-3">
     <input id="isActive" type="checkbox" x-model="form.is_active" class="h-4 w-4">

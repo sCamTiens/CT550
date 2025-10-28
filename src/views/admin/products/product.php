@@ -25,6 +25,7 @@ $items = $items ?? [];
         <thead>
           <tr class="bg-gray-50 text-slate-600">
             <th class="py-2 px-4 whitespace-nowrap text-center">Thao tác</th>
+            <th class="py-2 px-4 whitespace-nowrap text-center">Ảnh</th>
             <?= textFilterPopover('sku', 'SKU') ?>
             <?= textFilterPopover('barcode', 'Mã vạch') ?>
             <?= textFilterPopover('name', 'Tên') ?>
@@ -64,6 +65,12 @@ $items = $items ?? [];
                       d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 </button>
+              </td>
+              <td class="py-2 px-4 text-center">
+                <img :src="`/assets/images/products/${p.id}/1.png`" 
+                     @error="$event.target.src='/assets/images/products/default.png'"
+                     class="w-12 h-12 object-cover rounded-full border mx-auto"
+                     :alt="p.name">
               </td>
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.sku"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.barcode"></td>
@@ -115,7 +122,7 @@ $items = $items ?? [];
       class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
       x-show="openAdd" x-transition.opacity style="display:none">
       <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster"
-        @click.outside="openAdd=false">
+        @click.outside="openAdd=false" style="max-height: 90vh; overflow-y: auto;">
         <div class="px-5 py-3 border-b flex justify-center items-center relative">
           <h3 class="font-semibold text-2xl text-[#002975]">Thêm sản phẩm</h3>
           <button class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
@@ -139,7 +146,7 @@ $items = $items ?? [];
       class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
       x-show="openEdit" x-transition.opacity style="display:none">
       <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster"
-        @click.outside="openEdit=false">
+        @click.outside="openEdit=false" style="max-height: 90vh; overflow-y: auto;">
         <div class="px-5 py-3 border-b flex justify-center items-center relative">
           <h3 class="font-semibold text-2xl text-[#002975]">Sửa sản phẩm</h3>
           <button class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>
@@ -251,7 +258,10 @@ $items = $items ?? [];
         pack_size: '',
         barcode: '',
         description: '',
-        is_active: 1
+        is_active: 1,
+        mainImage: null,
+        mainImagePreview: '',
+        subImages: []
       },
 
       errors: {
@@ -512,7 +522,10 @@ $items = $items ?? [];
           cost_price: 0, cost_priceFormatted: '',
           unit_id: '', brand_id: '', category_id: '',
           pack_size: '', barcode: '', description: '',
-          is_active: 1
+          is_active: 1,
+          mainImage: null,
+          mainImagePreview: '',
+          subImages: []
         };
         this.errors = { name: '', sku: '', slug: '', sale_price: '', cost_price: '', brand_id: '', category_id: '', unit_id: '', pack_size: '', description: '' };
         this.touched = { name: false, sku: false, slug: false, sale_price: false, cost_price: false, brand_id: false, category_id: false, unit_id: false, pack_size: false, description: false };
@@ -584,6 +597,80 @@ $items = $items ?? [];
         if (Number.isNaN(val)) val = 0;
         this.form.cost_price = val;                          // giá trị gốc (dùng để lưu DB)
         this.form.cost_priceFormatted = val.toLocaleString('en-US'); // hiển thị: 100,000
+      },
+
+      // ===== IMAGE HANDLING =====
+      onMainImageChange(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Validate file
+        if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
+          alert('Chỉ chấp nhận file PNG, JPG, JPEG');
+          e.target.value = '';
+          return;
+        }
+
+        if (file.size > 2 * 1024 * 1024) { // 2MB
+          alert('Kích thước file không được vượt quá 2MB');
+          e.target.value = '';
+          return;
+        }
+
+        this.form.mainImage = file;
+
+        // Create preview
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          this.form.mainImagePreview = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+      },
+
+      removeMainImage() {
+        this.form.mainImage = null;
+        this.form.mainImagePreview = '';
+      },
+
+      onSubImageChange(e) {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        // Check if adding these files would exceed the limit
+        if (this.form.subImages.length + files.length > 5) {
+          alert('Tối đa 5 ảnh phụ');
+          e.target.value = '';
+          return;
+        }
+
+        files.forEach(file => {
+          // Validate file
+          if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
+            alert('Chỉ chấp nhận file PNG, JPG, JPEG');
+            return;
+          }
+
+          if (file.size > 2 * 1024 * 1024) { // 2MB
+            alert('Kích thước file không được vượt quá 2MB');
+            return;
+          }
+
+          // Create preview
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            this.form.subImages.push({
+              file: file,
+              preview: evt.target.result
+            });
+          };
+          reader.readAsDataURL(file);
+        });
+
+        e.target.value = '';
+      },
+
+      removeSubImage(index) {
+        this.form.subImages.splice(index, 1);
       },
 
       // ===== validate 1 field (gọi khi blur / input) =====
@@ -734,7 +821,7 @@ $items = $items ?? [];
         this.openAdd = true;
       },
 
-      openEditModal(p) {
+      async openEditModal(p) {
         this.resetForm();
 
         // Tìm id tương ứng với tên để fill lại
@@ -757,29 +844,108 @@ $items = $items ?? [];
           pack_size: p.pack_size || '',
           barcode: p.barcode || '',
           description: p.description || '',
-          is_active: p.is_active == 1 // true hoặc false
+          is_active: p.is_active == 1,
+          mainImage: null,
+          mainImagePreview: '',
+          subImages: []
         };
 
+        // Mở modal trước
         this.openEdit = true;
+
+        // Đợi modal render xong rồi mới load ảnh
+        await this.$nextTick();
+
+        // Load ảnh chính sau khi modal đã mở
+        const mainImageUrl = `/assets/images/products/${p.id}/1.png?t=${Date.now()}`;
+        try {
+          const checkImg = new Image();
+          await new Promise((resolve, reject) => {
+            checkImg.onload = () => {
+              // Set preview SAU KHI ảnh đã load xong
+              this.form.mainImagePreview = mainImageUrl;
+              console.log('Ảnh chính đã load:', mainImageUrl);
+              resolve();
+            };
+            checkImg.onerror = () => {
+              console.warn('Ảnh chính không tồn tại:', mainImageUrl);
+              reject();
+            };
+            checkImg.src = mainImageUrl;
+          });
+        } catch (e) {
+          console.log('Không tìm thấy ảnh chính');
+        }
+
+        // Load ảnh phụ
+        for (let i = 2; i <= 6; i++) {
+          try {
+            const img = new Image();
+            await new Promise((resolve, reject) => {
+              img.onload = () => {
+                this.form.subImages.push({
+                  file: null,
+                  preview: img.src,
+                  existing: true
+                });
+                resolve();
+              };
+              img.onerror = reject;
+              img.src = `/assets/images/products/${p.id}/${i}.png?t=${Date.now()}`;
+            });
+          } catch (e) {
+            // Bỏ qua nếu ảnh không tồn tại
+          }
+        }
       },
 
       // CRUD
       async submitCreate() {
         if (!this.validateForm()) return;
+
+        // Validate main image
+        if (!this.form.mainImage) {
+          this.showToast('Vui lòng chọn ảnh chính cho sản phẩm');
+          return;
+        }
+
         this.submitting = true;
         try {
           if (!this.form.barcode || !/^\d{13}$/.test(this.form.barcode)) {
             this.form.barcode = this.generateEAN13();
           }
+
+          // Step 1: Create product first
           const r = await fetch(api.create, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(this.form)
           });
           if (!r.ok) throw new Error((await r.json()).error || 'Không thể thêm sản phẩm');
-          const res = await r.json();
-          this.items.unshift(res);
+          const product = await r.json();
+
+          // Step 2: Upload images
+          const formData = new FormData();
+          formData.append('product_id', product.id);
+          formData.append('main_image', this.form.mainImage);
+
+          this.form.subImages.forEach((img, idx) => {
+            formData.append(`sub_images[]`, img.file);
+          });
+
+          const uploadRes = await fetch('/admin/api/products/upload-images', {
+            method: 'POST',
+            body: formData
+          });
+
+          if (!uploadRes.ok) {
+            console.error('Lỗi upload ảnh:', await uploadRes.text());
+            this.showToast('Sản phẩm đã tạo nhưng có lỗi khi upload ảnh', 'warning');
+          }
+
+          this.items.unshift(product);
           this.openAdd = false;
+          this.resetForm();
           this.showToast('Thêm sản phẩm thành công!', 'success');
         } catch (e) {
           this.showToast(e.message || 'Không thể thêm sản phẩm');
@@ -806,9 +972,39 @@ $items = $items ?? [];
           const res = await r.json();
           if (!r.ok) throw new Error(res.error || 'Lỗi máy chủ');
 
+          // Upload images if there are new ones
+          const hasNewMainImage = this.form.mainImage !== null;
+          const hasNewSubImages = this.form.subImages.some(img => img.file !== null);
+
+          if (hasNewMainImage || hasNewSubImages) {
+            const formData = new FormData();
+            formData.append('product_id', this.form.id);
+
+            if (hasNewMainImage) {
+              formData.append('main_image', this.form.mainImage);
+            }
+
+            this.form.subImages.forEach((img, idx) => {
+              if (img.file) {
+                formData.append(`sub_images[]`, img.file);
+              }
+            });
+
+            const uploadRes = await fetch('/admin/api/products/upload-images', {
+              method: 'POST',
+              body: formData
+            });
+
+            if (!uploadRes.ok) {
+              console.error('Lỗi upload ảnh:', await uploadRes.text());
+              this.showToast('Sản phẩm đã cập nhật nhưng có lỗi khi upload ảnh', 'warning');
+            }
+          }
+
           const i = this.items.findIndex(x => x.id == res.id);
           if (i > -1) this.items[i] = res; else this.items.unshift(res);
           this.openEdit = false;
+          this.resetForm();
           this.showToast('Cập nhật sản phẩm thành công!', 'success');
         } catch (e) {
           this.showToast(e.message || 'Không thể cập nhật sản phẩm');

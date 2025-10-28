@@ -1,40 +1,40 @@
 <!-- SIDEBAR -->
 <aside class="w-72 shrink-0 transition-all duration-200 bg-blue-50 text-slate-800" x-data="{
-    openSidebar: true,
-    groups: { catalog:false, inventory:false, expense:false, promo:false },
-    currentPath: window.location.pathname,
-    init() {
-      if (this.currentPath.includes('/admin/categories') 
-          || this.currentPath.includes('/admin/brands') 
-          || this.currentPath.includes('/admin/products') 
-          || this.currentPath.includes('/admin/suppliers') 
-          || this.currentPath.includes('/admin/units')) {
-        this.groups.catalog = true;
-      }
-      if (this.currentPath.includes('/admin/stocks') 
-          || this.currentPath.includes('/admin/purchase-orders') 
-          || this.currentPath.includes('/admin/stock-outs') 
-          || this.currentPath.includes('/admin/stocktakes') 
-          || this.currentPath.includes('/admin/product-batches')) {
-        this.groups.inventory = true;
-      }
-      if (this.currentPath.includes('/admin/receipt_vouchers') 
-          || this.currentPath.includes('/admin/expense_vouchers')) {
-        this.groups.expense = true;
-      }
-      if (this.currentPath.includes('/admin/coupons') 
-          || this.currentPath.includes('/admin/promotions')) {
-        this.groups.promo = true;
-      }
-    }
-  }" x-init="init()" :class="openSidebar ? 'translate-x-0' : '-translate-x-full'">
+        openSidebar: true,
+        groups: { catalog:false, inventory:false, expense:false, promo:false },
+        currentPath: window.location.pathname,
+        init() {
+        if (this.currentPath.includes('/admin/categories') 
+            || this.currentPath.includes('/admin/brands') 
+            || this.currentPath.includes('/admin/products') 
+            || this.currentPath.includes('/admin/suppliers') 
+            || this.currentPath.includes('/admin/units')) {
+            this.groups.catalog = true;
+        }
+        if (this.currentPath.includes('/admin/stocks') 
+            || this.currentPath.includes('/admin/purchase-orders') 
+            || this.currentPath.includes('/admin/stock-outs') 
+            || this.currentPath.includes('/admin/stocktakes') 
+            || this.currentPath.includes('/admin/product-batches')) {
+            this.groups.inventory = true;
+        }
+        if (this.currentPath.includes('/admin/receipt_vouchers') 
+            || this.currentPath.includes('/admin/expense_vouchers')) {
+            this.groups.expense = true;
+        }
+        if (this.currentPath.includes('/admin/coupons') 
+            || this.currentPath.includes('/admin/promotions')) {
+            this.groups.promo = true;
+        }
+        }
+    }" x-init="init()" :class="openSidebar ? 'translate-x-0' : '-translate-x-full'">
 
     <nav class="px-2 pb-6 text-base mt-6">
         <!-- Dashboard -->
         <a href="/admin" :class="[
-      'flex items-center gap-2 px-3 py-2 rounded',
-      currentPath === '/admin' ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white'
-    ]">
+                'flex items-center gap-2 px-3 py-2 rounded',
+                currentPath === '/admin' ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white'
+                ]">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round"
                     d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6" />
@@ -44,9 +44,9 @@
 
         <!-- Bán hàng -->
         <a href="/admin/orders" :class="[
-      'flex items-center gap-2 px-3 py-2 rounded',
-      currentPath.startsWith('/admin/orders') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white'
-    ]">
+                    'flex items-center gap-2 px-3 py-2 rounded',
+                    currentPath.startsWith('/admin/orders') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white'
+                    ]">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round"
                     d="M3 3h18l-1.68 9.39A2 2 0 0117.35 14H6.65a2 2 0 01-1.97-1.61L3 3z" />
@@ -59,14 +59,14 @@
         <!-- Danh mục sản phẩm -->
         <div class="mt-2">
             <button @click="groups.catalog=!groups.catalog" :class="[
-        'w-full flex justify-between items-center px-3 py-2 rounded',
-        (currentPath.includes('/admin/categories') 
-          || currentPath.includes('/admin/brands') 
-          || currentPath.includes('/admin/products') 
-          || currentPath.includes('/admin/suppliers') 
-          || currentPath.includes('/admin/units'))
-          ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white'
-      ]">
+                        'w-full flex justify-between items-center px-3 py-2 rounded',
+                        (currentPath.includes('/admin/categories') 
+                        || currentPath.includes('/admin/brands') 
+                        || currentPath.includes('/admin/products') 
+                        || currentPath.includes('/admin/suppliers') 
+                        || currentPath.includes('/admin/units'))
+                        ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white'
+                    ]">
                 <div class="flex items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -273,6 +273,7 @@
                     ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white'
                 ]">
                 <div class="flex items-center gap-2">
+                    <!-- Icon Ưu đãi -->
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -280,56 +281,85 @@
                     </svg>
                     <span>Ưu đãi</span>
                 </div>
-                <svg class="w-4 h-4 transition-transform" :class="groups.expense?'rotate-90':''" viewBox="0 0 20 20">
+
+                <!-- Icon mũi tên -->
+                <svg class="w-4 h-4 transition-transform" :class="groups.promo ? 'rotate-90' : ''" viewBox="0 0 20 20">
                     <path d="M6 6l4 4 4-4" fill="currentColor" />
                 </svg>
             </button>
+
+            <!-- Menu con -->
             <div class="pl-4 space-y-1 mt-1" x-show="groups.promo" x-collapse>
-                <a href="/admin/coupons"
-                    :class="['block px-3 py-2 rounded', currentPath.startsWith('/admin/coupons') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white']">Mã
-                    giảm giá</a>
-                <a href="/admin/promotions"
-                    :class="['block px-3 py-2 rounded', currentPath.startsWith('/admin/promotions') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white']">Chương
-                    trình khuyến mãi</a>
+
+                <!-- Mã giảm giá -->
+                <a href="/admin/coupons" :class="['flex items-center gap-2 px-3 py-2 rounded', 
+                        currentPath.startsWith('/admin/coupons') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white'
+                    ]">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a1 1 0 1 0 0 2v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a1 1 0 1 0 0-2V8z" />
+                    </svg>
+                    <span>Mã giảm giá</span>
+                </a>
+
+                <!-- Chương trình khuyến mãi -->
+                <a href="/admin/promotions" :class="['flex items-center gap-2 px-3 py-2 rounded',
+                        currentPath.startsWith('/admin/promotions') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white'
+                    ]">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M20 7h-1.17A3 3 0 0 0 16 4a3 3 0 0 0-2.83 2H10.83A3 3 0 0 0 8 4a3 3 0 0 0-2.83 3H4a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1ZM8 6a1 1 0 0 1 2 0v1H8Zm6 0a1 1 0 0 1 2 0v1h-2ZM5 9h6v2H5Zm8 10h-2v-8h2Zm0-10h6v2h-6Zm5 10h-3v-8h3Z" />
+                    </svg>
+                    <span>Chương trình khuyến mãi</span>
+                </a>
+
             </div>
         </div>
 
-        <!-- Nhân viên -->
-        <a href="/admin/staff"
-            :class="['flex items-center gap-2 px-3 py-2 mt-2 rounded', currentPath.startsWith('/admin/staff') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white']">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5V4H2v16h5m10 0v-4a4 4 0 00-8 0v4h8z" />
-            </svg>
-            <span>Quản lý nhân viên</span>
-        </a>
-
-        <!-- Khách hàng -->
-        <a href="/admin/customers"
-            :class="['flex items-center gap-2 px-3 py-2 rounded', currentPath.startsWith('/admin/customers') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white']">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M4 5h16a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V7a2 2 0 012-2z" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M16 11a2 2 0 11-4 0 2 2 0 014 0zM12 16h4" />
-            </svg>
-            <span>Quản lý khách hàng</span>
-        </a>
-
-        <!-- Lịch sử thao tác (Chỉ Admin có staff_role = 'Admin') -->
-        <?php
-        $showAuditLog = false;
-        if (isset($_SESSION['user']['role_id']) && $_SESSION['user']['role_id'] == 2 && isset($_SESSION['user']['staff_role'])) {
-            $showAuditLog = ($_SESSION['user']['staff_role'] === 'Admin');
-        }
-        ?>
-        <?php if ($showAuditLog): ?>
-            <a href="/admin/audit-logs"
-                :class="['flex items-center gap-2 px-3 py-2 rounded', currentPath.startsWith('/admin/audit-logs') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white']">
+        <div class="mt-2">
+            <!-- Nhân viên -->
+            <a href="/admin/staff"
+                :class="['flex items-center gap-2 px-3 py-2 mt-2 rounded', currentPath.startsWith('/admin/staff') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white']">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M17 20h5V4H2v16h5m10 0v-4a4 4 0 00-8 0v4h8z" />
                 </svg>
-                <span>Lịch sử thao tác</span>
+                <span>Quản lý nhân viên</span>
             </a>
-        <?php endif; ?>
+        </div>
+
+        <div class="mt-2">
+            <!-- Khách hàng -->
+            <a href="/admin/customers"
+                :class="['flex items-center gap-2 px-3 py-2 rounded', currentPath.startsWith('/admin/customers') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white']">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M4 5h16a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V7a2 2 0 012-2z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16 11a2 2 0 11-4 0 2 2 0 014 0zM12 16h4" />
+                </svg>
+                <span>Quản lý khách hàng</span>
+            </a>
+        </div>
+
+        <div class="mt-2">
+            <!-- Lịch sử thao tác (Chỉ Admin có staff_role = 'Admin') -->
+            <?php
+            $showAuditLog = false;
+            if (isset($_SESSION['user']['role_id']) && $_SESSION['user']['role_id'] == 2 && isset($_SESSION['user']['staff_role'])) {
+                $showAuditLog = ($_SESSION['user']['staff_role'] === 'Admin');
+            }
+            ?>
+            <?php if ($showAuditLog): ?>
+                <a href="/admin/audit-logs"
+                    :class="['flex items-center gap-2 px-3 py-2 rounded', currentPath.startsWith('/admin/audit-logs') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white']">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Lịch sử thao tác</span>
+                </a>
+            <?php endif; ?>
+        </div>
     </nav>
 </aside>

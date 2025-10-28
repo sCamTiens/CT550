@@ -92,7 +92,7 @@ CREATE TABLE user_addresses (
 -- Phân loại nhân viên theo vai trò nội bộ
 CREATE TABLE staff_profiles (
   user_id BIGINT PRIMARY KEY,
-  staff_role ENUM('Kho','Thu ngân','Hỗ trợ trực tuyến','Admin') NOT NULL, 
+  staff_role ENUM('Kho','Nhân viên bán hàng','Hỗ trợ trực tuyến','Admin') NOT NULL, 
   hired_at DATE, -- Ngày vào làm
   note VARCHAR(255),
   CONSTRAINT fk_staff_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -191,17 +191,31 @@ CREATE TABLE product_images (
 -- 3) PROMOTIONS / VOUCHERS
 -- =====================================================================
 
--- Chương trình khuyến mãi (Tự động áp dụng giảm giá khi thỏa điều kiện)
+-- Chương trình khuyến mãi (Hỗ trợ nhiều loại: giảm giá, mua kèm, tặng quà, combo)
 CREATE TABLE promotions (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(250) NOT NULL,
-  promo_type ENUM('Phần trăm','Số tiền','Mua kèm','Quà tặng') NOT NULL,  
-  value DECIMAL(12,2) NOT NULL DEFAULT 0,   -- percent hoặc amount
-  starts_at DATETIME NOT NULL, -- Ngày bắt đầu áp dụng
-  ends_at DATETIME NOT NULL, -- Ngày kết thúc áp dụng
-  min_order_value DECIMAL(12,2) DEFAULT 0, -- Giá trị đơn hàng tối thiểu để áp dụng
-  max_discount DECIMAL(12,2) DEFAULT NULL, -- Giá trị giảm tối đa
-  is_active BOOLEAN NOT NULL DEFAULT TRUE, -- Đang hoạt động
+  description TEXT,                             -- Mô tả chi tiết
+  
+  promo_type ENUM(
+    'discount',      -- Giảm giá thường (% hoặc cố định)
+    'bundle',        -- Mua kèm: mua N sản phẩm với giá bundle  
+    'gift',          -- Tặng quà: mua X → tặng Y
+    'combo'          -- Combo: mua sản phẩm A + B = giá combo
+  ) NOT NULL DEFAULT 'discount',
+  
+  -- Dùng cho promo_type = 'discount'
+  discount_type ENUM('percentage','fixed') NULL,
+  discount_value DECIMAL(12,2) NULL,
+  
+  -- Áp dụng cho (chỉ dùng cho promo_type = 'discount')
+  apply_to ENUM('all','category','product') NULL DEFAULT 'all',
+  
+  priority INT NOT NULL DEFAULT 0,              -- Độ ưu tiên
+  starts_at DATETIME NOT NULL,                  -- Ngày bắt đầu
+  ends_at DATETIME NOT NULL,                    -- Ngày kết thúc
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,      -- Trạng thái
+  
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   created_by BIGINT NULL,
@@ -271,6 +285,34 @@ CREATE TABLE promotion_gift_rules (
   CONSTRAINT fk_pgr_trigger FOREIGN KEY(trigger_product_id) REFERENCES products(id)   ON DELETE CASCADE,
   CONSTRAINT fk_pgr_gift    FOREIGN KEY(gift_product_id)   REFERENCES products(id)   ON DELETE CASCADE,
   UNIQUE KEY uniq_pgr (promotion_id, trigger_product_id, required_qty, gift_product_id)
+) ENGINE=InnoDB;
+
+-- QUY TẮC COMBO: Mua nhiều sản phẩm khác nhau với giá combo
+-- Ví dụ: Mua ổi + muối = 25k (thay vì ổi 20k + muối 8k = 28k)
+CREATE TABLE promotion_combo_rules (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  promotion_id BIGINT NOT NULL,
+  combo_price DECIMAL(12,2) NOT NULL,           -- Giá combo
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_pcr_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_pcr_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
+  CONSTRAINT fk_pcr_promo FOREIGN KEY(promotion_id) REFERENCES promotions(id) ON DELETE CASCADE,
+  CHECK (combo_price >= 0)
+) ENGINE=InnoDB;
+
+-- Chi tiết sản phẩm trong combo
+CREATE TABLE promotion_combo_items (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  combo_rule_id BIGINT NOT NULL,
+  product_id BIGINT NOT NULL,
+  required_qty INT NOT NULL DEFAULT 1,          -- Số lượng của sản phẩm này trong combo
+  CONSTRAINT fk_pci_combo FOREIGN KEY(combo_rule_id) REFERENCES promotion_combo_rules(id) ON DELETE CASCADE,
+  CONSTRAINT fk_pci_prod FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE,
+  UNIQUE KEY uniq_pci (combo_rule_id, product_id),
+  CHECK (required_qty > 0)
 ) ENGINE=InnoDB;
 
 /*----------------------------------------------------------------------

@@ -22,7 +22,7 @@
                 // Lấy thông tin filter key/field
                 const filterKey = el.getAttribute('data-filter-key');
                 const filterField = el.getAttribute('data-filter-field');
-                
+
                 // Lấy giá trị hiện tại từ Alpine.js
                 let initialValue = '';
                 const alpineEl = el.closest('[x-data]');
@@ -44,7 +44,7 @@
                         // Cập nhật giá trị vào Alpine.js filters
                         const fKey = instance.input.getAttribute('data-filter-key');
                         const fField = instance.input.getAttribute('data-filter-field');
-                        
+
                         if (fKey && fField) {
                             const aEl = instance.input.closest('[x-data]');
                             if (aEl && aEl._x_dataStack) {
@@ -118,6 +118,72 @@
         }
     });
 </script>
+
+<!-- <script>
+    // Chặn reload trang khi click vào link trong sidebar
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('aside a[href]').forEach(link => {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                const url = this.getAttribute('href');
+                history.pushState(null, '', url);
+                loadPage(url);
+            });
+        });
+
+        // Xử lý nút Back/Forward của browser
+        window.addEventListener('popstate', () => {
+            loadPage(window.location.pathname);
+        });
+    });
+
+    // Hàm load nội dung trang mới không reload toàn bộ
+    function loadPage(url) {
+        fetch(url)
+            .then(res => res.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                // Lấy nội dung trong <main id="content">
+                const newContent = doc.querySelector('#content');
+                const currentContent = document.querySelector('#content');
+                
+                if (newContent && currentContent) {
+                    currentContent.innerHTML = newContent.innerHTML;
+                    
+                    // Re-init Alpine.js cho nội dung mới
+                    if (window.Alpine) {
+                        Alpine.initTree(currentContent);
+                    }
+                    
+                    // Re-init Flatpickr nếu có
+                    if (window.__initFlatpickr) {
+                        setTimeout(() => {
+                            const flatpickrInputs = currentContent.querySelectorAll('.flatpickr');
+                            flatpickrInputs.forEach(input => {
+                                if (!input._flatpickr) {
+                                    flatpickr(input, {
+                                        dateFormat: 'd/m/Y',
+                                        locale: 'vn',
+                                        allowInput: true
+                                    });
+                                }
+                            });
+                        }, 200);
+                    }
+                    
+                    // Scroll về đầu trang
+                    window.scrollTo(0, 0);
+                }
+            })
+            .catch(err => {
+                console.error('Không thể load trang:', err);
+                // Nếu lỗi thì reload bình thường
+                window.location.href = url;
+            });
+    }
+</script> -->
 
 </body>
 

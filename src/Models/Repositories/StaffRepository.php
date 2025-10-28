@@ -13,6 +13,26 @@ class StaffRepository
     protected $userTable = 'users';
     protected $staffTable = 'staff_profiles';
 
+    /** Chuyển đổi ngày từ định dạng d/m/Y sang Y-m-d */
+    private function convertDateToMysql(?string $date): ?string
+    {
+        if (empty($date) || strtolower($date) === 'null') {
+            return null;
+        }
+        
+        // Nếu đã đúng định dạng Y-m-d hoặc Y-m-d H:i:s
+        if (preg_match('/^\d{4}-\d{2}-\d{2}/', $date)) {
+            return $date;
+        }
+        
+        // Chuyển từ d/m/Y sang Y-m-d
+        if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', $date, $matches)) {
+            return sprintf('%04d-%02d-%02d', $matches[3], $matches[2], $matches[1]);
+        }
+        
+        return null;
+    }
+
     /** Đổi mật khẩu cho nhân viên */
     public function changePassword(int|string $userId, string $newPassword): bool
     {
@@ -171,10 +191,8 @@ class StaffRepository
                      VALUES (?, ?, ?, ?)";
             $stmtStaff = DB::pdo()->prepare($sqlStaff);
 
-            $hiredAt = trim($data['hired_at'] ?? '');
-            if ($hiredAt === '' || strtolower($hiredAt) === 'null') {
-                $hiredAt = null;
-            }
+            $hiredAt = $this->convertDateToMysql($data['hired_at'] ?? null);
+            
             $stmtStaff->execute([
                 $userId,
                 $data['staff_role'] ?? 'Kho',
@@ -253,9 +271,12 @@ class StaffRepository
                      SET staff_role=?, hired_at=?, note=?
                      WHERE user_id=?";
             $stmtStaff = DB::pdo()->prepare($sqlStaff);
+            
+            $hiredAt = $this->convertDateToMysql($data['hired_at'] ?? null);
+            
             $stmtStaff->execute([
                 $data['staff_role'] ?? 'Kho',
-                $data['hired_at'] ?? null,
+                $hiredAt,
                 $data['note'] ?? null,
                 $id
             ]);

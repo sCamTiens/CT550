@@ -29,10 +29,14 @@
           width: 10%;
           /* Ví dụ 10 cột thì mỗi cột 10% */
      }
+
+     #content {
+    transition: opacity 0.3s ease-in-out;
+}
 </style>
 
 <body class="bg-gray-50 text-gray-800">
      <div class="min-h-screen flex"
           x-data="{ openSidebar: true, openAdd:false, groups: {catalog:true, inventory:false, promo:false} }">
           <?php require __DIR__ . '/sidebar.php'; ?>
-          <main class="flex-1 p-6">
+          <main class="flex-1 p-6" id="content">

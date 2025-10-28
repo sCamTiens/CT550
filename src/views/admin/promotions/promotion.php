@@ -1,3 +1,6 @@
+<!-- Flatpickr CSS -->
+<link rel="stylesheet" href="/assets/css/flatpickr.min.css">
+
 <?php
 // views/admin/promotions/promotion.php
 $items = $items ?? [];
@@ -5,91 +8,141 @@ $items = $items ?? [];
 
 <?php require __DIR__ . '/../partials/layout-start.php'; ?>
 
+<!-- Breadcrumb + Title -->
 <nav class="text-sm text-slate-500 mb-4">
-    Admin / Quản lý khuyến mãi / <span class="text-slate-800 font-medium">Chương trình khuyến mãi</span>
+    Admin / <span class="text-slate-800 font-medium">Khuyến mãi</span>
 </nav>
 
 <div x-data="promotionPage()" x-init="init()">
     <div class="flex items-center justify-between mb-4">
-        <h1 class="text-3xl font-bold text-[#002975]">Quản lý chương trình khuyến mãi</h1>
+        <h1 class="text-3xl font-bold text-[#002975]">Quản lý khuyến mãi</h1>
         <button
             class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
-            @click="openCreate()">+ Thêm chương trình</button>
+            @click="openCreate()">+ Thêm khuyến mãi</button>
     </div>
 
     <!-- Table -->
     <div class="bg-white rounded-xl shadow pb-4">
         <div style="overflow-x:auto; max-width:100%;" class="pb-40">
-            <table style="width:200%; min-width:1250px; border-collapse:collapse;">
+            <table style="width:200%; min-width:1200px; border-collapse:collapse;">
                 <thead>
                     <tr class="bg-gray-50 text-slate-600">
-                        <th class="py-2 px-4 text-center">Thao tác</th>
-                        <?= textFilterPopover('name', 'Tên chương trình') ?>
+                        <th class="py-2 px-4 whitespace-nowrap text-center">Thao tác</th>
+                        <?= textFilterPopover('name', 'Tên CT KM') ?>
                         <?= textFilterPopover('description', 'Mô tả') ?>
+                        <th class="py-2 px-4 whitespace-nowrap text-center">Loại KM</th>
                         <?= selectFilterPopover('discount_type', 'Loại giảm giá', [
                             '' => '-- Tất cả --',
                             'percentage' => 'Phần trăm',
                             'fixed' => 'Số tiền cố định'
                         ]) ?>
                         <?= numberFilterPopover('discount_value', 'Giá trị giảm') ?>
-                        <?= selectFilterPopover('apply_to', 'Áp dụng cho', [
-                            '' => '-- Tất cả --',
-                            'all' => 'Toàn bộ sản phẩm',
-                            'category' => 'Theo danh mục',
-                            'product' => 'Sản phẩm cụ thể'
-                        ]) ?>
                         <?= numberFilterPopover('priority', 'Độ ưu tiên') ?>
                         <?= dateFilterPopover('starts_at', 'Ngày bắt đầu') ?>
                         <?= dateFilterPopover('ends_at', 'Ngày kết thúc') ?>
-                        <?= selectFilterPopover('is_active', 'Trạng thái', [
+                        <?= selectFilterPopover('status', 'Trạng thái', [
                             '' => '-- Tất cả --',
-                            '1' => 'Kích hoạt',
-                            '0' => 'Vô hiệu hóa'
+                            '1' => 'Đang hoạt động',
+                            '0' => 'Tạm dừng'
                         ]) ?>
-                        <?= dateFilterPopover('created_at', 'Ngày tạo') ?>
+                        <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
                         <?= textFilterPopover('created_by', 'Người tạo') ?>
                     </tr>
                 </thead>
+
                 <tbody>
                     <template x-for="p in paginated()" :key="p.id">
                         <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
-                            <td class="py-2 px-4 text-center space-x-2">
-                                <button @click="openEdit(p)"
-                                    class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                            <td class="py-2 px-4 space-x-2 text-center">
+                                <button @click="openEditModal(p)" class="p-2 rounded hover:bg-gray-100 text-[#002975]"
                                     title="Sửa">
-                                    <i class="fa-solid fa-pen"></i>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                    </svg>
                                 </button>
-                                <button @click="remove(p.id)"
-                                    class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                                <button @click="openDetailModal(p)" class="p-2 rounded hover:bg-gray-100 text-[#002975]"
+                                    title="Xem chi tiết">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                </button>
+                                <button @click="remove(p.id)" class="p-2 rounded hover:bg-gray-100 text-[#002975]"
                                     title="Xóa">
-                                    <i class="fa-solid fa-trash"></i>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
                                 </button>
                             </td>
-                            <td class="py-2 px-4 font-semibold text-[#002975]" x-text="p.name"></td>
-                            <td class="py-2 px-4" x-text="p.description || '—'"></td>
-                            <td class="py-2 px-4"
-                                x-text="p.discount_type === 'percentage' ? 'Phần trăm' : 'Số tiền cố định'"></td>
-                            <td class="py-2 px-4 text-right"
-                                x-text="p.discount_type === 'percentage' ? (p.discount_value + '%') : formatCurrency(p.discount_value)">
+                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.name"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-center">
+                                <span x-text="(p.description || '—')"
+                                    :class="(p.description || '—') === '—' ? '' : 'text-left'"></span>
                             </td>
-                            <td class="py-2 px-4" x-text="getApplyToText(p.apply_to)"></td>
-                            <td class="py-2 px-4 text-center" x-text="p.priority || 0"></td>
-                            <td class="py-2 px-4 text-right" x-text="p.starts_at || '—'"></td>
-                            <td class="py-2 px-4 text-right" x-text="p.ends_at || '—'"></td>
-                            <td class="py-2 px-4 text-center">
-                                <span :class="p.is_active == 1 ? 'text-green-600' : 'text-red-600'"
-                                    x-text="p.is_active == 1 ? 'Kích hoạt' : 'Vô hiệu hóa'"></span>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-center">
+                                <span class="px-2 py-0.5 rounded text-xs"
+                                    :class="{
+                                        'bg-blue-100 text-blue-700': p.promo_type === 'discount',
+                                        'bg-purple-100 text-purple-700': p.promo_type === 'bundle',
+                                        'bg-green-100 text-green-700': p.promo_type === 'gift',
+                                        'bg-orange-100 text-orange-700': p.promo_type === 'combo'
+                                    }"
+                                    x-text="{
+                                        'discount': 'Giảm giá',
+                                        'bundle': 'Bundle',
+                                        'gift': 'Tặng quà',
+                                        'combo': 'Combo'
+                                    }[p.promo_type] || p.promo_type"></span>
                             </td>
-                            <td class="py-2 px-4 text-right" x-text="p.created_at || '—'"></td>
-                            <td class="py-2 px-4" x-text="p.created_by_name || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-center">
+                                <template x-if="p.promo_type === 'discount'">
+                                    <span class="px-2 py-0.5 rounded text-xs"
+                                        :class="p.discount_type === 'percentage' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'"
+                                        x-text="p.discount_type === 'percentage' ? 'Phần trăm' : 'Số tiền'"></span>
+                                </template>
+                                <template x-if="p.promo_type !== 'discount'">
+                                    <span class="text-gray-400">—</span>
+                                </template>
+                            </td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-right">
+                                <template x-if="p.promo_type === 'discount'">
+                                    <span
+                                        x-text="p.discount_type === 'percentage' ? (p.discount_value + '%') : formatCurrency(p.discount_value)"></span>
+                                </template>
+                                <template x-if="p.promo_type !== 'discount'">
+                                    <span class="text-gray-400">—</span>
+                                </template>
+                            </td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-center" x-text="p.priority"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-right"
+                                x-text="p.starts_at || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="p.ends_at || '—'">
+                            </td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-center">
+                                <span class="px-2 py-0.5 rounded text-xs"
+                                    :class="p.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+                                    x-text="p.is_active ? 'Hoạt động' : 'Tạm dừng'"></span>
+                            </td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-right"
+                                x-text="p.created_at || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-center">
+                                <span x-text="p.created_by_name || '—'"></span>
+                            </td>
                         </tr>
                     </template>
 
-                    <tr x-show="filtered().length===0">
+                    <tr x-show="!loading && filtered().length===0">
                         <td colspan="12" class="py-12 text-center text-slate-500">
                             <div class="flex flex-col items-center justify-center">
-                                <img src="/assets/images/null.png" alt="Trống" class="w-40 h-24 mb-3 opacity-80">
-                                <div class="text-lg text-slate-300">Không có dữ liệu</div>
+                                <img src="/assets/images/Null.png" alt="Trống" class="w-40 h-24 mb-3 opacity-80">
+                                <div class="text-lg text-slate-300">Trống</div>
                             </div>
                         </td>
                     </tr>
@@ -97,27 +150,245 @@ $items = $items ?? [];
             </table>
         </div>
 
-        <!-- Modal Create/Edit -->
+        <!-- MODAL: Create -->
         <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
-            x-show="openForm" x-transition.opacity style="display:none">
-            <div class="bg-white w-full max-w-5xl rounded-xl shadow max-h-[90vh] flex flex-col animate__animated animate__zoomIn animate__faster"
-                @click.outside="openForm=false">
-                <div class="px-5 py-3 border-b flex justify-center items-center relative flex-shrink-0">
-                    <h3 class="font-semibold text-2xl text-[#002975]"
-                        x-text="form.id ? 'Sửa chương trình khuyến mãi' : 'Thêm chương trình khuyến mãi'"></h3>
-                    <button class="text-slate-500 absolute right-5" @click="openForm=false">✕</button>
+            x-show="openAdd" x-transition.opacity style="display:none">
+            <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster"
+                @click.outside="openAdd=false" style="max-height: 90vh; overflow-y: auto;">
+                <div class="px-5 py-3 border-b flex justify-center items-center relative">
+                    <h3 class="font-semibold text-2xl text-[#002975]">Thêm khuyến mãi</h3>
+                    <button class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
                 </div>
-
-                <form class="flex flex-col flex-1 overflow-hidden" @submit.prevent="submit()">
-                    <div class="p-5 space-y-4 overflow-y-auto">
-                        <?php require __DIR__ . '/form.php'; ?>
+                <form class="p-5 space-y-4" @submit.prevent="submitCreate()">
+                    <?php require __DIR__ . '/form.php'; ?>
+                    <div class="pt-2 flex justify-end gap-3">
+                        <button type="button"
+                            class="px-4 py-2 rounded-md text-red-600 border border-red-600 hover:bg-red-600 hover:text-white"
+                            @click="openAdd=false">Hủy</button>
+                        <button
+                            class="px-4 py-2 rounded-md text-[#002975] hover:bg-[#002975] hover:text-white border border-[#002975]"
+                            :disabled="submitting" x-text="submitting?'Đang lưu...':'Lưu'"></button>
                     </div>
-                    <div class="px-5 py-3 border-t flex justify-end gap-3 flex-shrink-0 bg-white">
-                        <button type="button" @click="openForm=false"
-                            class="px-4 py-2 border rounded text-sm">Hủy</button>
-                        <button type="submit" class="px-4 py-2 bg-[#002975] text-white rounded text-sm"
-                            :disabled="submitting"
-                            x-text="submitting ? 'Đang lưu...' : (form.id ? 'Cập nhật' : 'Tạo')"></button>
+                </form>
+            </div>
+        </div>
+
+        <!-- MODAL: Detail -->
+        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
+            x-show="openDetail" x-transition.opacity style="display:none">
+            <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster"
+                @click.outside="openDetail=false" style="max-height: 90vh; overflow-y: auto;">
+                <div class="px-5 py-3 border-b flex justify-center items-center relative">
+                    <h3 class="font-semibold text-2xl text-[#002975]">Chi tiết khuyến mãi</h3>
+                    <button class="text-slate-500 absolute right-5" @click="openDetail=false">✕</button>
+                </div>
+                <div class="p-5 space-y-4">
+                    <!-- Thông tin cơ bản -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Tên chương trình</label>
+                            <p class="text-gray-900" x-text="form.name"></p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Loại khuyến mãi</label>
+                            <span class="px-2 py-0.5 rounded text-xs"
+                                :class="{
+                                    'bg-blue-100 text-blue-700': form.promo_type === 'discount',
+                                    'bg-purple-100 text-purple-700': form.promo_type === 'bundle',
+                                    'bg-green-100 text-green-700': form.promo_type === 'gift',
+                                    'bg-orange-100 text-orange-700': form.promo_type === 'combo'
+                                }"
+                                x-text="{
+                                    'discount': 'Giảm giá',
+                                    'bundle': 'Bundle',
+                                    'gift': 'Tặng quà',
+                                    'combo': 'Combo'
+                                }[form.promo_type]"></span>
+                        </div>
+                    </div>
+
+                    <div x-show="form.description">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
+                        <p class="text-gray-900" x-text="form.description"></p>
+                    </div>
+
+                    <!-- Chi tiết theo loại -->
+                    <div x-show="form.promo_type === 'discount'" class="border-t pt-4">
+                        <h4 class="font-semibold text-lg mb-3">Chi tiết giảm giá</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Loại giảm giá</label>
+                                <span class="px-2 py-0.5 rounded text-xs"
+                                    :class="form.discount_type === 'percentage' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'"
+                                    x-text="form.discount_type === 'percentage' ? 'Phần trăm' : 'Số tiền'"></span>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Giá trị giảm</label>
+                                <p class="text-gray-900 font-semibold"
+                                    x-text="form.discount_type === 'percentage' ? (form.discount_value + '%') : formatCurrency(form.discount_value)"></p>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Áp dụng cho</label>
+                            <p class="text-gray-900" x-text="getApplyToText(form.apply_to)"></p>
+                        </div>
+                        <div x-show="form.category_ids && form.category_ids.length > 0" class="mt-3">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Danh mục</label>
+                            <div class="flex flex-wrap gap-2">
+                                <template x-for="catId in form.category_ids" :key="catId">
+                                    <span class="px-2 py-1 bg-blue-50 text-blue-700 rounded text-sm"
+                                        x-text="categories.find(c => c.id == catId)?.name || catId"></span>
+                                </template>
+                            </div>
+                        </div>
+                        <div x-show="form.product_ids && form.product_ids.length > 0" class="mt-3">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Sản phẩm</label>
+                            <div class="flex flex-wrap gap-2">
+                                <template x-for="prodId in form.product_ids" :key="prodId">
+                                    <span class="px-2 py-1 bg-green-50 text-green-700 rounded text-sm"
+                                        x-text="products.find(p => p.id == prodId)?.name || prodId"></span>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div x-show="form.promo_type === 'bundle'" class="border-t pt-4">
+                        <h4 class="font-semibold text-lg mb-3">Chi tiết Bundle</h4>
+                        <template x-if="form.bundle_rules && form.bundle_rules.length > 0">
+                            <div>
+                                <template x-for="(rule, idx) in form.bundle_rules" :key="idx">
+                                    <div class="p-3 bg-gray-50 rounded mb-2">
+                                        <div class="flex flex-col gap-2">
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-sm text-gray-600">Sản phẩm:</span>
+                                                <strong class="text-sm" x-text="products.find(p => p.id == rule.product_id)?.name || 'Không xác định'"></strong>
+                                            </div>
+                                            <div class="flex items-center gap-4">
+                                                <span class="text-sm text-gray-700">Mua <strong class="text-blue-600" x-text="rule.buy_quantity"></strong> sản phẩm</span>
+                                                <span class="text-sm text-gray-700">→ Tặng <strong class="text-green-600" x-text="rule.free_quantity"></strong> sản phẩm</span>
+                                            </div>
+                                            <div class="text-sm text-gray-700">
+                                                Giá bundle: <strong class="text-orange-600" x-text="formatCurrency(rule.price)"></strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <template x-if="!form.bundle_rules || form.bundle_rules.length === 0">
+                            <div class="p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+                                Chưa có quy tắc Bundle nào được thiết lập
+                            </div>
+                        </template>
+                    </div>
+
+                    <div x-show="form.promo_type === 'gift'" class="border-t pt-4">
+                        <h4 class="font-semibold text-lg mb-3">Chi tiết quà tặng</h4>
+                        <template x-if="form.gift_rules && form.gift_rules.length > 0">
+                            <div>
+                                <template x-for="(rule, idx) in form.gift_rules" :key="idx">
+                                    <div class="p-3 bg-gray-50 rounded mb-2">
+                                        <div class="flex flex-col gap-2">
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-sm text-gray-600">Điều kiện:</span>
+                                                <span class="text-sm">Mua <strong class="text-blue-600" x-text="rule.trigger_qty"></strong> 
+                                                    <strong x-text="products.find(p => p.id == rule.trigger_product_id)?.name || 'Không xác định'"></strong></span>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-sm text-gray-600">Quà tặng:</span>
+                                                <span class="text-sm">Tặng <strong class="text-green-600" x-text="rule.gift_qty"></strong> 
+                                                    <strong x-text="products.find(p => p.id == rule.gift_product_id)?.name || 'Không xác định'"></strong></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <template x-if="!form.gift_rules || form.gift_rules.length === 0">
+                            <div class="p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+                                ⚠️ Chưa có quy tắc quà tặng nào được thiết lập
+                            </div>
+                        </template>
+                    </div>
+
+                    <div x-show="form.promo_type === 'combo'" class="border-t pt-4">
+                        <h4 class="font-semibold text-lg mb-3">Chi tiết Combo</h4>
+                        <div class="mb-3">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Giá combo</label>
+                            <p class="text-gray-900 font-semibold text-lg" x-text="formatCurrency(form.combo_price || 0)"></p>
+                        </div>
+                        <template x-if="form.combo_items && form.combo_items.length > 0">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Sản phẩm trong combo</label>
+                                <template x-for="(item, idx) in form.combo_items" :key="idx">
+                                    <div class="p-3 bg-gray-50 rounded mb-2">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm text-gray-700">
+                                                <strong x-text="products.find(p => p.id == item.product_id)?.name || 'Không xác định'"></strong>
+                                            </span>
+                                            <span class="text-sm text-gray-500">
+                                                Số lượng: <strong class="text-blue-600" x-text="item.qty"></strong>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <template x-if="!form.combo_items || form.combo_items.length === 0">
+                            <div class="p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+                                ⚠️ Chưa có sản phẩm nào trong combo
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Thông tin khác -->
+                    <div class="border-t pt-4 grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Độ ưu tiên</label>
+                            <p class="text-gray-900" x-text="form.priority"></p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
+                            <span class="px-2 py-0.5 rounded text-xs"
+                                :class="form.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+                                x-text="form.is_active ? 'Hoạt động' : 'Tạm dừng'"></span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Ngày bắt đầu</label>
+                            <p class="text-gray-900" x-text="form.starts_at"></p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Ngày kết thúc</label>
+                            <p class="text-gray-900" x-text="form.ends_at"></p>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 flex justify-end">
+                        <button type="button" class="px-4 py-2 rounded-md border" @click="openDetail=false">Đóng</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: Edit -->
+        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
+            x-show="openEdit" x-transition.opacity style="display:none">
+            <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster"
+                @click.outside="openEdit=false" style="max-height: 90vh; overflow-y: auto;">
+                <div class="px-5 py-3 border-b flex justify-center items-center relative">
+                    <h3 class="font-semibold text-2xl text-[#002975]">Sửa khuyến mãi</h3>
+                    <button class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>
+                </div>
+                <form class="p-5 space-y-4" @submit.prevent="submitUpdate()">
+                    <?php require __DIR__ . '/form.php'; ?>
+                    <div class="pt-2 flex justify-end gap-3">
+                        <button type="button" class="px-4 py-2 rounded-md border" @click="openEdit=false">Đóng</button>
+                        <button
+                            class="px-4 py-2 rounded-md text-[#002975] hover:bg-[#002975] hover:text-white border border-[#002975]"
+                            :disabled="submitting" x-text="submitting?'Đang lưu...':'Cập nhật'"></button>
                     </div>
                 </form>
             </div>
@@ -165,32 +436,62 @@ $items = $items ?? [];
             create: '/admin/promotions',
             update: (id) => `/admin/promotions/${id}`,
             remove: (id) => `/admin/promotions/${id}`,
-            products: '/admin/api/products',
-            categories: '/admin/api/categories'
+            categories: '/admin/api/categories',
+            products: '/admin/api/products'
         };
 
         return {
             // State
-            items: <?= json_encode($items ?? [], JSON_UNESCAPED_UNICODE) ?>,
-            products: [],
-            categories: [],
-            openForm: false,
+            loading: true,
             submitting: false,
-            form: {},
-            errors: {},
-            touched: {},
+            openAdd: false,
+            openEdit: false,
+            openDetail: false,
+            items: <?= json_encode($items, JSON_UNESCAPED_UNICODE) ?>,
+            categories: [],
+            products: [],
 
             // Pagination
             currentPage: 1,
             perPage: 20,
             perPageOptions: [5, 10, 20, 50, 100],
 
-            // Filters
+            // Form
+            form: {
+                id: null,
+                name: '',
+                description: '',
+                promo_type: 'discount',
+                discount_type: 'percentage',
+                discount_value: 0,
+                apply_to: 'all',
+                priority: 0,
+                starts_at: '',
+                ends_at: '',
+                is_active: 1,
+                category_ids: [],
+                product_ids: [],
+                bundle_rules: [],
+                gift_rules: [],
+                combo_price: 0,
+                combo_items: []
+            },
+
+            errors: {
+                name: '', discount_value: '', starts_at: '', ends_at: ''
+            },
+
+            touched: {
+                name: false, discount_value: false, starts_at: false, ends_at: false
+            },
+
+            // ===== FILTERS =====
             openFilter: {
                 name: false, description: false, discount_type: false, discount_value: false,
                 apply_to: false, priority: false, starts_at: false, ends_at: false,
-                is_active: false, created_at: false, created_by: false
+                status: false, created_at: false, created_by: false
             },
+
             filters: {
                 name: '',
                 description: '',
@@ -200,150 +501,185 @@ $items = $items ?? [];
                 priority_type: '', priority_value: '', priority_from: '', priority_to: '',
                 starts_at_type: '', starts_at_value: '', starts_at_from: '', starts_at_to: '',
                 ends_at_type: '', ends_at_value: '', ends_at_from: '', ends_at_to: '',
-                is_active: '',
+                status: '',
                 created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
-                created_by: ''
+                created_by: '',
             },
 
-            paginated() {
-                const start = (this.currentPage - 1) * this.perPage;
-                return this.filtered().slice(start, start + this.perPage);
-            },
+            // ------------------------------------------------------------------
+            // Hàm lọc tổng quát — hỗ trợ TEXT, NUMBER, DATE
+            // ------------------------------------------------------------------
+            applyFilter(val, type, { value, from, to, dataType }) {
+                if (val == null) return false;
 
-            totalPages() {
-                return Math.max(1, Math.ceil(this.filtered().length / this.perPage));
-            },
+                // ---------------- TEXT ----------------
+                if (dataType === 'text') {
+                    const hasAccent = (s) => /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(s);
+                    const normalize = (str) => String(str || '')
+                        .toLowerCase()
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '')
+                        .trim();
 
-            goToPage(page) {
-                if (page < 1) page = 1;
-                if (page > this.totalPages()) page = this.totalPages();
-                this.currentPage = page;
-            },
+                    const raw = String(val || '').toLowerCase();
+                    const str = normalize(val);
+                    const query = String(value || '').toLowerCase();
+                    const queryNoAccent = normalize(value);
 
-            // Chuẩn hóa ngày cho so sánh (loại bỏ phần giờ)
-            applyDateFilter(val, type, value, from, to) {
-                if (!type) return true;
-                const normalizeDate = (d) => {
-                    if (!d) return null;
-                    let s = String(d).trim();
-                    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
-                        const [dd, mm, yy] = s.split(/[\s\/]/);
-                        s = `${yy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+                    if (!query) return true;
+
+                    if (type === 'eq') return hasAccent(query)
+                        ? raw === query
+                        : str === queryNoAccent;
+
+                    if (type === 'contains' || type === 'like') {
+                        return hasAccent(query)
+                            ? raw.includes(query)
+                            : str.includes(queryNoAccent);
                     }
-                    if (/^\d{4}-\d{1,2}-\d{1,2}/.test(s)) {
-                        s = s.substring(0, 10);
-                    }
-                    const parsed = new Date(s);
-                    if (isNaN(parsed)) return null;
-                    return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
-                };
-                const itemDate = normalizeDate(val);
-                if (!itemDate) return false;
-                if (type === 'eq') {
-                    if (!value) return true;
-                    const compareDate = normalizeDate(value);
-                    if (!compareDate) return false;
-                    return itemDate.getTime() === compareDate.getTime();
-                }
-                if (type === 'between') {
-                    if (!from || !to) return true;
-                    const fromDate = normalizeDate(from);
-                    const toDate = normalizeDate(to);
-                    if (!fromDate || !toDate) return false;
-                    return itemDate >= fromDate && itemDate <= toDate;
-                }
-                if (type === 'lt') {
-                    if (!value) return true;
-                    const compareDate = normalizeDate(value);
-                    if (!compareDate) return false;
-                    return itemDate < compareDate;
-                }
-                if (type === 'gt') {
-                    if (!value) return true;
-                    const compareDate = normalizeDate(value);
-                    if (!compareDate) return false;
-                    return itemDate > compareDate;
-                }
-                if (type === 'lte') {
-                    if (!value) return true;
-                    const compareDate = normalizeDate(value);
-                    if (!compareDate) return false;
-                    return itemDate <= compareDate;
-                }
-                if (type === 'gte') {
-                    if (!value) return true;
-                    const compareDate = normalizeDate(value);
-                    if (!compareDate) return false;
-                    return itemDate >= compareDate;
-                }
-                return true;
-            },
 
-            applyNumberFilter(val, type, value, from, to) {
-                const num = Number(val);
-                if (isNaN(num)) return false;
-                if (!type) return true;
-                if (type === 'eq') {
-                    if (!value && value !== 0) return true;
-                    return num === Number(value);
-                }
-                if (type === 'between') {
-                    if ((!from && from !== 0) || (!to && to !== 0)) return true;
-                    return num >= Number(from) && num <= Number(to);
-                }
-                if (type === 'lt') {
-                    if (!value && value !== 0) return true;
-                    return num < Number(value);
-                }
-                if (type === 'gt') {
-                    if (!value && value !== 0) return true;
-                    return num > Number(value);
-                }
-                if (type === 'lte') {
-                    if (!value && value !== 0) return true;
-                    return num <= Number(value);
-                }
-                if (type === 'gte') {
-                    if (!value && value !== 0) return true;
-                    return num >= Number(value);
-                }
-                return true;
-            },
-
-            filtered() {
-                const fn = (v) => (v ?? '').toString().toLowerCase();
-                const f = this.filters;
-                return this.items.filter(p => {
-                    if (f.name && !fn(p.name).includes(fn(f.name))) return false;
-                    if (f.description && !fn(p.description).includes(fn(f.description))) return false;
-                    if (f.discount_type && !fn(p.discount_type).includes(fn(f.discount_type))) return false;
-                    if (f.apply_to && !fn(p.apply_to).includes(fn(f.apply_to))) return false;
-                    if (f.is_active !== '' && f.is_active !== undefined && String(p.is_active) !== String(f.is_active)) return false;
-                    if (f.created_by && !fn(p.created_by_name || '').includes(fn(f.created_by))) return false;
-                    if (!this.applyNumberFilter(p.discount_value, f.discount_value_type, f.discount_value_value, f.discount_value_from, f.discount_value_to)) return false;
-                    if (!this.applyNumberFilter(p.priority, f.priority_type, f.priority_value, f.priority_from, f.priority_to)) return false;
-                    if (!this.applyDateFilter(p.starts_at, f.starts_at_type, f.starts_at_value, f.starts_at_from, f.starts_at_to)) return false;
-                    if (!this.applyDateFilter(p.ends_at, f.ends_at_type, f.ends_at_value, f.ends_at_from, f.ends_at_to)) return false;
-                    if (!this.applyDateFilter(p.created_at, f.created_at_type, f.created_at_value, f.created_at_from, f.created_at_to)) return false;
                     return true;
+                }
+
+                // ---------------- NUMBER ----------------
+                if (dataType === 'number') {
+                    const parseNum = (v) => {
+                        if (v === '' || v === null || v === undefined) return null;
+                        const s = String(v).replace(/[^\d.-]/g, '');
+                        const n = Number(s);
+                        return isNaN(n) ? null : n;
+                    };
+
+                    const num = parseNum(val);
+                    const v = parseNum(value);
+                    const f = parseNum(from);
+                    const t = parseNum(to);
+
+                    if (num === null) return false;
+                    if (!type) return true;
+
+                    if (type === 'eq') return v === null ? true : num === v;
+                    if (type === 'lt') return v === null ? true : num < v;
+                    if (type === 'gt') return v === null ? true : num > v;
+                    if (type === 'lte') return v === null ? true : num <= v;
+                    if (type === 'gte') return v === null ? true : num >= v;
+                    if (type === 'between') return f === null || t === null ? true : num >= f && num <= t;
+
+                    if (type === 'like') {
+                        const raw = String(val).replace(/[^\d]/g, '');
+                        const query = String(value || '').replace(/[^\d]/g, '');
+                        return raw.includes(query);
+                    }
+
+                    return true;
+                }
+
+                // ---------------- DATE ----------------
+                if (dataType === 'date') {
+                    if (!val) return false;
+                    const d = new Date(val);
+                    const v = value ? new Date(value) : null;
+                    const f = from ? new Date(from) : null;
+                    const t = to ? new Date(to) : null;
+
+                    if (type === 'eq') return v ? d.toDateString() === v.toDateString() : true;
+                    if (type === 'lt') return v ? d < v : true;
+                    if (type === 'gt') {
+                        if (!v) return true;
+                        return d.setHours(0, 0, 0, 0) > v.setHours(0, 0, 0, 0);
+                    }
+                    if (type === 'lte') {
+                        if (!v) return true;
+                        const nextDay = new Date(v);
+                        nextDay.setDate(v.getDate() + 1);
+                        return d < nextDay; // cộng thêm 1 ngày
+                    }
+                    if (type === 'gte') return v ? d >= v : true;
+                    if (type === 'between') return f && t ? d >= f && d <= t : true;
+
+                    return true;
+                }
+
+                return true;
+            },
+
+            // ------------------------------------------------------------------
+            // Áp dụng filter cho toàn bộ bảng
+            // ------------------------------------------------------------------
+            filtered() {
+                let data = this.items;
+
+                // --- Lọc theo text ---
+                // Bao gồm các trường hiển thị tên như brand_name, category_name, created_by_name, updated_by_name
+                ['name', 'description', 'created_by'].forEach(key => {
+                    if (this.filters[key]) {
+                        data = data.filter(o =>
+                            this.applyFilter(o[key], 'contains', {
+                                value: this.filters[key],
+                                dataType: 'text'
+                            })
+                        );
+                    }
                 });
+
+                // --- Lọc theo select ---
+                ['discount_type'].forEach(key => {
+                    if (this.filters[key]) {
+                        data = data.filter(o =>
+                            this.applyFilter(o[key], 'eq', {
+                                value: this.filters[key],
+                                dataType: 'text'
+                            })
+                        );
+                    }
+                });
+
+                // --- Lọc theo số ---
+                ['discount_value', 'priority'].forEach(key => {
+                    if (this.filters[`${key}_type`]) {
+                        data = data.filter(o =>
+                            this.applyFilter(o[key], this.filters[`${key}_type`], {
+                                value: this.filters[`${key}_value`],
+                                from: this.filters[`${key}_from`],
+                                to: this.filters[`${key}_to`],
+                                dataType: 'number'
+                            })
+                        );
+                    }
+                });
+
+                // --- Lọc theo ngày ---
+                ['starts_at', 'ends_at', 'created_at'].forEach(key => {
+                    if (this.filters[`${key}_type`]) {
+                        data = data.filter(o =>
+                            this.applyFilter(o[key], this.filters[`${key}_type`], {
+                                value: this.filters[`${key}_value`],
+                                from: this.filters[`${key}_from`],
+                                to: this.filters[`${key}_to`],
+                                dataType: 'date'
+                            })
+                        );
+                    }
+                });
+
+                return data;
             },
 
+            // ------------------------------------------------------------------
+            // Mở / đóng / reset filter
+            // ------------------------------------------------------------------
             toggleFilter(key) {
-                Object.keys(this.openFilter).forEach(k => this.openFilter[k] = (k === key ? !this.openFilter[k] : false));
+                for (const k in this.openFilter) this.openFilter[k] = false;
+                this.openFilter[key] = true;
             },
-
-            applyFilter(key) {
-                this.openFilter[key] = false;
-            },
-
+            closeFilter(key) { this.openFilter[key] = false; },
             resetFilter(key) {
                 if (['starts_at', 'ends_at', 'created_at'].includes(key)) {
                     this.filters[`${key}_type`] = '';
                     this.filters[`${key}_value`] = '';
                     this.filters[`${key}_from`] = '';
                     this.filters[`${key}_to`] = '';
-                } else if (['discount_value', 'priority'].includes(key)) {
+                } else if (['discount_value_type', 'priority'].includes(key)) {
                     this.filters[`${key}_type`] = '';
                     this.filters[`${key}_value`] = '';
                     this.filters[`${key}_from`] = '';
@@ -354,179 +690,516 @@ $items = $items ?? [];
                 this.openFilter[key] = false;
             },
 
+            // Lifecycle
             async init() {
+                await this.fetchOptions();
                 await this.fetchAll();
             },
 
+            // API calls
             async fetchAll() {
                 try {
-                    const r = await fetch(api.list);
-                    if (r.ok) {
-                        const data = await r.json();
-                        this.items = data.items || [];
-                    }
-                } catch (e) {
-                    console.error(e);
+                    this.loading = true;
+                    const res = await fetch(api.list);
+                    if (!res.ok) throw new Error('Không thể tải danh sách');
+                    const data = await res.json();
+                    
+                    // API trả về { items: [...] } nên cần lấy items
+                    this.items = data.items || data || [];
+                    
+                    console.log('Loaded promotions:', this.items);
+                } catch (err) {
+                    this.showToast(err.message, 'error');
+                } finally {
+                    this.loading = false;
                 }
             },
 
-            async fetchProducts() {
+            async fetchOptions() {
                 try {
-                    const r = await fetch(api.products);
-                    if (r.ok) {
-                        const data = await r.json();
-                        this.products = data.items || [];
+                    const [catRes, prodRes] = await Promise.all([
+                        fetch(api.categories),
+                        fetch(api.products)
+                    ]);
+                    if (catRes.ok) {
+                        const catData = await catRes.json();
+                        this.categories = catData.items || catData || [];
                     }
-                } catch (e) {
-                    console.error(e);
-                }
-            },
-
-            async fetchCategories() {
-                try {
-                    const r = await fetch(api.categories);
-                    if (r.ok) {
-                        const data = await r.json();
-                        this.categories = data.items || [];
+                    if (prodRes.ok) {
+                        const prodData = await prodRes.json();
+                        this.products = prodData.items || prodData || [];
                     }
-                } catch (e) {
-                    console.error(e);
+                } catch (err) {
+                    console.error('Lỗi load options:', err);
                 }
             },
 
-            async openCreate() {
-                this.form = {
-                    id: null,
-                    name: '',
-                    description: '',
-                    discount_type: 'percentage',
-                    discount_value: 0,
-                    apply_to: 'all',
-                    category_ids: [],
-                    product_ids: [],
-                    priority: 0,
-                    starts_at: '',
-                    ends_at: '',
-                    is_active: 1
-                };
-                this.errors = {};
-                this.touched = {};
-                await Promise.all([this.fetchProducts(), this.fetchCategories()]);
-                this.openForm = true;
+            // CRUD operations
+            openCreate() {
+                this.resetForm();
+                this.openAdd = true;
             },
 
-            async openEdit(p) {
-                this.form = {
-                    ...p,
-                    category_ids: p.category_ids || [],
-                    product_ids: p.product_ids || []
-                };
-                this.errors = {};
-                this.touched = {};
-                await Promise.all([this.fetchProducts(), this.fetchCategories()]);
-                this.openForm = true;
+            openDetailModal(item) {
+                console.log('=== OPEN DETAIL MODAL ===');
+                console.log('Item data:', item);
+                
+                this.resetForm();
+                this.form.id = item.id;
+                this.form.name = item.name || '';
+                this.form.description = item.description || '';
+                this.form.promo_type = item.promo_type || 'discount';
+                this.form.discount_type = item.discount_type || 'percentage';
+                this.form.discount_value = item.discount_value || 0;
+                this.form.apply_to = item.apply_to || 'all';
+                this.form.priority = item.priority || 0;
+
+                // Convert ngày từ YYYY-MM-DD HH:MM:SS sang DD/MM/YYYY HH:MM
+                this.form.starts_at = this.convertDateToDisplay(item.starts_at);
+                this.form.ends_at = this.convertDateToDisplay(item.ends_at);
+
+                this.form.is_active = item.is_active ? 1 : 0;
+                this.form.category_ids = item.category_ids || [];
+                this.form.product_ids = item.product_ids || [];
+                
+                // Load data theo loại khuyến mãi
+                this.form.bundle_rules = item.bundle_rules || [];
+                this.form.gift_rules = item.gift_rules || [];
+                this.form.combo_price = item.combo_price || 0;
+                this.form.combo_items = item.combo_items || [];
+                
+                console.log('Form after load:', this.form);
+                this.openDetail = true;
             },
 
-            validateField(field) {
-                this.errors[field] = '';
-
-                if (field === 'name' && (!this.form.name || this.form.name.trim() === '')) {
-                    this.errors.name = 'Vui lòng nhập tên chương trình';
+            openEditModal(item) {
+                this.resetForm();
+                this.form.id = item.id;
+                this.form.name = item.name || '';
+                this.form.description = item.description || '';
+                this.form.promo_type = item.promo_type || 'discount';
+                this.form.discount_type = item.discount_type || 'percentage';
+                
+                // Format discount_value theo loại
+                if (item.discount_type === 'fixed') {
+                    this.form.discount_value = new Intl.NumberFormat('en-US').format(item.discount_value || 0);
+                } else {
+                    this.form.discount_value = item.discount_value || 0;
                 }
+                
+                this.form.apply_to = item.apply_to || 'all';
+                this.form.priority = item.priority || 0;
 
-                if (field === 'discount_value') {
-                    if (this.form.discount_value === '' || this.form.discount_value === null) {
-                        this.errors.discount_value = 'Vui lòng nhập giá trị giảm';
-                    } else if (this.form.discount_value <= 0) {
-                        this.errors.discount_value = 'Giá trị giảm phải lớn hơn 0';
-                    } else if (this.form.discount_type === 'percentage' && this.form.discount_value > 100) {
-                        this.errors.discount_value = 'Phần trăm giảm không được vượt quá 100%';
-                    }
-                }
+                // Convert ngày từ YYYY-MM-DD HH:MM:SS sang DD/MM/YYYY HH:MM
+                this.form.starts_at = this.convertDateToDisplay(item.starts_at);
+                this.form.ends_at = this.convertDateToDisplay(item.ends_at);
 
-                if (field === 'starts_at' && (!this.form.starts_at || this.form.starts_at.trim() === '')) {
-                    this.errors.starts_at = 'Vui lòng chọn ngày bắt đầu';
-                }
-
-                if (field === 'ends_at' && (!this.form.ends_at || this.form.ends_at.trim() === '')) {
-                    this.errors.ends_at = 'Vui lòng chọn ngày kết thúc';
-                }
+                this.form.is_active = item.is_active ? 1 : 0;
+                this.form.category_ids = item.category_ids || [];
+                this.form.product_ids = item.product_ids || [];
+                
+                // Format bundle_rules prices
+                this.form.bundle_rules = (item.bundle_rules || []).map(rule => ({
+                    ...rule,
+                    price: new Intl.NumberFormat('en-US').format(rule.price || 0)
+                }));
+                
+                this.form.gift_rules = item.gift_rules || [];
+                
+                // Format combo_price
+                this.form.combo_price = new Intl.NumberFormat('en-US').format(item.combo_price || 0);
+                
+                this.form.combo_items = item.combo_items || [];
+                this.openEdit = true;
             },
 
-            validateAll() {
-                this.validateField('name');
-                this.validateField('discount_value');
-                this.validateField('starts_at');
-                this.validateField('ends_at');
-
-                this.touched = {
-                    name: true,
-                    discount_value: true,
-                    starts_at: true,
-                    ends_at: true
-                };
-
-                return !Object.values(this.errors).some(err => err !== '');
-            },
-
-            async submit() {
-                if (!this.validateAll()) {
-                    this.showToast('Vui lòng kiểm tra lại thông tin!', 'error');
-                    return;
-                }
-
-                if (this.submitting) return;
-                this.submitting = true;
+            async submitCreate() {
+                if (!this.validateForm()) return;
 
                 try {
-                    const method = this.form.id ? 'PUT' : 'POST';
-                    const url = this.form.id ? api.update(this.form.id) : api.create;
-                    const r = await fetch(url, {
-                        method,
+                    this.submitting = true;
+
+                    // Convert discount_value về số (xóa dấu phẩy) - chỉ khi promo_type là discount
+                    const discountValue = this.form.promo_type === 'discount'
+                        ? (typeof this.form.discount_value === 'string'
+                            ? parseFloat(this.form.discount_value.replace(/,/g, ''))
+                            : this.form.discount_value)
+                        : 0;
+
+                    // Helper function để convert giá trị có dấu phẩy thành số
+                    const parseFormattedNumber = (val) => {
+                        if (typeof val === 'string') {
+                            return parseFloat(val.replace(/,/g, '')) || 0;
+                        }
+                        return parseFloat(val) || 0;
+                    };
+
+                    // Convert bundle_rules prices
+                    const bundleRules = (this.form.bundle_rules || []).map(rule => ({
+                        ...rule,
+                        price: parseFormattedNumber(rule.price)
+                    }));
+
+                    // Convert combo_price
+                    const comboPrice = parseFormattedNumber(this.form.combo_price);
+
+                    // Convert ngày từ DD/MM/YYYY sang YYYY-MM-DD HH:MM:SS
+                    const formData = {
+                        ...this.form,
+                        discount_value: discountValue,
+                        starts_at: this.convertDateToSQL(this.form.starts_at),
+                        ends_at: this.convertDateToSQL(this.form.ends_at),
+                        bundle_rules: bundleRules,
+                        gift_rules: this.form.gift_rules || [],
+                        combo_price: comboPrice,
+                        combo_items: this.form.combo_items || []
+                    };
+
+                    console.log('=== SUBMIT CREATE DEBUG ===');
+                    console.log('Form data:', formData);
+
+                    const res = await fetch(api.create, {
+                        method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(this.form)
+                        body: JSON.stringify(formData)
                     });
 
-                    if (!r.ok) throw new Error('Lỗi server');
+                    console.log('Response status:', res.status);
+                    const responseData = await res.json();
+                    console.log('Response data:', responseData);
 
+                    if (!res.ok) {
+                        const errorMsg = responseData.error || 'Không thể tạo mới';
+                        throw new Error(errorMsg);
+                    }
+
+                    this.showToast('Thêm khuyến mãi thành công!', 'success');
+                    this.openAdd = false;
                     await this.fetchAll();
-                    this.openForm = false;
-                    this.showToast('Thao tác thành công!', 'success');
-                } catch (e) {
-                    this.showToast(e.message || 'Lỗi', 'error');
+                } catch (err) {
+                    console.error('Create error:', err);
+                    this.showToast(err.message, 'error');
+                } finally {
+                    this.submitting = false;
+                }
+            },
+
+            async submitUpdate() {
+                if (!this.validateForm()) return;
+
+                try {
+                    this.submitting = true;
+
+                    // Convert discount_value về số (xóa dấu phẩy) - chỉ khi promo_type là discount
+                    const discountValue = this.form.promo_type === 'discount'
+                        ? (typeof this.form.discount_value === 'string'
+                            ? parseFloat(this.form.discount_value.replace(/,/g, ''))
+                            : this.form.discount_value)
+                        : 0;
+
+                    // Helper function để convert giá trị có dấu phẩy thành số
+                    const parseFormattedNumber = (val) => {
+                        if (typeof val === 'string') {
+                            return parseFloat(val.replace(/,/g, '')) || 0;
+                        }
+                        return parseFloat(val) || 0;
+                    };
+
+                    // Convert bundle_rules prices
+                    const bundleRules = (this.form.bundle_rules || []).map(rule => ({
+                        ...rule,
+                        price: parseFormattedNumber(rule.price)
+                    }));
+
+                    // Convert combo_price
+                    const comboPrice = parseFormattedNumber(this.form.combo_price);
+
+                    // Convert ngày từ DD/MM/YYYY HH:MM sang YYYY-MM-DD HH:MM:SS
+                    const formData = {
+                        ...this.form,
+                        discount_value: discountValue,
+                        starts_at: this.convertDateToSQL(this.form.starts_at),
+                        ends_at: this.convertDateToSQL(this.form.ends_at),
+                        bundle_rules: bundleRules,
+                        gift_rules: this.form.gift_rules || [],
+                        combo_price: comboPrice,
+                        combo_items: this.form.combo_items || []
+                    };
+
+                    console.log('=== SUBMIT UPDATE DEBUG ===');
+                    console.log('Form data:', formData);
+
+                    const res = await fetch(api.update(this.form.id), {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(formData)
+                    });
+
+                    console.log('Response status:', res.status);
+                    const responseData = await res.json();
+                    console.log('Response data:', responseData);
+
+                    if (!res.ok) {
+                        const errorMsg = responseData.error || 'Không thể cập nhật';
+                        throw new Error(errorMsg);
+                    }
+
+                    this.showToast('Cập nhật thành công!', 'success');
+                    this.openEdit = false;
+                    await this.fetchAll();
+                } catch (err) {
+                    console.error('Update error:', err);
+                    this.showToast(err.message, 'error');
                 } finally {
                     this.submitting = false;
                 }
             },
 
             async remove(id) {
-                if (!confirm('Xóa chương trình khuyến mãi này?')) return;
+                if (!confirm('Xác nhận xóa khuyến mãi này?')) return;
+
                 try {
-                    const r = await fetch(api.remove(id), { method: 'DELETE' });
-                    if (!r.ok) throw new Error('Lỗi server');
-                    await this.fetchAll();
+                    const res = await fetch(api.remove(id), { method: 'DELETE' });
+                    if (!res.ok) throw new Error('Không thể xóa');
+
                     this.showToast('Xóa thành công!', 'success');
-                } catch (e) {
-                    this.showToast(e.message || 'Lỗi', 'error');
+                    await this.fetchAll();
+                } catch (err) {
+                    this.showToast(err.message, 'error');
                 }
             },
 
-            getApplyToText(applyTo) {
+            // Validation
+            validateField(field) {
+                this.errors[field] = '';
+                const val = this.form[field];
+
+                if (field === 'name' && !val) {
+                    this.errors[field] = 'Vui lòng nhập tên chương trình';
+                }
+                
+                if (field === 'discount_value') {
+                    // Chuyển string có dấu phấy thành số
+                    const numVal = typeof val === 'string' 
+                        ? parseFloat(val.replace(/,/g, '')) 
+                        : parseFloat(val);
+                    
+                    if (!numVal || numVal <= 0) {
+                        this.errors[field] = 'Giá trị giảm phải lớn hơn 0';
+                    } else if (this.form.discount_type === 'percentage' && numVal > 100) {
+                        this.errors[field] = 'Phần trăm giảm không được vượt quá 100%';
+                    } else if (this.form.discount_type === 'fixed' && numVal > 9999999999) {
+                        this.errors[field] = 'Số tiền giảm không được vượt quá 9,999,999,999đ';
+                    }
+                }
+                
+                if (field === 'starts_at' && !val) {
+                    this.errors[field] = 'Vui lòng chọn ngày bắt đầu';
+                }
+                if (field === 'ends_at' && !val) {
+                    this.errors[field] = 'Vui lòng chọn ngày kết thúc';
+                }
+                if (field === 'ends_at' && val && this.form.starts_at && val <= this.form.starts_at) {
+                    this.errors[field] = 'Ngày kết thúc phải sau ngày bắt đầu';
+                }
+            },
+
+            validateForm() {
+                this.touched = { name: true, discount_value: true, starts_at: true, ends_at: true };
+                this.validateField('name');
+                
+                // Chỉ validate discount_value khi promo_type là 'discount'
+                if (this.form.promo_type === 'discount') {
+                    this.validateField('discount_value');
+                }
+                
+                this.validateField('starts_at');
+                this.validateField('ends_at');
+                
+                // Validate theo loại khuyến mãi
+                if (this.form.promo_type === 'bundle') {
+                    if (!this.form.bundle_rules || this.form.bundle_rules.length === 0) {
+                        this.showToast('Vui lòng thêm ít nhất 1 quy tắc Bundle', 'error');
+                        return false;
+                    }
+                    // Kiểm tra bundle rules đã đầy đủ chưa
+                    for (let rule of this.form.bundle_rules) {
+                        if (!rule.product_id || !rule.qty || !rule.price) {
+                            this.showToast('Vui lòng điền đầy đủ thông tin cho tất cả quy tắc Bundle', 'error');
+                            return false;
+                        }
+                    }
+                }
+                
+                if (this.form.promo_type === 'gift') {
+                    if (!this.form.gift_rules || this.form.gift_rules.length === 0) {
+                        this.showToast('Vui lòng thêm ít nhất 1 quy tắc Tặng quà', 'error');
+                        return false;
+                    }
+                    // Kiểm tra gift rules đã đầy đủ chưa
+                    for (let rule of this.form.gift_rules) {
+                        if (!rule.trigger_product_id || !rule.trigger_qty || !rule.gift_product_id || !rule.gift_qty) {
+                            this.showToast('Vui lòng điền đầy đủ thông tin cho tất cả quy tắc Tặng quà', 'error');
+                            return false;
+                        }
+                    }
+                }
+                
+                if (this.form.promo_type === 'combo') {
+                    if (!this.form.combo_price || this.form.combo_price === '0' || this.form.combo_price === 0) {
+                        this.showToast('Vui lòng nhập giá combo', 'error');
+                        return false;
+                    }
+                    if (!this.form.combo_items || this.form.combo_items.length === 0) {
+                        this.showToast('Vui lòng thêm ít nhất 2 sản phẩm vào combo', 'error');
+                        return false;
+                    }
+                    if (this.form.combo_items.length < 2) {
+                        this.showToast('Combo phải có ít nhất 2 sản phẩm', 'error');
+                        return false;
+                    }
+                    // Kiểm tra combo items đã đầy đủ chưa
+                    for (let item of this.form.combo_items) {
+                        if (!item.product_id || !item.qty) {
+                            this.showToast('Vui lòng điền đầy đủ thông tin cho tất cả sản phẩm trong combo', 'error');
+                            return false;
+                        }
+                    }
+                }
+                
+                return !Object.values(this.errors).some(e => e);
+            },
+
+            resetForm() {
+                this.form = {
+                    id: null,
+                    name: '',
+                    description: '',
+                    promo_type: 'discount',
+                    discount_type: 'percentage',
+                    discount_value: 0,
+                    apply_to: 'all',
+                    priority: 0,
+                    starts_at: '',
+                    ends_at: '',
+                    is_active: 1,
+                    category_ids: [],
+                    product_ids: [],
+                    bundle_rules: [],
+                    gift_rules: [],
+                    combo_price: 0,
+                    combo_items: []
+                };
+                this.errors = { name: '', discount_value: '', starts_at: '', ends_at: '' };
+                this.touched = { name: false, discount_value: false, starts_at: false, ends_at: false };
+            },
+
+            // Pagination
+            paginated() {
+                const arr = this.filtered();
+                if (!Array.isArray(arr)) return [];
+                
+                // Lấy dữ liệu theo trang
+                const start = (this.currentPage - 1) * this.perPage;
+                const end = start + this.perPage;
+                return arr.slice(start, end);
+            },
+
+
+            totalPages() {
+                return Math.ceil(this.filtered().length / this.perPage) || 1;
+            },
+
+            goToPage(p) {
+                if (p >= 1 && p <= this.totalPages()) this.currentPage = p;
+            },
+
+            // Utilities
+            formatCurrency(n) {
+                try {
+                    // Format với dấu phẩy thay vì dấu chấm
+                    const formatted = new Intl.NumberFormat('en-US').format(n || 0);
+                    return formatted + 'đ';
+                } catch {
+                    return (n || 0) + 'đ';
+                }
+            },
+            
+            // Format discount value khi nhập
+            formatDiscountValue() {
+                const val = this.form.discount_value;
+                
+                // Nếu là percentage thì không format (để nhập số thập phân)
+                if (this.form.discount_type === 'percentage') {
+                    // Chỉ cho phép số và dấu chấm
+                    this.form.discount_value = String(val).replace(/[^\d.]/g, '');
+                    return;
+                }
+                
+                // Nếu là fixed thì format với dấu phẩy
+                if (this.form.discount_type === 'fixed') {
+                    // Xóa tất cả ký tự không phải số
+                    let num = String(val).replace(/[^\d]/g, '');
+                    
+                    if (num) {
+                        // Format với dấu phẩy (en-US style)
+                        this.form.discount_value = new Intl.NumberFormat('en-US').format(parseInt(num));
+                    }
+                }
+            },
+
+            // Format number input với dấu phẩy
+            formatNumberInput(val) {
+                if (!val) return '';
+                // Xóa tất cả ký tự không phải số
+                let num = String(val).replace(/[^\d]/g, '');
+                
+                if (num) {
+                    // Format với dấu phẩy (en-US style: 500,000)
+                    return new Intl.NumberFormat('en-US').format(parseInt(num));
+                }
+                return '';
+            },
+
+            // Convert YYYY-MM-DD HH:MM:SS -> DD/MM/YYYY HH:MM
+            convertDateToDisplay(dateStr) {
+                if (!dateStr) return '';
+                const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})/);
+                if (match) {
+                    const [, year, month, day, hour, minute] = match;
+                    return `${day}/${month}/${year} ${hour}:${minute}`;
+                }
+                return dateStr;
+            },
+
+            // Convert DD/MM/YYYY HH:MM -> YYYY-MM-DD HH:MM:SS (for backend)
+            // hoặc DD/MM/YYYY -> YYYY-MM-DD 00:00:00
+            convertDateToSQL(dateStr) {
+                if (!dateStr) return '';
+                
+                // Thử match với giờ: DD/MM/YYYY HH:MM
+                let match = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/);
+                if (match) {
+                    const [, day, month, year, hour, minute] = match;
+                    return `${year}-${month}-${day} ${hour}:${minute}:00`;
+                }
+                
+                // Thử match không có giờ: DD/MM/YYYY
+                match = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                if (match) {
+                    const [, day, month, year] = match;
+                    return `${year}-${month}-${day} 00:00:00`;
+                }
+                
+                return dateStr;
+            },
+
+            getApplyToText(type) {
                 const map = {
-                    'all': 'Toàn bộ sản phẩm',
                     'category': 'Theo danh mục',
                     'product': 'Sản phẩm cụ thể'
                 };
-                return map[applyTo] || applyTo;
-            },
-
-            // --- utils ---
-            formatCurrency(n) {
-                try {
-                    return new Intl.NumberFormat('vi-VN').format(n || 0);
-                } catch {
-                    return n;
-                }
+                return map[type] || type;
             },
 
             showToast(msg, type = 'error') {
@@ -537,26 +1210,26 @@ $items = $items ?? [];
                 const toast = document.createElement('div');
                 toast.className =
                     `fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 mb-4 text-base font-semibold
-                    ${type === 'success'
+                                        ${type === 'success'
                         ? 'text-green-700 border-green-400'
                         : 'text-red-700 border-red-400'}
-                    bg-white rounded-xl shadow-lg border-2`;
+                                        bg-white rounded-xl shadow-lg border-2`;
 
                 toast.innerHTML = `
-                    <svg class="flex-shrink-0 w-6 h-6 ${type === 'success' ? 'text-green-600' : 'text-red-600'} mr-3" 
-                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    ${type === 'success'
+                                        <svg class="flex-shrink-0 w-6 h-6 ${type === 'success' ? 'text-green-600' : 'text-red-600'} mr-3" 
+                                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            ${type === 'success'
                         ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M5 13l4 4L19 7" />`
+                                                                d="M5 13l4 4L19 7" />`
                         : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`}
-                    </svg>
-                    <div class="flex-1">${msg}</div>
-                `;
+                                                                d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`}
+                                        </svg>
+                                        <div class="flex-1">${msg}</div>
+                                    `;
 
                 box.appendChild(toast);
                 setTimeout(() => toast.remove(), 3000);
-            }
+            },
         };
     }
 </script>

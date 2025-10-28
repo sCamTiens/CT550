@@ -11,7 +11,7 @@ $currentUserId = $_SESSION['user']['id'] ?? ($_SESSION['admin_user']['id'] ?? nu
 $user = $_SESSION['user'] ?? $_SESSION['admin_user'] ?? [];
 $avatarPath = !empty($user['avatar_url'])
     ? "/assets/images/avatar/" . htmlspecialchars($user['avatar_url'])
-    : "/assets/images/default.png";
+    : "/assets/images/avatar/default.png";
 ?>
 
 <style>

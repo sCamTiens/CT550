@@ -79,6 +79,7 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/products', [AdminProduct::class, 'index']);
     $r->get('/api/products', [AdminProduct::class, 'apiIndex']);
     $r->get('/api/products/stock-list', [AdminProduct::class, 'apiStockList']);
+    $r->post('/api/products/upload-images', [AdminProduct::class, 'uploadImages']);
     $r->post('/products', [AdminProduct::class, 'store']);
     $r->put('/products/{id}', [AdminProduct::class, 'update']);
     $r->delete('/products/{id}', [AdminProduct::class, 'destroy']);

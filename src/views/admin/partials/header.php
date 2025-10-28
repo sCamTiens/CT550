@@ -98,7 +98,7 @@
         <div class="relative">
             <?php
             $user = $_SESSION['admin_user'] ?? [];
-            $avatar = !empty($user['avatar_url']) ? '/assets/images/avatar/' . $user['avatar_url'] : '/assets/images/default.png';
+            $avatar = !empty($user['avatar_url']) ? '/assets/images/avatar/' . $user['avatar_url'] : '/assets/images/avatar/default.png';
             $fullName = htmlspecialchars($user['full_name'] ?? 'Admin');
             ?>
             <button id="user-menu-btn" class="flex items-center gap-2 px-3 py-2 bg-white rounded-lg focus:outline-none

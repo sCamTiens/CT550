@@ -32,7 +32,7 @@ $items = $items ?? [];
                             '' => '-- Tất cả --',
                             'Admin' => 'Quản trị viên',
                             'Kho' => 'Kho',
-                            'Thu ngân' => 'Thu ngân',
+                            'Nhân viên bán hàng' => 'Nhân viên bán hàng',
                             'Hỗ trợ trực tuyến' => 'Hỗ trợ trực tuyến'
                         ]) ?>
                         <?= textFilterPopover('email', 'Email') ?>
@@ -80,19 +80,14 @@ $items = $items ?? [];
                             </td>
                             <td class="py-2 px-4 text-center">
                                 <div class="flex flex-col items-center gap-1">
-                                    <!-- Hiển thị ảnh nếu có avatar_url -->
-                                    <img x-show="s.avatar_url" :src="'/assets/images/avatar/' + s.avatar_url"
-                                        :alt="s.full_name"
-                                        class="w-12 h-12 rounded-full object-cover border-2 border-gray-200">
-                                    <!-- Icon mặc định nếu không có avatar_url -->
-                                    <div x-show="!s.avatar_url"
-                                        class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
-                                            viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                        </svg>
-                                    </div>
+                                    <template x-if="s.avatar_url">
+                                        <img :src="'/assets/images/avatar/' + s.avatar_url" :alt="s.full_name"
+                                            class="w-12 h-12 rounded-full object-cover border-2 border-gray-200">
+                                    </template>
+                                    <template x-if="!s.avatar_url">
+                                        <img src="/assets/images/avatar/default.png" :alt="s.full_name"
+                                            class="w-12 h-12 rounded-full object-cover border-2 border-gray-200">
+                                    </template>
                                 </div>
                             </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line uppercase" x-text="s.username"></td>
@@ -101,7 +96,7 @@ $items = $items ?? [];
                                 <div class="flex justify-center items-center h-full">
                                     <span class="px-2 py-[3px] rounded text-xs font-medium" :class="{
                                         'bg-green-100 text-green-800': s.staff_role === 'Kho',
-                                        'bg-red-100 text-orange-800': s.staff_role === 'Thu ngân',
+                                        'bg-red-100 text-orange-800': s.staff_role === 'Nhân viên bán hàng',
                                         'bg-blue-100 text-blue-800': s.staff_role === 'Hỗ trợ trực tuyến',
                                         'bg-purple-100 text-purple-800': s.staff_role === 'Admin',
                                     }" x-text="getStaffRoleText(s.staff_role)"></span>
@@ -410,7 +405,7 @@ $items = $items ?? [];
                 const map = {
                     'Admin': 'Quản trị viên',
                     'Kho': 'Kho',
-                    'Thu ngân': 'Thu ngân',
+                    'Nhân viên bán hàng': 'Nhân viên bán hàng',
                     'Hỗ trợ trực tuyến': 'Hỗ trợ trực tuyến'
                 };
                 return map[staff_role] || staff_role;
@@ -702,10 +697,19 @@ $items = $items ?? [];
 
             // Khi bấm thêm nhân viên
             openCreate() {
-                this.form = {};
+                this.form = {
+                    is_active: '1', // Mặc định là Hoạt động
+                    hired_at: ''
+                };
                 this.errors = {};
                 this.touched = {};
+                this.showPassword = false;
+                this.showPasswordConfirm = false;
                 this.openAdd = true;
+                // Khởi tạo lại datepicker sau khi modal mở
+                this.$nextTick(() => {
+                    this.initDatepicker();
+                });
             },
 
             async submitCreate() {
@@ -732,8 +736,23 @@ $items = $items ?? [];
             },
 
             openEditModal(s) {
-                this.form = { ...s };
+                this.form = {
+                    ...s,
+                    is_active: String(s.is_active ?? '1')
+                };
+                // Chuyển đổi ngày từ Y-m-d sang d/m/Y cho datepicker
+                if (this.form.hired_at && this.form.hired_at !== '0000-00-00') {
+                    this.form.hired_at = this.formatDate(this.form.hired_at);
+                }
+                this.errors = {};
+                this.touched = {};
+                this.showPassword = false;
+                this.showPasswordConfirm = false;
                 this.openEdit = true;
+                // Khởi tạo lại datepicker sau khi modal mở
+                this.$nextTick(() => {
+                    this.initDatepicker();
+                });
             },
 
             async submitUpdate() {
@@ -775,6 +794,33 @@ $items = $items ?? [];
                     this.showToast('Không thể xóa nhân viên');
                 }
             },
+
+            // Khởi tạo datepicker cho modal
+            initDatepicker() {
+                if (!window.flatpickr) return;
+
+                const inputs = document.querySelectorAll('.staff-datepicker');
+                inputs.forEach(input => {
+                    // Destroy existing instance if any
+                    if (input._flatpickr) {
+                        input._flatpickr.destroy();
+                    }
+
+                    // Create new instance
+                    flatpickr(input, {
+                        dateFormat: 'd/m/Y',
+                        locale: 'vn',
+                        allowInput: true,
+                        static: true,
+                        appendTo: input.parentElement,
+                        onChange: (selectedDates, dateStr) => {
+                            // Cập nhật giá trị vào form.hired_at
+                            this.form.hired_at = dateStr;
+                        }
+                    });
+                });
+            },
+
             showToast(msg, type = 'error') {
                 const box = document.getElementById('toast-container');
                 if (!box) return;
