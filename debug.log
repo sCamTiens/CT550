@@ -1,0 +1,15 @@
+2025-10-28 13:33:22 - BaseAdminController::__construct() called
+Path: /admin/staff, Role: Nhân viên bán hàng
+Calling RoleMiddleware::authorize()
+RoleMiddleware::authorize() called for: /admin/staff
+checkAccess() - requestPath: /admin/staff
+checkAccess() - staffRole: Nhân viên bán hàng
+checkAccess() - allowedPaths: ["\/admin\/orders","\/admin\/customers","\/admin\/products","\/admin\/coupons","\/admin\/promotions"]
+  NO MATCH: '/admin/staff' vs '/admin/orders'
+  NO MATCH: '/admin/staff' vs '/admin/customers'
+  NO MATCH: '/admin/staff' vs '/admin/products'
+  NO MATCH: '/admin/staff' vs '/admin/coupons'
+  NO MATCH: '/admin/staff' vs '/admin/promotions'
+checkAccess() - NO MATCH FOUND - DENYING ACCESS
+ACCESS DENIED - Redirecting...
+Redirecting to: /admin

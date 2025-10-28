@@ -1,3 +1,9 @@
+<?php
+use App\Middlewares\RoleMiddleware;
+
+// Lấy quyền truy cập sections
+$allowedSections = RoleMiddleware::getAllowedSections();
+?>
 <!-- SIDEBAR -->
 <aside class="w-72 shrink-0 transition-all duration-200 bg-blue-50 text-slate-800" x-data="{
         openSidebar: true,
@@ -31,6 +37,7 @@
 
     <nav class="px-2 pb-6 text-base mt-6">
         <!-- Dashboard -->
+        <?php if ($allowedSections['dashboard']): ?>
         <a href="/admin" :class="[
                 'flex items-center gap-2 px-3 py-2 rounded',
                 currentPath === '/admin' ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white'
@@ -41,8 +48,10 @@
             </svg>
             <span>Dashboard</span>
         </a>
+        <?php endif; ?>
 
         <!-- Bán hàng -->
+        <?php if ($allowedSections['orders']): ?>
         <a href="/admin/orders" :class="[
                     'flex items-center gap-2 px-3 py-2 rounded',
                     currentPath.startsWith('/admin/orders') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white'
@@ -55,8 +64,11 @@
             </svg>
             <span>Quản lý đơn hàng</span>
         </a>
+        <?php endif; ?>
+
 
         <!-- Danh mục sản phẩm -->
+        <?php if ($allowedSections['catalog']): ?>
         <div class="mt-2">
             <button @click="groups.catalog=!groups.catalog" :class="[
                         'w-full flex justify-between items-center px-3 py-2 rounded',
@@ -134,8 +146,10 @@
                 </a>
             </div>
         </div>
+        <?php endif; ?>
 
         <!-- Quản lý kho -->
+        <?php if ($allowedSections['inventory']): ?>
         <div class="mt-2">
             <button @click="groups.inventory=!groups.inventory" :class="[
                     'w-full flex justify-between items-center px-3 py-2 rounded',
@@ -213,8 +227,10 @@
                 </a>
             </div>
         </div>
+        <?php endif; ?>
 
         <!-- Quản lý thu chi -->
+        <?php if ($allowedSections['expense']): ?>
         <div class="mt-2">
             <button @click="groups.expense=!groups.expense" :class="[
                     'w-full flex justify-between items-center px-3 py-2 rounded',
@@ -263,8 +279,10 @@
                 </a>
             </div>
         </div>
+        <?php endif; ?>
 
         <!-- Ưu đãi -->
+        <?php if ($allowedSections['promo']): ?>
         <div class="mt-2">
             <button @click="groups.promo=!groups.promo" :class="[
                     'w-full flex justify-between items-center px-3 py-2 rounded',
@@ -315,7 +333,9 @@
 
             </div>
         </div>
+        <?php endif; ?>
 
+        <?php if ($allowedSections['staff']): ?>
         <div class="mt-2">
             <!-- Nhân viên -->
             <a href="/admin/staff"
@@ -327,7 +347,9 @@
                 <span>Quản lý nhân viên</span>
             </a>
         </div>
+        <?php endif; ?>
 
+        <?php if ($allowedSections['customers']): ?>
         <div class="mt-2">
             <!-- Khách hàng -->
             <a href="/admin/customers"
@@ -341,25 +363,20 @@
                 <span>Quản lý khách hàng</span>
             </a>
         </div>
+        <?php endif; ?>
 
+        <?php if ($allowedSections['audit-logs']): ?>
         <div class="mt-2">
-            <!-- Lịch sử thao tác (Chỉ Admin có staff_role = 'Admin') -->
-            <?php
-            $showAuditLog = false;
-            if (isset($_SESSION['user']['role_id']) && $_SESSION['user']['role_id'] == 2 && isset($_SESSION['user']['staff_role'])) {
-                $showAuditLog = ($_SESSION['user']['staff_role'] === 'Admin');
-            }
-            ?>
-            <?php if ($showAuditLog): ?>
-                <a href="/admin/audit-logs"
-                    :class="['flex items-center gap-2 px-3 py-2 rounded', currentPath.startsWith('/admin/audit-logs') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white']">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Lịch sử thao tác</span>
-                </a>
-            <?php endif; ?>
+            <!-- Lịch sử thao tác (Chỉ Admin) -->
+            <a href="/admin/audit-logs"
+                :class="['flex items-center gap-2 px-3 py-2 rounded', currentPath.startsWith('/admin/audit-logs') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white']">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Lịch sử thao tác</span>
+            </a>
         </div>
+        <?php endif; ?>
     </nav>
 </aside>

@@ -237,7 +237,7 @@ $items = $items ?? [];
                 <div class="pt-2 flex justify-end gap-3">
                     <button type="button" class="px-4 py-2 rounded-md border"
                         @click="openChangePassword=false">Đóng</button>
-                    <button
+                    <button type="submit"
                         class="px-4 py-2 rounded-md text-[#002975] hover:bg-[#002975] hover:text-white border border-[#002975]"
                         :disabled="submitting" x-text="submitting?'Đang lưu...':'Đổi mật khẩu'"></button>
                 </div>
@@ -312,7 +312,9 @@ $items = $items ?? [];
             validateChangePassword() {
                 this.validateChangePasswordField('password');
                 this.validateChangePasswordField('password_confirm');
-                return Object.keys(this.changePasswordErrors).length === 0;
+                // Check if all error messages are empty
+                const hasError = Object.values(this.changePasswordErrors).some(msg => msg !== '');
+                return !hasError;
             },
 
             validateChangePasswordField(field) {
@@ -333,15 +335,28 @@ $items = $items ?? [];
 
             async submitChangePassword() {
                 this.changePasswordTouched = true;
-                if (!this.validateChangePassword()) return;
+                console.log('Form data:', this.formChangePassword);
+                console.log('Errors:', this.changePasswordErrors);
+                
+                if (!this.validateChangePassword()) {
+                    console.log('Validation failed');
+                    return;
+                }
+                
                 this.submitting = true;
+                console.log('Submitting to:', `/admin/api/staff/${this.formChangePassword.user_id}/password`);
+                
                 try {
                     const res = await fetch(`/admin/api/staff/${this.formChangePassword.user_id}/password`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ password: this.formChangePassword.password })
                     });
+                    
+                    console.log('Response status:', res.status);
                     const data = await res.json();
+                    console.log('Response data:', data);
+                    
                     if (res.ok && data && data.ok) {
                         this.openChangePassword = false;
                         this.showToast('Đổi mật khẩu thành công!', 'success');
@@ -349,6 +364,7 @@ $items = $items ?? [];
                         this.showToast((data && data.error) || 'Không thể đổi mật khẩu');
                     }
                 } catch (e) {
+                    console.error('Error:', e);
                     this.showToast('Không thể đổi mật khẩu');
                 } finally {
                     this.submitting = false;

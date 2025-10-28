@@ -3,14 +3,13 @@ namespace App\Controllers\Admin;
 
 use App\Models\Repositories\UnitRepository;
 
-use App\Controllers\Admin\AuthController;
-class UnitController extends \App\Core\Controller
+class UnitController extends BaseAdminController
 {
     private $unitRepo;
 
     public function __construct()
     {
-        AuthController::requirePasswordChanged();
+        parent::__construct();
         $this->unitRepo = new UnitRepository();
     }
     /** GET /admin/units (view) */

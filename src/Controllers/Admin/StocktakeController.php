@@ -1,15 +1,13 @@
 <?php
 namespace App\Controllers\Admin;
 
-use App\Core\Controller;
 use App\Models\Repositories\StocktakeRepository;
 
-use App\Controllers\Admin\AuthController;
-class StocktakeController extends Controller
+class StocktakeController extends BaseAdminController
 {
     public function __construct()
     {
-        AuthController::requirePasswordChanged();
+        parent::__construct();
     }
     /** GET /admin/stocktake (view) */
     public function index()

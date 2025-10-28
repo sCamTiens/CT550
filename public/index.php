@@ -219,7 +219,6 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/api/audit-logs/stats/action', [AdminAuditLog::class, 'apiStatsByAction']);
     $r->get('/api/audit-logs/stats/entity', [AdminAuditLog::class, 'apiStatsByEntity']);
     $r->get('/api/audit-logs/stats/staff', [AdminAuditLog::class, 'apiStatsByStaff']);
-    $r->get('/api/audit-logs/stats/customer', [AdminAuditLog::class, 'apiStatsByCustomer']);
     $r->get('/api/audit-logs/staff-list', [AdminAuditLog::class, 'apiGetStaffList']);
 
     // Notifications (Thông báo)

@@ -1,17 +1,15 @@
 <?php
 namespace App\Controllers\Admin;
 
-use App\Core\Controller;
 use App\Models\Repositories\CategoryRepository;
 
-use App\Controllers\Admin\AuthController;
-class CategoryController extends Controller
+class CategoryController extends BaseAdminController
 {
     private $categoryRepo;
 
     public function __construct()
     {
-        AuthController::requirePasswordChanged();
+        parent::__construct();
         $this->categoryRepo = new CategoryRepository();
     }
     /** GET /admin/categories (view) */

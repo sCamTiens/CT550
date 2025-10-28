@@ -68,6 +68,7 @@ $pageTitle = 'Lịch Sử Thao Tác';
                         <option value="categories">Danh mục</option>
                         <option value="brands">Thương hiệu</option>
                         <option value="suppliers">Nhà cung cấp</option>
+                        <option value="units">Đơn vị tính</option>
                         <option value="orders">Đơn hàng</option>
                         <option value="staff">Nhân viên</option>
                         <option value="customers">Khách hàng</option>
@@ -386,21 +387,6 @@ $pageTitle = 'Lịch Sử Thao Tác';
                             </div>
                         </template>
                     </div>
-
-                    <!-- Stats by Customer -->
-                    <div class="bg-orange-50 p-4 rounded-lg">
-                        <h4 class="font-bold mb-3">Theo Khách hàng</h4>
-                        <template x-if="stats.customer.length">
-                            <div class="space-y-2">
-                                <template x-for="item in stats.customer.slice(0, 10)" :key="item.actor_user_id">
-                                    <div class="flex justify-between">
-                                        <span class="truncate" x-text="item.full_name"></span>
-                                        <span class="font-bold" x-text="item.total_actions"></span>
-                                    </div>
-                                </template>
-                            </div>
-                        </template>
-                    </div>
                 </div>
             </div>
         </div>
@@ -430,7 +416,6 @@ $pageTitle = 'Lịch Sử Thao Tác';
                 byAction: [],
                 byEntity: [],
                 staff: [],
-                customer: [],
             },
 
             init() {
@@ -560,17 +545,15 @@ $pageTitle = 'Lịch Sử Thao Tác';
                     if (this.filters.from_date) params.append('from_date', this.filters.from_date);
                     if (this.filters.to_date) params.append('to_date', this.filters.to_date);
 
-                    const [resAction, resEntity, resStaff, resCustomer] = await Promise.all([
+                    const [resAction, resEntity, resStaff] = await Promise.all([
                         fetch(`/admin/api/audit-logs/stats/action?${params}`),
                         fetch(`/admin/api/audit-logs/stats/entity?${params}`),
                         fetch(`/admin/api/audit-logs/stats/staff?${params}`),
-                        fetch(`/admin/api/audit-logs/stats/customer?${params}`),
                     ]);
 
                     this.stats.byAction = (await resAction.json()).stats || [];
                     this.stats.byEntity = (await resEntity.json()).stats || [];
                     this.stats.staff = (await resStaff.json()).stats || [];
-                    this.stats.customer = (await resCustomer.json()).stats || [];
 
                     console.log('Stats loaded:', this.stats);
                 } catch (err) {
@@ -654,6 +637,7 @@ $pageTitle = 'Lịch Sử Thao Tác';
                     'categories': 'Danh mục',
                     'brands': 'Thương hiệu',
                     'suppliers': 'Nhà cung cấp',
+                    'units': 'Đơn vị tính',
                     'orders': 'Đơn hàng',
                     'staff': 'Nhân viên',
                     'customers': 'Khách hàng',

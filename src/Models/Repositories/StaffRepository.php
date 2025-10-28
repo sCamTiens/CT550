@@ -36,10 +36,10 @@ class StaffRepository
     /** Đổi mật khẩu cho nhân viên */
     public function changePassword(int|string $userId, string $newPassword): bool
     {
-    $hash = password_hash($newPassword, PASSWORD_BCRYPT);
-    $sql = "UPDATE {$this->userTable} SET password_hash = ? WHERE id = ?";
-    $stmt = DB::pdo()->prepare($sql);
-    return $stmt->execute([$hash, $userId]);
+        $hash = password_hash($newPassword, PASSWORD_BCRYPT);
+        $sql = "UPDATE {$this->userTable} SET password_hash = ? WHERE id = ?";
+        $stmt = DB::pdo()->prepare($sql);
+        return $stmt->execute([$hash, $userId]);
     }
 
     /** Lấy toàn bộ danh sách nhân viên (chỉ nhân viên chưa bị xóa) */

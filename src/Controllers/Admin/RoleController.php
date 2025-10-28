@@ -1,16 +1,14 @@
 <?php
 namespace App\Controllers\Admin;
 
-use App\Core\Controller;
 use App\Models\Repositories\RoleRepository;
 
-use App\Controllers\Admin\AuthController;
-class RoleController extends Controller
+class RoleController extends BaseAdminController
 {
     protected $repo;
     public function __construct()
     {
-        AuthController::requirePasswordChanged();
+        parent::__construct();
         $this->repo = new RoleRepository();
     }
 

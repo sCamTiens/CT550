@@ -1,17 +1,15 @@
 <?php
 namespace App\Controllers\Admin;
 
-use App\Core\Controller;
 use App\Models\Repositories\BrandRepository;
 
-use App\Controllers\Admin\AuthController;
-class BrandController extends Controller
+class BrandController extends BaseAdminController
 {
     private $brandRepo;
 
     public function __construct()
     {
-        AuthController::requirePasswordChanged();
+        parent::__construct(); // Gọi constructor của BaseAdminController
         $this->brandRepo = new BrandRepository();
     }
     /** GET /admin/brands (view) */

@@ -1,16 +1,15 @@
 <?php
 namespace App\Controllers\Admin;
 
-use App\Core\Controller;
 use App\Models\Repositories\StaffRepository;
 use App\Models\Repositories\RoleRepository;
-use App\Controllers\Admin\AuthController;
-class StaffController extends Controller
+
+class StaffController extends BaseAdminController
 {
     protected $repo;
     public function __construct()
     {
-        AuthController::requirePasswordChanged();
+        parent::__construct();
         $this->repo = new StaffRepository();
     }
 
@@ -28,12 +27,12 @@ class StaffController extends Controller
         try {
             $ok = $this->repo->changePassword($id, $password);
             if ($ok) {
-                $this->json(['ok' => true]);
+                return $this->json(['ok' => true]);
             } else {
-                $this->json(['error' => 'Không thể đổi mật khẩu'], 500);
+                return $this->json(['error' => 'Không thể đổi mật khẩu'], 500);
             }
         } catch (\Throwable $e) {
-            $this->json(['error' => 'Lỗi khi đổi mật khẩu', 'detail' => $e->getMessage()], 500);
+            return $this->json(['error' => 'Lỗi khi đổi mật khẩu', 'detail' => $e->getMessage()], 500);
         }
     }
 

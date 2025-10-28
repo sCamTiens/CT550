@@ -1,17 +1,15 @@
 <?php
 namespace App\Controllers\Admin;
 
-use App\Core\Controller;
 use App\Models\Repositories\CustomerRepository;
-use App\Controllers\Admin\AuthController;
 
-class CustomerController extends Controller
+class CustomerController extends BaseAdminController
 {
     private CustomerRepository $repo;
 
     public function __construct()
     {
-        AuthController::requirePasswordChanged();
+        parent::__construct();
         $this->repo = new CustomerRepository();
     }
 

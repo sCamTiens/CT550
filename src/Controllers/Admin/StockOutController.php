@@ -2,7 +2,6 @@
 namespace App\Controllers\Admin;
 
 use App\Models\Repositories\StockOutRepository;
-use App\Controllers\Admin\AuthController;
 
 class StockOutController extends BaseAdminController
 {
@@ -10,7 +9,7 @@ class StockOutController extends BaseAdminController
 
     public function __construct()
     {
-        AuthController::requirePasswordChanged();
+        parent::__construct();
         $this->stockOutRepo = new StockOutRepository();
     }
 
