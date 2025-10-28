@@ -131,6 +131,7 @@ $items = $items ?? [];
   function stockPage() {
     const api = {
       list: '/admin/api/stocks',
+      products: '/admin/api/products/all-including-inactive' // Lấy tất cả sản phẩm
     };
     return {
       loading: true,

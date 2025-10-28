@@ -14,7 +14,7 @@ class PromotionRepository
         $pdo = DB::pdo();
         $sql = "
             SELECT p.id, p.name, p.description, p.promo_type,
-                   p.discount_type, p.discount_value, p.apply_to,
+                   p.discount_type, p.discount_value, p.combo_price, p.apply_to,
                    p.priority, p.starts_at, p.ends_at, p.is_active,
                    p.created_at, p.updated_at,
                    p.created_by, cu.full_name AS created_by_name,
@@ -32,7 +32,7 @@ class PromotionRepository
             $row['product_ids'] = $this->getProductIds($row['id']);
             $row['bundle_rules'] = $this->getBundleRules($row['id']);
             $row['gift_rules'] = $this->getGiftRules($row['id']);
-            $row['combo_price'] = $this->getComboPrice($row['id']);
+            // combo_price đã có trong SELECT, không cần load riêng
             $row['combo_items'] = $this->getComboItems($row['id']);
         }
         return array_map(fn($row) => new Promotion($row), $rows);
@@ -43,7 +43,7 @@ class PromotionRepository
         $pdo = DB::pdo();
         $sql = "
             SELECT p.id, p.name, p.description, p.promo_type,
-                   p.discount_type, p.discount_value, p.apply_to,
+                   p.discount_type, p.discount_value, p.combo_price, p.apply_to,
                    p.priority, p.starts_at, p.ends_at, p.is_active,
                    p.created_at, p.updated_at,
                    p.created_by, cu.full_name AS created_by_name,
@@ -62,7 +62,7 @@ class PromotionRepository
             $row['product_ids'] = $this->getProductIds($id);
             $row['bundle_rules'] = $this->getBundleRules($id);
             $row['gift_rules'] = $this->getGiftRules($id);
-            $row['combo_price'] = $this->getComboPrice($id);
+            // combo_price đã có trong SELECT, không cần load riêng
             $row['combo_items'] = $this->getComboItems($id);
             return new Promotion($row);
         }
@@ -84,22 +84,13 @@ class PromotionRepository
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
-    // Combo price
-    private function getComboPrice(int $promotionId): float
-    {
-        $stmt = DB::pdo()->prepare("SELECT combo_price FROM promotion_combo_rules WHERE promotion_id = ? LIMIT 1");
-        $stmt->execute([$promotionId]);
-        return (float) $stmt->fetchColumn();
-    }
-
     // Combo items
     private function getComboItems(int $promotionId): array
     {
         $stmt = DB::pdo()->prepare("
             SELECT pci.product_id, pci.required_qty AS qty
             FROM promotion_combo_items pci
-            JOIN promotion_combo_rules pcr ON pcr.id = pci.combo_rule_id
-            WHERE pcr.promotion_id = ?
+            WHERE pci.promotion_id = ?
         ");
         $stmt->execute([$promotionId]);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -113,10 +104,10 @@ class PromotionRepository
 
             $stmt = $pdo->prepare("
                 INSERT INTO promotions
-                (name, description, promo_type, discount_type, discount_value, apply_to,
+                (name, description, promo_type, discount_type, discount_value, combo_price, apply_to,
                  priority, starts_at, ends_at, is_active, created_by, updated_by, created_at, updated_at)
                 VALUES
-                (:name, :description, :promo_type, :discount_type, :discount_value, :apply_to,
+                (:name, :description, :promo_type, :discount_type, :discount_value, :combo_price, :apply_to,
                  :priority, :starts_at, :ends_at, :is_active, :created_by, :updated_by, NOW(), NOW())
             ");
             $stmt->execute([
@@ -125,6 +116,7 @@ class PromotionRepository
                 ':promo_type' => $data['promo_type'] ?? 'discount',
                 ':discount_type' => $data['discount_type'] ?? 'percentage',
                 ':discount_value' => $data['discount_value'] ?? 0,
+                ':combo_price' => $data['combo_price'] ?? null,
                 ':apply_to' => $data['apply_to'] ?? 'all',
                 ':priority' => $data['priority'] ?? 0,
                 ':starts_at' => $data['starts_at'] ?? null,
@@ -183,23 +175,18 @@ class PromotionRepository
                 }
             }
 
-            // Lưu combo
+            // Lưu combo items (combo_price đã được lưu trong bảng promotions)
             if (!empty($data['combo_items']) && is_array($data['combo_items'])) {
-                $stmt = $pdo->prepare("
-                    INSERT INTO promotion_combo_rules (promotion_id, combo_price, created_by, updated_by)
-                    VALUES (?, ?, ?, ?)
-                ");
-                $stmt->execute([$id, $data['combo_price'] ?? 0, $currentUser, $currentUser]);
-                $comboRuleId = (int) $pdo->lastInsertId();
-
                 foreach ($data['combo_items'] as $item) {
                     $pdo->prepare("
-                        INSERT INTO promotion_combo_items (combo_rule_id, product_id, required_qty)
-                        VALUES (?, ?, ?)
+                        INSERT INTO promotion_combo_items (promotion_id, product_id, required_qty, created_by, updated_by)
+                        VALUES (?, ?, ?, ?, ?)
                     ")->execute([
-                        $comboRuleId,
+                        $id,
                         $item['product_id'],
-                        $item['qty']
+                        $item['qty'],
+                        $currentUser,
+                        $currentUser
                     ]);
                 }
             }
@@ -251,7 +238,8 @@ class PromotionRepository
             $stmt = $pdo->prepare("
                 UPDATE promotions SET 
                     name = :name, description = :description, promo_type = :promo_type,
-                    discount_type = :discount_type, discount_value = :discount_value, apply_to = :apply_to,
+                    discount_type = :discount_type, discount_value = :discount_value, 
+                    combo_price = :combo_price, apply_to = :apply_to,
                     priority = :priority, starts_at = :starts_at, ends_at = :ends_at,
                     is_active = :is_active, updated_by = :updated_by, updated_at = NOW()
                 WHERE id = :id
@@ -263,6 +251,7 @@ class PromotionRepository
                 ':promo_type' => $data['promo_type'] ?? 'discount',
                 ':discount_type' => $data['discount_type'] ?? 'percentage',
                 ':discount_value' => $data['discount_value'] ?? 0,
+                ':combo_price' => $data['combo_price'] ?? null,
                 ':apply_to' => $data['apply_to'] ?? 'all',
                 ':priority' => $data['priority'] ?? 0,
                 ':starts_at' => $data['starts_at'] ?? null,
@@ -275,15 +264,7 @@ class PromotionRepository
             $pdo->prepare("DELETE FROM promotion_products WHERE promotion_id = ?")->execute([$id]);
             $pdo->prepare("DELETE FROM promotion_bundle_rules WHERE promotion_id = ?")->execute([$id]);
             $pdo->prepare("DELETE FROM promotion_gift_rules WHERE promotion_id = ?")->execute([$id]);
-            
-            // Xóa combo cũ
-            $stmt = $pdo->prepare("SELECT id FROM promotion_combo_rules WHERE promotion_id = ?");
-            $stmt->execute([$id]);
-            $comboRuleIds = $stmt->fetchAll(\PDO::FETCH_COLUMN);
-            foreach ($comboRuleIds as $comboRuleId) {
-                $pdo->prepare("DELETE FROM promotion_combo_items WHERE combo_rule_id = ?")->execute([$comboRuleId]);
-            }
-            $pdo->prepare("DELETE FROM promotion_combo_rules WHERE promotion_id = ?")->execute([$id]);
+            $pdo->prepare("DELETE FROM promotion_combo_items WHERE promotion_id = ?")->execute([$id]);
 
             // Lưu lại product (bỏ category)
             if (!empty($data['product_ids']) && is_array($data['product_ids'])) {
@@ -332,23 +313,18 @@ class PromotionRepository
                 }
             }
 
-            // Lưu lại combo
+            // Lưu lại combo items (combo_price đã được lưu trong bảng promotions)
             if (!empty($data['combo_items']) && is_array($data['combo_items'])) {
-                $stmt = $pdo->prepare("
-                    INSERT INTO promotion_combo_rules (promotion_id, combo_price, created_by, updated_by)
-                    VALUES (?, ?, ?, ?)
-                ");
-                $stmt->execute([$id, $data['combo_price'] ?? 0, $currentUser, $currentUser]);
-                $comboRuleId = (int) $pdo->lastInsertId();
-
                 foreach ($data['combo_items'] as $item) {
                     $pdo->prepare("
-                        INSERT INTO promotion_combo_items (combo_rule_id, product_id, required_qty)
-                        VALUES (?, ?, ?)
+                        INSERT INTO promotion_combo_items (promotion_id, product_id, required_qty, created_by, updated_by)
+                        VALUES (?, ?, ?, ?, ?)
                     ")->execute([
-                        $comboRuleId,
+                        $id,
                         $item['product_id'],
-                        $item['qty']
+                        $item['qty'],
+                        $currentUser,
+                        $currentUser
                     ]);
                 }
             }
@@ -404,15 +380,8 @@ class PromotionRepository
             // Delete gift rules
             $pdo->prepare("DELETE FROM promotion_gift_rules WHERE promotion_id = ?")->execute([$id]);
             
-            // Delete combo: first get combo_rule ids, delete items, then delete rules
-            $stmtCombo = $pdo->prepare("SELECT id FROM promotion_combo_rules WHERE promotion_id = ?");
-            $stmtCombo->execute([$id]);
-            $comboRuleIds = $stmtCombo->fetchAll(\PDO::FETCH_COLUMN);
-            if (!empty($comboRuleIds)) {
-                $placeholders = implode(',', array_fill(0, count($comboRuleIds), '?'));
-                $pdo->prepare("DELETE FROM promotion_combo_items WHERE combo_rule_id IN ($placeholders)")->execute($comboRuleIds);
-                $pdo->prepare("DELETE FROM promotion_combo_rules WHERE promotion_id = ?")->execute([$id]);
-            }
+            // Delete combo items (CASCADE sẽ tự xóa khi xóa promotion)
+            $pdo->prepare("DELETE FROM promotion_combo_items WHERE promotion_id = ?")->execute([$id]);
             
             // Finally delete promotion
             $pdo->prepare("DELETE FROM promotions WHERE id = ?")->execute([$id]);

@@ -208,6 +208,9 @@ CREATE TABLE promotions (
   discount_type ENUM('percentage','fixed') NULL,
   discount_value DECIMAL(12,2) NULL,
   
+  -- Dùng cho promo_type = 'combo'
+  combo_price DECIMAL(12,2) NULL COMMENT 'Giá combo (cho promo_type = combo)',
+  
   -- Áp dụng cho (chỉ dùng cho promo_type = 'discount')
   apply_to ENUM('all','category','product') NULL DEFAULT 'all',
   
@@ -287,31 +290,22 @@ CREATE TABLE promotion_gift_rules (
   UNIQUE KEY uniq_pgr (promotion_id, trigger_product_id, required_qty, gift_product_id)
 ) ENGINE=InnoDB;
 
--- QUY TẮC COMBO: Mua nhiều sản phẩm khác nhau với giá combo
--- Ví dụ: Mua ổi + muối = 25k (thay vì ổi 20k + muối 8k = 28k)
-CREATE TABLE promotion_combo_rules (
+-- Chi tiết sản phẩm trong combo
+-- Lưu các sản phẩm tham gia combo và số lượng yêu cầu
+CREATE TABLE promotion_combo_items (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  promotion_id BIGINT NOT NULL,
-  combo_price DECIMAL(12,2) NOT NULL,           -- Giá combo
+  promotion_id BIGINT NOT NULL,                 -- FK trực tiếp tới promotions
+  product_id BIGINT NOT NULL,
+  required_qty INT NOT NULL DEFAULT 1,          -- Số lượng của sản phẩm này trong combo
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   created_by BIGINT NULL,
   updated_by BIGINT NULL,
-  CONSTRAINT fk_pcr_created_by FOREIGN KEY(created_by) REFERENCES users(id),
-  CONSTRAINT fk_pcr_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
-  CONSTRAINT fk_pcr_promo FOREIGN KEY(promotion_id) REFERENCES promotions(id) ON DELETE CASCADE,
-  CHECK (combo_price >= 0)
-) ENGINE=InnoDB;
-
--- Chi tiết sản phẩm trong combo
-CREATE TABLE promotion_combo_items (
-  id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  combo_rule_id BIGINT NOT NULL,
-  product_id BIGINT NOT NULL,
-  required_qty INT NOT NULL DEFAULT 1,          -- Số lượng của sản phẩm này trong combo
-  CONSTRAINT fk_pci_combo FOREIGN KEY(combo_rule_id) REFERENCES promotion_combo_rules(id) ON DELETE CASCADE,
+  CONSTRAINT fk_pci_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_pci_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
+  CONSTRAINT fk_pci_promo FOREIGN KEY(promotion_id) REFERENCES promotions(id) ON DELETE CASCADE,
   CONSTRAINT fk_pci_prod FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE,
-  UNIQUE KEY uniq_pci (combo_rule_id, product_id),
+  UNIQUE KEY uniq_pci (promotion_id, product_id),
   CHECK (required_qty > 0)
 ) ENGINE=InnoDB;
 

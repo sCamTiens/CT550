@@ -397,7 +397,7 @@
                             <template x-if="rule.gift_product_id">
                                 <div class="flex items-center justify-between bg-white p-2 rounded border">
                                     <span class="text-sm truncate"
-                                        x-text="products.find(p => p.id == rule.gift_product_id)?.name || 'Không xác định'"></span>
+                                        x-text="giftProducts.find(p => p.id == rule.gift_product_id)?.name || 'Không xác định'"></span>
                                     <button type="button" @click="rule.gift_product_id = ''"
                                         class="text-red-600 hover:text-red-800 text-sm ml-2">
                                         <i class="fa-solid fa-times"></i>
@@ -414,7 +414,7 @@
                                             this.open = !this.open;
                                             if (this.open) {
                                                 this.search = '';
-                                                this.filtered = products;
+                                                this.filtered = giftProducts;
                                                 this.$nextTick(() => this.$refs.searchInput?.focus());
                                             }
                                         },
@@ -423,7 +423,7 @@
                                             this.search = '';
                                             this.open = false;
                                         }
-                                    }" x-init="search = ''; filtered = products" @click.away="open = false">
+                                    }" x-init="search = ''; filtered = giftProducts" @click.away="open = false">
                                     <button type="button" @click="toggleDropdown()"
                                         class="w-full border-2 border-dashed border-[#002975] rounded px-2 py-2 text-xs text-[#002975] hover:bg-[#002975] hover:text-white transition-colors">
                                         <i class="fa-solid fa-plus"></i> Chọn
@@ -432,7 +432,7 @@
                                         class="absolute z-20 mt-1 w-full bg-white border rounded shadow-lg">
                                         <div class="p-2 border-b">
                                             <input type="text" x-ref="searchInput" x-model="search"
-                                                @input="filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))"
+                                                @input="filtered = giftProducts.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))"
                                                 class="w-full border rounded px-2 py-2 text-xs" placeholder="Tìm..." />
                                         </div>
                                         <div class="max-h-48 overflow-auto">
@@ -615,9 +615,11 @@
 
         <!-- Trạng thái -->
         <div class="flex items-center gap-3 pt-6">
-            <input id="isActive" type="checkbox" x-model="form.is_active" :true-value="1" :false-value="0"
+            <input id="isActive" type="checkbox" 
+                :checked="form.is_active == 1 || form.is_active === true"
+                @change="form.is_active = $event.target.checked ? 1 : 0"
                 class="h-4 w-4">
-            <label for="isActive">Kích hoạt</label>
+            <label for="isActive" class="cursor-pointer">Kích hoạt</label>
         </div>
 
         <!-- Ngày bắt đầu -->

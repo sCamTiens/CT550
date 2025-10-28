@@ -200,7 +200,7 @@ $items = $items ?? [];
 <script>
   function productPage() {
     const api = {
-      list: '/admin/api/products',
+      list: '/admin/api/products/all-including-inactive', // Lấy tất cả sản phẩm
       create: '/admin/products',
       update: (id) => `/admin/products/${id}`,
       remove: (id) => `/admin/products/${id}`,

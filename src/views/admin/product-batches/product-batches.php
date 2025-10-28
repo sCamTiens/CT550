@@ -166,7 +166,7 @@ $products = $products ?? [];
             create: '/admin/api/product-batches',
             update: (id) => `/admin/api/product-batches/${id}`,
             remove: (id) => `/admin/api/product-batches/${id}`,
-            products: '/admin/api/products'
+            products: '/admin/api/products/all-including-inactive' // Lấy tất cả sản phẩm
         };
 
         return {

@@ -102,6 +102,15 @@ class ProductController extends BaseAdminController
         return trim($text, '-') ?: uniqid('sp-');
     }
 
+    /** GET /admin/api/products/all-including-inactive - Danh sách tất cả sản phẩm (cho quà tặng) */
+    public function apiAllProducts()
+    {
+        $items = $this->productRepo->allIncludingInactive();
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['items' => $items], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     /** GET /admin/api/products/stock-list - Danh sách sản phẩm với tồn kho cho kiểm kê */
     public function apiStockList()
     {

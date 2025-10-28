@@ -425,6 +425,7 @@ $items = $items ?? [];
             nextCode: '/admin/api/orders/next-code',
             customers: '/admin/api/customers',
             products: '/admin/api/products',
+            checkPromotions: '/admin/api/promotions/check',
         };
 
         const MAX_AMOUNT = 1_000_000_000;
@@ -441,6 +442,11 @@ $items = $items ?? [];
             products: [],
             orderItems: [],
             items: <?= json_encode($items ?? [], JSON_UNESCAPED_UNICODE) ?>,
+            
+            // ===== PROMOTIONS =====
+            appliedPromotions: [],
+            promotionDiscount: 0,
+            checkingPromotions: false,
 
             // ===== PAGINATION =====
             currentPage: 1,
@@ -804,7 +810,7 @@ $items = $items ?? [];
             },
 
 
-            calculateTotal() {
+            calculateTotal(shouldCheckPromotions = false) {
                 // Tính tổng tiền từ danh sách sản phẩm
                 const subtotal = this.orderItems.reduce((sum, item) => {
                     return sum + (Number(item.quantity) || 0) * (Number(item.unit_price) || 0);
@@ -813,11 +819,146 @@ $items = $items ?? [];
                 this.form.subtotal = subtotal;
                 this.form.subtotalFormatted = subtotal.toLocaleString('en-US');
 
-                const discount = Number(this.form.discount_amount) || 0;
-                const total = Math.max(0, subtotal - discount);
+                // Tính giảm giá: Khuyến mãi tự động + Giảm giá thủ công
+                const manualDiscount = Number(this.form.discount_amount) || 0;
+                const totalDiscount = this.promotionDiscount + manualDiscount;
+                
+                const total = Math.max(0, subtotal - totalDiscount);
 
                 this.form.total_amount = total;
                 this.form.total_amountFormatted = total.toLocaleString('en-US');
+                
+                // Kiểm tra khuyến mãi sau khi tính toán (chỉ khi cần)
+                if (shouldCheckPromotions) {
+                    this.checkPromotions();
+                }
+            },
+
+            // Kiểm tra khuyến mãi
+            async checkPromotions() {
+                if (this.orderItems.length === 0 || this.checkingPromotions) return;
+                
+                this.checkingPromotions = true;
+                try {
+                    const items = this.orderItems.map(item => ({
+                        product_id: item.product_id,
+                        quantity: Number(item.quantity) || 0,
+                        unit_price: Number(item.unit_price) || 0
+                    })).filter(item => item.product_id && item.quantity > 0);
+
+                    if (items.length === 0) {
+                        this.appliedPromotions = [];
+                        this.promotionDiscount = 0;
+                        return;
+                    }
+
+                    console.log('=== Checking promotions ===');
+                    console.log('Items sent:', items);
+
+                    const res = await fetch(api.checkPromotions, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ items })
+                    });
+
+                    const data = await res.json();
+                    console.log('Promotion response:', data);
+                    
+                    if (data.promotions) {
+                        this.appliedPromotions = data.promotions;
+                        console.log('Applied promotions:', this.appliedPromotions);
+                        
+                        // Cập nhật items nếu có thay đổi (bundle)
+                        if (data.items) {
+                            data.items.forEach((updatedItem, idx) => {
+                                if (this.orderItems[idx]) {
+                                    this.orderItems[idx].unit_price = updatedItem.unit_price;
+                                    if (updatedItem.bundle_applied) {
+                                        this.orderItems[idx].bundle_applied = true;
+                                    }
+                                }
+                            });
+                        }
+                        
+                        // Thêm quà tặng vào giỏ hàng
+                        if (data.gift_items && data.gift_items.length > 0) {
+                            const outOfStockGifts = []; // Danh sách quà tặng hết hàng
+                            
+                            data.gift_items.forEach(gift => {
+                                // Kiểm tra tồn kho của quà tặng
+                                const product = this.products.find(p => p.id == gift.product_id);
+                                
+                                if (!product) {
+                                    console.warn(`Product not found: ${gift.product_id}`);
+                                    return;
+                                }
+                                
+                                // Kiểm tra tồn kho
+                                if (product.stock < gift.quantity) {
+                                    // Quà tặng hết hàng
+                                    outOfStockGifts.push({
+                                        name: product.name,
+                                        requested: gift.quantity,
+                                        available: product.stock
+                                    });
+                                    return;
+                                }
+                                
+                                // Kiểm tra xem quà đã có chưa
+                                const existingGift = this.orderItems.find(item => 
+                                    item.product_id == gift.product_id && item.is_gift
+                                );
+                                
+                                if (!existingGift) {
+                                    this.orderItems.push({
+                                        product_id: gift.product_id,
+                                        product_name: product.name,
+                                        quantity: gift.quantity,
+                                        unit_price: 0,
+                                        is_gift: true
+                                    });
+                                } else {
+                                    existingGift.quantity = gift.quantity;
+                                }
+                            });
+                            
+                            // Hiển thị thông báo nếu có quà hết hàng
+                            if (outOfStockGifts.length > 0) {
+                                const messages = outOfStockGifts.map(gift => 
+                                    `🎁 ${gift.name}: Yêu cầu ${gift.requested}, còn ${gift.available}`
+                                );
+                                this.showToast(
+                                    `Quà tặng không đủ số lượng:\n${messages.join('\n')}`,
+                                    'error'
+                                );
+                            }
+                        }
+                        
+                        // Tính tổng giảm giá từ khuyến mãi
+                        this.promotionDiscount = data.promotions.reduce((sum, p) => {
+                            return sum + (Number(p.discount_amount) || 0);
+                        }, 0);
+                        
+                        // Cập nhật tổng giá trị đơn hàng
+                        const subtotal = this.orderItems.reduce((sum, item) => {
+                            return sum + (Number(item.quantity) || 0) * (Number(item.unit_price) || 0);
+                        }, 0);
+                        
+                        this.form.subtotal = subtotal;
+                        this.form.subtotalFormatted = subtotal.toLocaleString('en-US');
+                        
+                        const manualDiscount = Number(this.form.discount_amount) || 0;
+                        const totalDiscount = this.promotionDiscount + manualDiscount;
+                        const total = Math.max(0, subtotal - totalDiscount);
+                        
+                        this.form.total_amount = total;
+                        this.form.total_amountFormatted = total.toLocaleString('en-US');
+                    }
+                } catch (e) {
+                    console.error('Error checking promotions:', e);
+                } finally {
+                    this.checkingPromotions = false;
+                }
             },
 
             async applyCoupon() {
@@ -872,12 +1013,22 @@ $items = $items ?? [];
             addItem() {
                 this.orderItems.push({
                     product_id: '',
+                    product_name: '',
                     quantity: 1,
-                    unit_price: 0
+                    unit_price: 0,
+                    is_gift: false,
+                    bundle_applied: false
                 });
             },
 
             removeItem(idx) {
+                // Kiểm tra xem có phải quà tặng không
+                const item = this.orderItems[idx];
+                if (item.is_gift) {
+                    this.showToast('Không thể xóa quà tặng. Hãy xóa sản phẩm kích hoạt khuyến mãi.', 'error');
+                    return;
+                }
+                
                 this.orderItems.splice(idx, 1);
                 this.calculateTotal();
             },
@@ -903,7 +1054,7 @@ $items = $items ?? [];
                     item.quantity = 0;
                 }
 
-                this.calculateTotal();
+                this.calculateTotal(false); // Không check promotion tự động
             },
 
             getStatusText(status) {

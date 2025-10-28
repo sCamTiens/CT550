@@ -102,8 +102,38 @@ class ProductRepository
             LEFT JOIN units u ON u.id = p.unit_id
             LEFT JOIN users cu ON cu.id = p.created_by
             LEFT JOIN users uu ON uu.id = p.updated_by
-            LEFT JOIN stocks s ON s.product_id = p.id  
+            LEFT JOIN stocks s ON s.product_id = p.id
+            WHERE p.is_active = 1
             ORDER BY p.id DESC 
+            LIMIT 500
+        ";
+        $rows = $pdo->query($sql)->fetchAll(\PDO::FETCH_ASSOC);
+        return array_map(fn($row) => new Product($row), $rows);
+    }
+
+    /**
+     * Lấy tất cả sản phẩm (bao gồm cả không hoạt động) - dùng cho quà tặng
+     */
+    public function allIncludingInactive(): array
+    {
+        $pdo = DB::pdo();
+        $sql = "
+            SELECT p.id, p.sku, p.name, p.slug, p.pack_size, p.barcode, p.description,
+                   p.sale_price, p.cost_price, p.tax_rate, p.is_active,
+                   p.brand_id, p.category_id, p.unit_id,
+                   p.created_at, p.updated_at,
+                   p.created_by, cu.full_name AS created_by_name,
+                   p.updated_by, uu.full_name AS updated_by_name,
+                   b.name AS brand_name, c.name AS category_name, u.name AS unit_name,
+                   s.qty AS stock_qty 
+            FROM products p
+            LEFT JOIN brands b ON b.id = p.brand_id
+            LEFT JOIN categories c ON c.id = p.category_id
+            LEFT JOIN units u ON u.id = p.unit_id
+            LEFT JOIN users cu ON cu.id = p.created_by
+            LEFT JOIN users uu ON uu.id = p.updated_by
+            LEFT JOIN stocks s ON s.product_id = p.id
+            ORDER BY p.is_active DESC, p.id DESC 
             LIMIT 500
         ";
         $rows = $pdo->query($sql)->fetchAll(\PDO::FETCH_ASSOC);

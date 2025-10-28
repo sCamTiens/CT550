@@ -261,7 +261,7 @@ $items = $items ?? [];
 
             async fetchProducts() {
                 try {
-                    const res = await fetch('/admin/api/products');
+                    const res = await fetch('/admin/api/products/all-including-inactive');
                     const data = await res.json();
                     this.products = data.items || [];
                 } catch (e) {

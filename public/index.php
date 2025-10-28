@@ -78,6 +78,7 @@ $router->group('/admin', function (Router $r): void {
     // Products
     $r->get('/products', [AdminProduct::class, 'index']);
     $r->get('/api/products', [AdminProduct::class, 'apiIndex']);
+    $r->get('/api/products/all-including-inactive', [AdminProduct::class, 'apiAllProducts']);
     $r->get('/api/products/stock-list', [AdminProduct::class, 'apiStockList']);
     $r->post('/api/products/upload-images', [AdminProduct::class, 'uploadImages']);
     $r->post('/products', [AdminProduct::class, 'store']);
@@ -203,8 +204,10 @@ $router->group('/admin', function (Router $r): void {
     $r->delete('/coupons/{id}', [AdminCoupon::class, 'destroy']);
 
     // Promotions (Chương trình khuyến mãi)
-    $r->get('/promotions', [AdminPromotion::class, 'index']);
+    // API routes phải đặt trước để không bị routes khác catch
+    $r->post('/api/promotions/check', [AdminPromotion::class, 'check']);
     $r->get('/api/promotions', [AdminPromotion::class, 'apiIndex']);
+    $r->get('/promotions', [AdminPromotion::class, 'index']);
     $r->post('/promotions', [AdminPromotion::class, 'store']);
     $r->put('/promotions/{id}', [AdminPromotion::class, 'update']);
     $r->delete('/promotions/{id}', [AdminPromotion::class, 'destroy']);

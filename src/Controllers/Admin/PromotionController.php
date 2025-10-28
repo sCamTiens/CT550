@@ -209,6 +209,324 @@ class PromotionController extends BaseAdminController
         exit;
     }
 
+    /**
+     * API: Kiểm tra và áp dụng khuyến mãi cho giỏ hàng
+     * POST /admin/api/promotions/check
+     * Body: { items: [{product_id, quantity, unit_price}] }
+     */
+    public function check()
+    {
+        // Đảm bảo response luôn là JSON
+        header('Content-Type: application/json');
+        
+        try {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $items = $data['items'] ?? [];
+
+            if (empty($items)) {
+                echo json_encode(['promotions' => [], 'items' => []]);
+                exit;
+            }
+
+            // Lấy tất cả CTKM đang active
+            $activePromotions = $this->getActivePromotions();
+
+            $appliedPromotions = [];
+            $updatedItems = $items;
+            $giftItems = [];
+
+            foreach ($activePromotions as $promo) {
+                $result = $this->applyPromotion($promo, $updatedItems);
+                
+                if ($result['applied']) {
+                    $appliedPromotions[] = [
+                        'id' => $promo->id,
+                        'name' => $promo->name,
+                        'type' => $promo->promo_type,
+                        'description' => $result['description'],
+                        'discount_amount' => $result['discount_amount'] ?? 0,
+                        'items_affected' => $result['items_affected'] ?? [],
+                    ];
+
+                    if (!empty($result['updated_items'])) {
+                        $updatedItems = $result['updated_items'];
+                    }
+
+                    if (!empty($result['gift_items'])) {
+                        $giftItems = array_merge($giftItems, $result['gift_items']);
+                    }
+                }
+            }
+
+            header('Content-Type: application/json');
+            echo json_encode([
+                'promotions' => $appliedPromotions,
+                'items' => $updatedItems,
+                'gift_items' => $giftItems,
+            ]);
+            exit;
+
+        } catch (\Exception $e) {
+            error_log("Error in promotion check: " . $e->getMessage());
+            header('Content-Type: application/json');
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
+            exit;
+        }
+    }
+
+    /**
+     * Lấy danh sách CTKM đang active
+     */
+    private function getActivePromotions(): array
+    {
+        $all = $this->promotionRepo->all();
+        $now = date('Y-m-d H:i:s');
+
+        return array_filter($all, function($promo) use ($now) {
+            return $promo->is_active 
+                && $promo->starts_at <= $now 
+                && $promo->ends_at >= $now;
+        });
+    }
+
+    /**
+     * Áp dụng một CTKM cho giỏ hàng
+     */
+    private function applyPromotion($promo, $items): array
+    {
+        switch ($promo->promo_type) {
+            case 'discount':
+                return $this->applyDiscount($promo, $items);
+            
+            case 'bundle':
+                return $this->applyBundle($promo, $items);
+            
+            case 'gift':
+                return $this->applyGift($promo, $items);
+            
+            case 'combo':
+                return $this->applyCombo($promo, $items);
+            
+            default:
+                return ['applied' => false];
+        }
+    }
+
+    /**
+     * Áp dụng CTKM Giảm giá thường
+     */
+    private function applyDiscount($promo, $items): array
+    {
+        $productIds = $promo->product_ids ?? [];
+        $discountAmount = 0;
+        $itemsAffected = [];
+
+        foreach ($items as &$item) {
+            // Kiểm tra áp dụng cho sản phẩm
+            $applicable = ($promo->apply_to === 'all') 
+                || ($promo->apply_to === 'product' && in_array($item['product_id'], $productIds));
+
+            if (!$applicable) continue;
+
+            $itemTotal = $item['quantity'] * $item['unit_price'];
+            
+            if ($promo->discount_type === 'percentage') {
+                $discount = $itemTotal * ($promo->discount_value / 100);
+            } else {
+                $discount = min($promo->discount_value, $itemTotal);
+            }
+
+            $discountAmount += $discount;
+            $itemsAffected[] = $item['product_id'];
+        }
+
+        if ($discountAmount > 0) {
+            return [
+                'applied' => true,
+                'description' => $promo->discount_type === 'percentage' 
+                    ? "Giảm {$promo->discount_value}%" 
+                    : "Giảm " . number_format($promo->discount_value) . "đ",
+                'discount_amount' => $discountAmount,
+                'items_affected' => $itemsAffected,
+            ];
+        }
+
+        return ['applied' => false];
+    }
+
+    /**
+     * Áp dụng CTKM Mua kèm (Bundle)
+     */
+    private function applyBundle($promo, $items): array
+    {
+        $rules = $promo->bundle_rules ?? [];
+        $updatedItems = $items;
+        $totalDiscount = 0;
+        $itemsAffected = [];
+
+        foreach ($rules as $rule) {
+            foreach ($updatedItems as &$item) {
+                if ($item['product_id'] == $rule['product_id'] && $item['quantity'] >= $rule['qty']) {
+                    // Tính số bộ bundle
+                    $bundles = floor($item['quantity'] / $rule['qty']);
+                    $remainingQty = $item['quantity'] % $rule['qty'];
+
+                    // Giá bundle cho các bộ đủ điều kiện
+                    $bundleTotal = $bundles * $rule['price'];
+                    // Giá gốc cho số lượng lẻ
+                    $remainingTotal = $remainingQty * $item['unit_price'];
+                    
+                    $oldTotal = $item['quantity'] * $item['unit_price'];
+                    $newTotal = $bundleTotal + $remainingTotal;
+                    
+                    $discount = $oldTotal - $newTotal;
+                    
+                    if ($discount > 0) {
+                        // Cập nhật đơn giá trung bình
+                        $item['unit_price'] = round($newTotal / $item['quantity'], 0);
+                        $item['bundle_applied'] = true;
+                        $totalDiscount += $discount;
+                        $itemsAffected[] = $item['product_id'];
+                    }
+                }
+            }
+        }
+
+        if ($totalDiscount > 0) {
+            return [
+                'applied' => true,
+                'description' => "Mua kèm: " . $this->describeBundleRules($rules),
+                'discount_amount' => $totalDiscount,
+                'updated_items' => $updatedItems,
+                'items_affected' => $itemsAffected,
+            ];
+        }
+
+        return ['applied' => false];
+    }
+
+    /**
+     * Áp dụng CTKM Tặng quà (Gift)
+     */
+    private function applyGift($promo, $items): array
+    {
+        $rules = $promo->gift_rules ?? [];
+        $giftItems = [];
+        $itemsAffected = [];
+
+        foreach ($rules as $rule) {
+            foreach ($items as $item) {
+                if ($item['product_id'] == $rule['trigger_product_id'] 
+                    && $item['quantity'] >= $rule['trigger_qty']) {
+                    
+                    // Tính số lượng quà được tặng
+                    $sets = floor($item['quantity'] / $rule['trigger_qty']);
+                    $giftQty = $sets * $rule['gift_qty'];
+
+                    $giftItems[] = [
+                        'product_id' => $rule['gift_product_id'],
+                        'quantity' => $giftQty,
+                        'unit_price' => 0, // Quà tặng = 0đ
+                        'is_gift' => true,
+                    ];
+                    
+                    $itemsAffected[] = $item['product_id'];
+                }
+            }
+        }
+
+        if (!empty($giftItems)) {
+            return [
+                'applied' => true,
+                'description' => "Tặng quà: " . $this->describeGiftRules($rules),
+                'gift_items' => $giftItems,
+                'items_affected' => $itemsAffected,
+            ];
+        }
+
+        return ['applied' => false];
+    }
+
+    /**
+     * Áp dụng CTKM Combo
+     */
+    private function applyCombo($promo, $items): array
+    {
+        $comboItems = $promo->combo_items ?? [];
+        $comboPrice = $promo->combo_price ?? 0;
+
+        // Kiểm tra xem giỏ hàng có đủ sản phẩm combo không
+        $hasAllItems = true;
+        $minSets = PHP_INT_MAX;
+
+        foreach ($comboItems as $comboItem) {
+            $found = false;
+            foreach ($items as $item) {
+                if ($item['product_id'] == $comboItem['product_id']) {
+                    $sets = floor($item['quantity'] / $comboItem['qty']);
+                    $minSets = min($minSets, $sets);
+                    $found = true;
+                    break;
+                }
+            }
+            if (!$found || $minSets == 0) {
+                $hasAllItems = false;
+                break;
+            }
+        }
+
+        if ($hasAllItems && $minSets > 0) {
+            // Tính tổng giá gốc của combo
+            $originalPrice = 0;
+            foreach ($comboItems as $comboItem) {
+                foreach ($items as $item) {
+                    if ($item['product_id'] == $comboItem['product_id']) {
+                        $originalPrice += $comboItem['qty'] * $item['unit_price'];
+                        break;
+                    }
+                }
+            }
+
+            $discount = ($originalPrice - $comboPrice) * $minSets;
+
+            if ($discount > 0) {
+                return [
+                    'applied' => true,
+                    'description' => "Combo: " . number_format($comboPrice) . "đ (Tiết kiệm " . number_format($discount) . "đ)",
+                    'discount_amount' => $discount,
+                    'items_affected' => array_column($comboItems, 'product_id'),
+                ];
+            }
+        }
+
+        return ['applied' => false];
+    }
+
+    /**
+     * Mô tả quy tắc bundle
+     */
+    private function describeBundleRules($rules): string
+    {
+        $descriptions = [];
+        foreach ($rules as $rule) {
+            $descriptions[] = "Mua {$rule['qty']} = " . number_format($rule['price']) . "đ";
+        }
+        return implode(', ', $descriptions);
+    }
+
+    /**
+     * Mô tả quy tắc gift
+     */
+    private function describeGiftRules($rules): string
+    {
+        $descriptions = [];
+        foreach ($rules as $rule) {
+            $descriptions[] = "Mua {$rule['trigger_qty']} tặng {$rule['gift_qty']}";
+        }
+        return implode(', ', $descriptions);
+    }
+
     private function currentUserId(): ?int
     {
         // Debug session

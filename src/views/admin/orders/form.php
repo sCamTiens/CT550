@@ -90,31 +90,51 @@
                 <div class="col-span-3">Thành tiền</div>
             </div>
 
-            <template x-for="(item, idx) in orderItems" :key="idx">
-                <div class="grid grid-cols-12 gap-2 items-start">
+                        <template x-for="(item, idx) in orderItems" :key="idx">
+                <div class="grid grid-cols-12 gap-2 items-start" 
+                    :class="item.is_gift === true ? 'bg-green-50 border border-green-200 rounded p-2' : ''">
                     <!-- Chọn sản phẩm -->
                     <div class="col-span-5">
                         <select x-model="item.product_id" 
-                            @change="const p = products.find(prod => prod.id == item.product_id); if (p) { if (p.sale_price) { item.unit_price = parseInt(p.sale_price.toString().replace(/,/g, '')); } item.quantity = Math.min(1, p.stock || 0); } calculateTotal();"
-                            class="w-full border rounded px-3 py-2 text-sm">
+                            @change="
+                                const p = products.find(pr => pr.id == $event.target.value);
+                                if (p) {
+                                    item.product_name = p.name;
+                                    item.unit_price = p.sale_price || 0;
+                                    if (!item.quantity || item.quantity === 0) {
+                                        item.quantity = 1;
+                                    }
+                                    calculateTotal();
+                                    checkPromotions();
+                                }
+                            " 
+                            :disabled="item.is_gift === true"
+                            class="w-full border rounded px-3 py-2 text-sm" 
+                            :class="item.is_gift === true ? 'bg-green-50 cursor-not-allowed' : ''" 
+                            required>
                             <option value="">-- Chọn sản phẩm --</option>
                             <template x-for="p in products" :key="p.id">
-                                <option :value="p.id"
-                                    x-text="p.name + ' (' + p.sku + ' - ' + (p.stock || 0) + ')' + (p.stock === 0 ? ' [HẾT HÀNG]' : '')"
-                                    :disabled="p.stock === 0 || orderItems.some((it, i) => i !== idx && it.product_id == p.id)"
-                                    :class="p.stock === 0 ? 'text-red-600' : ''">
-                                </option>
+                                <option :value="p.id" x-text="`${p.name} - ${p.sku} - Tồn: ${p.stock}`"></option>
                             </template>
                         </select>
+                        <!-- Badge quà tặng -->
+                        <div x-show="item.is_gift === true" class="mt-1 flex items-center gap-1">
+                            <span class="px-2 py-1 bg-green-500 text-white text-xs rounded-full">🎁 Quà tặng</span>
+                        </div>
+                        <!-- Badge bundle -->
+                        <div x-show="item.bundle_applied === true" class="mt-1 flex items-center gap-1">
+                            <span class="px-2 py-1 bg-blue-500 text-white text-xs rounded-full">📦 Mua kèm</span>
+                        </div>
                     </div>
 
                     <!-- Số lượng -->
                     <div class="col-span-2">
                         <input x-model.number="item.quantity" 
-                            @input="validateQuantity(item)" 
+                            @input="validateQuantity(item); checkPromotions();" 
+                            :disabled="item.is_gift === true"
                             type="number" min="0"
                             class="w-full border rounded px-3 py-2 text-sm" 
-                            :class="item.product_id && products && item.quantity > (products.find(p => p.id == item.product_id)?.stock || 0) ? 'border-red-500 bg-red-50' : ''"
+                            :class="item.is_gift === true ? 'bg-green-50 cursor-not-allowed' : (item.product_id && products && item.quantity > (products.find(p => p.id == item.product_id)?.stock || 0) ? 'border-red-500 bg-red-50' : '')"
                             placeholder="SL" />
                     </div>
 
@@ -125,17 +145,24 @@
                                 item.unit_price = val ? parseInt(val) : 0;
                                 $event.target.value = item.unit_price.toLocaleString('en-US');
                                 calculateTotal();
-                            " class="w-full border rounded px-3 py-2 text-sm" placeholder="Đơn giá" />
+                            " 
+                            :disabled="item.is_gift === true || item.bundle_applied === true"
+                            class="w-full border rounded px-3 py-2 text-sm" 
+                            :class="(item.is_gift === true || item.bundle_applied === true) ? 'bg-gray-100 cursor-not-allowed' : ''"
+                            placeholder="Đơn giá" />
                     </div>
 
                     <!-- Thành tiền & Action -->
                     <div class="col-span-3 flex items-center gap-2">
                         <div class="flex-1 font-semibold text-sm"
+                            :class="item.is_gift === true ? 'text-green-600' : ''"
                             x-text="((item.quantity || 0) * (item.unit_price || 0)).toLocaleString('en-US')">
                         </div>
 
-                        <button type="button" @click="removeItem(idx)" class="text-red-500 hover:text-red-700"
-                            title="Xóa">
+                        <button type="button" @click="removeItem(idx)" 
+                            :disabled="item.is_gift === true"
+                            class="text-red-500 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            :title="item.is_gift === true ? 'Không thể xóa quà tặng' : 'Xóa'">
                             <i class="fa-solid fa-trash"></i>
                         </button>
                     </div>
@@ -147,6 +174,47 @@
                 class="mt-2 px-3 py-2 text-sm border border-dashed border-[#002975] text-[#002975] rounded hover:bg-[#002975] hover:text-white">
                 <i class="fa-solid fa-plus mr-1"></i> Thêm sản phẩm
             </button>
+        </div>
+    </div>
+
+    <!-- Khuyến mãi áp dụng -->
+    <div x-show="appliedPromotions && appliedPromotions.length > 0" class="md:col-span-2 mt-4">
+        <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500 rounded-lg p-4">
+            <div class="flex items-start gap-3">
+                <div class="flex-shrink-0">
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h4 class="font-semibold text-green-800 mb-2">Khuyến mãi đang áp dụng</h4>
+                    <div class="space-y-2">
+                        <template x-for="(promo, idx) in appliedPromotions" :key="idx">
+                            <div class="bg-white rounded-lg p-3 shadow-sm border border-green-200">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded"
+                                                x-text="promo.type === 'discount' ? 'Giảm giá' : promo.type === 'bundle' ? 'Mua kèm' : promo.type === 'gift' ? 'Tặng quà' : 'Combo'"></span>
+                                            <span class="font-medium text-gray-800" x-text="promo.name"></span>
+                                        </div>
+                                        <p class="text-sm text-gray-600" x-text="promo.description"></p>
+                                    </div>
+                                    <div class="text-right ml-4">
+                                        <div class="text-lg font-bold text-green-600" x-show="promo.discount_amount > 0">
+                                            -<span x-text="promo.discount_amount.toLocaleString('en-US')"></span>đ
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="mt-3 text-sm text-green-700">
+                        <strong>Tổng tiết kiệm từ khuyến mãi: </strong>
+                        <span class="text-lg font-bold" x-text="promotionDiscount.toLocaleString('en-US')"></span>đ
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -250,12 +318,20 @@
                     </div>
                 </div>
 
-                <!-- Giảm giá (hiển thị số tiền giảm sau khi áp mã hoặc nhập thủ công) -->
-                <div class="flex items-center gap-4">
-                    <label class="text-sm text-black font-semibold w-48">Giảm giá:</label>
-                    <input x-model="form.discount_amountFormatted" @input="onAmountInput('discount_amount', $event)"
-                        class="flex-1 border rounded px-3 py-2" 
-                        placeholder="Hoặc nhập số tiền giảm thủ công">
+                <!-- Giảm giá -->
+                <div class="space-y-2">
+                    <div class="flex items-center gap-4">
+                        <label class="text-sm text-black font-semibold w-48">Giảm giá khuyến mãi:</label>
+                        <div class="flex-1 px-3 py-2 bg-green-50 border border-green-200 rounded text-green-700 font-semibold">
+                            <span x-text="promotionDiscount ? '-' + promotionDiscount.toLocaleString('en-US') + 'đ' : '0đ'"></span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <label class="text-sm text-black font-semibold w-48">Giảm giá thêm:</label>
+                        <input x-model="form.discount_amountFormatted" @input="onAmountInput('discount_amount', $event)"
+                            class="flex-1 border rounded px-3 py-2" 
+                            placeholder="Nhập số tiền giảm thêm (nếu có)">
+                    </div>
                 </div>
 
                 <!-- Tổng tiền -->

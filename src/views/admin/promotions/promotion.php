@@ -437,7 +437,8 @@ $items = $items ?? [];
             update: (id) => `/admin/promotions/${id}`,
             remove: (id) => `/admin/promotions/${id}`,
             categories: '/admin/api/categories',
-            products: '/admin/api/products'
+            products: '/admin/api/products',
+            allProducts: '/admin/api/products/all-including-inactive' // Cho quà tặng
         };
 
         return {
@@ -450,6 +451,7 @@ $items = $items ?? [];
             items: <?= json_encode($items, JSON_UNESCAPED_UNICODE) ?>,
             categories: [],
             products: [],
+            giftProducts: [], // Tất cả sản phẩm (bao gồm cả không bán) cho quà tặng
 
             // Pagination
             currentPage: 1,
@@ -707,7 +709,6 @@ $items = $items ?? [];
                     // API trả về { items: [...] } nên cần lấy items
                     this.items = data.items || data || [];
                     
-                    console.log('Loaded promotions:', this.items);
                 } catch (err) {
                     this.showToast(err.message, 'error');
                 } finally {
@@ -717,9 +718,10 @@ $items = $items ?? [];
 
             async fetchOptions() {
                 try {
-                    const [catRes, prodRes] = await Promise.all([
+                    const [catRes, prodRes, giftProdRes] = await Promise.all([
                         fetch(api.categories),
-                        fetch(api.products)
+                        fetch(api.products),
+                        fetch(api.allProducts) // Lấy tất cả sản phẩm cho quà tặng
                     ]);
                     if (catRes.ok) {
                         const catData = await catRes.json();
@@ -728,6 +730,10 @@ $items = $items ?? [];
                     if (prodRes.ok) {
                         const prodData = await prodRes.json();
                         this.products = prodData.items || prodData || [];
+                    }
+                    if (giftProdRes.ok) {
+                        const giftData = await giftProdRes.json();
+                        this.giftProducts = giftData.items || giftData || [];
                     }
                 } catch (err) {
                     console.error('Lỗi load options:', err);
@@ -773,7 +779,10 @@ $items = $items ?? [];
             },
 
             openEditModal(item) {
+                // Reset form trước
                 this.resetForm();
+                
+                // Sau đó gán dữ liệu
                 this.form.id = item.id;
                 this.form.name = item.name || '';
                 this.form.description = item.description || '';
@@ -790,7 +799,7 @@ $items = $items ?? [];
                 this.form.apply_to = item.apply_to || 'all';
                 this.form.priority = item.priority || 0;
 
-                // Convert ngày từ YYYY-MM-DD HH:MM:SS sang DD/MM/YYYY HH:MM
+                // Convert ngày từ YYYY-MM-DD HH:MM:SS sang DD/MM/YYYY
                 this.form.starts_at = this.convertDateToDisplay(item.starts_at);
                 this.form.ends_at = this.convertDateToDisplay(item.ends_at);
 
@@ -810,6 +819,10 @@ $items = $items ?? [];
                 this.form.combo_price = new Intl.NumberFormat('en-US').format(item.combo_price || 0);
                 
                 this.form.combo_items = item.combo_items || [];
+                
+                console.log('=== OPEN EDIT MODAL ===');
+                console.log('Form after load:', this.form);
+                
                 this.openEdit = true;
             },
 
