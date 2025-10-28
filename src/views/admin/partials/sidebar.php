@@ -52,7 +52,8 @@ $allowedSections = RoleMiddleware::getAllowedSections();
 
         <!-- Bán hàng -->
         <?php if ($allowedSections['orders']): ?>
-        <a href="/admin/orders" :class="[
+        <div class="mt-2">
+            <a href="/admin/orders" :class="[
                     'flex items-center gap-2 px-3 py-2 rounded',
                     currentPath.startsWith('/admin/orders') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white'
                     ]">
@@ -64,6 +65,7 @@ $allowedSections = RoleMiddleware::getAllowedSections();
             </svg>
             <span>Quản lý đơn hàng</span>
         </a>
+        </div>
         <?php endif; ?>
 
 

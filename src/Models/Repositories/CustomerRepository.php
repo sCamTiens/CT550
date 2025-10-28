@@ -291,29 +291,89 @@ class CustomerRepository
     {
         $sql = "SELECT 
                 ua.id,
-                ua.label,
-                ua.recipient_name,
-                ua.phone,
-                ua.address_line,
+                ua.receiver_name,
+                ua.receiver_phone,
+                ua.line1,
                 ua.province_code,
-                ua.district_code,
                 ua.commune_code,
                 ua.is_default,
-                CONCAT_WS(', ',
-                    ua.address_line,
-                    COALESCE(c.name, ''),
-                    COALESCE(d.name, ''),
-                    COALESCE(p.name, '')
-                ) AS full_address
+                ua.line1 AS full_address
             FROM user_addresses ua
-            LEFT JOIN provinces p ON p.code = ua.province_code
-            LEFT JOIN districts d ON d.code = ua.district_code
-            LEFT JOIN communes c ON c.code = ua.commune_code
             WHERE ua.user_id = ?
             ORDER BY ua.is_default DESC, ua.id ASC";
 
         $stmt = DB::pdo()->prepare($sql);
         $stmt->execute([$userId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Tìm khách hàng theo ID (alias của find)
+     */
+    public function findById(int|string $id): array|false
+    {
+        $result = $this->find($id);
+        if (is_array($result) || $result === false) {
+            return $result;
+        }
+        return false;
+    }
+
+    /**
+     * Lấy danh sách đơn hàng của khách hàng
+     */
+    public function getOrders(int|string $userId): array
+    {
+        $sql = "SELECT 
+                o.id,
+                o.code,
+                o.status,
+                o.grand_total,
+                o.created_at,
+                o.note,
+                o.payment_method,
+                o.payment_status,
+                o.order_type,
+                ua.receiver_name,
+                ua.receiver_phone,
+                ua.line1 AS delivery_address,
+                (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = o.id) AS total_items
+            FROM orders o
+            LEFT JOIN user_addresses ua ON ua.id = o.shipping_address_id
+            WHERE o.user_id = ?
+            ORDER BY o.created_at DESC, o.id DESC";
+
+        $stmt = DB::pdo()->prepare($sql);
+        $stmt->execute([$userId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Lấy chi tiết items của một đơn hàng
+     */
+    public function getOrderItems(int|string $orderId): array
+    {
+        $sql = "SELECT 
+                oi.id,
+                oi.product_id,
+                oi.qty AS quantity,
+                oi.unit_price,
+                oi.discount,
+                oi.tax,
+                oi.line_total AS total,
+                oi.is_gift,
+                p.name AS product_name,
+                p.sku,
+                NULL AS product_image
+            FROM order_items oi
+            LEFT JOIN products p ON p.id = oi.product_id
+            WHERE oi.order_id = ?
+            ORDER BY oi.id ASC";
+
+        $stmt = DB::pdo()->prepare($sql);
+        $stmt->execute([$orderId]);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }

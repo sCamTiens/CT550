@@ -188,4 +188,48 @@ class CustomerController extends BaseAdminController
         }
     }
 
+    /**
+     * API: Lấy thông tin chi tiết khách hàng và đơn hàng
+     * GET /admin/api/customers/{id}/detail
+     */
+    public function getDetail($id): void
+    {
+        try {
+            $customer = $this->repo->findById($id);
+            if (!$customer) {
+                $this->json(['error' => 'Không tìm thấy khách hàng'], 404);
+                return;
+            }
+
+            $orders = $this->repo->getOrders($id);
+            
+            $this->json([
+                'customer' => $customer,
+                'orders' => $orders
+            ]);
+        } catch (\PDOException $e) {
+            $this->json([
+                'error' => 'Không thể tải thông tin chi tiết',
+                'detail' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * API: Lấy chi tiết items của đơn hàng
+     * GET /admin/api/orders/{id}/items
+     */
+    public function getOrderItems($id): void
+    {
+        try {
+            $items = $this->repo->getOrderItems($id);
+            $this->json(['items' => $items]);
+        } catch (\PDOException $e) {
+            $this->json([
+                'error' => 'Không thể tải chi tiết đơn hàng',
+                'detail' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
 }

@@ -21,7 +21,7 @@ $items = $items ?? [];
       <table style="width:190%; min-width:1200px; border-collapse:collapse;">
         <thead>
           <tr class="bg-gray-50 text-slate-600">
-            <th class="py-2 px-4 whitespace-nowrap text-center">Thao tác</th>
+            <th class="py-2 px-4 whitespace-nowrap text-center" style="width:300px;">Thao tác</th>
             <th class="py-2 px-4 whitespace-nowrap text-center">Ảnh đại diện</th>
             <?= textFilterPopover('username', 'Tài khoản') ?>
             <?= textFilterPopover('full_name', 'Họ tên') ?>
@@ -54,6 +54,16 @@ $items = $items ?? [];
                     stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round"
                       d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+                <button @click="openDetailModal(c.id)"
+                  class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                  title="Xem chi tiết">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                   </svg>
                 </button>
                 <button @click="openChangePasswordModal(c)"
@@ -270,6 +280,252 @@ $items = $items ?? [];
     </div>
   </div>
 
+  <!-- Modal xem chi tiết khách hàng -->
+  <div x-show="openDetail"
+    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate__animated animate__fadeIn animate__faster"
+    @click.self="openDetail = false" x-cloak>
+    <div
+      class="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] overflow-y-auto animate__animated animate__zoomIn animate__faster"
+      @click.stop>
+      <div class="px-5 py-3 border-b flex justify-center items-center relative sticky top-0 bg-white z-10">
+        <h3 class="font-semibold text-2xl text-[#002975]">Chi tiết khách hàng</h3>
+        <button @click="openDetail = false" class="text-slate-500 absolute right-5">✕</button>
+      </div>
+
+      <div x-show="loadingDetail" class="flex justify-center py-8">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#002975]"></div>
+      </div>
+
+      <div x-show="!loadingDetail" class="p-6">
+        <!-- Thông tin khách hàng -->
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 mb-6 border border-blue-200">
+          <h4 class="text-xl font-bold text-[#002975] mb-4 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            Thông tin khách hàng
+          </h4>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="flex items-center gap-3">
+              <template x-if="detailCustomer.avatar_url">
+                <img :src="'/assets/images/avatar/' + detailCustomer.avatar_url" :alt="detailCustomer.full_name"
+                  class="w-20 h-20 rounded-full object-cover border-2 border-blue-300">
+              </template>
+              <template x-if="!detailCustomer.avatar_url">
+                <div
+                  class="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 border-2 border-gray-300">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+              </template>
+              <div>
+                <div class="text-2xl font-bold text-[#002975]" x-text="detailCustomer.full_name"></div>
+                <div class="text-sm text-gray-600 uppercase" x-text="'@' + detailCustomer.username"></div>
+              </div>
+            </div>
+            <div class="flex items-center justify-end">
+              <span x-text="detailCustomer.is_active ? 'Hoạt động' : 'Khóa'"
+                :class="detailCustomer.is_active ? 'px-4 py-2 bg-green-100 text-green-700 rounded-full font-semibold' : 'px-4 py-2 bg-red-100 text-red-700 rounded-full font-semibold'"></span>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4 mt-4">
+            <div>
+              <div class="text-sm text-gray-600 mb-1">Email</div>
+              <div class="font-medium" x-text="detailCustomer.email || '—'"></div>
+            </div>
+            <div>
+              <div class="text-sm text-gray-600 mb-1">Số điện thoại</div>
+              <div class="font-medium" x-text="detailCustomer.phone || '—'"></div>
+            </div>
+            <div>
+              <div class="text-sm text-gray-600 mb-1">Giới tính</div>
+              <div class="font-medium" x-text="detailCustomer.gender ? 'Nam' : 'Nữ'"></div>
+            </div>
+            <div>
+              <div class="text-sm text-gray-600 mb-1">Ngày sinh</div>
+              <div class="font-medium" x-text="formatDate(detailCustomer.date_of_birth) || '—'"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Danh sách đơn hàng -->
+        <div>
+          <h4 class="text-xl font-bold text-[#002975] mb-4 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
+            Lịch sử đơn hàng (<span x-text="detailOrders.length"></span> đơn)
+          </h4>
+
+          <template x-if="detailOrders.length === 0">
+            <div class="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-gray-300" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+              <p class="text-lg">Khách hàng chưa có đơn hàng nào</p>
+            </div>
+          </template>
+
+          <template x-if="detailOrders.length > 0">
+            <div>
+              <div class="overflow-x-auto">
+                <table class="w-full border-collapse border">
+                  <thead>
+                    <tr class="bg-gray-50 text-slate-600">
+                      <th class="py-2 px-4 border text-center">Thao tác</th>
+                      <th class="py-2 px-4 border text-left">Mã đơn</th>
+                      <th class="py-2 px-4 border text-left">Trạng thái</th>
+                      <th class="py-2 px-4 border text-right">Tổng tiền</th>
+                      <th class="py-2 px-4 border text-center">Số SP</th>
+                      <th class="py-2 px-4 border text-left">Địa chỉ</th>
+                      <th class="py-2 px-4 border text-right">Ngày tạo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <template x-for="order in paginatedOrders()" :key="order.id">
+                      <tr class="border-t hover:bg-blue-50">
+                        <td class="py-2 px-4 border text-center">
+                          <button @click="openOrderDetailModal(order.id)"
+                            class="p-2 rounded hover:bg-gray-100 text-[#002975]" title="Xem chi tiết đơn hàng">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                              stroke="currentColor" stroke-width="2">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          </button>
+                        </td>
+                        <td class="py-2 px-4 border text-sm" x-text="order.code || '—'"></td>
+                        <td class="py-2 px-4 border">
+                          <span x-text="order.status"
+                            :class="getStatusClass(order.status)"></span>
+                        </td>
+                        <td class="py-2 px-4 border text-right font-semibold text-green-600"
+                          x-text="formatMoney(order.grand_total)"></td>
+                        <td class="py-2 px-4 border text-center" x-text="order.total_items"></td>
+                        <td class="py-2 px-4 border text-sm" x-text="order.delivery_address || '—'"></td>
+                        <td class="py-2 px-4 border text-right text-sm" x-text="order.created_at"></td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Pagination cho đơn hàng -->
+              <div class="flex items-center justify-center mt-4 gap-6">
+                <div class="text-sm text-slate-600">
+                  Tổng cộng <span x-text="detailOrders.length"></span> đơn hàng
+                </div>
+                <div class="flex items-center gap-2">
+                  <button @click="goToOrderPage(orderCurrentPage-1)" :disabled="orderCurrentPage===1"
+                    class="px-2 py-1 border rounded disabled:opacity-50">&lt;</button>
+                  <span>Trang <span x-text="orderCurrentPage"></span> / <span x-text="orderTotalPages()"></span></span>
+                  <button @click="goToOrderPage(orderCurrentPage+1)" :disabled="orderCurrentPage===orderTotalPages()"
+                    class="px-2 py-1 border rounded disabled:opacity-50">&gt;</button>
+                  <div x-data="{ open: false }" class="relative">
+                    <button @click="open=!open" class="border rounded px-2 py-1 w-28 flex justify-between items-center">
+                      <span x-text="orderPerPage + ' / trang'"></span>
+                      <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    <div x-show="open" @click.outside="open=false"
+                      class="absolute right-0 mt-1 bg-white border rounded shadow w-28 z-50">
+                      <template x-for="opt in orderPerPageOptions" :key="opt">
+                        <div @click="orderPerPage=opt;orderCurrentPage=1;open=false"
+                          class="px-3 py-2 cursor-pointer hover:bg-[#002975] hover:text-white" x-text="opt + ' / trang'">
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <div class="p-6 border-t sticky bottom-0 bg-white flex justify-end">
+        <button type="button" class="px-4 py-2 rounded-md border hover:bg-gray-50"
+          @click="openDetail = false">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal xem chi tiết đơn hàng -->
+  <div x-show="openOrderDetail"
+    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] animate__animated animate__fadeIn animate__faster"
+    @click.self="openOrderDetail = false" x-cloak>
+    <div
+      class="bg-white rounded-lg w-full max-w-5xl max-h-[90vh] overflow-y-auto animate__animated animate__zoomIn animate__faster"
+      @click.stop>
+      <div class="px-5 py-3 border-b flex justify-center items-center relative sticky top-0 bg-white z-10">
+        <h3 class="font-semibold text-2xl text-[#002975]">Chi tiết đơn hàng</h3>
+        <button @click="openOrderDetail = false" class="text-slate-500 absolute right-5">✕</button>
+      </div>
+
+      <div x-show="loadingOrderDetail" class="flex justify-center py-8">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-[#002975]"></div>
+      </div>
+
+      <div x-show="!loadingOrderDetail" class="p-6">
+        <template x-if="orderDetailItems.length === 0">
+          <div class="text-center py-8 text-gray-500">
+            <p class="text-lg">Không có sản phẩm trong đơn hàng</p>
+          </div>
+        </template>
+
+        <template x-if="orderDetailItems.length > 0">
+          <div class="overflow-x-auto">
+            <table class="w-full border-collapse border">
+              <thead>
+                <tr class="bg-gray-50 text-slate-600">
+                  <th class="py-2 px-4 border text-left">Sản phẩm</th>
+                  <th class="py-2 px-4 border text-center">Số lượng</th>
+                  <th class="py-2 px-4 border text-right">Đơn giá</th>
+                  <th class="py-2 px-4 border text-right">Thành tiền</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="item in orderDetailItems" :key="item.id">
+                  <tr class="border-t">
+                    <td class="py-2 px-4 border">
+                      <div class="flex items-center gap-3">
+                        <img :src="item.product_image || '/assets/images/products/default.png'" :alt="item.product_name"
+                          class="w-12 h-12 object-cover rounded">
+                        <div>
+                          <div class="font-medium" x-text="item.product_name"></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="py-2 px-4 border text-center" x-text="item.quantity"></td>
+                    <td class="py-2 px-4 border text-right" x-text="formatMoney(item.unit_price)"></td>
+                    <td class="py-2 px-4 border text-right font-semibold text-green-600"
+                      x-text="formatMoney(item.total)"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </template>
+      </div>
+
+      <div class="p-6 border-t sticky bottom-0 bg-white flex justify-end">
+        <button type="button" class="px-4 py-2 rounded-md border hover:bg-gray-50"
+          @click="openOrderDetail = false">Đóng</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal xem địa chỉ -->
   <div x-show="openAddress"
     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate__animated animate__fadeIn animate__faster"
@@ -423,6 +679,16 @@ $items = $items ?? [];
       addresses: [],
       loadingAddress: false,
       addressCustomerName: '',
+      openDetail: false,
+      detailCustomer: {},
+      detailOrders: [],
+      loadingDetail: false,
+      orderCurrentPage: 1,
+      orderPerPage: 10,
+      orderPerPageOptions: [5, 10, 20, 50],
+      openOrderDetail: false,
+      orderDetailItems: [],
+      loadingOrderDetail: false,
       loading: true,
       submitting: false,
       openAdd: false,
@@ -484,6 +750,83 @@ $items = $items ?? [];
         } finally {
           this.loadingAddress = false;
         }
+      },
+
+      async openDetailModal(customerId) {
+        this.detailCustomer = {};
+        this.detailOrders = [];
+        this.loadingDetail = true;
+        this.openDetail = true;
+        this.orderCurrentPage = 1;
+
+        try {
+          const res = await fetch(`/admin/api/customers/${customerId}/detail`);
+          if (!res.ok) {
+            throw new Error('Không thể tải thông tin chi tiết');
+          }
+          const data = await res.json();
+          this.detailCustomer = data.customer || {};
+          this.detailOrders = data.orders || [];
+        } catch (err) {
+          console.error(err);
+          this.showToast('Lỗi khi tải thông tin chi tiết: ' + err.message);
+          this.detailCustomer = {};
+          this.detailOrders = [];
+        } finally {
+          this.loadingDetail = false;
+        }
+      },
+
+      async openOrderDetailModal(orderId) {
+        this.orderDetailItems = [];
+        this.loadingOrderDetail = true;
+        this.openOrderDetail = true;
+
+        try {
+          const res = await fetch(`/admin/api/orders/${orderId}/items`);
+          if (!res.ok) {
+            throw new Error('Không thể tải chi tiết đơn hàng');
+          }
+          const data = await res.json();
+          this.orderDetailItems = data.items || [];
+        } catch (err) {
+          console.error(err);
+          this.showToast('Lỗi khi tải chi tiết đơn hàng: ' + err.message);
+          this.orderDetailItems = [];
+        } finally {
+          this.loadingOrderDetail = false;
+        }
+      },
+
+      paginatedOrders() {
+        const start = (this.orderCurrentPage - 1) * this.orderPerPage;
+        return this.detailOrders.slice(start, start + this.orderPerPage);
+      },
+
+      orderTotalPages() {
+        return Math.max(1, Math.ceil(this.detailOrders.length / this.orderPerPage));
+      },
+
+      goToOrderPage(page) {
+        if (page < 1) page = 1;
+        if (page > this.orderTotalPages()) page = this.orderTotalPages();
+        this.orderCurrentPage = page;
+      },
+
+      getStatusClass(status) {
+        const statusMap = {
+          'Chờ xác nhận': 'px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-semibold',
+          'Đã xác nhận': 'px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold',
+          'Đang giao': 'px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-semibold',
+          'Hoàn tất': 'px-2 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold',
+          'Đã hủy': 'px-2 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold'
+        };
+        return statusMap[status] || 'px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-semibold';
+      },
+
+      formatMoney(amount) {
+        if (!amount) return '0';
+        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
       },
 
       generateChangePassword() {

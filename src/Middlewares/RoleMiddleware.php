@@ -48,33 +48,24 @@ class RoleMiddleware
      */
     public static function checkAccess(string $requestPath): bool
     {
-        // DEBUG
-        file_put_contents(__DIR__ . '/../../debug.log', "checkAccess() - requestPath: $requestPath\n", FILE_APPEND);
-        
         // Kiểm tra đăng nhập
         if (!isset($_SESSION['user'])) {
-            file_put_contents(__DIR__ . '/../../debug.log', "checkAccess() - No user session\n", FILE_APPEND);
             return false;
         }
 
         // Lấy role từ session
         $staffRole = $_SESSION['user']['staff_role'] ?? null;
-        file_put_contents(__DIR__ . '/../../debug.log', "checkAccess() - staffRole: $staffRole\n", FILE_APPEND);
-
         if (!$staffRole) {
             return false;
         }
 
         // Admin có quyền truy cập mọi nơi
         if ($staffRole === 'Admin') {
-            file_put_contents(__DIR__ . '/../../debug.log', "checkAccess() - Admin granted\n", FILE_APPEND);
             return true;
         }
 
         // Kiểm tra quyền theo role
         $allowedPaths = self::$rolePermissions[$staffRole] ?? [];
-        file_put_contents(__DIR__ . '/../../debug.log', "checkAccess() - allowedPaths: " . json_encode($allowedPaths) . "\n", FILE_APPEND);
-
         if ($allowedPaths === '*') {
             return true;
         }
@@ -83,21 +74,17 @@ class RoleMiddleware
         foreach ($allowedPaths as $allowedPath) {
             // Exact match: đường dẫn giống hệt
             if ($requestPath === $allowedPath) {
-                file_put_contents(__DIR__ . '/../../debug.log', "  EXACT MATCH: '$requestPath' === '$allowedPath' - GRANTED\n", FILE_APPEND);
                 return true;
             }
             
             // Prefix match: đường dẫn bắt đầu bằng allowedPath + '/'
             // Ví dụ: /admin/products cho phép /admin/products/123 nhưng KHÔNG cho phép /admin/productsx
             if (strpos($requestPath, $allowedPath . '/') === 0) {
-                file_put_contents(__DIR__ . '/../../debug.log', "  PREFIX MATCH: '$requestPath' starts with '$allowedPath/' - GRANTED\n", FILE_APPEND);
                 return true;
             }
             
-            file_put_contents(__DIR__ . '/../../debug.log', "  NO MATCH: '$requestPath' vs '$allowedPath'\n", FILE_APPEND);
         }
 
-        file_put_contents(__DIR__ . '/../../debug.log', "checkAccess() - NO MATCH FOUND - DENYING ACCESS\n", FILE_APPEND);
         return false;
     }
 
@@ -108,12 +95,8 @@ class RoleMiddleware
      */
     public static function authorize(string $requestPath): void
     {
-        // DEBUG
-        file_put_contents(__DIR__ . '/../../debug.log', "RoleMiddleware::authorize() called for: $requestPath\n", FILE_APPEND);
         
         if (!self::checkAccess($requestPath)) {
-            // DEBUG
-            file_put_contents(__DIR__ . '/../../debug.log', "ACCESS DENIED - Redirecting...\n", FILE_APPEND);
             
             // Lưu thông báo lỗi vào session
             $_SESSION['flash_error'] = 'Bạn không có quyền truy cập trang này.';
@@ -137,19 +120,13 @@ class RoleMiddleware
                     $redirectTo = $refererPath;
                 }
             }
-            
-            // DEBUG
-            file_put_contents(__DIR__ . '/../../debug.log', "Redirecting to: $redirectTo\n", FILE_APPEND);
-            
+                     
             // Send redirect header
             header("Location: $redirectTo", true, 302);
             
             // Force stop execution
             die();
         }
-        
-        // DEBUG
-        file_put_contents(__DIR__ . '/../../debug.log', "ACCESS GRANTED\n", FILE_APPEND);
     }
 
     /**
