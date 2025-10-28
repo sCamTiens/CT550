@@ -175,6 +175,7 @@ class RoleMiddleware
                 'promo' => true,
                 'staff' => true,
                 'customers' => true,
+                'reports' => true,
                 'audit-logs' => true,
             ];
         }
@@ -189,7 +190,8 @@ class RoleMiddleware
             'promo' => false,
             'staff' => false,
             'customers' => false,
-            'audit-logs' => false,
+            'reports' => false, // Chỉ Admin
+            'audit-logs' => false, // Chỉ Admin
         ];
 
         $allowedPaths = self::$rolePermissions[$staffRole] ?? [];

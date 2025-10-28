@@ -33,6 +33,7 @@ use App\Controllers\Admin\PromotionController as AdminPromotion;
 use App\Controllers\Admin\AuditLogController as AdminAuditLog;
 use App\Controllers\Admin\NotificationController as AdminNotification;
 use App\Controllers\Admin\StockAlertController as AdminStockAlert;
+use App\Controllers\Admin\ReportsController as AdminReports;
 
 
 /* --- load biến môi trường từ .env (đặt ở thư mục gốc dự án) --- */
@@ -220,6 +221,20 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/api/audit-logs/stats/entity', [AdminAuditLog::class, 'apiStatsByEntity']);
     $r->get('/api/audit-logs/stats/staff', [AdminAuditLog::class, 'apiStatsByStaff']);
     $r->get('/api/audit-logs/staff-list', [AdminAuditLog::class, 'apiGetStaffList']);
+
+    // Reports (Thống kê & Báo cáo - Admin only)
+    $r->get('/reports', [AdminReports::class, 'index']);
+    $r->get('/api/reports/overview', [AdminReports::class, 'apiOverview']);
+    $r->get('/api/reports/staff/orders', [AdminReports::class, 'apiStaffByOrders']);
+    $r->get('/api/reports/staff/revenue', [AdminReports::class, 'apiStaffByRevenue']);
+    $r->get('/api/reports/products/quantity', [AdminReports::class, 'apiProductsByQuantity']);
+    $r->get('/api/reports/products/revenue', [AdminReports::class, 'apiProductsByRevenue']);
+    $r->get('/api/reports/suppliers', [AdminReports::class, 'apiSuppliers']);
+    $r->get('/api/reports/customers/spenders', [AdminReports::class, 'apiCustomersBySpending']);
+    $r->get('/api/reports/customers/orders', [AdminReports::class, 'apiCustomersByOrders']);
+    $r->get('/api/reports/inventory/low-stock', [AdminReports::class, 'apiLowStock']);
+    $r->get('/api/reports/inventory/high-stock', [AdminReports::class, 'apiHighStock']);
+    $r->get('/api/reports/order-status', [AdminReports::class, 'apiOrderStatus']);
 
     // Notifications (Thông báo)
     $r->get('/api/notifications', [AdminNotification::class, 'index']);

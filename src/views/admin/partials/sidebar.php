@@ -365,6 +365,20 @@ $allowedSections = RoleMiddleware::getAllowedSections();
         </div>
         <?php endif; ?>
 
+        <?php if ($allowedSections['reports']): ?>
+        <div class="mt-2">
+            <!-- Thống kê & Báo cáo -->
+            <a href="/admin/reports"
+                :class="['flex items-center gap-2 px-3 py-2 rounded', currentPath.startsWith('/admin/reports') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white']">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <span>Thống kê & Báo cáo</span>
+            </a>
+        </div>
+        <?php endif; ?>
+
         <?php if ($allowedSections['audit-logs']): ?>
         <div class="mt-2">
             <!-- Lịch sử thao tác (Chỉ Admin) -->
