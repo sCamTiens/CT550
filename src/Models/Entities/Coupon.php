@@ -12,6 +12,7 @@ class Coupon
     public $min_order_value;
     public $max_discount;
     public $max_uses;
+    public $max_uses_per_customer;
     public $used_count;
     public $starts_at;
     public $ends_at;

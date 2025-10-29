@@ -990,7 +990,8 @@ $items = $items ?? [];
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             code: this.form.coupon_code.toUpperCase(),
-                            order_amount: this.form.subtotal
+                            order_amount: this.form.subtotal,
+                            user_id: this.form.customer_id || null
                         })
                     });
 

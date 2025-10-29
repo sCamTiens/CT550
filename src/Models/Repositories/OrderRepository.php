@@ -414,11 +414,32 @@ class OrderRepository
             // Cập nhật số lần sử dụng mã giảm giá (nếu có)
             if (!empty($data['coupon_code'])) {
                 error_log("Incrementing used_count for coupon: " . $data['coupon_code']);
+                error_log("CustomerId for coupon logging: " . ($customerId ?? 'NULL'));
+                
                 try {
                     require_once __DIR__ . '/CouponRepository.php';
                     $couponRepo = new CouponRepository();
+                    
+                    // Tăng used_count
                     $couponRepo->incrementUsedCount($data['coupon_code']);
                     error_log("Coupon used_count incremented successfully");
+                    
+                    // Ghi log vào user_coupons
+                    $discountAmount = $data['discount_amount'] ?? 0;
+                    
+                    // Nếu không có customerId, thử lấy từ session hoặc data khác
+                    $userIdForLog = $customerId;
+                    if (!$userIdForLog && isset($data['user_id'])) {
+                        $userIdForLog = $data['user_id'];
+                        error_log("Using user_id from data: {$userIdForLog}");
+                    }
+                    if (!$userIdForLog && isset($_SESSION['user']['id'])) {
+                        $userIdForLog = $_SESSION['user']['id'];
+                        error_log("Using user_id from session: {$userIdForLog}");
+                    }
+                    
+                    $couponRepo->logCouponUsage($data['coupon_code'], $userIdForLog, $id, $discountAmount);
+                    error_log("Coupon usage logged successfully");
                 } catch (\Exception $e) {
                     error_log("ERROR incrementing coupon used_count: " . $e->getMessage());
                     // Không throw exception để không làm fail toàn bộ đơn hàng

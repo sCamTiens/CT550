@@ -60,16 +60,22 @@ $items = $items ?? [];
                     <template x-for="c in paginated()" :key="c.id">
                         <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
                             <td class="py-2 px-4 text-center space-x-2">
-                                <button @click="openEdit(c)"
-                                    class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
-                                    title="Sửa">
-                                    <i class="fa-solid fa-pen"></i>
-                                </button>
-                                <button @click="remove(c.id)"
-                                    class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
-                                    title="Xóa">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
+                                <template x-if="c.used_count > 0">
+                                </template>
+                                <template x-if="!c.used_count || c.used_count === 0">
+                                    <div class="space-x-2">
+                                        <button @click="openEdit(c)"
+                                            class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                                            title="Sửa">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+                                        <button @click="remove(c.id)"
+                                            class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                                            title="Xóa">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </template>
                             </td>
                             <td class="py-2 px-4" x-text="c.code"></td>
                             <td class="py-2 px-4" x-text="c.description || '—'"></td>
@@ -443,6 +449,7 @@ $items = $items ?? [];
                     min_order_value: 0,
                     max_discount: 0,
                     max_uses: null,
+                    max_uses_per_customer: 0,
                     starts_at: '',
                     ends_at: '',
                     is_active: 1
@@ -450,13 +457,40 @@ $items = $items ?? [];
                 this.errors = {};
                 this.touched = {};
                 this.openForm = true;
+                
+                // Khởi tạo lại flatpickr sau khi modal hiển thị
+                this.$nextTick(() => {
+                    if (window.initCouponDatePickers) {
+                        window.initCouponDatePickers();
+                    }
+                });
             },
 
             openEdit(c) {
-                this.form = { ...c };
+                this.form = { 
+                    ...c,
+                    // Chuyển is_active về số để checkbox hoạt động đúng (kiểm tra chính xác)
+                    is_active: (c.is_active === 1 || c.is_active === '1' || c.is_active === 'true' || c.is_active === true) ? 1 : 0,
+                    // Đảm bảo các giá trị số là number, giữ nguyên giá trị 0
+                    discount_value: c.discount_value !== null && c.discount_value !== undefined && c.discount_value !== '' ? Number(c.discount_value) : 0,
+                    min_order_value: c.min_order_value !== null && c.min_order_value !== undefined && c.min_order_value !== '' ? Number(c.min_order_value) : 0,
+                    max_discount: c.max_discount !== null && c.max_discount !== undefined && c.max_discount !== '' ? Number(c.max_discount) : 0,
+                    max_uses: c.max_uses !== null && c.max_uses !== undefined && c.max_uses !== '' ? Number(c.max_uses) : null,
+                    max_uses_per_customer: c.max_uses_per_customer !== null && c.max_uses_per_customer !== undefined && c.max_uses_per_customer !== '' ? Number(c.max_uses_per_customer) : 0,
+                    // Đảm bảo dates được format đúng
+                    starts_at: c.starts_at ? c.starts_at.split(' ')[0] : '',
+                    ends_at: c.ends_at ? c.ends_at.split(' ')[0] : ''
+                };
                 this.errors = {};
                 this.touched = {};
                 this.openForm = true;
+                
+                // Khởi tạo lại flatpickr sau khi modal hiển thị
+                this.$nextTick(() => {
+                    if (window.initCouponDatePickers) {
+                        window.initCouponDatePickers();
+                    }
+                });
             },
 
             validateField(field) {
@@ -517,20 +551,38 @@ $items = $items ?? [];
                 this.submitting = true;
 
                 try {
+                    // Convert formatted values back to numbers before sending
+                    const submitData = {
+                        ...this.form,
+                        discount_value: Number(String(this.form.discount_value).replace(/,/g, '')),
+                        min_order_value: Number(String(this.form.min_order_value).replace(/,/g, '')),
+                        max_discount: Number(String(this.form.max_discount).replace(/,/g, '')) || null,
+                        max_uses: Number(String(this.form.max_uses).replace(/,/g, '')) || null,
+                        max_uses_per_customer: Number(String(this.form.max_uses_per_customer).replace(/,/g, '')) || 0,
+                        is_active: Number(this.form.is_active)
+                    };
+
+                    console.log('Submitting data:', submitData);
+
                     const method = this.form.id ? 'PUT' : 'POST';
                     const url = this.form.id ? api.update(this.form.id) : api.create;
                     const r = await fetch(url, {
                         method,
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(this.form)
+                        body: JSON.stringify(submitData)
                     });
 
-                    if (!r.ok) throw new Error('Lỗi server');
+                    if (!r.ok) {
+                        const errorData = await r.json().catch(() => ({}));
+                        console.error('Server error:', errorData);
+                        throw new Error(errorData.error || 'Lỗi server');
+                    }
 
                     await this.fetchAll();
                     this.openForm = false;
                     this.showToast('Thao tác thành công!', 'success');
                 } catch (e) {
+                    console.error('Submit error:', e);
                     this.showToast(e.message || 'Lỗi', 'error');
                 } finally {
                     this.submitting = false;

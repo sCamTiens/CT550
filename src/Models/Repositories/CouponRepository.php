@@ -17,6 +17,17 @@ class CouponRepository
     public function all(): array
     {
         $pdo = DB::pdo();
+        
+        // Tự động vô hiệu hóa các mã hết hạn
+        $now = date('Y-m-d');
+        $pdo->prepare("
+            UPDATE coupons 
+            SET is_active = 0, 
+                updated_at = NOW()
+            WHERE ends_at < :now 
+            AND is_active = 1
+        ")->execute([':now' => $now]);
+        
         $sql = "
             SELECT c.*, 
                 cu.full_name AS created_by_name,
@@ -67,17 +78,22 @@ class CouponRepository
     }
 
     /**
-     * Chuyển đổi ngày từ d/m/Y sang Y-m-d
+     * Chuyển đổi ngày từ d/m/Y hoặc Y-m-d H:i:s sang Y-m-d
      */
     private function convertDate(?string $date): ?string
     {
         if (!$date) return null;
-        if (preg_match('/^\d{4}-\d{2}-\d{2}/', $date)) {
-            return substr($date, 0, 10);
+        
+        // Nếu đã đúng định dạng Y-m-d hoặc Y-m-d H:i:s
+        if (preg_match('/^(\d{4}-\d{2}-\d{2})/', $date, $matches)) {
+            return $matches[1];
         }
+        
+        // Nếu là định dạng d/m/Y
         if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})/', $date, $matches)) {
             return sprintf('%04d-%02d-%02d', $matches[3], $matches[2], $matches[1]);
         }
+        
         return null;
     }
 
@@ -100,12 +116,12 @@ class CouponRepository
         $stmt = $pdo->prepare("
             INSERT INTO coupons (
                 code, name, discount_type, discount_value,
-                min_order_value, max_discount, max_uses, used_count,
+                min_order_value, max_discount, max_uses, max_uses_per_customer, used_count,
                 starts_at, ends_at, is_active,
                 created_by, updated_by, created_at, updated_at
             ) VALUES (
                 :code, :name, :discount_type, :discount_value,
-                :min_order_value, :max_discount, :max_uses, 0,
+                :min_order_value, :max_discount, :max_uses, :max_uses_per_customer, 0,
                 :starts_at, :ends_at, :is_active,
                 :created_by, :updated_by, NOW(), NOW()
             )
@@ -119,6 +135,7 @@ class CouponRepository
             ':min_order_value' => $coupon->min_order_value ?? 0,
             ':max_discount' => $coupon->max_discount ?? 0,
             ':max_uses' => $coupon->max_uses ?? 0,
+            ':max_uses_per_customer' => $coupon->max_uses_per_customer ?? 0,
             ':starts_at' => $startsAt,
             ':ends_at' => $endsAt,
             ':is_active' => $coupon->is_active ?? 1,
@@ -160,6 +177,7 @@ class CouponRepository
                 min_order_value = :min_order_value,
                 max_discount = :max_discount,
                 max_uses = :max_uses,
+                max_uses_per_customer = :max_uses_per_customer,
                 starts_at = :starts_at,
                 ends_at = :ends_at,
                 is_active = :is_active,
@@ -176,6 +194,7 @@ class CouponRepository
             ':min_order_value' => $coupon->min_order_value ?? 0,
             ':max_discount' => $coupon->max_discount ?? 0,
             ':max_uses' => $coupon->max_uses ?? 0,
+            ':max_uses_per_customer' => $coupon->max_uses_per_customer ?? 0,
             ':starts_at' => $this->convertDate($coupon->starts_at),
             ':ends_at' => $this->convertDate($coupon->ends_at),
             ':is_active' => $coupon->is_active ?? 1,
@@ -222,7 +241,7 @@ class CouponRepository
     /**
      * Validate mã giảm giá khi áp dụng vào đơn hàng
      */
-    public function validateCoupon(string $code, float $orderAmount): array
+    public function validateCoupon(string $code, float $orderAmount, ?int $userId = null): array
     {
         $pdo = DB::pdo();
         $stmt = $pdo->prepare("
@@ -248,14 +267,26 @@ class CouponRepository
             throw new \Exception('Mã giảm giá đã hết lượt sử dụng');
         if ($coupon->min_order_value > 0 && $orderAmount < $coupon->min_order_value) {
             $minFormatted = number_format($coupon->min_order_value, 0, ',', '.');
-            throw new \Exception("Đơn hàng phải có giá trị tối thiểu {$minFormatted} để áp dụng mã này");
+            throw new \Exception("Đơn hàng phải có giá trị tối thiểu {$minFormatted}đ để áp dụng mã này");
+        }
+
+        // Kiểm tra số lần sử dụng của khách hàng - LUÔN giới hạn 1 lần/khách hàng
+        if ($userId) {
+            $userCouponRepo = new UserCouponRepository();
+            $currentUsage = $userCouponRepo->countUserUsage($userId, $coupon->id);
+
+            if ($currentUsage > 0) {
+                throw new \Exception("Bạn đã sử dụng mã giảm giá này rồi. Mỗi khách hàng chỉ được sử dụng 1 lần.");
+            }
         }
 
         $discountAmount = 0;
+        $maxDiscount = $row['max_discount'] ?? 0;
+        
         if ($coupon->discount_type === 'Phần trăm') {
             $discountAmount = $orderAmount * ($coupon->discount_value / 100);
-            if ($coupon->max_discount > 0 && $discountAmount > $coupon->max_discount)
-                $discountAmount = $coupon->max_discount;
+            if ($maxDiscount > 0 && $discountAmount > $maxDiscount)
+                $discountAmount = $maxDiscount;
         } else {
             $discountAmount = $coupon->discount_value;
         }
@@ -286,5 +317,45 @@ class CouponRepository
             WHERE UPPER(code) = UPPER(:code)
         ");
         $stmt->execute([':code' => $code]);
+    }
+
+    /**
+     * Ghi log sử dụng mã giảm giá vào bảng user_coupons
+     */
+    public function logCouponUsage(string $code, ?int $userId, ?int $orderId, float $discountAmount): void
+    {
+        error_log("=== logCouponUsage called ===");
+        error_log("Code: {$code}, UserId: {$userId}, OrderId: {$orderId}, Discount: {$discountAmount}");
+        
+        if (!$userId) {
+            error_log("ERROR: Cannot log coupon usage - userId is required");
+            return;
+        }
+        
+        try {
+            $pdo = DB::pdo();
+            
+            // Lấy coupon_id từ code
+            $stmt = $pdo->prepare("SELECT id FROM coupons WHERE UPPER(code) = UPPER(:code)");
+            $stmt->execute([':code' => $code]);
+            $couponId = $stmt->fetchColumn();
+            
+            if (!$couponId) {
+                error_log("ERROR: Cannot log coupon usage - coupon not found with code: {$code}");
+                return;
+            }
+            
+            error_log("Found coupon_id: {$couponId}");
+            
+            // Ghi log vào user_coupons thông qua UserCouponRepository
+            require_once __DIR__ . '/UserCouponRepository.php';
+            $userCouponRepo = new UserCouponRepository();
+            $recordId = $userCouponRepo->recordUsage($userId, $couponId, $orderId, $userId);
+            
+            error_log("Successfully recorded usage with ID: {$recordId}");
+        } catch (\Exception $e) {
+            error_log("ERROR in logCouponUsage: " . $e->getMessage());
+            error_log("Stack trace: " . $e->getTraceAsString());
+        }
     }
 }

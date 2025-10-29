@@ -194,6 +194,18 @@ class ReportsController extends BaseAdminController
         $toDate = $to ? $this->convertDate($to) : null;
 
         $db = $this->getDB();
+        
+        // Build WHERE conditions for date filtering
+        $poDateCondition = "";
+        if ($fromDate || $toDate) {
+            $conditions = [];
+            if ($fromDate) $conditions[] = "DATE(po.created_at) >= '$fromDate'";
+            if ($toDate) $conditions[] = "DATE(po.created_at) <= '$toDate'";
+            if (!empty($conditions)) {
+                $poDateCondition = " AND (" . implode(" AND ", $conditions) . ")";
+            }
+        }
+        
         $sql = "SELECT 
                     s.id as supplier_id,
                     s.name as supplier_name,
@@ -207,15 +219,19 @@ class ReportsController extends BaseAdminController
                         ELSE 0 
                     END as efficiency
                 FROM suppliers s
-                LEFT JOIN purchase_orders po ON s.id = po.supplier_id";
-        
-        if ($fromDate || $toDate) {
-            $sql .= " AND po.id IS NOT NULL";
-            if ($fromDate) $sql .= " AND DATE(po.created_at) >= '$fromDate'";
-            if ($toDate) $sql .= " AND DATE(po.created_at) <= '$toDate'";
-        }
+                LEFT JOIN purchase_orders po ON s.id = po.supplier_id" . $poDateCondition;
 
         // Doanh thu từ sản phẩm: order_items -> stock_out_items -> product_batches -> purchase_orders -> suppliers
+        $orderDateCondition = "";
+        if ($fromDate || $toDate) {
+            $conditions = [];
+            if ($fromDate) $conditions[] = "DATE(o.created_at) >= '$fromDate'";
+            if ($toDate) $conditions[] = "DATE(o.created_at) <= '$toDate'";
+            if (!empty($conditions)) {
+                $orderDateCondition = " AND " . implode(" AND ", $conditions);
+            }
+        }
+        
         $sql .= " LEFT JOIN (
                         SELECT 
                             po_inner.supplier_id,
@@ -229,12 +245,9 @@ class ReportsController extends BaseAdminController
                         LEFT JOIN purchase_orders po_inner ON pb.purchase_order_id = po_inner.id
                         WHERE o.status = 'Hoàn tất'
                         AND so.type = 'sale'
-                        AND so.status IN ('approved', 'completed')";
-        
-        if ($fromDate) $sql .= " AND DATE(o.created_at) >= '$fromDate'";
-        if ($toDate) $sql .= " AND DATE(o.created_at) <= '$toDate'";
-        
-        $sql .= "       GROUP BY po_inner.supplier_id
+                        AND so.status IN ('approved', 'completed')" 
+                        . $orderDateCondition . "
+                        GROUP BY po_inner.supplier_id
                     ) sales ON s.id = sales.supplier_id
                   GROUP BY s.id
                   HAVING total_purchases > 0

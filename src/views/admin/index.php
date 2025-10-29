@@ -298,41 +298,18 @@ require __DIR__ . '/partials/layout-start.php';
 
     <!-- 2 Biểu đồ Tròn -->
     <div class="grid lg:grid-cols-2 gap-6 mb-6">
-        <!-- Biểu đồ Doanh thu theo Danh mục -->
+        <!-- Biểu đồ Doanh thu theo loại sản phẩm -->
         <div class="bg-white rounded-xl shadow p-6">
-            <h2 class="text-xl font-bold text-[#002975] mb-4">Doanh thu theo Danh mục</h2>
-            <div class="flex justify-center items-center" style="height: 300px;">
+            <h2 class="text-xl font-bold text-[#002975] mb-4">Doanh thu theo Loại sản phẩm</h2>
+            <div class="flex justify-center items-center" style="height: 500px;">
                 <canvas id="categoryChart"></canvas>
-            </div>
-            <div class="mt-4 space-y-2" x-data="{ categoryData: <?= json_encode($category_revenue ?? []) ?> }">
-                <template x-if="categoryData.length === 0">
-                    <div class="text-center text-slate-400 py-4">
-                        <i class="fa-solid fa-chart-pie text-3xl mb-2"></i>
-                        <p class="text-sm">Chưa có dữ liệu</p>
-                    </div>
-                </template>
-                <template x-if="categoryData.length > 0">
-                    <div>
-                        <template x-for="(cat, idx) in categoryData" :key="idx">
-                            <div class="flex items-center justify-between py-2 border-b">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-3 h-3 rounded-full" 
-                                         :style="'background-color: ' + ['#002975', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][idx]"></div>
-                                    <span class="text-sm" x-text="cat.name"></span>
-                                </div>
-                                <span class="text-sm font-semibold text-[#002975]" 
-                                      x-text="cat.revenue.toFixed(1) + 'M'"></span>
-                            </div>
-                        </template>
-                    </div>
-                </template>
             </div>
         </div>
 
         <!-- Biểu đồ Trạng thái Đơn hàng -->
         <div class="bg-white rounded-xl shadow p-6">
             <h2 class="text-xl font-bold text-[#002975] mb-4">Trạng thái Đơn hàng</h2>
-            <div class="flex justify-center items-center" style="height: 300px;">
+            <div class="flex justify-center items-center" style="height: 350px; margin-top: 90px;">
                 <canvas id="orderStatusChart"></canvas>
             </div>
             <div class="mt-4 grid grid-cols-3 gap-4 text-center">
@@ -726,10 +703,13 @@ require __DIR__ . '/partials/layout-start.php';
 
                 // Helper function để format số tiền
                 const formatRevenue = (value) => {
-                    if (value >= 1) {
-                        return value.toFixed(1) + 'M';
-                    } else if (value > 0) {
-                        return (value * 1000).toFixed(0) + 'K';
+                    const num = Number(value);
+                    if (isNaN(num)) return '0';
+                    
+                    if (num >= 1) {
+                        return num.toFixed(1) + 'M';
+                    } else if (num > 0) {
+                        return (num * 1000).toFixed(0) + 'K';
                     }
                     return '0';
                 };
@@ -756,7 +736,35 @@ require __DIR__ . '/partials/layout-start.php';
                         maintainAspectRatio: true,
                         plugins: {
                             legend: {
-                                display: false
+                                display: true,
+                                position: 'right',
+                                align: 'center',
+                                labels: {
+                                    padding: 12,
+                                    font: {
+                                        size: 13,
+                                        family: 'Arial, sans-serif'
+                                    },
+                                    color: '#334155',
+                                    usePointStyle: true,
+                                    pointStyle: 'circle',
+                                    boxWidth: 10,
+                                    boxHeight: 10,
+                                    generateLabels: function(chart) {
+                                        const data = chart.data;
+                                        if (data.labels.length && data.datasets.length) {
+                                            return data.labels.map((label, i) => {
+                                                return {
+                                                    text: label,
+                                                    fillStyle: data.datasets[0].backgroundColor[i],
+                                                    hidden: false,
+                                                    index: i
+                                                };
+                                            });
+                                        }
+                                        return [];
+                                    }
+                                }
                             },
                             tooltip: {
                                 backgroundColor: 'rgba(0, 41, 117, 0.9)',
@@ -769,6 +777,12 @@ require __DIR__ . '/partials/layout-start.php';
                                         return context.label + ': ' + formatRevenue(value) + ' (' + percentage + '%)';
                                     }
                                 }
+                            }
+                        },
+                        layout: {
+                            padding: {
+                                left: 20,
+                                right: 20
                             }
                         }
                     }

@@ -95,8 +95,8 @@
             }
             validateField('discount_value');
         }
-    }" x-init="formatted = form.discount_type === 'percentage' ? form.discount_value : (form.discount_value ? form.discount_value.toLocaleString('en-US') : '')"
-        x-effect="if (form.discount_type === 'percentage') { formatted = form.discount_value; } else { formatted = form.discount_value ? form.discount_value.toLocaleString('en-US') : ''; }">
+    }" x-init="formatted = form.discount_type === 'percentage' ? (form.discount_value || 0) : ((form.discount_value !== null && form.discount_value !== undefined) ? Number(form.discount_value).toLocaleString('en-US') : '')"
+        x-effect="if (form.discount_type === 'percentage') { formatted = form.discount_value || 0; } else { formatted = (form.discount_value !== null && form.discount_value !== undefined) ? Number(form.discount_value).toLocaleString('en-US') : ''; }">
         <label class="block text-sm font-semibold mb-1">
             Giá trị giảm <span class="text-red-500">*</span>
             <span class="text-xs text-gray-500" x-text="form.discount_type === 'percentage' ? '(%)' : '(₫)'"></span>
@@ -121,7 +121,8 @@
             this.formatted = raw ? Number(raw).toLocaleString('en-US') : '';
             validateField('min_order_value');
         }
-    }" x-init="formatted = form.min_order_value ? form.min_order_value.toLocaleString('en-US') : ''">
+    }" x-init="formatted = (form.min_order_value !== null && form.min_order_value !== undefined) ? Number(form.min_order_value).toLocaleString('en-US') : ''"
+       x-effect="formatted = (form.min_order_value !== null && form.min_order_value !== undefined) ? Number(form.min_order_value).toLocaleString('en-US') : ''">
         <label class="block text-sm font-semibold mb-1">Giá trị đơn tối thiểu (₫)</label>
         <input x-model="formatted" type="text" @input="onInput($event)"
             @blur="touched.min_order_value = true; validateField('min_order_value')"
@@ -140,7 +141,8 @@
             form.max_discount = raw ? Number(raw) : 0;
             this.formatted = raw ? Number(raw).toLocaleString('en-US') : '';
         }
-    }" x-init="formatted = form.max_discount ? form.max_discount.toLocaleString('en-US') : ''">
+    }" x-init="formatted = (form.max_discount !== null && form.max_discount !== undefined && form.max_discount > 0) ? Number(form.max_discount).toLocaleString('en-US') : ''"
+       x-effect="formatted = (form.max_discount !== null && form.max_discount !== undefined && form.max_discount > 0) ? Number(form.max_discount).toLocaleString('en-US') : ''">
         <label class="block text-sm font-semibold mb-1">Giảm tối đa (₫)
             <span title="Để trống nếu không giới hạn số tiền giảm tối đa"
                 class="inline-flex items-center justify-center w-4 h-4 rounded-full border border-gray-300 text-gray-400 text-xs font-bold cursor-help">?</span>
@@ -182,29 +184,73 @@
             placeholder="Để trống nếu không giới hạn" />
     </div>
 
+    <!-- Số lần sử dụng tối đa / khách hàng -->
+    <div>
+        <label class="block text-sm font-semibold mb-1">Số lần dùng tối đa / khách
+            <span title="Số lần mỗi khách hàng có thể sử dụng mã này (0 = không giới hạn)"
+                class="inline-flex items-center justify-center w-4 h-4 rounded-full border border-gray-300 text-gray-400 text-xs font-bold cursor-help">?</span>
+        </label>
+        <input x-model.number="form.max_uses_per_customer" type="number" min="0"
+            class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
+            placeholder="0 = không giới hạn" />
+    </div>
+
     <!-- Trạng thái -->
     <div class="md:col-span-2 flex items-center gap-3">
-        <input id="isActive" type="checkbox" x-model="form.is_active" true-value="1" false-value="0" class="h-4 w-4">
+        <input id="isActive" type="checkbox" x-model.number="form.is_active" :checked="form.is_active == 1" true-value="1" false-value="0" class="h-4 w-4">
         <label for="isActive" class="text-sm">Kích hoạt</label>
     </div>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+    // Hàm khởi tạo flatpickr - export to global scope
+    window.initCouponDatePickers = function() {
         if (window.flatpickr) {
-            // Ngày bắt đầu
-            flatpickr(".coupon-start-date", {
-                dateFormat: "d/m/Y",
-                locale: "vn",
-                allowInput: true
-            });
+            // Hủy các instance cũ nếu có
+            const startDateElement = document.querySelector(".coupon-start-date");
+            const endDateElement = document.querySelector(".coupon-end-date");
+            
+            if (startDateElement && startDateElement._flatpickr) {
+                startDateElement._flatpickr.destroy();
+            }
+            if (endDateElement && endDateElement._flatpickr) {
+                endDateElement._flatpickr.destroy();
+            }
 
-            // Ngày kết thúc
-            flatpickr(".coupon-end-date", {
-                dateFormat: "d/m/Y",
-                locale: "vn",
-                allowInput: true
-            });
+            // Khởi tạo lại flatpickr cho ngày bắt đầu
+            if (startDateElement) {
+                flatpickr(startDateElement, {
+                    dateFormat: "Y-m-d",
+                    altInput: true,
+                    altFormat: "d/m/Y",
+                    locale: "vn",
+                    allowInput: true,
+                    onChange: function(selectedDates, dateStr, instance) {
+                        // Trigger Alpine.js update
+                        startDateElement.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                });
+            }
+
+            // Khởi tạo lại flatpickr cho ngày kết thúc
+            if (endDateElement) {
+                flatpickr(endDateElement, {
+                    dateFormat: "Y-m-d",
+                    altInput: true,
+                    altFormat: "d/m/Y",
+                    locale: "vn",
+                    allowInput: true,
+                    onChange: function(selectedDates, dateStr, instance) {
+                        // Trigger Alpine.js update
+                        endDateElement.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                });
+            }
         }
+    };
+
+    // Khởi tạo lần đầu khi trang load
+    document.addEventListener('DOMContentLoaded', function () {
+        window.initCouponDatePickers();
     });
 </script>

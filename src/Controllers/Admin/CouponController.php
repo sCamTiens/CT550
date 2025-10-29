@@ -37,7 +37,8 @@ class CouponController extends BaseAdminController
         $currentUser = $this->currentUserId();
 
         try {
-            $id = $this->couponRepo->create($data, $currentUser);
+            $coupon = new \App\Models\Entities\Coupon($data);
+            $id = $this->couponRepo->create($coupon, $currentUser);
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode($this->couponRepo->findOne($id), JSON_UNESCAPED_UNICODE);
             exit;
@@ -64,7 +65,17 @@ class CouponController extends BaseAdminController
         $currentUser = $this->currentUserId();
 
         try {
-            $this->couponRepo->update($id, $data, $currentUser);
+            // Kiểm tra xem mã đã được sử dụng chưa
+            $existingCoupon = $this->couponRepo->findOne($id);
+            if ($existingCoupon && $existingCoupon->used_count > 0) {
+                http_response_code(400);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['error' => 'Không thể chỉnh sửa mã giảm giá đã được sử dụng'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            $coupon = new \App\Models\Entities\Coupon($data);
+            $this->couponRepo->update($id, $coupon, $currentUser);
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode($this->couponRepo->findOne($id), JSON_UNESCAPED_UNICODE);
             exit;
@@ -81,6 +92,14 @@ class CouponController extends BaseAdminController
     {
         header('Content-Type: application/json; charset=utf-8');
         try {
+            // Kiểm tra xem mã đã được sử dụng chưa
+            $existingCoupon = $this->couponRepo->findOne($id);
+            if ($existingCoupon && $existingCoupon->used_count > 0) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Không thể xóa mã giảm giá đã được sử dụng'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
             $this->couponRepo->delete($id);
             echo json_encode(['ok' => true, 'id' => $id]);
         } catch (\Throwable $e) {
@@ -98,9 +117,10 @@ class CouponController extends BaseAdminController
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
         $code = $data['code'] ?? '';
         $orderAmount = floatval($data['order_amount'] ?? 0);
+        $userId = isset($data['user_id']) ? intval($data['user_id']) : null;
 
         try {
-            $result = $this->couponRepo->validateCoupon($code, $orderAmount);
+            $result = $this->couponRepo->validateCoupon($code, $orderAmount, $userId);
             echo json_encode($result, JSON_UNESCAPED_UNICODE);
         } catch (\Exception $e) {
             http_response_code(400);
