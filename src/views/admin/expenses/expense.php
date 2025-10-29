@@ -12,9 +12,16 @@ $items = $items ?? [];
 <div x-data="expensePage()" x-init="init()">
     <div class="flex items-center justify-between mb-4">
         <h1 class="text-3xl font-bold text-[#002975]">Quản lý phiếu chi</h1>
-        <button
-            class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
-            @click="openCreate()">+ Thêm phiếu chi</button>
+        <div class="flex gap-2">
+            <button
+                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975] flex items-center gap-2"
+                @click="exportExcel()">
+                <i class="fa-solid fa-file-excel"></i> Xuất Excel
+            </button>
+            <button
+                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
+                @click="openCreate()">+ Thêm phiếu chi</button>
+        </div>
     </div>
 
     <!-- Table -->
@@ -67,7 +74,8 @@ $items = $items ?? [];
                                     }" x-text="getPaymentMethodText(e.method)"></span>
                                 </div>
                             </td>
-                            <td class="px-3 py-2 break-words whitespace-pre-line text-right" x-text="formatCurrency(e.amount)">
+                            <td class="px-3 py-2 break-words whitespace-pre-line text-right"
+                                x-text="formatCurrency(e.amount)">
                             </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
                                 :class="(e.paid_by_name || '—') === '—' ? 'text-center' : 'text-left'"
@@ -743,6 +751,53 @@ $items = $items ?? [];
 
                 box.appendChild(toast);
                 setTimeout(() => toast.remove(), 3000);
+            },
+
+            exportExcel() {
+                const data = this.filtered().map(e => ({
+                    code: e.code || '',
+                    purchase_order_code: e.purchase_order_code || '',
+                    supplier_name: e.supplier_name || '',
+                    method: this.getPaymentMethodText(e.method),
+                    amount: e.amount || 0,
+                    txn_ref: e.txn_ref || '',
+                    bank_time: e.bank_time || '',
+                    paid_by_name: e.paid_by_name || '',
+                    paid_at: e.paid_at || '',
+                    note: e.note || '',
+                    created_at: e.created_at || '',
+                    created_by_name: e.created_by_name || ''
+                }));
+
+                const now = new Date();
+                const dateStr = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
+                const timeStr = `${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
+                const filename = `Phieu_chi_${dateStr}_${timeStr}.xlsx`;
+
+                fetch('/admin/api/expense_vouchers/export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items: data })
+                })
+                    .then(res => {
+                        if (!res.ok) throw new Error('Export failed');
+                        return res.blob();
+                    })
+                    .then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                        this.showToast('Xuất Excel thành công!', 'success');
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        this.showToast('Không thể xuất Excel');
+                    });
             },
         };
     }

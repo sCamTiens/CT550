@@ -314,8 +314,7 @@ class PurchaseOrderRepository
                 LEFT JOIN suppliers s ON s.id = po.supplier_id
                 LEFT JOIN users u ON u.id = po.created_by
                 LEFT JOIN users u2 ON u2.id = po.updated_by
-                ORDER BY po.created_at DESC
-                LIMIT ?";
+                WHERE po.id = ?";
         $st = $pdo->prepare($sql);
         $st->execute([$id]);
         return $st->fetch(\PDO::FETCH_ASSOC);
@@ -359,10 +358,11 @@ class PurchaseOrderRepository
         // Lấy các dòng sản phẩm từ product_batches
         $sql = "SELECT 
                     pb.product_id,
-                    pb.initial_qty AS qty,
+                    pb.batch_code,
+                    pb.initial_qty AS quantity,
                     pb.unit_cost,
-                    pb.mfg_date,
-                    pb.exp_date,
+                    pb.mfg_date AS manufacture_date,
+                    pb.exp_date AS expiry_date,
                     p.name AS product_name,
                     p.sku AS product_sku
                 FROM product_batches pb
@@ -376,11 +376,11 @@ class PurchaseOrderRepository
 
         // Convert date format cho từng dòng
         foreach ($lines as &$line) {
-            if ($line['mfg_date']) {
-                $line['mfg_date'] = date('d/m/Y', strtotime($line['mfg_date']));
+            if ($line['manufacture_date']) {
+                $line['manufacture_date'] = date('d/m/Y', strtotime($line['manufacture_date']));
             }
-            if ($line['exp_date']) {
-                $line['exp_date'] = date('d/m/Y', strtotime($line['exp_date']));
+            if ($line['expiry_date']) {
+                $line['expiry_date'] = date('d/m/Y', strtotime($line['expiry_date']));
             }
         }
 

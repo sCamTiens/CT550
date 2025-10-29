@@ -12,9 +12,16 @@ $items = $items ?? [];
 <div x-data="couponPage()" x-init="init()">
     <div class="flex items-center justify-between mb-4">
         <h1 class="text-3xl font-bold text-[#002975]">Quản lý mã giảm giá</h1>
-        <button
-            class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
-            @click="openCreate()">+ Thêm mã giảm giá</button>
+        <div class="flex gap-2">
+            <button
+                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975] flex items-center gap-2"
+                @click="exportExcel()">
+                <i class="fa-solid fa-file-excel"></i> Xuất Excel
+            </button>
+            <button
+                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
+                @click="openCreate()">+ Thêm mã giảm giá</button>
+        </div>
     </div>
 
     <!-- Table -->
@@ -43,8 +50,10 @@ $items = $items ?? [];
                             '1' => 'Kích hoạt',
                             '0' => 'Vô hiệu hóa'
                         ]) ?>
-                        <?= dateFilterPopover('created_at', 'Ngày tạo') ?>
+                        <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
                         <?= textFilterPopover('created_by', 'Người tạo') ?>
+                        <?= dateFilterPopover('updated_at', 'Thời gian cập nhật') ?>
+                        <?= textFilterPopover('updated_by', 'Người cập nhật') ?>
                     </tr>
                 </thead>
                 <tbody>
@@ -82,6 +91,8 @@ $items = $items ?? [];
                             </td>
                             <td class="py-2 px-4 text-right" x-text="c.created_at || '—'"></td>
                             <td class="py-2 px-4" x-text="c.created_by_name || '—'"></td>
+                            <td class="py-2 px-4 text-right" x-text="c.updated_at || '—'"></td>
+                            <td class="py-2 px-4" x-text="c.updated_by_name || '—'"></td>
                         </tr>
                     </template>
 
@@ -200,7 +211,8 @@ $items = $items ?? [];
             openFilter: {
                 code: false, description: false, discount_type: false, discount_value: false,
                 min_order_value: false, max_discount: false, max_uses: false, used_count: false,
-                starts_at: false, ends_at: false, is_active: false, created_at: false, created_by: false
+                starts_at: false, ends_at: false, is_active: false, created_at: false, created_by: false,
+                updated_at: false, updated_by: false,
             },
             filters: {
                 code: '',
@@ -215,7 +227,9 @@ $items = $items ?? [];
                 ends_at_type: '', ends_at_value: '', ends_at_from: '', ends_at_to: '',
                 is_active: '',
                 created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
-                created_by: ''
+                created_by: '',
+                updated_at_type: '', updated_at_value: '', updated_at_from: '', updated_at_to: '',
+                updated_by: '',
             },
 
             // -------------------------------------------
@@ -326,7 +340,7 @@ $items = $items ?? [];
                 let data = this.items;
 
                 // --- Lọc theo chuỗi ---
-                ['code', 'description', 'created_by'].forEach(key => {
+                ['code', 'description', 'created_by', 'updated_by'].forEach(key => {
                     if (this.filters[key]) {
                         const field = key === 'created_by' ? 'created_by_name' : key;
                         data = data.filter(o =>
@@ -365,7 +379,7 @@ $items = $items ?? [];
                 });
 
                 // --- Lọc theo ngày ---
-                ['starts_at', 'ends_at', 'created_at'].forEach(key => {
+                ['starts_at', 'ends_at', 'created_at', 'updated_at'].forEach(key => {
                     if (this.filters[`${key}_type`]) {
                         data = data.filter(o =>
                             this.applyFilter(o[key], this.filters[`${key}_type`], {
@@ -387,7 +401,7 @@ $items = $items ?? [];
             },
             closeFilter(key) { this.openFilter[key] = false; },
             resetFilter(key) {
-                if (['starts_at', 'ends_at', 'created_at'].includes(key)) {
+                if (['starts_at', 'ends_at', 'created_at', 'updated_at'].includes(key)) {
                     this.filters[`${key}_type`] = '';
                     this.filters[`${key}_value`] = '';
                     this.filters[`${key}_from`] = '';
@@ -570,6 +584,56 @@ $items = $items ?? [];
 
                 box.appendChild(toast);
                 setTimeout(() => toast.remove(), 3000);
+            },
+
+            exportExcel() {
+                const data = this.filtered().map(c => ({
+                    code: c.code || '',
+                    description: c.description || '',
+                    discount_type: c.discount_type == 'percent' ? 'Phần trăm' : 'Số tiền',
+                    discount_value: c.discount_value || 0,
+                    min_order_value: c.min_order_value || 0,
+                    max_discount: c.max_discount || 0,
+                    max_uses: c.max_uses || 0,
+                    used_count: c.used_count || 0,
+                    starts_at: c.starts_at || '',
+                    ends_at: c.ends_at || '',
+                    is_active: c.is_active == 1 ? 'Hoạt động' : 'Không hoạt động',
+                    created_at: c.created_at || '',
+                    created_by_name: c.created_by_name || '',
+                    updated_at: c.updated_at || '',
+                    updated_by_name: c.updated_by_name || '',
+                }));
+
+                const now = new Date();
+                const dateStr = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
+                const timeStr = `${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
+                const filename = `Ma_giam_gia_${dateStr}_${timeStr}.xlsx`;
+
+                fetch('/admin/api/coupons/export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items: data })
+                })
+                    .then(res => {
+                        if (!res.ok) throw new Error('Export failed');
+                        return res.blob();
+                    })
+                    .then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                        this.showToast('Xuất Excel thành công!', 'success');
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        this.showToast('Không thể xuất Excel');
+                    });
             }
         };
     }

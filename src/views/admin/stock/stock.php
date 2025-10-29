@@ -36,16 +36,27 @@ $items = $items ?? [];
   <div class="flex items-center justify-between mb-4">
     <h1 class="text-3xl font-bold text-[#002975]">Quản lý tồn kho</h1>
 
-    <!-- Thống kê cảnh báo -->
-    <div class="flex gap-4 text-sm">
-      <div class="flex items-center gap-2 px-3 py-2 bg-red-50 rounded-lg border border-red-200">
-        <i class="fa-solid fa-exclamation-circle text-red-600"></i>
-        <span class="text-gray-700">Hết hàng: <strong class="text-red-600" x-text="outOfStockCount()"></strong></span>
+    <div class="flex items-center gap-4">
+      <!-- Thống kê cảnh báo -->
+      <div class="flex gap-4 text-sm">
+        <div class="flex items-center gap-2 px-3 py-2 bg-red-50 rounded-lg border border-red-200">
+          <i class="fa-solid fa-exclamation-circle text-red-600"></i>
+          <span class="text-gray-700">Hết hàng: <strong class="text-red-600" x-text="outOfStockCount()"></strong></span>
+        </div>
+        <div class="flex items-center gap-2 px-3 py-2 bg-yellow-50 rounded-lg border border-yellow-200">
+          <i class="fa-solid fa-exclamation-triangle text-yellow-600"></i>
+          <span class="text-gray-700">Cảnh báo: <strong class="text-yellow-600"
+              x-text="lowStockCount()"></strong></span>
+        </div>
       </div>
-      <div class="flex items-center gap-2 px-3 py-2 bg-yellow-50 rounded-lg border border-yellow-200">
-        <i class="fa-solid fa-exclamation-triangle text-yellow-600"></i>
-        <span class="text-gray-700">Cảnh báo: <strong class="text-yellow-600" x-text="lowStockCount()"></strong></span>
-      </div>
+
+      <!-- Nút xuất Excel -->
+      <button
+        class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975] flex items-center gap-2"
+        @click="exportExcel()">
+        <i class="fa-solid fa-file-excel"></i>
+        Xuất Excel
+      </button>
     </div>
   </div>
 
@@ -125,6 +136,8 @@ $items = $items ?? [];
       </div>
     </div>
   </div>
+    <div id="toast-container" class="z-[60]"></div>
+
 </div>
 
 <script>
@@ -361,6 +374,59 @@ $items = $items ?? [];
         this.openFilter[key] = false;
       },
 
+      exportExcel() {
+        const data = this.filtered();
+
+        if (data.length === 0) {
+          this.showToast('Không có dữ liệu để xuất', 'error');
+          return;
+        }
+
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('vi-VN').replace(/\//g, '-');
+        const timeStr = now.toLocaleTimeString('vi-VN', { hour12: false }).replace(/:/g, '-');
+        const filename = `Ton_kho_${dateStr}_${timeStr}.xlsx`;
+
+        const exportData = {
+          items: data.map(item => ({
+            product_sku: item.product_sku || '',
+            product_name: item.product_name || '',
+            unit_name: item.unit_name || '',
+            qty: item.qty || 0,
+            updated_at: item.updated_at || '',
+            updated_by_name: item.updated_by_name || ''
+          })),
+          export_date: now.toLocaleDateString('vi-VN'),
+          filename: filename
+        };
+
+        fetch('/admin/api/stocks/export', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(exportData)
+        })
+          .then(response => {
+            if (!response.ok) throw new Error('Export failed');
+            return response.blob();
+          })
+          .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            this.showToast('Xuất file Excel thành công!', 'success');
+          })
+          .catch(e => {
+            console.error('Export error:', e);
+            this.showToast('Không thể xuất file Excel', 'error');
+          });
+      },
+
       async init() {
         this.loading = true;
         try {
@@ -371,7 +437,35 @@ $items = $items ?? [];
           }
         } finally { this.loading = false; }
       },
-    }
+
+      showToast(msg, type = 'error') {
+        const box = document.getElementById('toast-container');
+        if (!box) return;
+        box.innerHTML = '';
+        const toast = document.createElement('div');
+        toast.className =
+          `fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 mb-4 text-base font-semibold
+          ${type === 'success'
+            ? 'text-green-700 border-green-400'
+            : 'text-red-700 border-red-400'}
+          bg-white rounded-xl shadow-lg border-2`;
+
+        toast.innerHTML = `
+          <svg class="flex-shrink-0 w-6 h-6 ${type === 'success' ? 'text-green-600' : 'text-red-600'} mr-3" 
+              xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            ${type === 'success'
+            ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M5 13l4 4L19 7" />`
+            : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`}
+          </svg>
+          <div class="flex-1">${msg}</div>
+        `;
+
+        box.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+      }
+    };
   }
 </script>
 

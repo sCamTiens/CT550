@@ -12,9 +12,16 @@ $items = $items ?? [];
 <div x-data="stockOutPage()" x-init="init()">
     <div class="flex items-center justify-between mb-4">
         <h1 class="text-3xl font-bold text-[#002975]">Quản lý phiếu xuất kho</h1>
-        <button
-            class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
-            @click="openCreate()">+ Thêm phiếu xuất</button>
+        <div class="flex gap-2">
+            <button
+                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975] flex items-center gap-2"
+                @click="exportExcel()">
+                <i class="fa-solid fa-file-excel"></i> Xuất Excel
+            </button>
+            <button
+                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
+                @click="openCreate()">+ Thêm phiếu xuất</button>
+        </div>
     </div>
 
     <!-- Table -->
@@ -1122,6 +1129,65 @@ $items = $items ?? [];
                 } catch (e) {
                     this.showToast('Không thể hoàn thành phiếu xuất kho');
                 }
+            },
+
+            exportExcel() {
+                const data = this.filtered().map(s => ({
+                    code: s.code || '',
+                    customer_name: s.customer_name || '',
+                    order_code: s.order_code || '',
+                    type: this.getTypeText(s.type),
+                    status: this.getStatusText(s.status),
+                    out_date: s.out_date || '',
+                    total_amount: s.total_amount || 0,
+                    note: s.note || '',
+                    created_at: s.created_at || '',
+                    created_by_name: s.created_by_name || '',
+                    items: (s.items || []).map(item => ({
+                        product_name: item.product_name || '',
+                        batch_code: item.batch_code || '',
+                        quantity: item.qty || 0
+                    }))
+                }));
+
+                const now = new Date();
+                const dateStr = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
+                const timeStr = `${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
+                const filename = `Phieu_xuat_kho_${dateStr}_${timeStr}.xlsx`;
+
+                // Get date range from filters
+                const fromDate = this.filters.out_date_from || '';
+                const toDate = this.filters.out_date_to || '';
+
+                fetch('/admin/api/stock-outs/export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        items: data,
+                        from_date: fromDate,
+                        to_date: toDate,
+                        filename: filename
+                    })
+                })
+                    .then(res => {
+                        if (!res.ok) throw new Error('Export failed');
+                        return res.blob();
+                    })
+                    .then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                        this.showToast('Xuất Excel thành công!', 'success');
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        this.showToast('Không thể xuất Excel');
+                    });
             },
 
             // ===== TOAST =====

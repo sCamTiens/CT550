@@ -13,9 +13,17 @@ $items = $items ?? [];
 <div x-data="productPage()" x-init="init()">
   <div class="flex items-center justify-between mb-4">
     <h1 class="text-3xl font-bold text-[#002975]">Quản lý sản phẩm</h1>
-    <button
-      class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
-      @click="openCreate()">+ Thêm sản phẩm</button>
+    <div class="flex gap-2">
+      <button
+        class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975] flex items-center gap-2"
+        @click="exportExcel()">
+        <i class="fa-solid fa-file-excel"></i>
+        Xuất Excel
+      </button>
+      <button
+        class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
+        @click="openCreate()">+ Thêm sản phẩm</button>
+    </div>
   </div>
 
   <!-- Table -->
@@ -67,10 +75,9 @@ $items = $items ?? [];
                 </button>
               </td>
               <td class="py-2 px-4 text-center">
-                <img :src="`/assets/images/products/${p.id}/1.png`" 
-                     @error="$event.target.src='/assets/images/products/default.png'"
-                     class="w-12 h-12 object-cover rounded-full border mx-auto"
-                     :alt="p.name">
+                <img :src="`/assets/images/products/${p.id}/1.png`"
+                  @error="$event.target.src='/assets/images/products/default.png'"
+                  class="w-12 h-12 object-cover rounded-full border mx-auto" :alt="p.name">
               </td>
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.sku"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.barcode"></td>
@@ -1027,6 +1034,66 @@ $items = $items ?? [];
         } catch (e) {
           this.showToast(e.message || 'Không thể xóa sản phẩm');
         }
+      },
+
+      // ===== EXPORT EXCEL =====
+      exportExcel() {
+        const data = this.filtered();
+
+        if (data.length === 0) {
+          this.showToast('Không có dữ liệu để xuất', 'error');
+          return;
+        }
+
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('vi-VN').replace(/\//g, '-');
+        const timeStr = now.toLocaleTimeString('vi-VN', { hour12: false }).replace(/:/g, '-');
+        const filename = `San_pham_${dateStr}_${timeStr}.xlsx`;
+
+        const exportData = {
+          products: data.map(p => ({
+            sku: p.sku || '',
+            name: p.name || '',
+            category_name: p.category_name || '',
+            brand_name: p.brand_name || '',
+            sale_price: p.sale_price || 0,
+            cost_price: p.cost_price || 0,
+            stock_qty: p.stock_qty || 0,
+            is_active: p.is_active,
+            created_at: p.created_at || '',
+            created_by_name: p.created_by_name || '',
+            updated_at: p.updated_at || '',
+            updated_by_name: p.updated_by_name || '',
+          })),
+          export_date: now.toLocaleDateString('vi-VN'),
+          filename: filename
+        };
+
+        fetch('/admin/api/products/export', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(exportData)
+        })
+          .then(response => {
+            if (!response.ok) throw new Error('Export failed');
+            return response.blob();
+          })
+          .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            this.showToast('Xuất file Excel thành công!', 'success');
+          })
+          .catch(e => {
+            console.error('Export error:', e);
+            this.showToast('Không thể xuất file Excel', 'error');
+          });
       },
 
       showToast(msg, type = 'error') {

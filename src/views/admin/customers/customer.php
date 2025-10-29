@@ -12,9 +12,17 @@ $items = $items ?? [];
 <div x-data="customerPage()" x-init="init()">
   <div class="flex items-center justify-between mb-4">
     <h1 class="text-3xl font-bold text-[#002975]">Quản lý khách hàng</h1>
-    <button
-      class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
-      @click="openCreate()">+ Thêm khách hàng</button>
+    <div class="flex items-center gap-2">
+      <button
+        class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975] flex items-center gap-2"
+        @click="exportExcel()">
+        <i class="fa-solid fa-file-excel"></i>
+        Xuất Excel
+      </button>
+      <button
+        class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
+        @click="openCreate()">+ Thêm khách hàng</button>
+    </div>
   </div>
   <div class="bg-white rounded-xl shadow pb-4">
     <div style="overflow-x:auto; max-width:100%;" class="pb-40">
@@ -125,12 +133,14 @@ $items = $items ?? [];
                   :class="c.is_active ? 'text-green-600' : 'text-red-600'"></span>
               </td>
               <td class="py-2 px-4 break-words whitespace-pre-line"
-                :class="(c.created_at || '—') === '—' ? 'text-center' : 'text-right'" x-text="c.created_at || '—'"></td>
+                :class="(c.created_at || '—') === '—' ? 'text-center' : 'text-right'" x-text="c.created_at || '—'">
+              </td>
               <td class="py-2 px-4 break-words whitespace-pre-line"
                 :class="(c.created_by_name || '—') === '—' ? 'text-center' : 'text-left'"
                 x-text="c.created_by_name || '—'"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line"
-                :class="(c.updated_at || '—') === '—' ? 'text-center' : 'text-right'" x-text="c.updated_at || '—'"></td>
+                :class="(c.updated_at || '—') === '—' ? 'text-center' : 'text-right'" x-text="c.updated_at || '—'">
+              </td>
               <td class="py-2 px-4 break-words whitespace-pre-line"
                 :class="(c.updated_by_name || '—') === '—' ? 'text-center' : 'text-left'"
                 x-text="c.updated_by_name || '—'"></td>
@@ -398,7 +408,8 @@ $items = $items ?? [];
                             class="p-2 rounded hover:bg-gray-100 text-[#002975]" title="Xem chi tiết đơn hàng">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
                               stroke="currentColor" stroke-width="2">
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                               <path stroke-linecap="round" stroke-linejoin="round"
                                 d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
@@ -406,8 +417,7 @@ $items = $items ?? [];
                         </td>
                         <td class="py-2 px-4 border text-sm" x-text="order.code || '—'"></td>
                         <td class="py-2 px-4 border">
-                          <span x-text="order.status"
-                            :class="getStatusClass(order.status)"></span>
+                          <span x-text="order.status" :class="getStatusClass(order.status)"></span>
                         </td>
                         <td class="py-2 px-4 border text-right font-semibold text-green-600"
                           x-text="formatMoney(order.grand_total)"></td>
@@ -442,7 +452,8 @@ $items = $items ?? [];
                       class="absolute right-0 mt-1 bg-white border rounded shadow w-28 z-50">
                       <template x-for="opt in orderPerPageOptions" :key="opt">
                         <div @click="orderPerPage=opt;orderCurrentPage=1;open=false"
-                          class="px-3 py-2 cursor-pointer hover:bg-[#002975] hover:text-white" x-text="opt + ' / trang'">
+                          class="px-3 py-2 cursor-pointer hover:bg-[#002975] hover:text-white"
+                          x-text="opt + ' / trang'">
                         </div>
                       </template>
                     </div>
@@ -510,7 +521,8 @@ $items = $items ?? [];
                     <td class="py-2 px-4 border text-center" x-text="item.quantity"></td>
                     <td class="py-2 px-4 border text-right" x-text="formatMoney(item.unit_price)"></td>
                     <td class="py-2 px-4 border text-right font-semibold text-green-600"
-                      x-text="formatMoney(item.total)"></td>
+                      x-text="formatMoney(item.total)">
+                    </td>
                   </tr>
                 </template>
               </tbody>
@@ -1040,6 +1052,64 @@ $items = $items ?? [];
           this.filters[key] = '';
         }
         this.openFilter[key] = false;
+      },
+
+      exportExcel() {
+        const data = this.filtered();
+
+        if (data.length === 0) {
+          this.showToast('Không có dữ liệu để xuất', 'error');
+          return;
+        }
+
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('vi-VN').replace(/\//g, '-');
+        const timeStr = now.toLocaleTimeString('vi-VN', { hour12: false }).replace(/:/g, '-');
+        const filename = `Khach_hang_${dateStr}_${timeStr}.xlsx`;
+
+        const exportData = {
+          items: data.map(item => ({
+            username: item.username || '',
+            full_name: item.full_name || '',
+            email: item.email || '',
+            phone: item.phone || '',
+            gender: item.gender,
+            date_of_birth: this.formatDate(item.date_of_birth) || '',
+            is_active: item.is_active,
+            created_at: item.created_at || '',
+            created_by_name: item.created_by_name || '',
+            updated_at: item.updated_at || '',
+            updated_by_name: item.updated_by_name || ''
+          })),
+          export_date: now.toLocaleDateString('vi-VN'),
+          filename: filename
+        };
+
+        fetch('/admin/api/customers/export', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(exportData)
+        })
+          .then(response => {
+            if (!response.ok) throw new Error('Export failed');
+            return response.blob();
+          })
+          .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            this.showToast('Xuất file Excel thành công!', 'success');
+          })
+          .catch(e => {
+            console.error('Export error:', e);
+            this.showToast('Không thể xuất file Excel', 'error');
+          });
       },
 
       async init() {

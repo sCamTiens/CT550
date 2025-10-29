@@ -256,4 +256,93 @@ class ProductController extends BaseAdminController
         imagepng($image, $destPath, 9);
         imagedestroy($image);
     }
+
+    /** POST /admin/api/products/export - Xuất Excel */
+    public function export()
+    {
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        $products = $data['products'] ?? [];
+        
+        if (empty($products)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Không có dữ liệu để xuất']);
+            exit;
+        }
+
+        require_once __DIR__ . '/../../../vendor/autoload.php';
+        
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        
+        // Header
+        $sheet->mergeCells('A1:M1');
+        $sheet->setCellValue('A1', 'MINIGO');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        
+        $exportDate = $data['export_date'] ?? date('d/m/Y');
+        $sheet->mergeCells('A2:M2');
+        $sheet->setCellValue('A2', "Ngày xuất: $exportDate");
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        
+        $sheet->mergeCells('A3:M3');
+        $sheet->setCellValue('A3', 'DANH SÁCH SẢN PHẨM');
+        $sheet->getStyle('A3')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        
+        // Column headers
+        $headers = ['STT', 'SKU', 'Tên sản phẩm', 'Danh mục', 'Thương hiệu', 'Giá bán', 'Giá nhập', 'Tồn kho', 'Trạng thái', 'Thời gian tạo', 'Người tạo', 'Thời gian cập nhật', 'Người cập nhật'];
+        $col = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . '5', $header);
+            $col++;
+        }
+        $sheet->getStyle('A5:M5')->getFont()->setBold(true);
+        $sheet->getStyle('A5:M5')->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('E2EFDA');
+        
+        // Data
+        $row = 6;
+        foreach ($products as $index => $product) {
+            $sheet->setCellValue('A' . $row, $index + 1);
+            $sheet->setCellValue('B' . $row, $product['sku'] ?? '');
+            $sheet->setCellValue('C' . $row, $product['name'] ?? '');
+            $sheet->setCellValue('D' . $row, $product['category_name'] ?? '');
+            $sheet->setCellValue('E' . $row, $product['brand_name'] ?? '');
+            $sheet->setCellValue('F' . $row, $product['sale_price'] ?? 0);
+            $sheet->setCellValue('G' . $row, $product['cost_price'] ?? 0);
+            $sheet->setCellValue('H' . $row, $product['stock_qty'] ?? 0);
+            $sheet->setCellValue('I' . $row, $product['is_active'] ? 'Hoạt động' : 'Ngừng');
+            $sheet->setCellValue('J' . $row, $product['created_at'] ?? '');
+            $sheet->setCellValue('K' . $row, $product['created_by_name'] ?? '');
+            $sheet->setCellValue('L' . $row, $product['updated_at'] ?? '');
+            $sheet->setCellValue('M' . $row, $product['updated_by_name'] ?? '');
+
+            $row++;
+        }
+        
+        // Number format for prices and stock
+        $lastRow = $row - 1;
+        $sheet->getStyle("F6:H$lastRow")->getNumberFormat()
+            ->setFormatCode('#,##0');
+        
+        // Borders
+        $sheet->getStyle("A5:M$lastRow")->getBorders()->getAllBorders()
+            ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+        
+        // Auto-size columns
+        foreach (range('A', 'M') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+        
+        // Output
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . ($data['filename'] ?? 'San_pham.xlsx') . '"');
+        header('Cache-Control: max-age=0');
+        
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
 }

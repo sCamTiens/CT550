@@ -13,9 +13,17 @@ $items = $items ?? [];
 <div x-data="supplierPage()" x-init="init()">
     <div class="flex items-center justify-between mb-4">
         <h1 class="text-3xl font-bold text-[#002975]">Quản lý nhà cung cấp</h1>
-        <button
-            class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
-            @click="openCreate()">+ Thêm nhà cung cấp</button>
+        <div class="flex items-center gap-2">
+            <button
+                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975] flex items-center gap-2"
+                @click="exportExcel()">
+                <i class="fa-solid fa-file-excel"></i>
+                Xuất Excel
+            </button>
+            <button
+                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
+                @click="openCreate()">+ Thêm nhà cung cấp</button>
+        </div>
     </div>
 
     <!-- Table -->
@@ -386,7 +394,7 @@ $items = $items ?? [];
             errors: {},
             touched: {},
             markTouched(field) {
-                                this.touched[field] = true;
+                this.touched[field] = true;
                 this.validateField(field);
             },
 
@@ -453,6 +461,61 @@ $items = $items ?? [];
                     this.items = this.items.filter(x => x.id != id);
                     this.showToast('Đã xóa thành công!', 'success');
                 } catch (e) { this.showToast(e.message, 'error'); }
+            },
+
+            exportExcel() {
+                const data = this.filtered();
+
+                if (data.length === 0) {
+                    this.showToast('Không có dữ liệu để xuất', 'error');
+                    return;
+                }
+
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('vi-VN').replace(/\//g, '-');
+                const timeStr = now.toLocaleTimeString('vi-VN', { hour12: false }).replace(/:/g, '-');
+                const filename = `Nha_cung_cap_${dateStr}_${timeStr}.xlsx`;
+
+                const exportData = {
+                    items: data.map(item => ({
+                        name: item.name || '',
+                        phone: item.phone || '',
+                        email: item.email || '',
+                        address: item.address || '',
+                        created_at: item.created_at || '',
+                        created_by_name: item.created_by_name || '',
+                        updated_at: item.updated_at || '',
+                        updated_by_name: item.updated_by_name || ''
+                    })),
+                    export_date: now.toLocaleDateString('vi-VN'),
+                    filename: filename
+                };
+
+                fetch('/admin/api/suppliers/export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(exportData)
+                })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Export failed');
+                        return response.blob();
+                    })
+                    .then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+
+                        this.showToast('Xuất file Excel thành công!', 'success');
+                    })
+                    .catch(e => {
+                        console.error('Export error:', e);
+                        this.showToast('Không thể xuất file Excel', 'error');
+                    });
             },
 
             showToast(msg, type = 'success') {

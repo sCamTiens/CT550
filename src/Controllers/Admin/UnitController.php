@@ -157,4 +157,82 @@ class UnitController extends BaseAdminController
     {
         return $_SESSION['admin_user']['full_name'] ?? null;
     }
+
+    /** POST /admin/api/units/export - Xuất Excel */
+    public function export()
+    {
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        $items = $data['items'] ?? [];
+
+        if (empty($items)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Không có dữ liệu để xuất']);
+            exit;
+        }
+
+        require_once __DIR__ . '/../../../vendor/autoload.php';
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Header
+        $sheet->mergeCells('A1:G1');
+        $sheet->setCellValue('A1', 'MINIGO');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $exportDate = $data['export_date'] ?? date('d/m/Y');
+        $sheet->mergeCells('A2:G2');
+        $sheet->setCellValue('A2', "Ngày xuất: $exportDate");
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $sheet->mergeCells('A3:G3');
+        $sheet->setCellValue('A3', 'DANH SÁCH ĐƠN VỊ TÍNH');
+        $sheet->getStyle('A3')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // Column headers
+        $headers = ['STT', 'Tên đơn vị', 'Slug', 'Ngày tạo', 'Người tạo', 'Thời gian cập nhật', 'Người cập nhật'];
+        $col = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . '5', $header);
+            $col++;
+        }
+        $sheet->getStyle('A5:G5')->getFont()->setBold(true);
+        $sheet->getStyle('A5:G5')->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('E2EFDA');
+
+        // Data
+        $row = 6;
+        foreach ($items as $index => $item) {
+            $sheet->setCellValue('A' . $row, $index + 1);
+            $sheet->setCellValue('B' . $row, $item['name'] ?? '');
+            $sheet->setCellValue('C' . $row, $item['slug'] ?? '');
+            $sheet->setCellValue('D' . $row, $item['created_at'] ?? '');
+            $sheet->setCellValue('E' . $row, $item['created_by_name'] ?? '');
+            $sheet->setCellValue('F' . $row, $item['updated_at'] ?? '');
+            $sheet->setCellValue('G' . $row, $item['updated_by_name'] ?? '');
+            $row++;
+        }
+
+        // Borders
+        $lastRow = $row - 1;
+        $sheet->getStyle("A5:G$lastRow")->getBorders()->getAllBorders()
+            ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+        // Auto-size columns
+        foreach (range('A', 'G') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Output
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . ($data['filename'] ?? 'Don_vi_tinh.xlsx') . '"');
+        header('Cache-Control: max-age=0');
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
 }

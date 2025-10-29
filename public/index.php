@@ -82,6 +82,7 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/api/products/all-including-inactive', [AdminProduct::class, 'apiAllProducts']);
     $r->get('/api/products/stock-list', [AdminProduct::class, 'apiStockList']);
     $r->post('/api/products/upload-images', [AdminProduct::class, 'uploadImages']);
+    $r->post('/api/products/export', [AdminProduct::class, 'export']);
     $r->post('/products', [AdminProduct::class, 'store']);
     $r->put('/products/{id}', [AdminProduct::class, 'update']);
     $r->delete('/products/{id}', [AdminProduct::class, 'destroy']);
@@ -90,13 +91,15 @@ $router->group('/admin', function (Router $r): void {
     // Categories
     $r->get('/categories', [AdminCategory::class, 'index']);
     $r->get('/api/categories', [AdminCategory::class, 'apiIndex']);
+    $r->post('/api/categories/export', [AdminCategory::class, 'export']);
     $r->post('/categories', [AdminCategory::class, 'store']);
     $r->put('/categories/{id}', [AdminCategory::class, 'update']);
-    $r->delete('/categories/{id}', [AdminCategory::class, 'destroy']);
+    $r->delete('/categories/{id}/delete', [AdminCategory::class, 'destroy']);
 
     // Brands
     $r->get('/brands', [AdminBrand::class, 'index']);
     $r->get('/api/brands', [AdminBrand::class, 'apiIndex']);
+    $r->post('/api/brands/export', [AdminBrand::class, 'export']);
     $r->post('/brands', [AdminBrand::class, 'store']);
     $r->put('/brands/{id}', [AdminBrand::class, 'update']);
     $r->delete('/brands/{id}', [AdminBrand::class, 'destroy']);
@@ -104,6 +107,7 @@ $router->group('/admin', function (Router $r): void {
     // Suppliers
     $r->get('/suppliers', [AdminSupplier::class, 'index']);
     $r->get('/api/suppliers', [AdminSupplier::class, 'apiIndex']);
+    $r->post('/api/suppliers/export', [AdminSupplier::class, 'export']);
     $r->post('/suppliers', [AdminSupplier::class, 'store']);
     $r->put('/suppliers/{id}', [AdminSupplier::class, 'update']);
     $r->delete('/suppliers/{id}', [AdminSupplier::class, 'destroy']);
@@ -111,6 +115,7 @@ $router->group('/admin', function (Router $r): void {
     // Units
     $r->get('/units', [AdminUnit::class, 'index']);
     $r->get('/api/units', [AdminUnit::class, 'apiIndex']);
+    $r->post('/api/units/export', [AdminUnit::class, 'export']);
     $r->post('/units', [AdminUnit::class, 'store']);
     $r->put('/units/{id}', [AdminUnit::class, 'update']);
     $r->delete('/units/{id}', [AdminUnit::class, 'destroy']);
@@ -118,6 +123,7 @@ $router->group('/admin', function (Router $r): void {
     // Stocks
     $r->get('/stocks', [AdminStock::class, 'index']);
     $r->get('/api/stocks', [AdminStock::class, 'apiIndex']);
+    $r->post('/api/stocks/export', [AdminStock::class, 'export']);
     $r->get('/stocktakes', [AdminStocktake::class, 'index']);
     $r->get('/api/stocktakes', [AdminStocktake::class, 'apiIndex']);
     $r->post('/api/stocktakes/create', [AdminStocktake::class, 'apiCreate']);
@@ -126,6 +132,7 @@ $router->group('/admin', function (Router $r): void {
     // Product Batches (Inventory lots)
     $r->get('/product-batches', [AdminProductBatch::class, 'index']);
     $r->get('/api/product-batches', [AdminProductBatch::class, 'apiIndex']);
+    $r->post('/api/product-batches/export', [AdminProductBatch::class, 'export']);
     $r->post('/api/product-batches', [AdminProductBatch::class, 'store']);
     $r->put('/api/product-batches/{id}', [AdminProductBatch::class, 'update']);
     $r->delete('/api/product-batches/{id}', [AdminProductBatch::class, 'destroy']);
@@ -134,6 +141,7 @@ $router->group('/admin', function (Router $r): void {
     // Purchase Orders / Receipts
     $r->get('/purchase-orders', [AdminPurchaseOrder::class, 'index']);
     $r->get('/api/purchase-orders', [AdminPurchaseOrder::class, 'apiIndex']);
+    $r->post('/api/purchase-orders/export', [AdminPurchaseOrder::class, 'export']);
     $r->get('/api/purchase-orders/unpaid', [AdminPurchaseOrder::class, 'unpaid']);
     $r->get('/api/purchase-orders/{id}', [AdminPurchaseOrder::class, 'show']);
     $r->post('/api/purchase-orders', [AdminPurchaseOrder::class, 'store']);
@@ -143,6 +151,7 @@ $router->group('/admin', function (Router $r): void {
     // Staffs
     $r->get('/staff', [AdminStaff::class, 'index']);
     $r->get('/api/staff', [AdminStaff::class, 'apiIndex']);
+    $r->post('/api/staff/export', [AdminStaff::class, 'export']);
     $r->get('/api/staff/roles', [AdminStaff::class, 'apiRoles']);
     $r->post('/api/staff', [AdminStaff::class, 'store']);
     $r->put('/api/staff/{id}', [AdminStaff::class, 'update']);
@@ -158,10 +167,12 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/api/customers/{id}/addresses', [AdminCustomer::class, 'getAddresses']);
     $r->get('/api/customers/{id}/detail', [AdminCustomer::class, 'getDetail']);
     $r->delete('/api/customers/{id}', [AdminCustomer::class, 'destroy']);
+    $r->post('/api/customers/export', [AdminCustomer::class, 'export']);
 
     // Expense Vouchers
     $r->get('/expense_vouchers', [AdminExpenseVoucher::class, 'index']);
     $r->get('/api/expense_vouchers', [AdminExpenseVoucher::class, 'apiIndex']);
+    $r->post('/api/expense_vouchers/export', [AdminExpenseVoucher::class, 'export']);
     $r->post('/api/expense_vouchers', [AdminExpenseVoucher::class, 'store']);
     $r->put('/api/expense_vouchers/{id}', [AdminExpenseVoucher::class, 'update']);
     $r->delete('/api/expense_vouchers/{id}', [AdminExpenseVoucher::class, 'destroy']);
@@ -170,6 +181,7 @@ $router->group('/admin', function (Router $r): void {
     // Receipt Vouchers
     $r->get('/receipt_vouchers', [AdminReceiptVoucher::class, 'index']);
     $r->get('/api/receipt_vouchers', [AdminReceiptVoucher::class, 'apiIndex']);
+    $r->post('/api/receipt_vouchers/export', [AdminReceiptVoucher::class, 'export']);
     $r->post('/api/receipt_vouchers', [AdminReceiptVoucher::class, 'store']);
     $r->put('/api/receipt_vouchers/{id}', [AdminReceiptVoucher::class, 'update']);
     $r->delete('/api/receipt_vouchers/{id}', [AdminReceiptVoucher::class, 'destroy']);
@@ -189,6 +201,7 @@ $router->group('/admin', function (Router $r): void {
     // Stock Outs (Phiếu xuất kho)
     $r->get('/stock-outs', [AdminStockOut::class, 'index']);
     $r->get('/api/stock-outs', [AdminStockOut::class, 'apiIndex']);
+    $r->post('/api/stock-outs/export', [AdminStockOut::class, 'export']);
     $r->post('/api/stock-outs', [AdminStockOut::class, 'store']);
     $r->get('/api/stock-outs/next-code', [AdminStockOut::class, 'nextCode']);
     $r->get('/api/stock-outs/pending', [AdminStockOut::class, 'pending']);
@@ -201,6 +214,7 @@ $router->group('/admin', function (Router $r): void {
     // Coupons (Mã giảm giá)
     $r->get('/coupons', [AdminCoupon::class, 'index']);
     $r->get('/api/coupons', [AdminCoupon::class, 'apiIndex']);
+    $r->post('/api/coupons/export', [AdminCoupon::class, 'export']);
     $r->post('/api/coupons/validate', [AdminCoupon::class, 'validate']);
     $r->post('/coupons', [AdminCoupon::class, 'store']);
     $r->put('/coupons/{id}', [AdminCoupon::class, 'update']);
@@ -209,6 +223,7 @@ $router->group('/admin', function (Router $r): void {
     // Promotions (Chương trình khuyến mãi)
     // API routes phải đặt trước để không bị routes khác catch
     $r->post('/api/promotions/check', [AdminPromotion::class, 'check']);
+    $r->post('/api/promotions/export', [AdminPromotion::class, 'export']);
     $r->get('/api/promotions', [AdminPromotion::class, 'apiIndex']);
     $r->get('/promotions', [AdminPromotion::class, 'index']);
     $r->post('/promotions', [AdminPromotion::class, 'store']);

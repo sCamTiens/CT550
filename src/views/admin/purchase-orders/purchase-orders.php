@@ -13,20 +13,176 @@ $items = $items ?? [];
 <div x-data="purchaseOrdersPage()" x-init="init()">
     <div class="flex items-center justify-between mb-4">
         <h1 class="text-3xl font-bold text-[#002975]">Phiếu nhập kho</h1>
-        <button
-            class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
-            @click="openCreate()">+ Thêm phiếu nhập kho</button>
+        <div class="flex gap-2">
+            <button
+                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975] flex items-center gap-2"
+                @click="exportExcel()">
+                <i class="fa-solid fa-file-excel"></i> Xuất Excel
+            </button>
+            <button
+                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
+                @click="openCreate()">+ Thêm phiếu nhập kho</button>
+        </div>
     </div>
 
     <!-- Table -->
     <div class="bg-white rounded-xl shadow pb-4">
         <div style="overflow-x:auto; max-width:100%;" class="pb-40">
-            <table style="width:180%; min-width:1200px; border-collapse:collapse;">
+            <table style="width:230%; min-width:1250px; border-collapse:collapse;">
                 <thead>
                     <tr class="bg-gray-50 text-slate-600">
                         <th class="py-2 px-4 text-center">Thao tác</th>
                         <?= textFilterPopover('code', 'Mã phiếu') ?>
                         <?= textFilterPopover('supplier_name', 'Nhà cung cấp') ?>
+                        <th class="py-2 px-4 text-center align-top" style="min-width: 500px; width: 500px;">
+                            <div class="mb-2 text-base font-bold">Chi tiết nhập kho (theo lô)</div>
+
+                            <div class="grid grid-cols-3 gap-3 border-t pt-2">
+                                <!-- Tên sản phẩm - Mã lô -->
+                                <div class="relative">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <span class="text-sm font-semibold text-gray-700">Sản phẩm - Mã lô</span>
+                                        <button @click.stop="toggleFilter('item_product')"
+                                            class="p-1 rounded hover:bg-gray-100" title="Tìm theo Sản phẩm hoặc Mã lô">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" />
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    <div x-cloak x-show="openFilter.item_product" x-transition
+                                        @click.outside="openFilter.item_product=false"
+                                        class="absolute z-40 mt-2 w-64 bg-white rounded-lg shadow-lg border p-3 text-left left-0">
+                                        <div class="font-semibold mb-2">Tìm theo "Sản phẩm hoặc Mã lô"</div>
+                                        <input x-model.trim="filters.item_product"
+                                            class="w-full border rounded px-3 py-2" placeholder="Nhập tên hoặc mã lô">
+                                        <div class="mt-3 flex gap-2 justify-end">
+                                            <button @click="closeFilter('item_product')"
+                                                class="px-3 py-1 text-xs rounded bg-[#002975] text-white hover:opacity-90">Tìm</button>
+                                            <button @click="resetFilter('item_product')"
+                                                class="px-3 py-1 text-xs rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Làm
+                                                mới</button>
+                                            <button @click="openFilter.item_product=false"
+                                                class="px-3 py-1 text-xs rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Đóng</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Số lượng -->
+                                <div class="relative">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <span class="text-sm font-semibold text-gray-700">Số lượng</span>
+                                        <button @click.stop="toggleFilter('item_qty')"
+                                            class="p-1 rounded hover:bg-gray-100" title="Tìm theo Số lượng">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" />
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    <div x-cloak x-show="openFilter.item_qty" x-transition
+                                        @click.outside="openFilter.item_qty=false"
+                                        class="absolute z-40 mt-2 w-64 bg-white rounded-lg shadow-lg border p-3 text-left left-0">
+                                        <div class="font-semibold mb-2">Tìm theo "Số lượng"</div>
+                                        <select x-model="filters.item_qty_type"
+                                            class="border rounded px-3 py-2 text-sm w-full">
+                                            <option value="">-- Chọn kiểu lọc --</option>
+                                            <option value="eq">Bằng</option>
+                                            <option value="gt">Lớn hơn</option>
+                                            <option value="lt">Nhỏ hơn</option>
+                                            <option value="gte">Lớn hơn hoặc bằng</option>
+                                            <option value="lte">Nhỏ hơn hoặc bằng</option>
+                                            <option value="between">Trong khoảng</option>
+                                        </select>
+
+                                        <div class="flex flex-col gap-2 mt-2">
+                                            <input type="number" x-model.number="filters.item_qty_value"
+                                                x-show="filters.item_qty_type && filters.item_qty_type !== 'between'"
+                                                class="w-full border rounded px-3 py-2" placeholder="Nhập giá trị">
+
+                                            <template x-if="filters.item_qty_type === 'between'">
+                                                <div class="flex gap-2">
+                                                    <input type="number" x-model.number="filters.item_qty_from"
+                                                        class="w-1/2 border rounded px-3 py-2" placeholder="Từ">
+                                                    <input type="number" x-model.number="filters.item_qty_to"
+                                                        class="w-1/2 border rounded px-3 py-2" placeholder="Đến">
+                                                </div>
+                                            </template>
+                                        </div>
+
+                                        <div class="mt-3 flex gap-2 justify-end">
+                                            <button @click="closeFilter('item_qty')"
+                                                class="px-3 py-1 text-xs rounded bg-[#002975] text-white hover:opacity-90">Tìm</button>
+                                            <button @click="resetFilter('item_qty')"
+                                                class="px-3 py-1 text-xs rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Làm
+                                                mới</button>
+                                            <button @click="openFilter.item_qty=false"
+                                                class="px-3 py-1 text-xs rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Đóng</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Đơn giá -->
+                                <div class="relative">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <span class="text-sm font-semibold text-gray-700">Đơn giá</span>
+                                        <button @click.stop="toggleFilter('item_price')"
+                                            class="p-1 rounded hover:bg-gray-100" title="Tìm theo Đơn giá">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" />
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    <div x-cloak x-show="openFilter.item_price" x-transition
+                                        @click.outside="openFilter.item_price=false"
+                                        class="absolute z-40 mt-2 w-64 bg-white rounded-lg shadow-lg border p-3 text-left left-0">
+                                        <div class="font-semibold mb-2">Tìm theo "Đơn giá"</div>
+                                        <select x-model="filters.item_price_type"
+                                            class="border rounded px-3 py-2 text-sm w-full">
+                                            <option value="">-- Chọn kiểu lọc --</option>
+                                            <option value="eq">Bằng</option>
+                                            <option value="gt">Lớn hơn</option>
+                                            <option value="lt">Nhỏ hơn</option>
+                                            <option value="gte">Lớn hơn hoặc bằng</option>
+                                            <option value="lte">Nhỏ hơn hoặc bằng</option>
+                                            <option value="between">Trong khoảng</option>
+                                        </select>
+
+                                        <div class="flex flex-col gap-2 mt-2">
+                                            <input type="number" x-model.number="filters.item_price_value"
+                                                x-show="filters.item_price_type && filters.item_price_type !== 'between'"
+                                                class="w-full border rounded px-3 py-2" placeholder="Nhập giá trị">
+
+                                            <template x-if="filters.item_price_type === 'between'">
+                                                <div class="flex gap-2">
+                                                    <input type="number" x-model.number="filters.item_price_from"
+                                                        class="w-1/2 border rounded px-3 py-2" placeholder="Từ">
+                                                    <input type="number" x-model.number="filters.item_price_to"
+                                                        class="w-1/2 border rounded px-3 py-2" placeholder="Đến">
+                                                </div>
+                                            </template>
+                                        </div>
+
+                                        <div class="mt-3 flex gap-2 justify-end">
+                                            <button @click="closeFilter('item_price')"
+                                                class="px-3 py-1 text-xs rounded bg-[#002975] text-white hover:opacity-90">Tìm</button>
+                                            <button @click="resetFilter('item_price')"
+                                                class="px-3 py-1 text-xs rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Làm
+                                                mới</button>
+                                            <button @click="openFilter.item_price=false"
+                                                class="px-3 py-1 text-xs rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Đóng</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </th>
                         <?= numberFilterPopover('total_amount', 'Tổng tiền') ?>
                         <?= numberFilterPopover('paid_amount', 'Số tiền đã thanh toán') ?>
                         <?= dateFilterPopover('due_date', 'Ngày hẹn thanh toán') ?>
@@ -47,32 +203,75 @@ $items = $items ?? [];
                     <template x-for="po in paginated()" :key="po.id">
                         <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
                             <td class="py-2 px-4 text-center space-x-2">
-                                <!-- Hiện nút sửa/xóa dựa trên trạng thái thanh toán -->
-                                <template x-if="statusLabel(po) === 'Chưa đối soát'">
-                                    <div class="inline-flex space-x-2">
+                                <div class="inline-flex space-x-2">
+                                    <!-- Nút Sửa - chỉ hiện khi Chưa đối soát -->
+                                    <template x-if="statusLabel(po) === 'Chưa đối soát'">
                                         <button @click="openEditModal(po)"
                                             class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
                                             title="Sửa">
                                             <i class="fa-solid fa-pen"></i>
                                         </button>
+                                    </template>
+                                    
+                                    <!-- Nút Xem chi tiết - luôn hiển thị -->
+                                    <button @click="openViewModal(po)"
+                                        class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                                        title="Xem chi tiết">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </button>
+                                    
+                                    <!-- Nút Xóa - chỉ hiện khi Chưa đối soát -->
+                                    <template x-if="statusLabel(po) === 'Chưa đối soát'">
                                         <button @click="remove(po.id)"
                                             class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
                                             title="Xóa">
                                             <i class="fa-solid fa-trash"></i>
                                         </button>
-                                    </div>
-                                </template>
-                                <!-- Chỉ hiện nút xóa nếu đã thanh toán một phần -->
-                                <template x-if="statusLabel(po) === 'Đã thanh toán một phần'">
-                                    <span class="text-slate-400 text-sm">—</span>
-                                </template>
-                                <!-- Không hiện gì nếu đã thanh toán hết -->
-                                <template x-if="statusLabel(po) === 'Đã thanh toán hết'">
-                                    <span class="text-slate-400 text-sm">—</span>
-                                </template>
+                                    </template>
+                                </div>
                             </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="po.code"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="po.supplier_name"></td>
+
+                            <!-- Cột Chi tiết nhập kho theo lô -->
+                            <td class="px-3 py-2 align-top" style="min-width: 800px; width: 800px;">
+                                <div class="space-y-2">
+                                    <!-- Hiển thị danh sách sản phẩm theo lô -->
+                                    <template x-if="po.items && po.items.length > 0">
+                                        <div class="space-y-1">
+                                            <template x-for="(item, itemIdx) in po.items" :key="itemIdx">
+                                                <div class="grid grid-cols-3 gap-2 text-xs pb-1"
+                                                    :class="{ 'border-b': itemIdx < po.items.length - 1 }">
+                                                    <!-- Cột 1: Tên sản phẩm - Mã lô -->
+                                                    <div class="flex flex-col">
+                                                        <span class="font-medium text-gray-800"
+                                                            x-text="item.product_name"></span>
+                                                        <span class="text-gray-500 text-[10px]"
+                                                            x-text="'Lô: ' + (item.batch_code || '—')"></span>
+                                                    </div>
+                                                    <!-- Cột 2: Số lượng -->
+                                                    <div class="text-center">
+                                                        <span class="font-semibold"
+                                                            x-text="formatCurrency(item.quantity || 0)"></span>
+                                                    </div>
+                                                    <!-- Cột 3: Đơn giá -->
+                                                    <div class="text-right">
+                                                        <span x-text="formatCurrency(item.unit_cost || 0)"></span>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+
+                                    <!-- Trạng thái rỗng -->
+                                    <template x-if="!po.items || po.items.length === 0">
+                                        <div class="text-center text-gray-400 text-xs py-2">
+                                            Đang tải...
+                                        </div>
+                                    </template>
+                                </div>
+                            </td>
+
                             <td class="py-2 px-4 break-words whitespace-pre-line text-right"
                                 x-text="po.total_amount ? formatCurrency(po.total_amount) : '—'">
                             </td>
@@ -151,6 +350,130 @@ $items = $items ?? [];
         </div>
     </div>
 
+    <!-- MODAL: View (Chi tiết) -->
+    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" x-show="openView"
+        x-transition.opacity style="display:none">
+        <div class="bg-white w-full max-w-4xl rounded-xl shadow max-h-[90vh] flex flex-col"
+            @click.outside="openView=false">
+            <div class="px-5 py-3 border-b flex justify-center items-center relative flex-shrink-0">
+                <h3 class="font-semibold text-2xl text-[#002975]">Chi tiết phiếu nhập kho</h3>
+                <button class="text-slate-500 absolute right-5" @click="openView=false">✕</button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-5 space-y-4">
+                <!-- Thông tin phiếu nhập -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-sm font-medium text-slate-600">Mã phiếu</label>
+                        <p class="mt-1 text-base" x-text="viewItem.code || '—'"></p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-slate-600">Nhà cung cấp</label>
+                        <p class="mt-1 text-base" x-text="viewItem.supplier_name || '—'"></p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-slate-600">Tổng tiền</label>
+                        <p class="mt-1 text-base font-semibold text-[#002975]"
+                            x-text="formatCurrency(viewItem.total_amount || 0)"></p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-slate-600">Đã thanh toán</label>
+                        <p class="mt-1 text-base font-semibold text-green-600"
+                            x-text="formatCurrency(viewItem.paid_amount || 0)"></p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-slate-600">Trạng thái</label>
+                        <p class="mt-1">
+                            <span class="px-2 py-1 rounded text-xs font-medium" :class="{
+                                'bg-yellow-100 text-yellow-800': statusLabel(viewItem) === 'Chưa đối soát',
+                                'bg-orange-100 text-orange-800': statusLabel(viewItem) === 'Đã thanh toán một phần',
+                                'bg-green-100 text-green-800': statusLabel(viewItem) === 'Đã thanh toán hết'
+                            }" x-text="statusLabel(viewItem)"></span>
+                        </p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-slate-600">Hạn thanh toán</label>
+                        <p class="mt-1 text-base" x-text="viewItem.due_date || '—'"></p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-slate-600">Ngày nhập</label>
+                        <p class="mt-1 text-base" x-text="viewItem.received_at || '—'"></p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-slate-600">Ghi chú</label>
+                        <p class="mt-1 text-base" x-text="viewItem.note || '—'"></p>
+                    </div>
+                </div>
+
+                <!-- Chi tiết sản phẩm theo lô -->
+                <div>
+                    <h4 class="font-semibold text-lg text-[#002975] mb-3">Danh sách sản phẩm</h4>
+                    <div class="border rounded-lg overflow-hidden">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="py-2 px-3 text-left font-medium text-slate-600">STT</th>
+                                    <th class="py-2 px-3 text-left font-medium text-slate-600">Sản phẩm</th>
+                                    <th class="py-2 px-3 text-left font-medium text-slate-600">Mã lô</th>
+                                    <th class="py-2 px-3 text-right font-medium text-slate-600">Số lượng</th>
+                                    <th class="py-2 px-3 text-right font-medium text-slate-600">Đơn giá</th>
+                                    <th class="py-2 px-3 text-right font-medium text-slate-600">Thành tiền</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-if="!viewItem.items || viewItem.items.length === 0">
+                                    <tr>
+                                        <td colspan="8" class="py-4 text-center text-slate-500">Đang tải dữ liệu...</td>
+                                    </tr>
+                                </template>
+                                <template x-if="viewItem.items && viewItem.items.length > 0">
+                                    <template x-for="(item, idx) in viewItem.items" :key="idx">
+                                        <tr class="border-t hover:bg-gray-50">
+                                            <td class="py-2 px-3" x-text="idx + 1"></td>
+                                            <td class="py-2 px-3" x-text="item.product_name || '—'"></td>
+                                            <td class="py-2 px-3" x-text="item.batch_code || '—'"></td>
+                                            <td class="py-2 px-3 text-right"
+                                                x-text="formatCurrency(item.quantity || 0)">
+                                            </td>
+                                            <td class="py-2 px-3 text-right"
+                                                x-text="formatCurrency(item.unit_cost || 0)">
+                                            </td>
+                                            <td class="py-2 px-3 text-right font-medium"
+                                                x-text="formatCurrency((item.quantity || 0) * (item.unit_cost || 0))">
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Thông tin người tạo -->
+                <div class="grid grid-cols-2 gap-4 pt-4 border-t">
+                    <div>
+                        <label class="text-sm font-medium text-slate-600">Người tạo</label>
+                        <p class="mt-1 text-base" x-text="viewItem.created_by_name || '—'"></p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-slate-600">Người cập nhật</label>
+                        <p class="mt-1 text-base" x-text="viewItem.updated_by_name || '—'"></p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-slate-600">Thời gian tạo</label>
+                        <p class="mt-1 text-base" x-text="viewItem.created_at || '—'"></p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-slate-600">Thời gian cập nhật</label>
+                        <p class="mt-1 text-base" x-text="viewItem.updated_at || '—'"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="px-5 pb-5 pt-2 flex justify-end gap-3 border-t bg-white flex-shrink-0">
+                <button type="button" class="px-4 py-2 border rounded text-sm" @click="openView=false">Đóng</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toast-container" class="z-[60]"></div>
 
     <!-- Pagination -->
@@ -176,7 +499,8 @@ $items = $items ?? [];
                     <template x-for="opt in perPageOptions" :key="opt">
                         <div @click="perPage=opt;open=false"
                             class="px-3 py-2 cursor-pointer hover:bg-[#002975] hover:text-white"
-                            x-text="opt + ' / trang'"></div>
+                            x-text="opt + ' / trang'">
+                        </div>
                     </template>
                 </div>
             </div>
@@ -191,6 +515,8 @@ $items = $items ?? [];
             loading: true,
             openAdd: false,
             openEdit: false,
+            openView: false,
+            viewItem: {},
             submitting: false,
             touched: {},
             errors: {},
@@ -249,6 +575,8 @@ $items = $items ?? [];
                     // gọi API lấy suppliers luôn khi load trang
                     this.fetchSuppliers();
                     this.fetchProducts();
+                    // Load chi tiết items cho mỗi phiếu nhập
+                    await this.loadPurchaseOrderItems();
                     // reset các lỗi và trạng thái touch
                     this.touched = {};
                     this.errors = {};
@@ -257,6 +585,27 @@ $items = $items ?? [];
                 } finally {
                     this.loading = false;
                 }
+            },
+
+            async loadPurchaseOrderItems() {
+                // Load danh sách sản phẩm và lô hàng cho tất cả phiếu nhập
+                const promises = this.items.map(async (po) => {
+                    try {
+                        const res = await fetch(`/admin/api/purchase-orders/${po.id}`);
+                        if (!res.ok) {
+                            console.warn(`Cannot load items for PO ${po.id}: ${res.status}`);
+                            po.items = [];
+                            return;
+                        }
+                        const data = await res.json();
+                        po.items = data.lines || [];
+                    } catch (e) {
+                        console.error(`Cannot load items for PO ${po.id}:`, e);
+                        po.items = [];
+                    }
+                });
+
+                await Promise.all(promises);
             },
 
             async fetchProducts() {
@@ -351,13 +700,17 @@ $items = $items ?? [];
 
             // filters
             openFilter: {
-                code: false, supplier_name: false, total_amount: false, paid_amount: false,
+                code: false, supplier_name: false, item_product: false, item_qty: false, item_price: false,
+                total_amount: false, paid_amount: false,
                 due_date: false, note: false, payment_status: false,
                 received_at: false, created_by: false, updated_at: false, updated_by: false
             },
             filters: {
                 code: '',
                 supplier_name: '',
+                item_product: '',
+                item_qty_type: '', item_qty_value: '', item_qty_from: '', item_qty_to: '',
+                item_price_type: '', item_price_value: '', item_price_from: '', item_price_to: '',
                 total_amount_type: '', total_amount_value: '', total_amount_from: '', total_amount_to: '',
                 paid_amount_type: '', paid_amount_value: '', paid_amount_from: '', paid_amount_to: '',
                 due_date_type: '', due_date_value: '', due_date_from: '', due_date_to: '',
@@ -509,6 +862,53 @@ $items = $items ?? [];
                     }
                 });
 
+                // --- Lọc theo Sản phẩm hoặc Mã lô ---
+                if (this.filters.item_product) {
+                    data = data.filter(po => {
+                        if (!po.items || po.items.length === 0) return false;
+                        return po.items.some(item =>
+                            this.applyFilter(item.product_name, 'contains', {
+                                value: this.filters.item_product,
+                                dataType: 'text'
+                            }) ||
+                            this.applyFilter(item.batch_code, 'contains', {
+                                value: this.filters.item_product,
+                                dataType: 'text'
+                            })
+                        );
+                    });
+                }
+
+                // --- Lọc theo Số lượng ---
+                if (this.filters.item_qty_type) {
+                    data = data.filter(po => {
+                        if (!po.items || po.items.length === 0) return false;
+                        return po.items.some(item =>
+                            this.applyFilter(item.quantity, this.filters.item_qty_type, {
+                                value: this.filters.item_qty_value,
+                                from: this.filters.item_qty_from,
+                                to: this.filters.item_qty_to,
+                                dataType: 'number'
+                            })
+                        );
+                    });
+                }
+
+                // --- Lọc theo Đơn giá ---
+                if (this.filters.item_price_type) {
+                    data = data.filter(po => {
+                        if (!po.items || po.items.length === 0) return false;
+                        return po.items.some(item =>
+                            this.applyFilter(item.unit_cost, this.filters.item_price_type, {
+                                value: this.filters.item_price_value,
+                                from: this.filters.item_price_from,
+                                to: this.filters.item_price_to,
+                                dataType: 'number'
+                            })
+                        );
+                    });
+                }
+
                 // --- Lọc theo số ---
                 ['total_amount', 'paid_amount'].forEach(key => {
                     if (this.filters[`${key}_type`]) {
@@ -564,7 +964,7 @@ $items = $items ?? [];
                     this.filters[`${key}_value`] = '';
                     this.filters[`${key}_from`] = '';
                     this.filters[`${key}_to`] = '';
-                } else if (['paid_amount', 'total_amount'].includes(key)) {
+                } else if (['paid_amount', 'total_amount', 'item_qty', 'item_price'].includes(key)) {
                     this.filters[`${key}_type`] = '';
                     this.filters[`${key}_value`] = '';
                     this.filters[`${key}_from`] = '';
@@ -665,6 +1065,34 @@ $items = $items ?? [];
                         console.error(e);
                         this.showToast('Không thể tải chi tiết phiếu nhập');
                     });
+            },
+
+            async openViewModal(po) {
+                // Copy dữ liệu cơ bản
+                this.viewItem = {
+                    ...po,
+                    items: [] // Khởi tạo mảng rỗng
+                };
+
+                // Mở modal ngay
+                this.openView = true;
+
+                // Gọi API lấy chi tiết sản phẩm theo lô
+                try {
+                    const res = await fetch(`/admin/api/purchase-orders/${po.id}`);
+                    if (!res.ok) throw new Error('Không thể tải chi tiết');
+
+                    const data = await res.json();
+
+                    // Cập nhật items với dữ liệu chi tiết
+                    this.viewItem = {
+                        ...this.viewItem,
+                        items: data.lines || []
+                    };
+                } catch (e) {
+                    console.error(e);
+                    this.showToast('Không thể tải chi tiết sản phẩm');
+                }
             },
 
             async submitCreate() {
@@ -818,6 +1246,63 @@ $items = $items ?? [];
                     this.showToast('Không thể xóa phiếu nhập');
                 }
             },
+
+            exportExcel() {
+                const data = this.filtered().map(po => ({
+                    code: po.code || '',
+                    supplier_name: po.supplier_name || '',
+                    total_amount: po.total_amount || 0,
+                    paid_amount: po.paid_amount || 0,
+                    payment_status: this.statusLabel(po),
+                    due_date: po.due_date || '',
+                    note: po.note || '',
+                    received_at: po.received_at || '',
+                    created_by_name: po.created_by_name || '',
+                    updated_at: po.updated_at || '',
+                    updated_by_name: po.updated_by_name || '',
+                    items: po.items || [] // Bao gồm danh sách sản phẩm
+                }));
+
+                const now = new Date();
+                const dateStr = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
+                const timeStr = `${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
+                const filename = `Phieu_nhap_kho_${dateStr}_${timeStr}.xlsx`;
+
+                // Get date range from filters
+                const fromDate = this.filters.received_from || '';
+                const toDate = this.filters.received_to || '';
+
+                fetch('/admin/api/purchase-orders/export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        items: data,
+                        from_date: fromDate,
+                        to_date: toDate,
+                        filename: filename
+                    })
+                })
+                    .then(res => {
+                        if (!res.ok) throw new Error('Export failed');
+                        return res.blob();
+                    })
+                    .then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                        this.showToast('Xuất Excel thành công!', 'success');
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        this.showToast('Không thể xuất Excel');
+                    });
+            },
+
             showToast(msg, type = 'error') {
                 const box = document.getElementById('toast-container');
                 if (!box) return;

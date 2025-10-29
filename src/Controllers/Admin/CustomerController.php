@@ -202,7 +202,7 @@ class CustomerController extends BaseAdminController
             }
 
             $orders = $this->repo->getOrders($id);
-            
+
             $this->json([
                 'customer' => $customer,
                 'orders' => $orders
@@ -230,6 +230,118 @@ class CustomerController extends BaseAdminController
                 'detail' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /** POST /admin/api/customers/export - Xuất Excel */
+    public function export()
+    {
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        $items = $data['items'] ?? [];
+
+        if (empty($items)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Không có dữ liệu để xuất']);
+            exit;
+        }
+
+        // Tự động tìm ngày nhỏ nhất và lớn nhất từ created_at
+        $fromDate = '';
+        $toDate = '';
+        
+        if (!empty($items)) {
+            $dates = array_filter(array_map(function($item) {
+                $date = $item['created_at'] ?? '';
+                if ($date && strpos($date, ' ') !== false) {
+                    $date = explode(' ', $date)[0];
+                }
+                return $date;
+            }, $items));
+            
+            if (!empty($dates)) {
+                sort($dates);
+                $fromDate = reset($dates);
+                $toDate = end($dates);
+            }
+        }
+
+        require_once __DIR__ . '/../../../vendor/autoload.php';
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Set timezone to Vietnam
+        $vietnamTime = new \DateTime('now', new \DateTimeZone('Asia/Ho_Chi_Minh'));
+
+        // Header
+        $sheet->mergeCells('A1:L1');
+        $sheet->setCellValue('A1', 'MINIGO');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // Ngày xuất file
+        $sheet->setCellValue('A2', 'Ngày xuất file: ' . $vietnamTime->format('d/m/Y H:i:s'));
+        $sheet->mergeCells('A2:L2');
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // Khoảng thời gian
+        $sheet->setCellValue('A3', "Từ ngày: $fromDate - Đến ngày: $toDate");
+        $sheet->mergeCells('A3:L3');
+        $sheet->getStyle('A3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // Tiêu đề
+        $sheet->setCellValue('A5', 'DANH SÁCH KHÁCH HÀNG');
+        $sheet->mergeCells('A5:L5');
+        $sheet->getStyle('A5')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A5')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // Column headers
+        $headers = ['STT', 'Tài khoản', 'Họ tên', 'Email', 'Số điện thoại', 'Giới tính', 'Ngày sinh', 'Trạng thái', 'Thời gian tạo', 'Người tạo', 'Thời gian cập nhật', 'Người cập nhật'];
+        $col = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . '6', $header);
+            $col++;
+        }
+        $sheet->getStyle('A6:L6')->getFont()->setBold(true);
+        $sheet->getStyle('A6:L6')->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('E2EFDA');
+
+        // Data
+        $row = 7;
+        foreach ($items as $index => $item) {
+            $sheet->setCellValue('A' . $row, $index + 1);
+            $sheet->setCellValue('B' . $row, $item['username'] ?? '');
+            $sheet->setCellValue('C' . $row, $item['full_name'] ?? '');
+            $sheet->setCellValue('D' . $row, $item['email'] ?? '');
+            $sheet->setCellValue('E' . $row, $item['phone'] ?? '');
+            $sheet->setCellValue('F' . $row, ($item['gender'] ?? 0) ? 'Nam' : 'Nữ');
+            $sheet->setCellValue('G' . $row, $item['date_of_birth'] ?? '');
+            $sheet->setCellValue('H' . $row, ($item['is_active'] ?? 0) ? 'Hoạt động' : 'Khóa');
+            $sheet->setCellValue('I' . $row, $item['created_at'] ?? '');
+            $sheet->setCellValue('J' . $row, $item['created_by_name'] ?? '');
+            $sheet->setCellValue('K' . $row, $item['updated_at'] ?? '');
+            $sheet->setCellValue('L' . $row, $item['updated_by_name'] ?? '');
+            $row++;
+        }
+
+        // Borders
+        $lastRow = $row - 1;
+        $sheet->getStyle("A6:L$lastRow")->getBorders()->getAllBorders()
+            ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+        // Auto-size columns
+        foreach (range('A', 'L') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Output
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . ($data['filename'] ?? 'Export.xlsx') . '"');
+        header('Cache-Control: max-age=0');
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
     }
 
 }

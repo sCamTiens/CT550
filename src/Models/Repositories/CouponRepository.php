@@ -272,4 +272,19 @@ class CouponRepository
             'coupon_name' => $coupon->name
         ];
     }
+
+    /**
+     * Tăng số lần sử dụng mã giảm giá
+     */
+    public function incrementUsedCount(string $code): void
+    {
+        $pdo = DB::pdo();
+        $stmt = $pdo->prepare("
+            UPDATE coupons 
+            SET used_count = used_count + 1,
+                updated_at = NOW()
+            WHERE UPPER(code) = UPPER(:code)
+        ");
+        $stmt->execute([':code' => $code]);
+    }
 }

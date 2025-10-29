@@ -13,6 +13,11 @@ $products = $products ?? [];
     <!-- Header -->
     <div class="flex items-center justify-between mb-4">
         <h1 class="text-3xl font-bold text-[#002975]">Quản lý lô sản phẩm</h1>
+        <button
+            class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975] flex items-center gap-2"
+            @click="exportExcel()">
+            <i class="fa-solid fa-file-excel"></i> Xuất Excel
+        </button>
         <!-- <button
             class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
             @click="openCreate()">+ Thêm lô</button> -->
@@ -594,6 +599,51 @@ $products = $products ?? [];
 
                 box.appendChild(toast);
                 setTimeout(() => toast.remove(), 3000);
+            },
+
+            exportExcel() {
+                const data = this.filtered().map(b => ({
+                    product_name: b.product_name || '',
+                    batch_code: b.batch_code || '',
+                    mfg_date: b.mfg_date || '',
+                    exp_date: b.exp_date || '',
+                    initial_qty: b.initial_qty || 0,
+                    current_qty: b.current_qty || 0,
+                    unit_cost: b.unit_cost || 0,
+                    note: b.note || '',
+                    created_at: b.created_at || '',
+                    created_by_name: b.created_by_name || ''
+                }));
+
+                const now = new Date();
+                const dateStr = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
+                const timeStr = `${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
+                const filename = `Lo_san_pham_${dateStr}_${timeStr}.xlsx`;
+
+                fetch('/admin/api/product-batches/export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items: data })
+                })
+                    .then(res => {
+                        if (!res.ok) throw new Error('Export failed');
+                        return res.blob();
+                    })
+                    .then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                        this.showToast('Xuất Excel thành công!', 'success');
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        this.showToast('Không thể xuất Excel');
+                    });
             }
         };
     }

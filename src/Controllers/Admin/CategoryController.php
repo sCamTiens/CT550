@@ -201,4 +201,88 @@ class CategoryController extends BaseAdminController
         return $_SESSION['admin_user']['full_name'] ?? null;
     }
 
+    public function export()
+    {
+        $json = file_get_contents('php://input');
+        $data = json_decode($json, true);
+        $items = $data['items'] ?? [];
+
+        require_once __DIR__ . '/../../../vendor/autoload.php';
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Set timezone to Vietnam
+        $vietnamTime = new \DateTime('now', new \DateTimeZone('Asia/Ho_Chi_Minh'));
+
+        // Header MINIGO
+        $sheet->setCellValue('A1', 'MINIGO');
+        $sheet->mergeCells('A1:I1');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // Ngày xuất file
+        $sheet->setCellValue('A2', 'Ngày xuất file: ' . $vietnamTime->format('d/m/Y H:i:s'));
+        $sheet->mergeCells('A2:I2');
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // Tiêu đề
+        $sheet->setCellValue('A3', 'DANH SÁCH LOẠI SẢN PHẨM');
+        $sheet->mergeCells('A3:I3');
+        $sheet->getStyle('A3')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // Headers
+        $headers = ['STT', 'Tên loại', 'Slug', 'Loại cha', 'Trạng thái', 'Thời gian tạo', 'Người tạo', 'Thời gian cập nhật', 'Người cập nhật'];
+        $col = 'A';
+        foreach ($headers as $h) {
+            $sheet->setCellValue($col . '5', $h);
+            $col++;
+        }
+        $sheet->getStyle('A5:I5')->getFont()->setBold(true);
+        $sheet->getStyle('A5:I5')->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FFE2EFDA');
+
+        // Data
+        $row = 6;
+        $stt = 1;
+        foreach ($items as $c) {
+            $sheet->setCellValue('A' . $row, $stt++);
+            $sheet->setCellValue('B' . $row, $c['name'] ?? '');
+            $sheet->setCellValue('C' . $row, $c['slug'] ?? '');
+            $sheet->setCellValue('D' . $row, $c['parent'] ?? '');
+            $sheet->setCellValue('E' . $row, $c['is_active'] ?? '');
+            $sheet->setCellValue('F' . $row, $c['created_at'] ?? '');
+            $sheet->setCellValue('G' . $row, $c['created_by_name'] ?? '');
+            $sheet->setCellValue('H' . $row, $c['updated_at'] ?? '');
+            $sheet->setCellValue('I' . $row, $c['updated_by_name'] ?? '');
+            $row++;
+        }
+
+        $lastRow = $row - 1;
+
+        // Borders
+        $styleArray = [
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                ],
+            ],
+        ];
+        $sheet->getStyle('A5:I' . $lastRow)->applyFromArray($styleArray);
+
+        // Auto-size columns
+        foreach (range('A', 'I') as $c) {
+            $sheet->getColumnDimension($c)->setAutoSize(true);
+        }
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; charset=utf-8');
+        header('Content-Disposition: attachment;filename="Loai_san_pham.xlsx"');
+        header('Cache-Control: max-age=0');
+        $writer->save('php://output');
+        exit;
+    }
+
 }

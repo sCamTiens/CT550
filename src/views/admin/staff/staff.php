@@ -13,9 +13,16 @@ $items = $items ?? [];
 <div x-data="staffPage()" x-init="init()">
     <div class="flex items-center justify-between mb-4">
         <h1 class="text-3xl font-bold text-[#002975]">Quản lý nhân viên</h1>
-        <button
-            class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
-            @click="openCreate()">+ Thêm nhân viên</button>
+        <div class="flex gap-2">
+            <button
+                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975] flex items-center gap-2"
+                @click="exportExcel()">
+                <i class="fa-solid fa-file-excel"></i> Xuất Excel
+            </button>
+            <button
+                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
+                @click="openCreate()">+ Thêm nhân viên</button>
+        </div>
     </div>
 
     <!-- Table -->
@@ -337,26 +344,26 @@ $items = $items ?? [];
                 this.changePasswordTouched = true;
                 console.log('Form data:', this.formChangePassword);
                 console.log('Errors:', this.changePasswordErrors);
-                
+
                 if (!this.validateChangePassword()) {
                     console.log('Validation failed');
                     return;
                 }
-                
+
                 this.submitting = true;
                 console.log('Submitting to:', `/admin/api/staff/${this.formChangePassword.user_id}/password`);
-                
+
                 try {
                     const res = await fetch(`/admin/api/staff/${this.formChangePassword.user_id}/password`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ password: this.formChangePassword.password })
                     });
-                    
+
                     console.log('Response status:', res.status);
                     const data = await res.json();
                     console.log('Response data:', data);
-                    
+
                     if (res.ok && data && data.ok) {
                         this.openChangePassword = false;
                         this.showToast('Đổi mật khẩu thành công!', 'success');
@@ -835,6 +842,53 @@ $items = $items ?? [];
                         }
                     });
                 });
+            },
+
+            exportExcel() {
+                const data = this.filtered().map(s => ({
+                    username: s.username || '',
+                    full_name: s.full_name || '',
+                    staff_role: this.getStaffRoleText(s.staff_role),
+                    email: s.email || '',
+                    phone: s.phone || '',
+                    is_active: s.is_active == 1 ? 'Hoạt động' : 'Không hoạt động',
+                    hired_at: s.hired_at || '',
+                    note: s.note || '',
+                    created_at: s.created_at || '',
+                    created_by_name: s.created_by_name || '',
+                    updated_at: s.updated_at || '',
+                    updated_by_name: s.updated_by_name || ''
+                }));
+
+                const now = new Date();
+                const dateStr = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
+                const timeStr = `${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
+                const filename = `Nhan_vien_${dateStr}_${timeStr}.xlsx`;
+
+                fetch('/admin/api/staff/export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items: data })
+                })
+                    .then(res => {
+                        if (!res.ok) throw new Error('Export failed');
+                        return res.blob();
+                    })
+                    .then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                        this.showToast('Xuất Excel thành công!', 'success');
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        this.showToast('Không thể xuất Excel');
+                    });
             },
 
             showToast(msg, type = 'error') {

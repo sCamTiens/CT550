@@ -16,9 +16,17 @@ $items = $items ?? [];
 <div x-data="promotionPage()" x-init="init()">
     <div class="flex items-center justify-between mb-4">
         <h1 class="text-3xl font-bold text-[#002975]">Quản lý khuyến mãi</h1>
-        <button
-            class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
-            @click="openCreate()">+ Thêm khuyến mãi</button>
+        <div class="flex items-center gap-2">
+            <button
+                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975] flex items-center gap-2"
+                @click="exportExcel()">
+                <i class="fa-solid fa-file-excel"></i>
+                Xuất Excel
+            </button>
+            <button
+                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
+                @click="openCreate()">+ Thêm khuyến mãi</button>
+        </div>
     </div>
 
     <!-- Table -->
@@ -47,6 +55,8 @@ $items = $items ?? [];
                         ]) ?>
                         <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
                         <?= textFilterPopover('created_by', 'Người tạo') ?>
+                        <?= dateFilterPopover('updated_at', 'Thời gian cập nhật') ?>
+                        <?= textFilterPopover('updated_by', 'Người cập nhật') ?>
                     </tr>
                 </thead>
 
@@ -87,14 +97,12 @@ $items = $items ?? [];
                                     :class="(p.description || '—') === '—' ? '' : 'text-left'"></span>
                             </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line text-center">
-                                <span class="px-2 py-0.5 rounded text-xs"
-                                    :class="{
+                                <span class="px-2 py-0.5 rounded text-xs" :class="{
                                         'bg-blue-100 text-blue-700': p.promo_type === 'discount',
                                         'bg-purple-100 text-purple-700': p.promo_type === 'bundle',
                                         'bg-green-100 text-green-700': p.promo_type === 'gift',
                                         'bg-orange-100 text-orange-700': p.promo_type === 'combo'
-                                    }"
-                                    x-text="{
+                                    }" x-text="{
                                         'discount': 'Giảm giá',
                                         'bundle': 'Bundle',
                                         'gift': 'Tặng quà',
@@ -134,6 +142,11 @@ $items = $items ?? [];
                                 x-text="p.created_at || '—'"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line text-center">
                                 <span x-text="p.created_by_name || '—'"></span>
+                            </td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-right"
+                                x-text="p.updated_at || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-center">
+                                <span x-text="p.updated_by_name || '—'"></span>
                             </td>
                         </tr>
                     </template>
@@ -191,14 +204,12 @@ $items = $items ?? [];
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Loại khuyến mãi</label>
-                            <span class="px-2 py-0.5 rounded text-xs"
-                                :class="{
+                            <span class="px-2 py-0.5 rounded text-xs" :class="{
                                     'bg-blue-100 text-blue-700': form.promo_type === 'discount',
                                     'bg-purple-100 text-purple-700': form.promo_type === 'bundle',
                                     'bg-green-100 text-green-700': form.promo_type === 'gift',
                                     'bg-orange-100 text-orange-700': form.promo_type === 'combo'
-                                }"
-                                x-text="{
+                                }" x-text="{
                                     'discount': 'Giảm giá',
                                     'bundle': 'Bundle',
                                     'gift': 'Tặng quà',
@@ -225,7 +236,8 @@ $items = $items ?? [];
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Giá trị giảm</label>
                                 <p class="text-gray-900 font-semibold"
-                                    x-text="form.discount_type === 'percentage' ? (form.discount_value + '%') : formatCurrency(form.discount_value)"></p>
+                                    x-text="form.discount_type === 'percentage' ? (form.discount_value + '%') : formatCurrency(form.discount_value)">
+                                </p>
                             </div>
                         </div>
                         <div class="mt-3">
@@ -261,14 +273,19 @@ $items = $items ?? [];
                                         <div class="flex flex-col gap-2">
                                             <div class="flex items-center gap-2">
                                                 <span class="text-sm text-gray-600">Sản phẩm:</span>
-                                                <strong class="text-sm" x-text="products.find(p => p.id == rule.product_id)?.name || 'Không xác định'"></strong>
+                                                <strong class="text-sm"
+                                                    x-text="products.find(p => p.id == rule.product_id)?.name || 'Không xác định'"></strong>
                                             </div>
                                             <div class="flex items-center gap-4">
-                                                <span class="text-sm text-gray-700">Mua <strong class="text-blue-600" x-text="rule.buy_quantity"></strong> sản phẩm</span>
-                                                <span class="text-sm text-gray-700">→ Tặng <strong class="text-green-600" x-text="rule.free_quantity"></strong> sản phẩm</span>
+                                                <span class="text-sm text-gray-700">Mua <strong class="text-blue-600"
+                                                        x-text="rule.buy_quantity"></strong> sản phẩm</span>
+                                                <span class="text-sm text-gray-700">→ Tặng <strong
+                                                        class="text-green-600" x-text="rule.free_quantity"></strong> sản
+                                                    phẩm</span>
                                             </div>
                                             <div class="text-sm text-gray-700">
-                                                Giá bundle: <strong class="text-orange-600" x-text="formatCurrency(rule.price)"></strong>
+                                                Giá bundle: <strong class="text-orange-600"
+                                                    x-text="formatCurrency(rule.price)"></strong>
                                             </div>
                                         </div>
                                     </div>
@@ -291,13 +308,17 @@ $items = $items ?? [];
                                         <div class="flex flex-col gap-2">
                                             <div class="flex items-center gap-2">
                                                 <span class="text-sm text-gray-600">Điều kiện:</span>
-                                                <span class="text-sm">Mua <strong class="text-blue-600" x-text="rule.trigger_qty"></strong> 
-                                                    <strong x-text="products.find(p => p.id == rule.trigger_product_id)?.name || 'Không xác định'"></strong></span>
+                                                <span class="text-sm">Mua <strong class="text-blue-600"
+                                                        x-text="rule.trigger_qty"></strong>
+                                                    <strong
+                                                        x-text="products.find(p => p.id == rule.trigger_product_id)?.name || 'Không xác định'"></strong></span>
                                             </div>
                                             <div class="flex items-center gap-2">
                                                 <span class="text-sm text-gray-600">Quà tặng:</span>
-                                                <span class="text-sm">Tặng <strong class="text-green-600" x-text="rule.gift_qty"></strong> 
-                                                    <strong x-text="products.find(p => p.id == rule.gift_product_id)?.name || 'Không xác định'"></strong></span>
+                                                <span class="text-sm">Tặng <strong class="text-green-600"
+                                                        x-text="rule.gift_qty"></strong>
+                                                    <strong
+                                                        x-text="products.find(p => p.id == rule.gift_product_id)?.name || 'Không xác định'"></strong></span>
                                             </div>
                                         </div>
                                     </div>
@@ -315,7 +336,8 @@ $items = $items ?? [];
                         <h4 class="font-semibold text-lg mb-3">Chi tiết Combo</h4>
                         <div class="mb-3">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Giá combo</label>
-                            <p class="text-gray-900 font-semibold text-lg" x-text="formatCurrency(form.combo_price || 0)"></p>
+                            <p class="text-gray-900 font-semibold text-lg"
+                                x-text="formatCurrency(form.combo_price || 0)"></p>
                         </div>
                         <template x-if="form.combo_items && form.combo_items.length > 0">
                             <div>
@@ -324,7 +346,8 @@ $items = $items ?? [];
                                     <div class="p-3 bg-gray-50 rounded mb-2">
                                         <div class="flex items-center justify-between">
                                             <span class="text-sm text-gray-700">
-                                                <strong x-text="products.find(p => p.id == item.product_id)?.name || 'Không xác định'"></strong>
+                                                <strong
+                                                    x-text="products.find(p => p.id == item.product_id)?.name || 'Không xác định'"></strong>
                                             </span>
                                             <span class="text-sm text-gray-500">
                                                 Số lượng: <strong class="text-blue-600" x-text="item.qty"></strong>
@@ -367,7 +390,8 @@ $items = $items ?? [];
                     </div>
 
                     <div class="pt-2 flex justify-end">
-                        <button type="button" class="px-4 py-2 rounded-md border" @click="openDetail=false">Đóng</button>
+                        <button type="button" class="px-4 py-2 rounded-md border"
+                            @click="openDetail=false">Đóng</button>
                     </div>
                 </div>
             </div>
@@ -491,7 +515,8 @@ $items = $items ?? [];
             openFilter: {
                 name: false, description: false, discount_type: false, discount_value: false,
                 apply_to: false, priority: false, starts_at: false, ends_at: false,
-                status: false, created_at: false, created_by: false
+                status: false, created_at: false, created_by: false,
+                updated_at: false, updated_by: false,
             },
 
             filters: {
@@ -506,6 +531,8 @@ $items = $items ?? [];
                 status: '',
                 created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
                 created_by: '',
+                updated_at_type: '', updated_at_value: '', updated_at_from: '', updated_at_to: '',
+                updated_by: '',
             },
 
             // ------------------------------------------------------------------
@@ -613,7 +640,7 @@ $items = $items ?? [];
 
                 // --- Lọc theo text ---
                 // Bao gồm các trường hiển thị tên như brand_name, category_name, created_by_name, updated_by_name
-                ['name', 'description', 'created_by'].forEach(key => {
+                ['name', 'description', 'created_by', 'updated_by'].forEach(key => {
                     if (this.filters[key]) {
                         data = data.filter(o =>
                             this.applyFilter(o[key], 'contains', {
@@ -651,7 +678,7 @@ $items = $items ?? [];
                 });
 
                 // --- Lọc theo ngày ---
-                ['starts_at', 'ends_at', 'created_at'].forEach(key => {
+                ['starts_at', 'ends_at', 'created_at', 'updated_at'].forEach(key => {
                     if (this.filters[`${key}_type`]) {
                         data = data.filter(o =>
                             this.applyFilter(o[key], this.filters[`${key}_type`], {
@@ -676,7 +703,7 @@ $items = $items ?? [];
             },
             closeFilter(key) { this.openFilter[key] = false; },
             resetFilter(key) {
-                if (['starts_at', 'ends_at', 'created_at'].includes(key)) {
+                if (['starts_at', 'ends_at', 'created_at', 'updated_at'].includes(key)) {
                     this.filters[`${key}_type`] = '';
                     this.filters[`${key}_value`] = '';
                     this.filters[`${key}_from`] = '';
@@ -692,6 +719,66 @@ $items = $items ?? [];
                 this.openFilter[key] = false;
             },
 
+            exportExcel() {
+                const data = this.filtered();
+
+                if (data.length === 0) {
+                    this.showToast('Không có dữ liệu để xuất', 'error');
+                    return;
+                }   
+
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('vi-VN').replace(/\//g, '-');
+                const timeStr = now.toLocaleTimeString('vi-VN', { hour12: false }).replace(/:/g, '-');
+                const filename = `Chuong_trinh_khuyen_mai_${dateStr}_${timeStr}.xlsx`;
+
+                const exportData = {
+                    items: data.map(item => ({
+                        name: item.name || '',
+                        description: item.description || '',
+                        promo_type: item.promo_type || '',
+                        discount_type: item.discount_type || '',
+                        discount_value: item.discount_value || 0,
+                        priority: item.priority || 0,
+                        starts_at: item.starts_at || '',
+                        ends_at: item.ends_at || '',
+                        is_active: item.is_active || 0,
+                        created_at: item.created_at || '',
+                        created_by_name: item.created_by_name || '',
+                        updated_at: item.updated_at || '',
+                        updated_by_name: item.updated_by_name || '',
+                    })),
+                    export_date: now.toLocaleDateString('vi-VN'),
+                    filename: filename
+                };
+
+                fetch('/admin/api/promotions/export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(exportData)
+                })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Export failed');
+                        return response.blob();
+                    })
+                    .then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+
+                        this.showToast('Xuất file Excel thành công!', 'success');
+                    })
+                    .catch(e => {
+                        console.error('Export error:', e);
+                        this.showToast('Không thể xuất file Excel', 'error');
+                    });
+            },
+
             // Lifecycle
             async init() {
                 await this.fetchOptions();
@@ -705,10 +792,10 @@ $items = $items ?? [];
                     const res = await fetch(api.list);
                     if (!res.ok) throw new Error('Không thể tải danh sách');
                     const data = await res.json();
-                    
+
                     // API trả về { items: [...] } nên cần lấy items
                     this.items = data.items || data || [];
-                    
+
                 } catch (err) {
                     this.showToast(err.message, 'error');
                 } finally {
@@ -749,7 +836,7 @@ $items = $items ?? [];
             openDetailModal(item) {
                 console.log('=== OPEN DETAIL MODAL ===');
                 console.log('Item data:', item);
-                
+
                 this.resetForm();
                 this.form.id = item.id;
                 this.form.name = item.name || '';
@@ -767,13 +854,13 @@ $items = $items ?? [];
                 this.form.is_active = item.is_active ? 1 : 0;
                 this.form.category_ids = item.category_ids || [];
                 this.form.product_ids = item.product_ids || [];
-                
+
                 // Load data theo loại khuyến mãi
                 this.form.bundle_rules = item.bundle_rules || [];
                 this.form.gift_rules = item.gift_rules || [];
                 this.form.combo_price = item.combo_price || 0;
                 this.form.combo_items = item.combo_items || [];
-                
+
                 console.log('Form after load:', this.form);
                 this.openDetail = true;
             },
@@ -781,21 +868,21 @@ $items = $items ?? [];
             openEditModal(item) {
                 // Reset form trước
                 this.resetForm();
-                
+
                 // Sau đó gán dữ liệu
                 this.form.id = item.id;
                 this.form.name = item.name || '';
                 this.form.description = item.description || '';
                 this.form.promo_type = item.promo_type || 'discount';
                 this.form.discount_type = item.discount_type || 'percentage';
-                
+
                 // Format discount_value theo loại
                 if (item.discount_type === 'fixed') {
                     this.form.discount_value = new Intl.NumberFormat('en-US').format(item.discount_value || 0);
                 } else {
                     this.form.discount_value = item.discount_value || 0;
                 }
-                
+
                 this.form.apply_to = item.apply_to || 'all';
                 this.form.priority = item.priority || 0;
 
@@ -806,23 +893,23 @@ $items = $items ?? [];
                 this.form.is_active = item.is_active ? 1 : 0;
                 this.form.category_ids = item.category_ids || [];
                 this.form.product_ids = item.product_ids || [];
-                
+
                 // Format bundle_rules prices
                 this.form.bundle_rules = (item.bundle_rules || []).map(rule => ({
                     ...rule,
                     price: new Intl.NumberFormat('en-US').format(rule.price || 0)
                 }));
-                
+
                 this.form.gift_rules = item.gift_rules || [];
-                
+
                 // Format combo_price
                 this.form.combo_price = new Intl.NumberFormat('en-US').format(item.combo_price || 0);
-                
+
                 this.form.combo_items = item.combo_items || [];
-                
+
                 console.log('=== OPEN EDIT MODAL ===');
                 console.log('Form after load:', this.form);
-                
+
                 this.openEdit = true;
             },
 
@@ -990,13 +1077,13 @@ $items = $items ?? [];
                 if (field === 'name' && !val) {
                     this.errors[field] = 'Vui lòng nhập tên chương trình';
                 }
-                
+
                 if (field === 'discount_value') {
                     // Chuyển string có dấu phấy thành số
-                    const numVal = typeof val === 'string' 
-                        ? parseFloat(val.replace(/,/g, '')) 
+                    const numVal = typeof val === 'string'
+                        ? parseFloat(val.replace(/,/g, ''))
                         : parseFloat(val);
-                    
+
                     if (!numVal || numVal <= 0) {
                         this.errors[field] = 'Giá trị giảm phải lớn hơn 0';
                     } else if (this.form.discount_type === 'percentage' && numVal > 100) {
@@ -1005,7 +1092,7 @@ $items = $items ?? [];
                         this.errors[field] = 'Số tiền giảm không được vượt quá 9,999,999,999đ';
                     }
                 }
-                
+
                 if (field === 'starts_at' && !val) {
                     this.errors[field] = 'Vui lòng chọn ngày bắt đầu';
                 }
@@ -1020,15 +1107,15 @@ $items = $items ?? [];
             validateForm() {
                 this.touched = { name: true, discount_value: true, starts_at: true, ends_at: true };
                 this.validateField('name');
-                
+
                 // Chỉ validate discount_value khi promo_type là 'discount'
                 if (this.form.promo_type === 'discount') {
                     this.validateField('discount_value');
                 }
-                
+
                 this.validateField('starts_at');
                 this.validateField('ends_at');
-                
+
                 // Validate theo loại khuyến mãi
                 if (this.form.promo_type === 'bundle') {
                     if (!this.form.bundle_rules || this.form.bundle_rules.length === 0) {
@@ -1043,7 +1130,7 @@ $items = $items ?? [];
                         }
                     }
                 }
-                
+
                 if (this.form.promo_type === 'gift') {
                     if (!this.form.gift_rules || this.form.gift_rules.length === 0) {
                         this.showToast('Vui lòng thêm ít nhất 1 quy tắc Tặng quà', 'error');
@@ -1057,7 +1144,7 @@ $items = $items ?? [];
                         }
                     }
                 }
-                
+
                 if (this.form.promo_type === 'combo') {
                     if (!this.form.combo_price || this.form.combo_price === '0' || this.form.combo_price === 0) {
                         this.showToast('Vui lòng nhập giá combo', 'error');
@@ -1079,7 +1166,7 @@ $items = $items ?? [];
                         }
                     }
                 }
-                
+
                 return !Object.values(this.errors).some(e => e);
             },
 
@@ -1111,7 +1198,7 @@ $items = $items ?? [];
             paginated() {
                 const arr = this.filtered();
                 if (!Array.isArray(arr)) return [];
-                
+
                 // Lấy dữ liệu theo trang
                 const start = (this.currentPage - 1) * this.perPage;
                 const end = start + this.perPage;
@@ -1137,23 +1224,23 @@ $items = $items ?? [];
                     return (n || 0) + 'đ';
                 }
             },
-            
+
             // Format discount value khi nhập
             formatDiscountValue() {
                 const val = this.form.discount_value;
-                
+
                 // Nếu là percentage thì không format (để nhập số thập phân)
                 if (this.form.discount_type === 'percentage') {
                     // Chỉ cho phép số và dấu chấm
                     this.form.discount_value = String(val).replace(/[^\d.]/g, '');
                     return;
                 }
-                
+
                 // Nếu là fixed thì format với dấu phẩy
                 if (this.form.discount_type === 'fixed') {
                     // Xóa tất cả ký tự không phải số
                     let num = String(val).replace(/[^\d]/g, '');
-                    
+
                     if (num) {
                         // Format với dấu phẩy (en-US style)
                         this.form.discount_value = new Intl.NumberFormat('en-US').format(parseInt(num));
@@ -1166,7 +1253,7 @@ $items = $items ?? [];
                 if (!val) return '';
                 // Xóa tất cả ký tự không phải số
                 let num = String(val).replace(/[^\d]/g, '');
-                
+
                 if (num) {
                     // Format với dấu phẩy (en-US style: 500,000)
                     return new Intl.NumberFormat('en-US').format(parseInt(num));
@@ -1189,21 +1276,21 @@ $items = $items ?? [];
             // hoặc DD/MM/YYYY -> YYYY-MM-DD 00:00:00
             convertDateToSQL(dateStr) {
                 if (!dateStr) return '';
-                
+
                 // Thử match với giờ: DD/MM/YYYY HH:MM
                 let match = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/);
                 if (match) {
                     const [, day, month, year, hour, minute] = match;
                     return `${year}-${month}-${day} ${hour}:${minute}:00`;
                 }
-                
+
                 // Thử match không có giờ: DD/MM/YYYY
                 match = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
                 if (match) {
                     const [, day, month, year] = match;
                     return `${year}-${month}-${day} 00:00:00`;
                 }
-                
+
                 return dateStr;
             },
 

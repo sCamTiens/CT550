@@ -411,6 +411,20 @@ class OrderRepository
                 throw $e;
             }
 
+            // Cập nhật số lần sử dụng mã giảm giá (nếu có)
+            if (!empty($data['coupon_code'])) {
+                error_log("Incrementing used_count for coupon: " . $data['coupon_code']);
+                try {
+                    require_once __DIR__ . '/CouponRepository.php';
+                    $couponRepo = new CouponRepository();
+                    $couponRepo->incrementUsedCount($data['coupon_code']);
+                    error_log("Coupon used_count incremented successfully");
+                } catch (\Exception $e) {
+                    error_log("ERROR incrementing coupon used_count: " . $e->getMessage());
+                    // Không throw exception để không làm fail toàn bộ đơn hàng
+                }
+            }
+
             $pdo->commit();
             error_log("Transaction committed successfully");
 

@@ -12,9 +12,16 @@ $items = $items ?? [];
 <div x-data="receiptPage()" x-init="init()">
     <div class="flex items-center justify-between mb-4">
         <h1 class="text-3xl font-bold text-[#002975]">Quản lý phiếu thu</h1>
-        <button
-            class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
-            @click="openCreate()">+ Thêm phiếu thu</button>
+        <div class="flex gap-2">
+            <button
+                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975] flex items-center gap-2"
+                @click="exportExcel()">
+                <i class="fa-solid fa-file-excel"></i> Xuất Excel
+            </button>
+            <button
+                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
+                @click="openCreate()">+ Thêm phiếu thu</button>
+        </div>
     </div>
 
     <!-- Table -->
@@ -756,6 +763,53 @@ $items = $items ?? [];
                 }
             },
 
+            exportExcel() {
+                const data = this.filtered().map(r => ({
+                    code: r.code || '',
+                    payer_user_name: r.payer_user_name || '',
+                    order_id: r.order_id || '',
+                    method: this.getPaymentMethodText(r.method),
+                    amount: r.amount || 0,
+                    txn_ref: r.txn_ref || '',
+                    bank_time: r.bank_time || '',
+                    received_by_name: r.received_by_name || '',
+                    received_at: r.received_at || '',
+                    note: r.note || '',
+                    created_at: r.created_at || '',
+                    created_by_name: r.created_by_name || ''
+                }));
+
+                const now = new Date();
+                const dateStr = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
+                const timeStr = `${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
+                const filename = `Phieu_thu_${dateStr}_${timeStr}.xlsx`;
+
+                fetch('/admin/api/receipt_vouchers/export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items: data })
+                })
+                    .then(res => {
+                        if (!res.ok) throw new Error('Export failed');
+                        return res.blob();
+                    })
+                    .then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                        this.showToast('Xuất Excel thành công!', 'success');
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        this.showToast('Không thể xuất Excel');
+                    });
+            },
+
             // ===== TOAST =====
             showToast(msg, type = 'error') {
                 const box = document.getElementById('toast-container');
@@ -780,7 +834,7 @@ $items = $items ?? [];
                     <div class="flex-1">${msg}</div>
                 `;
 
-                                box.appendChild(toast);
+                box.appendChild(toast);
                 setTimeout(() => toast.remove(), 3000);
             },
         };

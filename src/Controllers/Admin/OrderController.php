@@ -189,7 +189,10 @@ class OrderController extends BaseAdminController
         $orders = $data['orders'];
         $fromDate = $data['from_date'] ?? '';
         $toDate = $data['to_date'] ?? '';
-        $exportDate = $data['export_date'] ?? date('d/m/Y');
+        
+        // Set timezone to Vietnam
+        $vietnamTime = new \DateTime('now', new \DateTimeZone('Asia/Ho_Chi_Minh'));
+        $exportDate = $data['export_date'] ?? $vietnamTime->format('d/m/Y H:i:s');
         $filename = $data['filename'] ?? 'Don_hang.xlsx';
 
         // Tạo file Excel với PhpSpreadsheet
@@ -203,8 +206,8 @@ class OrderController extends BaseAdminController
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
         $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-        // Ngày xuất
-        $sheet->setCellValue('A2', "Ngày xuất: $exportDate");
+        // Ngày xuất file
+        $sheet->setCellValue('A2', "Ngày xuất file: $exportDate");
         $sheet->mergeCells('A2:P2');
         $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 

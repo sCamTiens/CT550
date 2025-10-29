@@ -545,4 +545,151 @@ class PromotionController extends BaseAdminController
         
         return $userId;
     }
+
+    /** POST /admin/api/promotions/export - Xuất Excel */
+    public function export()
+    {
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        $items = $data['items'] ?? [];
+
+        if (empty($items)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Không có dữ liệu để xuất']);
+            exit;
+        }
+
+        require_once __DIR__ . '/../../../vendor/autoload.php';
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Tự động tính từ ngày - đến ngày từ dữ liệu
+        $dates = array_filter(array_map(function($item) {
+            return $item['starts_at'] ?? null;
+        }, $items));
+
+        // Loại bỏ phần thời gian, chỉ giữ ngày
+        $dates = array_map(function($date) {
+            return strpos($date, ' ') !== false ? explode(' ', $date)[0] : $date;
+        }, $dates);
+
+        sort($dates);
+        $fromDate = !empty($dates) ? reset($dates) : '';
+        $toDate = !empty($dates) ? end($dates) : '';
+
+        // Chuyển định dạng từ YYYY-MM-DD sang DD/MM/YYYY
+        if ($fromDate && preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $fromDate, $matches)) {
+            $fromDate = $matches[3] . '/' . $matches[2] . '/' . $matches[1];
+        }
+        if ($toDate && preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $toDate, $matches)) {
+            $toDate = $matches[3] . '/' . $matches[2] . '/' . $matches[1];
+        }
+
+        // Header
+        $sheet->mergeCells('A1:N1');
+        $sheet->setCellValue('A1', 'MINIGO');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // Ngày xuất với timezone Việt Nam
+        $vietnamTime = new \DateTime('now', new \DateTimeZone('Asia/Ho_Chi_Minh'));
+        $exportDate = $vietnamTime->format('d/m/Y H:i:s');
+        $sheet->mergeCells('A2:N2');
+        $sheet->setCellValue('A2', "Ngày xuất: $exportDate");
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // Từ ngày - Đến ngày
+        $sheet->mergeCells('A3:N3');
+        $dateRangeText = ($fromDate && $toDate) ? "Từ ngày: $fromDate - Đến ngày: $toDate" : "Tất cả các chương trình";
+        $sheet->setCellValue('A3', $dateRangeText);
+        $sheet->getStyle('A3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        $sheet->mergeCells('A5:N5');
+        $sheet->setCellValue('A5', 'DANH SÁCH CHƯƠNG TRÌNH KHUYẾN MÃI');
+        $sheet->getStyle('A5')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A5')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // Column headers
+        $headers = ['STT', 'Tên CT KM', 'Mô tả', 'Loại KM', 'Loại giảm giá', 'Giá trị giảm', 'Độ ưu tiên', 'Ngày bắt đầu', 'Ngày kết thúc', 'Trạng thái', 'Thời gian tạo', 'Người tạo', 'Thời gian cập nhật', 'Người cập nhật'];
+        $col = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . '6', $header);
+            $col++;
+        }
+        $sheet->getStyle('A6:N6')->getFont()->setBold(true);
+        $sheet->getStyle('A6:N6')->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('E2EFDA');
+
+        $sheet->getStyle('A6:N6')->getFont()->setBold(true);
+        $sheet->getStyle('A6:N6')->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('E2EFDA');
+
+        // Data
+        $row = 7;
+        foreach ($items as $index => $item) {
+            $promoTypeMap = [
+                'discount' => 'Giảm giá',
+                'bundle' => 'Bundle',
+                'gift' => 'Tặng quà',
+                'combo' => 'Combo'
+            ];
+            
+            $discountTypeMap = [
+                'percentage' => 'Phần trăm',
+                'fixed' => 'Số tiền cố định'
+            ];
+
+            $sheet->setCellValue('A' . $row, $index + 1);
+            $sheet->setCellValue('B' . $row, $item['name'] ?? '');
+            $sheet->setCellValue('C' . $row, $item['description'] ?? '');
+            $sheet->setCellValue('D' . $row, $promoTypeMap[$item['promo_type'] ?? ''] ?? $item['promo_type'] ?? '');
+            
+            // Loại giảm giá & giá trị chỉ hiển thị với discount type
+            if (($item['promo_type'] ?? '') === 'discount') {
+                $sheet->setCellValue('E' . $row, $discountTypeMap[$item['discount_type'] ?? ''] ?? '');
+                
+                if (($item['discount_type'] ?? '') === 'percentage') {
+                    $sheet->setCellValue('F' . $row, ($item['discount_value'] ?? 0) . '%');
+                } else {
+                    $sheet->setCellValue('F' . $row, $item['discount_value'] ?? 0);
+                    $sheet->getStyle('F' . $row)->getNumberFormat()->setFormatCode('#,##0');
+                }
+            } else {
+                $sheet->setCellValue('E' . $row, '—');
+                $sheet->setCellValue('F' . $row, '—');
+            }
+
+            $sheet->setCellValue('G' . $row, $item['priority'] ?? 0);
+            $sheet->setCellValue('H' . $row, $item['starts_at'] ?? '');
+            $sheet->setCellValue('I' . $row, $item['ends_at'] ?? '');
+            $sheet->setCellValue('J' . $row, ($item['is_active'] ?? 0) ? 'Hoạt động' : 'Tạm dừng');
+            $sheet->setCellValue('K' . $row, $item['created_at'] ?? '');
+            $sheet->setCellValue('L' . $row, $item['created_by_name'] ?? '');
+            $sheet->setCellValue('M' . $row, $item['updated_at'] ?? '');
+            $sheet->setCellValue('N' . $row, $item['updated_by_name'] ?? '');
+
+            $row++;
+        }
+
+        // Borders
+        $lastRow = $row - 1;
+        $sheet->getStyle("A6:N$lastRow")->getBorders()->getAllBorders()
+            ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+        // Auto-size columns
+        foreach (range('A', 'N') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Output
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . ($data['filename'] ?? 'Chuong_trinh_khuyen_mai.xlsx') . '"');
+        header('Cache-Control: max-age=0');
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
 }
