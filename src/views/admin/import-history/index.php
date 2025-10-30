@@ -29,6 +29,8 @@
                     <option value="suppliers">Nhà cung cấp</option>
                     <option value="customers">Khách hàng</option>
                     <option value="staff">Nhân viên</option>
+                    <option value="purchase_orders">Phiếu nhập kho</option>
+                    <option value="coupons">Mã giảm giá</option>
                 </select>
             </div>
 
@@ -579,12 +581,15 @@
                         { label: 'Trạng thái', index: 5 }
                     ],
                     'customers': [
-                        { label: 'STT', index: 0 },
-                        { label: 'Tên khách hàng', index: 1 },
-                        { label: 'Số điện thoại', index: 2 },
-                        { label: 'Email', index: 3 },
-                        { label: 'Địa chỉ', index: 4 },
-                        { label: 'Trạng thái', index: 5 }
+                        { label: 'Dòng', field: 'row' },
+                        { label: 'Họ tên', field: 'full_name' },
+                        { label: 'Email', field: 'email' },
+                        { label: 'SĐT', field: 'phone' },
+                        { label: 'Ngày sinh', field: 'date_of_birth' },
+                        { label: 'Giới tính', field: 'gender' },
+                        { label: 'Địa chỉ', field: 'address' },
+                        { label: 'Điểm TL', field: 'loyalty_points' },
+                        { label: 'Trạng thái', field: 'is_active' }
                     ],
                     'categories': [
                         { label: 'STT', index: 0 },
@@ -603,13 +608,36 @@
                         { label: 'Trạng thái', index: 2 }
                     ],
                     'staff': [
-                        { label: 'STT', index: 0 },
-                        { label: 'Họ tên', index: 1 },
-                        { label: 'Số điện thoại', index: 2 },
-                        { label: 'Email', index: 3 },
-                        { label: 'Vai trò', index: 4 },
-                        { label: 'Trạng thái', index: 5 }
-                    ]
+                        { label: 'Dòng', field: 'row' },
+                        { label: 'Tài khoản', field: 'username' },
+                        { label: 'Họ tên', field: 'full_name' },
+                        { label: 'Vai trò', field: 'staff_role' },
+                        { label: 'Email', field: 'email' },
+                        { label: 'Số điện thoại', field: 'phone' },
+                        { label: 'Trạng thái', field: 'is_active' }
+                    ],
+                    'purchase_orders': [
+                        { label: 'Dòng', field: 'rows' },
+                        { label: 'ID NCC', field: 'supplier_id' },
+                        { label: 'Ngày nhập', field: 'created_at' },
+                        { label: 'Hạn TT', field: 'due_date' },
+                        { label: 'Trạng thái TT', field: 'payment_status' },
+                        { label: 'Số tiền trả', field: 'paid_amount' },
+                        { label: 'Ghi chú', field: 'note' },
+                        { label: 'Số SP', field: 'products_count' }
+                    ],
+                    'coupons': [
+                        { label: 'Dòng', field: 'row' },
+                        { label: 'Mã', field: 'code' },
+                        { label: 'Tên', field: 'name' },
+                        { label: 'Loại', field: 'discount_type' },
+                        { label: 'Giá trị', field: 'discount_value' },
+                        { label: 'Đơn TT', field: 'min_order_value' },
+                        { label: 'Giảm TĐ', field: 'max_discount' },
+                        { label: 'Bắt đầu', field: 'starts_at' },
+                        { label: 'Kết thúc', field: 'ends_at' },
+                        { label: 'Trạng thái', field: 'is_active' }
+                    ],
                 };
                 return headers[tableName] || [
                     { label: 'STT', index: 0 },
@@ -642,7 +670,9 @@
                     'suppliers': 'Nhà cung cấp',
                     'customers': 'Khách hàng',
                     'staff': 'Nhân viên',
-                    'units': 'Đơn vị tính'
+                    'units': 'Đơn vị tính',
+                    'purchase_orders': 'Phiếu nhập kho',
+                    'coupons': 'Mã giảm giá',
                 };
                 return map[tableName] || tableName;
             },
@@ -655,7 +685,9 @@
                     'suppliers': 'bg-green-100 text-green-700',
                     'customers': 'bg-pink-100 text-pink-700',
                     'staff': 'bg-indigo-100 text-indigo-700',
-                    'units': 'bg-teal-100 text-teal-700'
+                    'units': 'bg-teal-100 text-teal-700',
+                    'purchase_orders': 'bg-yellow-100 text-yellow-700',
+                    'coupons': 'bg-red-100 text-red-700',
                 };
                 return colors[tableName] || 'bg-gray-100 text-gray-700';
             },

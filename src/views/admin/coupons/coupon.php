@@ -13,6 +13,15 @@ $items = $items ?? [];
     <div class="flex items-center justify-between mb-4">
         <h1 class="text-3xl font-bold text-[#002975]">Quản lý mã giảm giá</h1>
         <div class="flex gap-2">
+            <a href="/admin/import-history?table=coupons"
+                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975] flex items-center gap-2">
+                <i class="fa-solid fa-clock-rotate-left"></i> Lịch sử nhập
+            </a>
+            <button
+                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975] flex items-center gap-2"
+                @click="openImportModal()">
+                <i class="fa-solid fa-file-import"></i> Nhập Excel
+            </button>
             <button
                 class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975] flex items-center gap-2"
                 @click="exportExcel()">
@@ -140,6 +149,74 @@ $items = $items ?? [];
             </div>
         </div>
 
+        <!-- MODAL: Import Excel -->
+        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
+            x-show="showImportModal" x-transition.opacity style="display:none">
+            <div class="bg-white w-full max-w-2xl rounded-xl shadow animate__animated animate__zoomIn animate__faster"
+                @click.outside="showImportModal=false">
+                <div class="px-5 py-3 border-b flex justify-center items-center relative">
+                    <h3 class="font-semibold text-2xl text-[#002975]">Nhập dữ liệu từ Excel</h3>
+                    <button class="text-slate-500 absolute right-5" @click="showImportModal=false">✕</button>
+                </div>
+                <div class="p-5 space-y-4">
+                    <!-- Chọn file -->
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                        <input type="file" @change="handleFileSelect($event)" accept=".xlsx,.xls" class="hidden"
+                            x-ref="fileInput">
+                        <div x-show="!importFile" @click="$refs.fileInput.click()" class="cursor-pointer">
+                            <i class="fa-solid fa-cloud-arrow-up text-4xl text-[#002975] mb-3"></i>
+                            <p class="text-slate-600 mb-1">Nhấn để chọn file Excel</p>
+                            <p class="text-sm text-slate-400">Hỗ trợ định dạng .xlsx, .xls</p>
+                        </div>
+                        <div x-show="importFile" class="space-y-3">
+                            <div class="flex items-center justify-center gap-2 text-[#002975]">
+                                <i class="fa-solid fa-file-excel text-2xl"></i>
+                                <span x-text="importFile?.name" class="font-medium"></span>
+                            </div>
+                            <button type="button" @click="clearFile()" class="text-sm text-red-600 hover:underline">
+                                Xóa file
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tải file mẫu -->
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div class="flex items-start gap-3">
+                            <i class="fa-solid fa-circle-info text-[#002975] text-xl mt-0.5"></i>
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-blue-900 mb-2">Hướng dẫn nhập file:</h4>
+                                <ul class="text-sm text-blue-800 space-y-1 mb-3">
+                                    <li>• Dòng đầu là tiêu đề, dữ liệu bắt đầu từ dòng 2</li>
+                                    <li>• Trường có dấu <span class="text-red-600 font-bold">*</span> là bắt buộc</li>
+                                    <li>• Ngày tháng theo định dạng: <strong>dd/mm/yyyy HH:MM:SS</strong></li>
+                                    <li>• File phải có định dạng .xls hoặc .xlsx</li>
+                                    <li>• File tối đa 10MB, không quá 10,000 dòng</li>
+                                </ul>
+                                <button type="button" @click="downloadTemplate()"
+                                    class="text-sm text-red-400 hover:text-red-600 hover:underline font-semibold flex items-center gap-1">
+                                    <i class="fa-solid fa-download"></i>
+                                    Tải file mẫu Excel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Nút hành động -->
+                    <div class="pt-2 flex justify-end gap-3">
+                        <button type="button"
+                            class="px-4 py-2 rounded-md text-red-600 border border-red-600 hover:bg-red-600 hover:text-white transition-colors"
+                            @click="showImportModal=false">
+                            Hủy
+                        </button>
+                        <button type="button" @click="submitImport()" :disabled="!importFile || importing"
+                            class="px-4 py-2 rounded-md text-white bg-[#002975] hover:bg-[#001a56] disabled:opacity-50 disabled:cursor-not-allowed"
+                            x-text="importing ? 'Đang nhập...' : 'Nhập dữ liệu'">
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Toast -->
         <div id="toast-container" class="z-[60]"></div>
     </div>
@@ -192,6 +269,11 @@ $items = $items ?? [];
             form: {},
             errors: {},
             touched: {},
+
+            // Import Excel
+            showImportModal: false,
+            importFile: null,
+            importing: false,
 
             // Pagination
             currentPage: 1,
@@ -457,7 +539,7 @@ $items = $items ?? [];
                 this.errors = {};
                 this.touched = {};
                 this.openForm = true;
-                
+
                 // Khởi tạo lại flatpickr sau khi modal hiển thị
                 this.$nextTick(() => {
                     if (window.initCouponDatePickers) {
@@ -467,7 +549,7 @@ $items = $items ?? [];
             },
 
             openEdit(c) {
-                this.form = { 
+                this.form = {
                     ...c,
                     // Chuyển is_active về số để checkbox hoạt động đúng (kiểm tra chính xác)
                     is_active: (c.is_active === 1 || c.is_active === '1' || c.is_active === 'true' || c.is_active === true) ? 1 : 0,
@@ -484,7 +566,7 @@ $items = $items ?? [];
                 this.errors = {};
                 this.touched = {};
                 this.openForm = true;
-                
+
                 // Khởi tạo lại flatpickr sau khi modal hiển thị
                 this.$nextTick(() => {
                     if (window.initCouponDatePickers) {
@@ -686,6 +768,106 @@ $items = $items ?? [];
                         console.error(err);
                         this.showToast('Không thể xuất Excel');
                     });
+            },
+
+            // ===== Import Excel =====
+            openImportModal() {
+                this.importFile = null;
+                this.showImportModal = true;
+            },
+
+            handleFileSelect(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                // 1. Kiểm tra định dạng file
+                const ext = file.name.split('.').pop().toLowerCase();
+                if (!['xls', 'xlsx'].includes(ext)) {
+                    this.showToast('File không đúng định dạng. Vui lòng chọn file Excel (.xls hoặc .xlsx)', 'error');
+                    return;
+                }
+
+                // 2. Kiểm tra kích thước file (10MB)
+                const maxSize = 10 * 1024 * 1024;
+                if (file.size > maxSize) {
+                    this.showToast(`File vượt quá kích thước cho phép (tối đa 10MB). Kích thước file: ${(file.size / 1024 / 1024).toFixed(2)}MB`, 'error');
+                    return;
+                }
+
+                // 3. Kiểm tra độ dài tên file
+                if (file.name.length > 255) {
+                    this.showToast(`Tên file quá dài (tối đa 255 ký tự). Độ dài hiện tại: ${file.name.length} ký tự`, 'error');
+                    return;
+                }
+
+                // 4. Kiểm tra ký tự đặc biệt
+                const fileName = file.name.split('.')[0];
+                if (!/^[a-zA-Z0-9._\-\s()\[\]]+$/.test(fileName)) {
+                    this.showToast('Tên file chứa ký tự đặc biệt không hợp lệ. Vui lòng chỉ sử dụng chữ cái, số, dấu gạch ngang, gạch dưới và khoảng trắng', 'error');
+                    return;
+                }
+
+                this.importFile = file;
+            },
+
+            clearFile() {
+                this.importFile = null;
+                if (this.$refs.fileInput) {
+                    this.$refs.fileInput.value = '';
+                }
+            },
+
+            downloadTemplate() {
+                window.location.href = '/admin/api/coupons/template';
+            },
+
+            async submitImport() {
+                if (!this.importFile) {
+                    this.showToast('Vui lòng chọn file để nhập', 'error');
+                    return;
+                }
+
+                this.importing = true;
+
+                try {
+                    const formData = new FormData();
+                    formData.append('file', this.importFile);
+
+                    const response = await fetch('/admin/api/coupons/import', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(result.error || 'Có lỗi xảy ra khi nhập file');
+                    }
+
+                    // Hiển thị kết quả
+                    let message = result.message || `Nhập thành công ${result.success} mã giảm giá`;
+                    let toastType = 'success';
+
+                    if (result.status === 'partial') {
+                        toastType = 'error';
+                    } else if (result.status === 'failed') {
+                        toastType = 'error';
+                    }
+
+                    this.showToast(message, toastType);
+
+                    // Đóng modal và reload data nếu có ít nhất 1 bản ghi thành công
+                    if (result.success > 0) {
+                        this.showImportModal = false;
+                        this.importFile = null;
+                        await this.fetchAll();
+                    }
+
+                } catch (error) {
+                    this.showToast(error.message || 'Có lỗi xảy ra khi nhập file', 'error');
+                } finally {
+                    this.importing = false;
+                }
             }
         };
     }

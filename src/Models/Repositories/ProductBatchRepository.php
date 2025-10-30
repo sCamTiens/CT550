@@ -56,7 +56,7 @@ class ProductBatchRepository
         $stmt = $pdo->prepare("INSERT INTO product_batches (product_id, batch_code, mfg_date, exp_date, initial_qty, current_qty, purchase_order_id, note, unit_cost, is_active, created_by, updated_by, created_at, updated_at) VALUES (:product_id, :batch_code, :mfg_date, :exp_date, :initial_qty, :current_qty, :purchase_order_id, :note, :unit_cost, :is_active, :created_by, :updated_by, NOW(), NOW())");
         $stmt->execute([
             ':product_id' => $data['product_id'],
-            ':batch_code' => $data['batch_code'] ?? uniqid('B-'),
+            ':batch_code' => $data['batch_code'] ?? ('BATCH-' . round(microtime(true) * 1000)),
             ':mfg_date' => $data['mfg_date'] ?: null,
             ':exp_date' => $data['exp_date'] ?: null,
             ':initial_qty' => $data['initial_qty'] ?? 0,
@@ -73,7 +73,7 @@ class ProductBatchRepository
         // Log audit
         $this->logCreate('product_batches', $id, [
             'product_id' => $data['product_id'],
-            'batch_code' => $data['batch_code'] ?? uniqid('B-'),
+            'batch_code' => $data['batch_code'] ?? ('BATCH-' . round(microtime(true) * 1000)),
             'mfg_date' => $data['mfg_date'] ?: null,
             'exp_date' => $data['exp_date'] ?: null,
             'initial_qty' => $data['initial_qty'] ?? 0

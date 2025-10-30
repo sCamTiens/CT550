@@ -40,6 +40,40 @@ class CustomerRepository
     }
 
     /**
+     * Tìm khách hàng theo email
+     *
+     * @return array|false
+     */
+    public function findByEmail(string $email): array|false
+    {
+        $sql = $this->getBaseSelect() . " AND u.email = ?";
+
+        $stmt = DB::pdo()->prepare($sql);
+        $stmt->execute([$email]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ?: false;
+    }
+
+    /**
+     * Tìm khách hàng theo số điện thoại
+     *
+     * @return array|false
+     */
+    public function findByPhone(string $phone): array|false
+    {
+        $sql = $this->getBaseSelect() . " AND u.phone = ?";
+
+        $stmt = DB::pdo()->prepare($sql);
+        $stmt->execute([$phone]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ?: false;
+    }
+
+    /**
      * Tạo khách hàng mới
      *
      * @return array|false

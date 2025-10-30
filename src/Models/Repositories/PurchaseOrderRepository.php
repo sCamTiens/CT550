@@ -46,7 +46,7 @@ class PurchaseOrderRepository
         try {
             $pdo->beginTransaction();
 
-            $code = $data['code'] ?? ('PO-' . time());
+            $code = $data['code'] ?? ('PO-' . round(microtime(true) * 1000));
 
             // Convert ngày nhập từ d/m/Y sang Y-m-d
             $receivedAtDate = $this->convertDateFormat($data['created_at'] ?? null);
@@ -81,12 +81,16 @@ class PurchaseOrderRepository
                     break;
             }
 
-            $paidAmount = 0;
-            if ($paymentStatusText === 'Đã thanh toán một phần') {
-                $paidAmount = isset($data['paid_amount']) ? (float) $data['paid_amount'] : 0;
-            } elseif ($paymentStatusText === 'Đã thanh toán hết') {
+            // Xử lý số tiền đã trả
+            $paidAmount = isset($data['paid_amount']) ? (float) $data['paid_amount'] : 0;
+            
+            // Nếu trạng thái là "Đã thanh toán hết", ưu tiên lấy tổng tiền
+            if ($paymentStatusText === 'Đã thanh toán hết') {
                 $paidAmount = $totalAmount;
             }
+
+            // Convert due_date từ d/m/Y sang Y-m-d
+            $dueDate = $this->convertDateFormat($data['due_date'] ?? null);
 
             $stmt = $pdo->prepare("
                 INSERT INTO purchase_orders 
@@ -99,7 +103,7 @@ class PurchaseOrderRepository
                 ':total_amount' => $totalAmount,
                 ':paid_amount' => $paidAmount,
                 ':payment_status' => $paymentStatus,
-                ':due_date' => $data['due_date'] ?? null,
+                ':due_date' => $dueDate,
                 ':note' => $data['note'] ?? null,
                 ':received_at' => $receivedAt,
                 ':created_by' => $currentUser,
@@ -136,7 +140,7 @@ class PurchaseOrderRepository
                         $sum += $bqty;
                         $batchData = [
                             'product_id' => $productId,
-                            'batch_code' => $ln['batch_code'] ?? 'AUTO-' . time(),
+                            'batch_code' => $ln['batch_code'] ?? ('BATCH-' . round(microtime(true) * 1000)),
                             'mfg_date' => $this->convertDateFormat($ln['mfg_date'] ?? null),
                             'exp_date' => $this->convertDateFormat($ln['exp_date'] ?? null),
                             'initial_qty' => $bqty,

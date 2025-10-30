@@ -42,6 +42,31 @@ class StaffRepository
         return $stmt->execute([$hash, $userId]);
     }
 
+    /** Tìm nhân viên theo username */
+    public function findByUsername(string $username): ?array
+    {
+        $sql = "SELECT 
+                    u.id AS user_id,
+                    u.username,
+                    u.full_name,
+                    u.email,
+                    u.phone,
+                    u.is_active,
+                    s.staff_role,
+                    s.hired_at,
+                    s.note
+                FROM {$this->userTable} u
+                LEFT JOIN {$this->staffTable} s ON s.user_id = u.id
+                WHERE u.username = ? AND u.is_deleted = 0
+                LIMIT 1";
+        
+        $stmt = DB::pdo()->prepare($sql);
+        $stmt->execute([$username]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $result ?: null;
+    }
+
     /** Lấy toàn bộ danh sách nhân viên (chỉ nhân viên chưa bị xóa) */
     public function all(): array
     {

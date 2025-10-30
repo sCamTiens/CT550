@@ -68,6 +68,39 @@ class PromotionRepository
         }
         return null;
     }
+
+    /**
+     * Find promotion by name
+     */
+    public function findByName(string $name): ?Promotion
+    {
+        $pdo = DB::pdo();
+        $sql = "
+            SELECT p.id, p.name, p.description, p.promo_type,
+                   p.discount_type, p.discount_value, p.combo_price, p.apply_to,
+                   p.priority, p.starts_at, p.ends_at, p.is_active,
+                   p.created_at, p.updated_at,
+                   p.created_by, cu.full_name AS created_by_name,
+                   p.updated_by, uu.full_name AS updated_by_name
+            FROM promotions p
+            LEFT JOIN users cu ON cu.id = p.created_by
+            LEFT JOIN users uu ON uu.id = p.updated_by
+            WHERE p.name = ?
+        ";
+        $st = $pdo->prepare($sql);
+        $st->execute([$name]);
+        $row = $st->fetch(\PDO::FETCH_ASSOC);
+
+        if ($row) {
+            $row['category_ids'] = [];
+            $row['product_ids'] = $this->getProductIds($row['id']);
+            $row['bundle_rules'] = $this->getBundleRules($row['id']);
+            $row['gift_rules'] = $this->getGiftRules($row['id']);
+            $row['combo_items'] = $this->getComboItems($row['id']);
+            return new Promotion($row);
+        }
+        return null;
+    }
     // Bundle rules
     private function getBundleRules(int $promotionId): array
     {

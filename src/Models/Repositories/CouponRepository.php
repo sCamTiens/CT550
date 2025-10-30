@@ -78,6 +78,33 @@ class CouponRepository
     }
 
     /**
+     * Tìm mã giảm giá theo code
+     */
+    public function findByCode(string $code): ?Coupon
+    {
+        $pdo = DB::pdo();
+        $sql = "
+            SELECT c.*, 
+                cu.full_name AS created_by_name,
+                uu.full_name AS updated_by_name
+            FROM coupons c
+            LEFT JOIN users cu ON cu.id = c.created_by
+            LEFT JOIN users uu ON uu.id = c.updated_by
+            WHERE c.code = ?
+        ";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$code]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row) return null;
+
+        $row['description'] = $row['name'];
+        $row['discount_type'] = ($row['discount_type'] === 'Phần trăm') ? 'percentage' : 'fixed';
+
+        return new Coupon($row);
+    }
+
+    /**
      * Chuyển đổi ngày từ d/m/Y hoặc Y-m-d H:i:s sang Y-m-d
      */
     private function convertDate(?string $date): ?string

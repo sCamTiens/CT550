@@ -153,6 +153,8 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/purchase-orders', [AdminPurchaseOrder::class, 'index']);
     $r->get('/api/purchase-orders', [AdminPurchaseOrder::class, 'apiIndex']);
     $r->post('/api/purchase-orders/export', [AdminPurchaseOrder::class, 'export']);
+    $r->get('/api/purchase-orders/template', [AdminPurchaseOrder::class, 'downloadTemplate']);
+    $r->post('/api/purchase-orders/import', [AdminPurchaseOrder::class, 'importExcel']);
     $r->get('/api/purchase-orders/unpaid', [AdminPurchaseOrder::class, 'unpaid']);
     $r->get('/api/purchase-orders/{id}', [AdminPurchaseOrder::class, 'show']);
     $r->post('/api/purchase-orders', [AdminPurchaseOrder::class, 'store']);
@@ -162,6 +164,8 @@ $router->group('/admin', function (Router $r): void {
     // Staffs
     $r->get('/staff', [AdminStaff::class, 'index']);
     $r->get('/api/staff', [AdminStaff::class, 'apiIndex']);
+    $r->get('/api/staff/template', [AdminStaff::class, 'downloadTemplate']);
+    $r->post('/api/staff/import', [AdminStaff::class, 'importExcel']);
     $r->post('/api/staff/export', [AdminStaff::class, 'export']);
     $r->get('/api/staff/roles', [AdminStaff::class, 'apiRoles']);
     $r->post('/api/staff', [AdminStaff::class, 'store']);
@@ -172,13 +176,15 @@ $router->group('/admin', function (Router $r): void {
     // Customers
     $r->get('/customers', [AdminCustomer::class, 'index']);
     $r->get('/api/customers', [AdminCustomer::class, 'apiIndex']);
+    $r->get('/api/customers/template', [AdminCustomer::class, 'downloadTemplate']);
+    $r->post('/api/customers/import', [AdminCustomer::class, 'importExcel']);
+    $r->post('/api/customers/export', [AdminCustomer::class, 'export']);
     $r->post('/api/customers', [AdminCustomer::class, 'store']);
     $r->put('/api/customers/{id}', [AdminCustomer::class, 'update']);
     $r->put('/api/customers/{id}/password', [AdminCustomer::class, 'changePassword']);
     $r->get('/api/customers/{id}/addresses', [AdminCustomer::class, 'getAddresses']);
     $r->get('/api/customers/{id}/detail', [AdminCustomer::class, 'getDetail']);
     $r->delete('/api/customers/{id}', [AdminCustomer::class, 'destroy']);
-    $r->post('/api/customers/export', [AdminCustomer::class, 'export']);
 
     // Expense Vouchers
     $r->get('/expense_vouchers', [AdminExpenseVoucher::class, 'index']);
@@ -225,6 +231,8 @@ $router->group('/admin', function (Router $r): void {
     // Coupons (Mã giảm giá)
     $r->get('/coupons', [AdminCoupon::class, 'index']);
     $r->get('/api/coupons', [AdminCoupon::class, 'apiIndex']);
+    $r->get('/api/coupons/template', [AdminCoupon::class, 'downloadTemplate']);
+    $r->post('/api/coupons/import', [AdminCoupon::class, 'importExcel']);
     $r->post('/api/coupons/export', [AdminCoupon::class, 'export']);
     $r->post('/api/coupons/validate', [AdminCoupon::class, 'validate']);
     $r->post('/coupons', [AdminCoupon::class, 'store']);
