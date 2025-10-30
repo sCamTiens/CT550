@@ -102,6 +102,15 @@ class UnitRepository
         }
     }
 
+    public function findBySlug($slug)
+    {
+        $pdo = DB::pdo();
+        $stmt = $pdo->prepare("SELECT * FROM units WHERE slug = ?");
+        $stmt->execute([$slug]);
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        return $row ? new Unit($row) : null;
+    }
+
     public function delete($id)
     {
         if (!$this->canDelete($id)) {

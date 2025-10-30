@@ -14,6 +14,15 @@ $items = $items ?? [];
     <div class="flex items-center justify-between mb-4">
         <h1 class="text-3xl font-bold text-[#002975]">Quản lý nhà cung cấp</h1>
         <div class="flex items-center gap-2">
+            <a href="/admin/import-history"
+                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975] flex items-center gap-2">
+                <i class="fa-solid fa-history"></i> Lịch sử nhập
+            </a>
+            <button
+                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975] flex items-center gap-2"
+                @click="openImportModal()">
+                <i class="fa-solid fa-file-import"></i> Nhập Excel
+            </button>
             <button
                 class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975] flex items-center gap-2"
                 @click="exportExcel()">
@@ -151,6 +160,74 @@ $items = $items ?? [];
         </div>
     </div>
 
+    <!-- MODAL: Import Excel -->
+    <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
+        x-show="openImport" x-transition.opacity style="display:none">
+        <div class="bg-white w-full max-w-2xl rounded-xl shadow animate__animated animate__zoomIn animate__faster"
+            @click.outside="openImport=false">
+            <div class="px-5 py-3 border-b flex justify-center items-center relative">
+                <h3 class="font-semibold text-2xl text-[#002975]">Nhập dữ liệu từ Excel</h3>
+                <button class="text-slate-500 absolute right-5" @click="openImport=false">✕</button>
+            </div>
+            <div class="p-5 space-y-4">
+                <!-- Chọn file -->
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                    <input type="file" id="importFile" accept=".xls,.xlsx" @change="onFileSelected($event)"
+                        class="hidden">
+                    <label for="importFile" class="cursor-pointer">
+                        <div class="flex flex-col items-center">
+                            <i class="fa-solid fa-cloud-arrow-up text-4xl text-[#002975] mb-2"></i>
+                            <span class="text-slate-600">Chọn file Excel hoặc kéo thả vào đây</span>
+                            <span class="text-xs text-slate-400 mt-1">Hỗ trợ: .xls, .xlsx (Tối đa 10MB)</span>
+                        </div>
+                    </label>
+                    <div x-show="selectedFile" class="mt-3 text-sm text-slate-700">
+                        <i class="fa-solid fa-file-excel text-green-600"></i>
+                        <span x-text="selectedFile?.name"></span>
+                        <button @click="clearFile()" class="ml-2 text-red-500 hover:text-red-700">
+                            <i class="fa-solid fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tải file mẫu -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div class="flex items-start gap-3">
+                        <i class="fa-solid fa-circle-info text-[#002975] text-xl mt-0.5"></i>
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-blue-900 mb-2">Hướng dẫn nhập file:</h4>
+                            <ul class="text-sm text-blue-800 space-y-1 mb-3">
+                                <li>• Dòng đầu là tiêu đề, dữ liệu bắt đầu từ dòng 2</li>
+                                <li>• Trường có dấu <span class="text-red-600 font-bold">*</span> là bắt buộc</li>
+                                <li>• Số điện thoại phải bắt đầu bằng 0 và có 10-11 chữ số</li>
+                                <li>• File phải có định dạng .xls hoặc .xlsx</li>
+                                <li>• File tối đa 10MB, không quá 10,000 dòng</li>
+                            </ul>
+                            <button @click="downloadTemplate()"
+                                class="text-sm text-red-400 hover:text-red-600 hover:underline font-semibold flex items-center gap-1">
+                                <i class="fa-solid fa-download"></i>
+                                Tải file mẫu
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nút hành động -->
+                <div class="pt-2 flex justify-end gap-3">
+                    <button type="button"
+                        class="px-4 py-2 rounded-md text-red-600 border border-red-600 hover:bg-red-600 hover:text-white transition-colors"
+                        @click="openImport=false">Hủy</button>
+                    <button type="button" :disabled="!selectedFile || importing"
+                        class="px-4 py-2 rounded-md bg-[#002975] text-white hover:bg-[#001850] disabled:opacity-50 disabled:cursor-not-allowed"
+                        @click="submitImport()">
+                        <span x-show="!importing">Nhập dữ liệu</span>
+                        <span x-show="importing"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Đang nhập...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div id="toast-container" class="z-[60]"></div>
 
@@ -198,6 +275,9 @@ $items = $items ?? [];
             loading: true, submitting: false,
             items: <?= json_encode($items, JSON_UNESCAPED_UNICODE) ?>,
             openAdd: false, openEdit: false,
+            openImport: false,
+            importing: false,
+            selectedFile: null,
             form: { id: null, name: '', phone: '', email: '', address: '' },
 
             currentPage: 1, perPage: 20, perPageOptions: [5, 10, 20, 50, 100],
@@ -463,6 +543,99 @@ $items = $items ?? [];
                 } catch (e) { this.showToast(e.message, 'error'); }
             },
 
+            // ===== Import Excel =====
+            openImportModal() {
+                this.selectedFile = null;
+                this.openImport = true;
+            },
+
+            onFileSelected(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                // 1. Kiểm tra định dạng file
+                const ext = file.name.split('.').pop().toLowerCase();
+                if (!['xls', 'xlsx'].includes(ext)) {
+                    this.showToast('File không đúng định dạng. Vui lòng chọn file Excel (.xls hoặc .xlsx)', 'error');
+                    return;
+                }
+
+                // 2. Kiểm tra kích thước file (10MB)
+                const maxSize = 10 * 1024 * 1024;
+                if (file.size > maxSize) {
+                    this.showToast('File vượt quá kích thước cho phép (tối đa 10MB)', 'error');
+                    return;
+                }
+
+                // 3. Kiểm tra độ dài tên file
+                if (file.name.length > 255) {
+                    this.showToast('Tên file quá dài (tối đa 255 ký tự)', 'error');
+                    return;
+                }
+
+                // 4. Kiểm tra ký tự đặc biệt
+                const fileName = file.name.split('.')[0];
+                if (!/^[a-zA-Z0-9._\-\s()\[\]]+$/.test(fileName)) {
+                    this.showToast('Tên file chứa ký tự đặc biệt không hợp lệ', 'error');
+                    return;
+                }
+
+                this.selectedFile = file;
+            },
+
+            clearFile() {
+                this.selectedFile = null;
+                document.getElementById('importFile').value = '';
+            },
+
+            downloadTemplate() {
+                window.location.href = '/admin/api/suppliers/template';
+            },
+
+            async submitImport() {
+                if (!this.selectedFile) {
+                    this.showToast('Vui lòng chọn file', 'error');
+                    return;
+                }
+
+                this.importing = true;
+
+                try {
+                    const formData = new FormData();
+                    formData.append('file', this.selectedFile);
+
+                    const response = await fetch('/admin/api/suppliers/import', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(result.error || 'Có lỗi xảy ra khi nhập file');
+                    }
+
+                    // Hiển thị thông báo dựa vào status
+                    if (result.status === 'success') {
+                        this.showToast(result.message || 'Nhập file thành công!', 'success');
+                    } else if (result.status === 'partial') {
+                        this.showToast(result.message || 'Nhập file hoàn tất với một số lỗi', 'warning');
+                    } else {
+                        this.showToast(result.message || 'Nhập file thất bại', 'error');
+                    }
+
+                    // Đóng modal và refresh data
+                    this.openImport = false;
+                    this.selectedFile = null;
+                    await this.fetchAll();
+
+                } catch (error) {
+                    this.showToast(error.message || 'Có lỗi xảy ra khi nhập file', 'error');
+                } finally {
+                    this.importing = false;
+                }
+            },
+
             exportExcel() {
                 const data = this.filtered();
 
@@ -477,18 +650,18 @@ $items = $items ?? [];
                 const filename = `Nha_cung_cap_${dateStr}_${timeStr}.xlsx`;
 
                 const exportData = {
-                    items: data.map(item => ({
-                        name: item.name || '',
-                        phone: item.phone || '',
-                        email: item.email || '',
-                        address: item.address || '',
-                        created_at: item.created_at || '',
-                        created_by_name: item.created_by_name || '',
-                        updated_at: item.updated_at || '',
-                        updated_by_name: item.updated_by_name || ''
+                    items: data.map(s => ({
+                        name: s.name,
+                        phone: s.phone || '',
+                        email: s.email || '',
+                        address: s.address || '',
+                        created_at: s.created_at,
+                        created_by_name: s.created_by_name || '',
+                        updated_at: s.updated_at,
+                        updated_by_name: s.updated_by_name || ''
                     })),
-                    export_date: now.toLocaleDateString('vi-VN'),
-                    filename: filename
+                    filename,
+                    export_date: dateStr
                 };
 
                 fetch('/admin/api/suppliers/export', {
@@ -496,25 +669,22 @@ $items = $items ?? [];
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(exportData)
                 })
-                    .then(response => {
-                        if (!response.ok) throw new Error('Export failed');
-                        return response.blob();
+                    .then(r => {
+                        if (!r.ok) throw new Error('Lỗi khi xuất Excel');
+                        return r.blob();
                     })
                     .then(blob => {
-                        const url = window.URL.createObjectURL(blob);
+                        const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
                         a.download = filename;
-                        document.body.appendChild(a);
                         a.click();
-                        window.URL.revokeObjectURL(url);
-                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
 
-                        this.showToast('Xuất file Excel thành công!', 'success');
+                        this.showToast('Xuất Excel thành công!', 'success');
                     })
-                    .catch(e => {
-                        console.error('Export error:', e);
-                        this.showToast('Không thể xuất file Excel', 'error');
+                    .catch(err => {
+                        this.showToast(err.message || 'Lỗi khi xuất Excel', 'error');
                     });
             },
 
@@ -527,16 +697,21 @@ $items = $items ?? [];
                     `fixed top-5 right-5 z-[60] flex items-center w-[400px] p-4 mb-4 text-base font-semibold
                     ${type === 'success'
                         ? 'text-green-700 border-green-400'
-                        : 'text-red-700 border-red-400'}
+                        : type === 'warning'
+                            ? 'text-yellow-700 border-yellow-400'
+                            : 'text-red-700 border-red-400'}
                     bg-white rounded-xl shadow-lg border-2`;
 
                 toast.innerHTML = `
-                    <svg class="flex-shrink-0 w-6 h-6 ${type === 'success' ? 'text-green-600' : 'text-red-600'} mr-3" 
+                    <svg class="flex-shrink-0 w-6 h-6 ${type === 'success' ? 'text-green-600' : type === 'warning' ? 'text-yellow-600' : 'text-red-600'} mr-3" 
                         xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         ${type === 'success'
                         ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M5 13l4 4L19 7" />`
-                        : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        : type === 'warning'
+                            ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />`
+                            : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`}
                     </svg>
                     <div class="flex-1">${msg}</div>
@@ -544,7 +719,7 @@ $items = $items ?? [];
 
                 box.appendChild(toast);
 
-                setTimeout(() => toast.remove(), 3000);
+                setTimeout(() => toast.remove(), 5000);
             }
 
         }

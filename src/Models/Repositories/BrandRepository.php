@@ -40,6 +40,14 @@ class BrandRepository
      return $row ? $this->mapToEntity($row) : null;
     }
 
+    public function findBySlug($slug)
+    {
+        $pdo = DB::pdo();
+        $st = $pdo->prepare("SELECT id, name, slug FROM brands WHERE slug = ? LIMIT 1");
+        $st->execute([$slug]);
+        return $st->fetch(\PDO::FETCH_ASSOC);
+    }
+
     public function create($name, $slug, $userId)
     {
         $pdo = DB::pdo();

@@ -53,4 +53,9 @@ class BaseAdminController extends Controller
             RoleMiddleware::authorize($requestPath);
         }
     }
+
+    protected function currentUserName()
+    {
+        return $_SESSION['user']['full_name'] ?? 'Unknown';
+    }
 }

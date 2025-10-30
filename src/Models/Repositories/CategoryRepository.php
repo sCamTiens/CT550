@@ -39,6 +39,26 @@ class CategoryRepository
         return $st->fetch(\PDO::FETCH_ASSOC);
     }
 
+    public function findByName($name)
+    {
+        $pdo = DB::pdo();
+        $st = $pdo->prepare("SELECT id, name, slug, parent_id, sort_order, is_active 
+                             FROM categories 
+                             WHERE name = ? LIMIT 1");
+        $st->execute([$name]);
+        return $st->fetch(\PDO::FETCH_ASSOC);
+    }
+
+    public function findBySlug($slug)
+    {
+        $pdo = DB::pdo();
+        $st = $pdo->prepare("SELECT id, name, slug, parent_id, sort_order, is_active 
+                             FROM categories 
+                             WHERE slug = ? LIMIT 1");
+        $st->execute([$slug]);
+        return $st->fetch(\PDO::FETCH_ASSOC);
+    }
+
     public function create($data)
     {
         $pdo = DB::pdo();

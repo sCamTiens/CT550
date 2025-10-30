@@ -34,6 +34,7 @@ use App\Controllers\Admin\AuditLogController as AdminAuditLog;
 use App\Controllers\Admin\NotificationController as AdminNotification;
 use App\Controllers\Admin\StockAlertController as AdminStockAlert;
 use App\Controllers\Admin\ReportsController as AdminReports;
+use App\Controllers\Admin\ImportHistoryController as AdminImportHistory;
 
 
 /* --- load biến môi trường từ .env (đặt ở thư mục gốc dự án) --- */
@@ -82,6 +83,8 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/api/products/all-including-inactive', [AdminProduct::class, 'apiAllProducts']);
     $r->get('/api/products/stock-list', [AdminProduct::class, 'apiStockList']);
     $r->post('/api/products/upload-images', [AdminProduct::class, 'uploadImages']);
+    $r->get('/api/products/template', [AdminProduct::class, 'downloadTemplate']);
+    $r->post('/api/products/import', [AdminProduct::class, 'importExcel']);
     $r->post('/api/products/export', [AdminProduct::class, 'export']);
     $r->post('/products', [AdminProduct::class, 'store']);
     $r->put('/products/{id}', [AdminProduct::class, 'update']);
@@ -92,6 +95,8 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/categories', [AdminCategory::class, 'index']);
     $r->get('/api/categories', [AdminCategory::class, 'apiIndex']);
     $r->post('/api/categories/export', [AdminCategory::class, 'export']);
+    $r->get('/api/categories/template', [AdminCategory::class, 'downloadTemplate']);
+    $r->post('/api/categories/import', [AdminCategory::class, 'importExcel']);
     $r->post('/categories', [AdminCategory::class, 'store']);
     $r->put('/categories/{id}', [AdminCategory::class, 'update']);
     $r->delete('/categories/{id}/delete', [AdminCategory::class, 'destroy']);
@@ -99,6 +104,8 @@ $router->group('/admin', function (Router $r): void {
     // Brands
     $r->get('/brands', [AdminBrand::class, 'index']);
     $r->get('/api/brands', [AdminBrand::class, 'apiIndex']);
+    $r->get('/api/brands/template', [AdminBrand::class, 'downloadTemplate']);
+    $r->post('/api/brands/import', [AdminBrand::class, 'importExcel']);
     $r->post('/api/brands/export', [AdminBrand::class, 'export']);
     $r->post('/brands', [AdminBrand::class, 'store']);
     $r->put('/brands/{id}', [AdminBrand::class, 'update']);
@@ -107,6 +114,8 @@ $router->group('/admin', function (Router $r): void {
     // Suppliers
     $r->get('/suppliers', [AdminSupplier::class, 'index']);
     $r->get('/api/suppliers', [AdminSupplier::class, 'apiIndex']);
+    $r->get('/api/suppliers/template', [AdminSupplier::class, 'downloadTemplate']);
+    $r->post('/api/suppliers/import', [AdminSupplier::class, 'importExcel']);
     $r->post('/api/suppliers/export', [AdminSupplier::class, 'export']);
     $r->post('/suppliers', [AdminSupplier::class, 'store']);
     $r->put('/suppliers/{id}', [AdminSupplier::class, 'update']);
@@ -115,6 +124,8 @@ $router->group('/admin', function (Router $r): void {
     // Units
     $r->get('/units', [AdminUnit::class, 'index']);
     $r->get('/api/units', [AdminUnit::class, 'apiIndex']);
+    $r->get('/api/units/template', [AdminUnit::class, 'downloadTemplate']);
+    $r->post('/api/units/import', [AdminUnit::class, 'importExcel']);
     $r->post('/api/units/export', [AdminUnit::class, 'export']);
     $r->post('/units', [AdminUnit::class, 'store']);
     $r->put('/units/{id}', [AdminUnit::class, 'update']);
@@ -252,6 +263,12 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/api/reports/inventory/low-stock', [AdminReports::class, 'apiLowStock']);
     $r->get('/api/reports/inventory/high-stock', [AdminReports::class, 'apiHighStock']);
     $r->get('/api/reports/order-status', [AdminReports::class, 'apiOrderStatus']);
+
+    // Import History (Lịch sử nhập file - Tất cả modules)
+    $r->get('/import-history', [AdminImportHistory::class, 'index']);
+    $r->get('/api/import-history', [AdminImportHistory::class, 'apiIndex']);
+    $r->get('/api/import-history/{id}', [AdminImportHistory::class, 'apiDetail']);
+    $r->delete('/api/import-history/{id}', [AdminImportHistory::class, 'destroy']);
 
     // Notifications (Thông báo)
     $r->get('/api/notifications', [AdminNotification::class, 'index']);

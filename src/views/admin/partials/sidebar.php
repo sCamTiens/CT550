@@ -394,5 +394,17 @@ $allowedSections = RoleMiddleware::getAllowedSections();
             </a>
         </div>
         <?php endif; ?>
+
+        <div class="mt-2">
+            <!-- Lịch sử nhập file -->
+            <a href="/admin/import-history"
+                :class="['flex items-center gap-2 px-3 py-2 rounded', currentPath.startsWith('/admin/import-history') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white']">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Lịch sử nhập file</span>
+            </a>
+        </div>
     </nav>
 </aside>

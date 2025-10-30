@@ -416,6 +416,7 @@ $pageTitle = 'Lịch Sử Thao Tác';
                 byAction: [],
                 byEntity: [],
                 staff: [],
+                customer: [],
             },
 
             init() {
@@ -545,15 +546,17 @@ $pageTitle = 'Lịch Sử Thao Tác';
                     if (this.filters.from_date) params.append('from_date', this.filters.from_date);
                     if (this.filters.to_date) params.append('to_date', this.filters.to_date);
 
-                    const [resAction, resEntity, resStaff] = await Promise.all([
+                    const [resAction, resEntity, resStaff, resCustomer] = await Promise.all([
                         fetch(`/admin/api/audit-logs/stats/action?${params}`),
                         fetch(`/admin/api/audit-logs/stats/entity?${params}`),
                         fetch(`/admin/api/audit-logs/stats/staff?${params}`),
+                        fetch(`/admin/api/audit-logs/stats/customer?${params}`),
                     ]);
 
                     this.stats.byAction = (await resAction.json()).stats || [];
                     this.stats.byEntity = (await resEntity.json()).stats || [];
                     this.stats.staff = (await resStaff.json()).stats || [];
+                    this.stats.customer = (await resCustomer.json()).stats || [];
 
                     console.log('Stats loaded:', this.stats);
                 } catch (err) {

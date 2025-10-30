@@ -27,6 +27,7 @@ class Product
 	public $stock_qty;
 	public $created_by_name;
 	public $updated_by_name;
+	public $image_url;
 
 	public function __construct(array $data)
 	{

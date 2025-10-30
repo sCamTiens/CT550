@@ -2,15 +2,18 @@
 namespace App\Controllers\Admin;
 
 use App\Models\Repositories\CategoryRepository;
+use App\Models\Repositories\ImportHistoryRepository;
 
 class CategoryController extends BaseAdminController
 {
     private $categoryRepo;
+    private $importHistoryRepo;
 
     public function __construct()
     {
         parent::__construct();
         $this->categoryRepo = new CategoryRepository();
+        $this->importHistoryRepo = new ImportHistoryRepository();
     }
     /** GET /admin/categories (view) */
     public function index()
@@ -21,10 +24,10 @@ class CategoryController extends BaseAdminController
     /** GET /admin/api/categories (list JSON) */
     public function apiIndex()
     {
-    header('Content-Type: application/json; charset=utf-8');
-    $rows = $this->categoryRepo->all();
-    echo json_encode(['items' => $rows], JSON_UNESCAPED_UNICODE);
-    exit;
+        header('Content-Type: application/json; charset=utf-8');
+        $rows = $this->categoryRepo->all();
+        echo json_encode(['items' => $rows], JSON_UNESCAPED_UNICODE);
+        exit;
     }
 
     /** POST /admin/categories (create) */
@@ -196,7 +199,7 @@ class CategoryController extends BaseAdminController
         return $_SESSION['admin_user']['id'] ?? null;
     }
 
-    private function currentUserName(): ?string
+    protected function currentUserName(): ?string
     {
         return $_SESSION['admin_user']['full_name'] ?? null;
     }
@@ -283,6 +286,449 @@ class CategoryController extends BaseAdminController
         header('Cache-Control: max-age=0');
         $writer->save('php://output');
         exit;
+    }
+
+    /** GET /admin/api/categories/template - Download file mẫu Excel */
+    public function downloadTemplate()
+    {
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Header
+        $sheet->setCellValue('A1', 'STT');
+        $sheet->setCellValue('B1', 'Tên');
+        $sheet->setCellValue('C1', 'Slug');
+        $sheet->setCellValue('D1', 'Cấp cha');
+        $sheet->setCellValue('E1', 'Trạng thái');
+
+        // Định dạng header
+        $sheet->getStyle('A1:E1')->getFont()->setBold(true)->setSize(12);
+        $sheet->getStyle('A1:E1')->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('002975');
+        $sheet->getStyle('A1:E1')->getFont()->getColor()->setRGB('FFFFFF');
+
+        // Đánh dấu màu đỏ cho dấu * (trường bắt buộc)
+        $richText = new \PhpOffice\PhpSpreadsheet\RichText\RichText();
+        $richText->createText('Tên ');
+        $red = $richText->createTextRun('*');
+        $red->getFont()->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('FF0000'));
+        $sheet->getCell('B1')->setValue($richText);
+
+        // Border cho header
+        $sheet->getStyle('A1:E1')->getBorders()->getAllBorders()
+            ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+        // Dữ liệu mẫu
+        $sheet->setCellValue('A2', '1');
+        $sheet->setCellValue('B2', 'Thực phẩm tươi sống');
+        $sheet->setCellValue('C2', 'thuc-pham-tuoi-song');
+        $sheet->setCellValue('D2', '');
+        $sheet->setCellValue('E2', 'Hiển thị');
+
+        $sheet->setCellValue('A3', '2');
+        $sheet->setCellValue('B3', 'Rau củ quả');
+        $sheet->setCellValue('C3', 'rau-cu-qua');
+        $sheet->setCellValue('D3', 'Thực phẩm tươi sống');
+        $sheet->setCellValue('E3', 'Hiển thị');
+
+        $sheet->setCellValue('A4', '3');
+        $sheet->setCellValue('B4', 'Thịt, cá, hải sản');
+        $sheet->setCellValue('C4', 'thit-ca-hai-san');
+        $sheet->setCellValue('D4', 'Thực phẩm tươi sống');
+        $sheet->setCellValue('E4', 'Hiển thị');
+
+        // Border cho data
+        $sheet->getStyle('A2:E4')->getBorders()->getAllBorders()
+            ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+        // Auto-size columns
+        foreach (range('A', 'E') as $c) {
+            $sheet->getColumnDimension($c)->setAutoSize(true);
+        }
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; charset=utf-8');
+        header('Content-Disposition: attachment;filename="Mau_loai_san_pham.xlsx"');
+        header('Cache-Control: max-age=0');
+        $writer->save('php://output');
+        exit;
+    }
+
+    /** POST /admin/api/categories/import - Nhập dữ liệu từ Excel */
+    public function importExcel()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $currentUserId = $this->currentUserId();
+        $currentUserName = $this->currentUserName();
+        $fileName = '';
+        $success = 0;
+        $errors = [];
+        $fileData = [];
+
+        try {
+            // 1. Kiểm tra file có được upload không
+            if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+                $errorMsg = 'Không có file được tải lên';
+
+                // Kiểm tra lỗi cụ thể
+                if (isset($_FILES['file']['error'])) {
+                    switch ($_FILES['file']['error']) {
+                        case UPLOAD_ERR_INI_SIZE:
+                        case UPLOAD_ERR_FORM_SIZE:
+                            $errorMsg = 'File vượt quá kích thước cho phép (tối đa 10MB)';
+                            break;
+                        case UPLOAD_ERR_PARTIAL:
+                            $errorMsg = 'File chỉ được tải lên một phần';
+                            break;
+                        case UPLOAD_ERR_NO_FILE:
+                            $errorMsg = 'Không có file nào được chọn';
+                            break;
+                        case UPLOAD_ERR_NO_TMP_DIR:
+                            $errorMsg = 'Thiếu thư mục tạm để lưu file';
+                            break;
+                        case UPLOAD_ERR_CANT_WRITE:
+                            $errorMsg = 'Không thể ghi file vào ổ đĩa';
+                            break;
+                    }
+                }
+
+                $this->importHistoryRepo->create([
+                    'table_name' => 'categories',
+                    'file_name' => 'unknown',
+                    'total_rows' => 0,
+                    'success_rows' => 0,
+                    'failed_rows' => 0,
+                    'status' => 'failed',
+                    'error_details' => json_encode([$errorMsg], JSON_UNESCAPED_UNICODE),
+                    'file_content' => null,
+                    'imported_by' => $currentUserId,
+                    'imported_by_name' => $currentUserName,
+                ]);
+
+                http_response_code(400);
+                echo json_encode(['error' => $errorMsg], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            $fileName = $_FILES['file']['name'];
+            $fileSize = $_FILES['file']['size'];
+            $file = $_FILES['file']['tmp_name'];
+
+            // 2. Kiểm tra kích thước file (10MB)
+            $maxSize = 10 * 1024 * 1024; // 10MB in bytes
+            if ($fileSize > $maxSize) {
+                $this->importHistoryRepo->create([
+                    'table_name' => 'categories',
+                    'file_name' => $fileName,
+                    'total_rows' => 0,
+                    'success_rows' => 0,
+                    'failed_rows' => 0,
+                    'status' => 'failed',
+                    'error_details' => json_encode(['File vượt quá kích thước cho phép (tối đa 10MB). Kích thước file: ' . round($fileSize / 1024 / 1024, 2) . 'MB'], JSON_UNESCAPED_UNICODE),
+                    'file_content' => null,
+                    'imported_by' => $currentUserId,
+                    'imported_by_name' => $currentUserName,
+                ]);
+
+                http_response_code(400);
+                echo json_encode(['error' => 'File vượt quá kích thước cho phép (tối đa 10MB)'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            // 3. Kiểm tra độ dài tên file
+            if (mb_strlen($fileName) > 255) {
+                $this->importHistoryRepo->create([
+                    'table_name' => 'categories',
+                    'file_name' => mb_substr($fileName, 0, 255),
+                    'total_rows' => 0,
+                    'success_rows' => 0,
+                    'failed_rows' => 0,
+                    'status' => 'failed',
+                    'error_details' => json_encode(['Tên file quá dài (tối đa 255 ký tự). Độ dài hiện tại: ' . mb_strlen($fileName) . ' ký tự'], JSON_UNESCAPED_UNICODE),
+                    'file_content' => null,
+                    'imported_by' => $currentUserId,
+                    'imported_by_name' => $currentUserName,
+                ]);
+
+                http_response_code(400);
+                echo json_encode(['error' => 'Tên file quá dài (tối đa 255 ký tự)'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            // 4. Kiểm tra ký tự đặc biệt trong tên file
+            $cleanFileName = preg_replace('/[^a-zA-Z0-9._\-\s()\[\]]/u', '', pathinfo($fileName, PATHINFO_FILENAME));
+            $originalFileName = pathinfo($fileName, PATHINFO_FILENAME);
+            if ($cleanFileName !== $originalFileName) {
+                $this->importHistoryRepo->create([
+                    'table_name' => 'categories',
+                    'file_name' => $fileName,
+                    'total_rows' => 0,
+                    'success_rows' => 0,
+                    'failed_rows' => 0,
+                    'status' => 'failed',
+                    'error_details' => json_encode(['Tên file chứa ký tự đặc biệt không hợp lệ. Vui lòng chỉ sử dụng chữ cái, số, dấu gạch ngang, gạch dưới và khoảng trắng'], JSON_UNESCAPED_UNICODE),
+                    'file_content' => null,
+                    'imported_by' => $currentUserId,
+                    'imported_by_name' => $currentUserName,
+                ]);
+
+                http_response_code(400);
+                echo json_encode(['error' => 'Tên file chứa ký tự đặc biệt không hợp lệ'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            // 5. Kiểm tra định dạng file
+            $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            if (!in_array($ext, ['xls', 'xlsx'])) {
+                $this->importHistoryRepo->create([
+                    'table_name' => 'categories',
+                    'file_name' => $fileName,
+                    'total_rows' => 0,
+                    'success_rows' => 0,
+                    'failed_rows' => 0,
+                    'status' => 'failed',
+                    'error_details' => json_encode(['File không đúng định dạng. Chỉ chấp nhận file .xls hoặc .xlsx'], JSON_UNESCAPED_UNICODE),
+                    'file_content' => null,
+                    'imported_by' => $currentUserId,
+                    'imported_by_name' => $currentUserName,
+                ]);
+
+                http_response_code(400);
+                echo json_encode(['error' => 'File không đúng định dạng. Chỉ chấp nhận file .xls hoặc .xlsx'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file);
+            $sheet = $spreadsheet->getActiveSheet();
+            $highestRow = $sheet->getHighestRow();
+
+            // 6. Kiểm tra số lượng dòng (giới hạn để tránh file quá lớn)
+            $maxRows = 10000; // Tối đa 10,000 dòng
+            if ($highestRow > $maxRows + 1) { // +1 vì header ở dòng 1
+                $this->importHistoryRepo->create([
+                    'table_name' => 'categories',
+                    'file_name' => $fileName,
+                    'total_rows' => 0,
+                    'success_rows' => 0,
+                    'failed_rows' => 0,
+                    'status' => 'failed',
+                    'error_details' => json_encode(['File có quá nhiều dòng (tối đa ' . number_format($maxRows) . ' dòng). Số dòng hiện tại: ' . number_format($highestRow - 1)], JSON_UNESCAPED_UNICODE),
+                    'file_content' => null,
+                    'imported_by' => $currentUserId,
+                    'imported_by_name' => $currentUserName,
+                ]);
+
+                http_response_code(400);
+                echo json_encode(['error' => 'File có quá nhiều dòng (tối đa ' . number_format($maxRows) . ' dòng)'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            // Bắt đầu từ dòng 2 (sau header dòng 1)
+            for ($row = 2; $row <= $highestRow; $row++) {
+                $name = trim($sheet->getCell('B' . $row)->getValue() ?? '');
+
+                // Skip hàng trống hoàn toàn
+                if ($name === '')
+                    continue;
+
+                $slug = trim($sheet->getCell('C' . $row)->getValue() ?? '');
+                $parentName = trim($sheet->getCell('D' . $row)->getValue() ?? '');
+                $status = trim($sheet->getCell('E' . $row)->getValue() ?? 'Hiển thị');
+
+                // Lưu dữ liệu hàng
+                $rowData = [
+                    'row' => $row,
+                    'name' => $name,
+                    'slug' => $slug,
+                    'parent_name' => $parentName,
+                    'status' => $status,
+                    'result' => 'pending',
+                    'error' => ''
+                ];
+
+                // ===== VALIDATE DỮ LIỆU =====
+                $rowErrors = [];
+
+                // 1. Kiểm tra tên (bắt buộc)
+                if ($name === '') {
+                    $rowErrors[] = 'Tên loại sản phẩm không được bỏ trống';
+                }
+
+                // 2. Kiểm tra độ dài tên
+                if (mb_strlen($name) > 250) {
+                    $rowErrors[] = 'Tên loại sản phẩm không được vượt quá 250 ký tự';
+                }
+
+                // 3. Kiểm tra ký tự đặc biệt trong tên
+                if (preg_match('/[<>\"\'\\\\]/', $name)) {
+                    $rowErrors[] = 'Tên loại sản phẩm chứa ký tự không hợp lệ (< > " \' \\)';
+                }
+
+                // Auto-generate slug
+                if ($slug === '') {
+                    $slug = $this->slugify($name);
+                    $rowData['slug'] = $slug;
+                }
+
+                // 4. Kiểm tra độ dài slug
+                if (mb_strlen($slug) > 250) {
+                    $rowErrors[] = 'Slug không được vượt quá 250 ký tự';
+                }
+
+                // 5. Kiểm tra slug đã tồn tại
+                $existingSlug = $this->categoryRepo->findBySlug($slug);
+                if ($existingSlug) {
+                    $rowErrors[] = "Slug '$slug' đã tồn tại trong hệ thống";
+                }
+
+                // 6. Kiểm tra trạng thái hợp lệ
+                $validStatuses = ['hiển thị', 'hien thi', 'ẩn', 'an'];
+                if ($status !== '' && !in_array(mb_strtolower($status), $validStatuses)) {
+                    $rowErrors[] = "Trạng thái phải là 'Hiển thị' hoặc 'Ẩn'";
+                }
+
+                // 7. Tìm parent_id từ tên
+                $parent_id = null;
+                if ($parentName !== '') {
+                    $parent = $this->categoryRepo->findByName($parentName);
+                    if ($parent) {
+                        $parent_id = $parent['id'];
+                    } else {
+                        $rowErrors[] = "Không tìm thấy loại cha '$parentName'";
+                    }
+                }
+
+                // Nếu có lỗi validation, ghi nhận và bỏ qua hàng này
+                if (!empty($rowErrors)) {
+                    $rowData['result'] = 'failed';
+                    $rowData['error'] = implode('; ', $rowErrors);
+                    $errors[] = "Dòng $row: " . implode('; ', $rowErrors);
+                    $fileData[] = $rowData;
+                    continue;
+                }
+
+                // Convert status
+                $is_active = (in_array(mb_strtolower($status), ['hiển thị', 'hien thi'])) ? 1 : 0;
+
+                // Tạo category
+                try {
+                    $id = $this->categoryRepo->create([
+                        'name' => $name,
+                        'slug' => $slug,
+                        'parent_id' => $parent_id,
+                        'sort_order' => 0,
+                        'is_active' => $is_active,
+                        'created_by' => $currentUserId,
+                        'updated_by' => $currentUserId,
+                    ]);
+
+                    if ($id) {
+                        $success++;
+                        $rowData['result'] = 'success';
+                        $rowData['id'] = $id;
+                    } else {
+                        $rowData['result'] = 'failed';
+                        $rowData['error'] = 'Không thể tạo bản ghi trong cơ sở dữ liệu';
+                        $errors[] = "Dòng $row: Không thể tạo bản ghi";
+                    }
+                } catch (\Exception $e) {
+                    $rowData['result'] = 'failed';
+                    $rowData['error'] = 'Lỗi database: ' . $e->getMessage();
+                    $errors[] = "Dòng $row: " . $e->getMessage();
+                }
+
+                $fileData[] = $rowData;
+            }
+
+            $totalRows = count($fileData);
+            $failedRows = count($errors);
+
+            // Xác định status
+            $importStatus = 'success';
+            if ($success === 0 && $totalRows > 0) {
+                $importStatus = 'failed';
+            } elseif ($failedRows > 0 && $success > 0) {
+                $importStatus = 'partial';
+            } elseif ($totalRows === 0) {
+                $importStatus = 'failed';
+            }
+
+            // Lưu lịch sử nhập file
+            $this->importHistoryRepo->create([
+                'table_name' => 'categories',
+                'file_name' => $fileName,
+                'total_rows' => $totalRows,
+                'success_rows' => $success,
+                'failed_rows' => $failedRows,
+                'status' => $importStatus,
+                'error_details' => !empty($errors) ? json_encode($errors, JSON_UNESCAPED_UNICODE) : null,
+                'file_content' => json_encode($fileData, JSON_UNESCAPED_UNICODE),
+                'imported_by' => $currentUserId,
+                'imported_by_name' => $currentUserName,
+            ]);
+
+            // Tạo thông báo kết quả chi tiết - chỉ hiển thị 1 lỗi đầu tiên
+            $message = '';
+            if ($importStatus === 'success') {
+                $message = "Nhập thành công $success/$totalRows bản ghi";
+            } elseif ($importStatus === 'partial') {
+                $message = "Nhập thành công $success/$totalRows bản ghi. Có $failedRows lỗi";
+                if (!empty($errors)) {
+                    // Chỉ hiển thị lỗi đầu tiên
+                    $message .= ": " . $errors[0];
+                    if (count($errors) > 1) {
+                        $message .= " (xem chi tiết trong lịch sử nhập)";
+                    }
+                }
+            } else {
+                $message = "Nhập thất bại. Có $failedRows lỗi";
+                if (!empty($errors)) {
+                    // Chỉ hiển thị lỗi đầu tiên
+                    $message .= ": " . $errors[0];
+                    if (count($errors) > 1) {
+                        $message .= " (xem chi tiết trong lịch sử nhập)";
+                    }
+                }
+            }
+
+            echo json_encode([
+                'success' => $success,
+                'total' => $totalRows,
+                'failed' => $failedRows,
+                'status' => $importStatus,
+                'errors' => $errors,
+                'message' => $message
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+
+        } catch (\Exception $e) {
+            // Lưu lỗi hệ thống vào database
+            try {
+                $this->importHistoryRepo->create([
+                    'table_name' => 'categories',
+                    'file_name' => $fileName ?: 'unknown',
+                    'total_rows' => 0,
+                    'success_rows' => 0,
+                    'failed_rows' => 0,
+                    'status' => 'failed',
+                    'error_details' => json_encode(['Lỗi hệ thống: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE),
+                    'file_content' => !empty($fileData) ? json_encode($fileData, JSON_UNESCAPED_UNICODE) : null,
+                    'imported_by' => $currentUserId,
+                    'imported_by_name' => $currentUserName,
+                ]);
+            } catch (\Exception $saveError) {
+                // Nếu không lưu được vào database thì bỏ qua
+            }
+
+            http_response_code(500);
+            echo json_encode([
+                'error' => 'Lỗi hệ thống: ' . $e->getMessage(),
+                'message' => 'Đã xảy ra lỗi trong quá trình nhập file'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
     }
 
 }

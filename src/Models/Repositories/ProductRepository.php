@@ -55,6 +55,21 @@ class ProductRepository
     }
 
     /**
+     * Lấy đường dẫn ảnh sản phẩm
+     */
+    private function getProductImage(int $productId): string
+    {
+        // Check if product image exists in filesystem
+        $imagePath = __DIR__ . '/../../../public/assets/images/products/' . $productId . '/1.png';
+
+        if (file_exists($imagePath)) {
+            return '/assets/images/products/' . $productId . '/1.png';
+        }
+
+        return '/assets/images/products/default.png';
+    }
+
+    /**
      * Lấy sản phẩm mới nhất
      */
     public function latest(int $limit = 12): array
@@ -68,7 +83,14 @@ class ProductRepository
         ");
         $stmt->bindValue(1, (int) $limit, \PDO::PARAM_INT);
         $stmt->execute();
-        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        // Add image path for each product
+        foreach ($rows as &$row) {
+            $row['image_url'] = $this->getProductImage($row['id']);
+        }
+
+        return $rows;
     }
 
     /**
@@ -78,7 +100,31 @@ class ProductRepository
     {
         $st = DB::pdo()->prepare("SELECT * FROM products WHERE slug = ?");
         $st->execute([$slug]);
-        return $st->fetch(\PDO::FETCH_ASSOC) ?: null;
+        $row = $st->fetch(\PDO::FETCH_ASSOC);
+
+        if ($row) {
+            $row['image_url'] = $this->getProductImage($row['id']);
+            return $row;
+        }
+
+        return null;
+    }
+
+    /**
+     * Tìm sản phẩm theo SKU
+     */
+    public function findBySku(string $sku): ?array
+    {
+        $st = DB::pdo()->prepare("SELECT * FROM products WHERE sku = ?");
+        $st->execute([$sku]);
+        $row = $st->fetch(\PDO::FETCH_ASSOC);
+
+        if ($row) {
+            $row['image_url'] = $this->getProductImage($row['id']);
+            return $row;
+        }
+
+        return null;
     }
 
     /**
@@ -108,6 +154,12 @@ class ProductRepository
             LIMIT 500
         ";
         $rows = $pdo->query($sql)->fetchAll(\PDO::FETCH_ASSOC);
+
+        // Add image path for each product
+        foreach ($rows as &$row) {
+            $row['image_url'] = $this->getProductImage($row['id']);
+        }
+
         return array_map(fn($row) => new Product($row), $rows);
     }
 
@@ -137,6 +189,12 @@ class ProductRepository
             LIMIT 500
         ";
         $rows = $pdo->query($sql)->fetchAll(\PDO::FETCH_ASSOC);
+
+        // Add image path for each product
+        foreach ($rows as &$row) {
+            $row['image_url'] = $this->getProductImage($row['id']);
+        }
+
         return array_map(fn($row) => new Product($row), $rows);
     }
 
@@ -167,7 +225,13 @@ class ProductRepository
         $st = $pdo->prepare($sql);
         $st->execute([$id]);
         $row = $st->fetch(\PDO::FETCH_ASSOC);
-        return $row ? new Product($row) : null;
+
+        if ($row) {
+            $row['image_url'] = $this->getProductImage($row['id']);
+            return new Product($row);
+        }
+
+        return null;
     }
 
     /**
@@ -217,7 +281,7 @@ class ProductRepository
                     ]);
 
             $pdo->commit();
-            
+
             // Log audit
             $this->logCreate('products', $id, [
                 'sku' => $data['sku'],
@@ -233,7 +297,7 @@ class ProductRepository
                 'tax_rate' => $data['tax_rate'] ?? 0,
                 'is_active' => !empty($data['is_active']) ? 1 : 0
             ]);
-            
+
             return $id;
         } catch (\PDOException $e) {
             $pdo->rollBack();
@@ -264,7 +328,7 @@ class ProductRepository
                 'is_active' => $beforeProduct->is_active
             ];
         }
-        
+
         $pdo = DB::pdo();
         $stmt = $pdo->prepare("
             UPDATE products SET 
@@ -292,7 +356,7 @@ class ProductRepository
             ':is_active' => !empty($data['is_active']) ? 1 : 0,
             ':updated_by' => $currentUser,
         ]);
-        
+
         // Log audit
         if (isset($beforeArray)) {
             $afterArray = [
@@ -337,7 +401,7 @@ class ProductRepository
                 'is_active' => $beforeProduct->is_active
             ];
         }
-        
+
         $pdo = DB::pdo();
         try {
             $pdo->beginTransaction();
@@ -346,7 +410,7 @@ class ProductRepository
             $pdo->prepare("DELETE FROM products WHERE id = ?")->execute([$id]);
 
             $pdo->commit();
-            
+
             // Log audit
             if ($beforeArray) {
                 $this->logDelete('products', $id, $beforeArray);
