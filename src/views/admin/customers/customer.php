@@ -50,6 +50,7 @@ $items = $items ?? [];
               'Nữ' => 'Nữ',
             ]) ?>
             <?= dateFilterPopover('date_of_birth', 'Ngày sinh') ?>
+            <th class="py-2 px-4 whitespace-nowrap text-center">Điểm tích lũy</th>
             <?= selectFilterPopover('is_active', 'Trạng thái', [
               '' => '-- Tất cả --',
               '1' => 'Hoạt động',
@@ -131,12 +132,16 @@ $items = $items ?? [];
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="c.email"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line"
                 :class="(c.phone || '—') === '—' ? 'text-center' : 'text-right'" x-text="c.phone || '—'"></td>
-              <td class="py-2 px-4 break-words whitespace-pre-line">
-                <span x-text="c.gender ? 'Nam' : 'Nữ'" :class="c.gender ? 'text-green-600' : 'text-red-600'"></span>
+              <td class="py-2 px-4 break-words whitespace-pre-line text-center">
+                <span x-text="c.gender ? (c.gender === 'Nam' ? 'Nam' : 'Nữ') : '—'"></span>
               </td>
               <td class="py-2 px-4 break-words whitespace-pre-line"
                 :class="(c.date_of_birth || '—') === '—' ? 'text-center' : 'text-right'"
                 x-text="formatDate(c.date_of_birth) || '—'"></td>
+              <td class="py-2 px-4 text-center">
+                <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold"
+                  x-text="(c.loyalty_points || 0) + ' điểm'"></span>
+              </td>
               <td class="py-2 px-4 break-words whitespace-pre-line">
                 <span x-text="c.is_active ? 'Hoạt động' : 'Khóa'"
                   :class="c.is_active ? 'text-green-600' : 'text-red-600'"></span>
@@ -156,7 +161,7 @@ $items = $items ?? [];
             </tr>
           </template>
           <tr x-show="!loading && filtered().length===0">
-            <td colspan="14" class="py-12 text-center text-slate-500">
+            <td colspan="15" class="py-12 text-center text-slate-500">
               <div class="flex flex-col items-center justify-center">
                 <img src="/assets/images/Null.png" alt="Trống" class="w-40 h-24 mb-3 opacity-80">
                 <div class="text-lg text-slate-300">Không có dữ liệu khách hàng</div>
@@ -369,6 +374,13 @@ $items = $items ?? [];
               <div class="text-sm text-gray-600 mb-1">Ngày sinh</div>
               <div class="font-medium" x-text="formatDate(detailCustomer.date_of_birth) || '—'"></div>
             </div>
+            <div>
+              <div class="text-sm text-gray-600 mb-1">
+                <i class="fa-solid fa-star text-yellow-500"></i> Điểm tích lũy
+              </div>
+              <div class="font-bold text-green-600 text-lg" x-text="(detailCustomer.loyalty_points || 0) + ' điểm'">
+              </div>
+            </div>
           </div>
         </div>
 
@@ -397,22 +409,23 @@ $items = $items ?? [];
           <template x-if="detailOrders.length > 0">
             <div>
               <div class="overflow-x-auto">
-                <table class="w-full border-collapse border">
+                <table class="w-full border-collapse border" style="width:120%;">
                   <thead>
                     <tr class="bg-gray-50 text-slate-600">
                       <th class="py-2 px-4 border text-center">Thao tác</th>
-                      <th class="py-2 px-4 border text-left">Mã đơn</th>
-                      <th class="py-2 px-4 border text-left">Trạng thái</th>
-                      <th class="py-2 px-4 border text-right">Tổng tiền</th>
+                      <th class="py-2 px-4 border text-center">Mã đơn</th>
+                      <th class="py-2 px-4 border text-center">Trạng thái</th>
+                      <th class="py-2 px-4 border text-center">Tổng tiền</th>
+                      <th class="py-2 px-4 border text-center">Điểm tích được</th>
                       <th class="py-2 px-4 border text-center">Số SP</th>
-                      <th class="py-2 px-4 border text-left">Địa chỉ</th>
-                      <th class="py-2 px-4 border text-right">Ngày tạo</th>
+                      <th class="py-2 px-4 border text-center">Địa chỉ</th>
+                      <th class="py-2 px-4 border text-center">Ngày tạo</th>
                     </tr>
                   </thead>
                   <tbody>
                     <template x-for="order in paginatedOrders()" :key="order.id">
                       <tr class="border-t hover:bg-blue-50">
-                        <td class="py-2 px-4 border text-center">
+                        <td class="py-1 px-3 border text-center">
                           <button @click="openOrderDetailModal(order.id)"
                             class="p-2 rounded hover:bg-gray-100 text-[#002975]" title="Xem chi tiết đơn hàng">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
@@ -430,8 +443,13 @@ $items = $items ?? [];
                         </td>
                         <td class="py-2 px-4 border text-right font-semibold text-green-600"
                           x-text="formatMoney(order.grand_total)"></td>
+                        <td class="py-2 px-4 border text-center">
+                          <span class="px-2 py-1 bg-green-100 text-green-600 rounded font-semibold"
+                            x-text="(order.loyalty_points_earned || 0) + ' điểm'"></span>
+                        </td>
                         <td class="py-2 px-4 border text-center" x-text="order.total_items"></td>
-                        <td class="py-2 px-4 border text-sm" x-text="order.delivery_address || '—'"></td>
+                        <td class="py-2 px-4 border text-sm break-words whitespace-pre-line"
+                          x-text="order.delivery_address || '—'"></td>
                         <td class="py-2 px-4 border text-right text-sm" x-text="order.created_at"></td>
                       </tr>
                     </template>
@@ -509,10 +527,10 @@ $items = $items ?? [];
             <table class="w-full border-collapse border">
               <thead>
                 <tr class="bg-gray-50 text-slate-600">
-                  <th class="py-2 px-4 border text-left">Sản phẩm</th>
+                  <th class="py-2 px-4 border text-center">Sản phẩm</th>
                   <th class="py-2 px-4 border text-center">Số lượng</th>
-                  <th class="py-2 px-4 border text-right">Đơn giá</th>
-                  <th class="py-2 px-4 border text-right">Thành tiền</th>
+                  <th class="py-2 px-4 border text-center">Đơn giá</th>
+                  <th class="py-2 px-4 border text-center">Thành tiền</th>
                 </tr>
               </thead>
               <tbody>
@@ -660,8 +678,7 @@ $items = $items ?? [];
       <div class="p-5 space-y-4">
         <!-- Chọn file -->
         <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-          <input type="file" @change="handleFileSelect($event)" accept=".xlsx,.xls" class="hidden"
-            x-ref="fileInput">
+          <input type="file" @change="handleFileSelect($event)" accept=".xlsx,.xls" class="hidden" x-ref="fileInput">
           <div x-show="!importFile" @click="$refs.fileInput.click()" class="cursor-pointer">
             <i class="fa-solid fa-cloud-arrow-up text-4xl text-[#002975] mb-3"></i>
             <p class="text-slate-600 mb-1">Nhấn để chọn file Excel</p>
@@ -676,25 +693,6 @@ $items = $items ?? [];
               Xóa file
             </button>
           </div>
-        </div>
-
-        <!-- Instructions -->
-        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <h4 class="font-semibold text-sm text-gray-700 mb-2">
-            <i class="fa-solid fa-info-circle text-yellow-600"></i> Hướng dẫn
-          </h4>
-          <ul class="text-sm text-gray-600 space-y-1 list-disc list-inside">
-            <li>Tải file mẫu và điền đầy đủ thông tin các cột bắt buộc (*)</li>
-            <li>Họ tên: Tối thiểu 3 ký tự</li>
-            <li>Email: Phải đúng định dạng email và duy nhất</li>
-            <li>Số điện thoại: Bắt đầu bằng 0 và có 10 chữ số, duy nhất</li>
-            <li>Ngày sinh: Định dạng <code class="bg-gray-200 px-1 rounded">dd/mm/yyyy</code></li>
-            <li>Giới tính: <code class="bg-gray-200 px-1 rounded">Nam</code> hoặc <code
-                class="bg-gray-200 px-1 rounded">Nữ</code></li>
-            <li>Điểm tích lũy: Số không âm (mặc định 0)</li>
-            <li>Trạng thái: <code class="bg-gray-200 px-1 rounded">1</code> (Hoạt động) hoặc <code
-                class="bg-gray-200 px-1 rounded">0</code> (Khóa)</li>
-          </ul>
         </div>
 
         <!-- Tải file mẫu -->
@@ -1528,32 +1526,45 @@ $items = $items ?? [];
         };
       },
 
+      // ===== toast =====
       showToast(msg, type = 'error') {
         const box = document.getElementById('toast-container');
         if (!box) return;
         box.innerHTML = '';
+
         const toast = document.createElement('div');
-        toast.className =
-          `fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 mb-4 text-base font-semibold
-          ${type === 'success'
-            ? 'text-green-700 border-green-400'
-            : 'text-red-700 border-red-400'}
-          bg-white rounded-xl shadow-lg border-2`;
+
+        // Xác định màu sắc theo type
+        let colorClasses = '';
+        let iconColor = '';
+        let iconSvg = '';
+
+        if (type === 'success') {
+          colorClasses = 'text-green-700 border-green-400';
+          iconColor = 'text-green-600';
+          iconSvg = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />`;
+        } else if (type === 'warning') {
+          colorClasses = 'text-yellow-700 border-yellow-400';
+          iconColor = 'text-yellow-600';
+          iconSvg = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5 12a7 7 0 1114 0 7 7 0 01-14 0z" />`;
+        } else {
+          colorClasses = 'text-red-700 border-red-400';
+          iconColor = 'text-red-600';
+          iconSvg = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`;
+        }
+
+        toast.className = `fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 mb-4 text-base font-semibold ${colorClasses} bg-white rounded-xl shadow-lg border-2`;
 
         toast.innerHTML = `
-          <svg class="flex-shrink-0 w-6 h-6 ${type === 'success' ? 'text-green-600' : 'text-red-600'} mr-3" 
-              xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            ${type === 'success'
-            ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M5 13l4 4L19 7" />`
-            : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`}
-          </svg>
-          <div class="flex-1">${msg}</div>
-        `;
+            <svg class="flex-shrink-0 w-6 h-6 ${iconColor} mr-3" 
+                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              ${iconSvg}
+            </svg>
+            <div class="flex-1">${msg}</div>
+          `;
 
         box.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
+        setTimeout(() => toast.remove(), 5000);
       },
 
       // ===== IMPORT EXCEL =====
@@ -1637,19 +1648,45 @@ $items = $items ?? [];
             body: formData
           });
 
-          const data = await res.json();
+          // Log response for debugging
+          console.log('Response status:', res.status);
+          console.log('Response headers:', res.headers.get('content-type'));
+
+          // Get text first to see what we're getting
+          const text = await res.text();
+          console.log('Raw response:', text.substring(0, 500)); // First 500 chars
+
+          let data;
+          try {
+            data = JSON.parse(text);
+          } catch (parseError) {
+            console.error('JSON parse error:', parseError);
+            console.error('Response text:', text);
+            this.showToast('Lỗi: Server trả về dữ liệu không hợp lệ. Kiểm tra console để xem chi tiết.');
+            return;
+          }
 
           if (data.success) {
-            this.showToast(data.message || 'Nhập Excel thành công!', 'success');
+            // Chọn màu toast theo status
+            let toastType = 'success';
+            if (data.status === 'failed') toastType = 'error';
+            else if (data.status === 'partial') toastType = 'warning';
+
+            this.showToast(data.message || 'Nhập Excel thành công!', toastType);
             this.showImportModal = false;
             this.importFile = null;
             await this.init();
           } else {
-            this.showToast(data.message || 'Có lỗi xảy ra');
+            let errorMsg = data.message || 'Có lỗi xảy ra';
+            if (data.detail) {
+              console.error('Error detail:', data.detail);
+              errorMsg += ' (Xem console để biết chi tiết)';
+            }
+            this.showToast(errorMsg, 'error');
           }
         } catch (err) {
-          console.error(err);
-          this.showToast('Lỗi kết nối server');
+          console.error('Fetch error:', err);
+          this.showToast('Lỗi kết nối server: ' + err.message);
         } finally {
           this.importing = false;
         }

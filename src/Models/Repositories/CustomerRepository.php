@@ -364,6 +364,7 @@ class CustomerRepository
                 o.code,
                 o.status,
                 o.grand_total,
+                o.loyalty_points_earned,
                 o.created_at,
                 o.note,
                 o.payment_method,
@@ -425,6 +426,7 @@ class CustomerRepository
                 u.phone,
                 u.gender,
                 u.date_of_birth,
+                u.loyalty_points,
                 u.is_active,
                 u.avatar_url,
                 u.created_at,
@@ -435,5 +437,126 @@ class CustomerRepository
             LEFT JOIN {$this->userTable} cu ON cu.id = u.created_by
             LEFT JOIN {$this->userTable} uu ON uu.id = u.updated_by
             WHERE u.role_id = 1 AND u.is_deleted = 0";
+    }
+
+    /**
+     * Cộng điểm tích lũy cho khách hàng
+     * @param int $userId ID khách hàng
+     * @param int $points Số điểm cộng
+     * @param int|null $orderId ID đơn hàng (nếu có)
+     * @param string $description Mô tả
+     * @return bool
+     */
+    public function addLoyaltyPoints(int $userId, int $points, ?int $orderId = null, string $description = ''): bool
+    {
+        try {
+            $pdo = DB::pdo();
+            $pdo->beginTransaction();
+
+            // Lấy số dư hiện tại
+            $stmt = $pdo->prepare("SELECT loyalty_points FROM {$this->userTable} WHERE id = ? AND role_id = 1");
+            $stmt->execute([$userId]);
+            $currentPoints = (int)$stmt->fetchColumn();
+
+            // Cập nhật điểm
+            $newPoints = $currentPoints + $points;
+            $stmt = $pdo->prepare("UPDATE {$this->userTable} SET loyalty_points = ? WHERE id = ?");
+            $stmt->execute([$newPoints, $userId]);
+
+            // Ghi lịch sử
+            $stmt = $pdo->prepare("
+                INSERT INTO loyalty_transactions 
+                (user_id, order_id, points, transaction_type, description, balance_before, balance_after, created_at)
+                VALUES (?, ?, ?, 'earn', ?, ?, ?, NOW())
+            ");
+            $stmt->execute([$userId, $orderId, $points, $description, $currentPoints, $newPoints]);
+
+            $pdo->commit();
+            return true;
+        } catch (\PDOException $e) {
+            if (isset($pdo) && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Trừ điểm khi đổi điểm lấy giảm giá
+     * @param int $userId ID khách hàng
+     * @param int $points Số điểm trừ
+     * @param int|null $orderId ID đơn hàng (nếu có)
+     * @param string $description Mô tả
+     * @return bool|string True nếu thành công, string message nếu lỗi
+     */
+    public function redeemLoyaltyPoints(int $userId, int $points, ?int $orderId = null, string $description = ''): bool|string
+    {
+        try {
+            $pdo = DB::pdo();
+            $pdo->beginTransaction();
+
+            // Lấy số dư hiện tại
+            $stmt = $pdo->prepare("SELECT loyalty_points FROM {$this->userTable} WHERE id = ? AND role_id = 1");
+            $stmt->execute([$userId]);
+            $currentPoints = (int)$stmt->fetchColumn();
+
+            // Kiểm tra đủ điểm không
+            if ($currentPoints < $points) {
+                $pdo->rollBack();
+                return "Không đủ điểm. Hiện có: {$currentPoints} điểm, cần: {$points} điểm";
+            }
+
+            // Cập nhật điểm
+            $newPoints = $currentPoints - $points;
+            $stmt = $pdo->prepare("UPDATE {$this->userTable} SET loyalty_points = ? WHERE id = ?");
+            $stmt->execute([$newPoints, $userId]);
+
+            // Ghi lịch sử (points âm)
+            $stmt = $pdo->prepare("
+                INSERT INTO loyalty_transactions 
+                (user_id, order_id, points, transaction_type, description, balance_before, balance_after, created_at)
+                VALUES (?, ?, ?, 'redeem', ?, ?, ?, NOW())
+            ");
+            $stmt->execute([$userId, $orderId, -$points, $description, $currentPoints, $newPoints]);
+
+            $pdo->commit();
+            return true;
+        } catch (\PDOException $e) {
+            if (isset($pdo) && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Lấy lịch sử giao dịch điểm của khách hàng
+     * @param int $userId ID khách hàng
+     * @return array
+     */
+    public function getLoyaltyTransactions(int $userId): array
+    {
+        $sql = "SELECT 
+                lt.id,
+                lt.order_id,
+                o.code AS order_code,
+                lt.points,
+                lt.transaction_type,
+                lt.description,
+                lt.balance_before,
+                lt.balance_after,
+                lt.created_at,
+                u.full_name AS created_by_name
+            FROM loyalty_transactions lt
+            LEFT JOIN orders o ON o.id = lt.order_id
+            LEFT JOIN users u ON u.id = lt.created_by
+            WHERE lt.user_id = ?
+            ORDER BY lt.created_at DESC, lt.id DESC
+            LIMIT 100";
+
+        $stmt = DB::pdo()->prepare($sql);
+        $stmt->execute([$userId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }

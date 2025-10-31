@@ -23,11 +23,58 @@
 
     <!-- Số điện thoại -->
     <div>
-        <label class="block text-sm text-black font-semibold mb-1">Số điện thoại <span class="text-red-500">*</span></label>
+        <label class="block text-sm text-black font-semibold mb-1">Số điện thoại <span
+                class="text-red-500">*</span></label>
         <input type="text" x-model="form.phone" @input="clearError('phone'); validateField('phone')"
             @blur="touched.phone = true; validateField('phone')" class="border rounded px-3 py-2 w-full"
             placeholder="Nhập số điện thoại" maxlength="32">
         <p x-show="touched.phone && errors.phone" x-text="errors.phone" class="text-red-500 text-xs mt-1"></p>
+    </div>
+
+    <!-- Giới tính -->
+    <div class="relative" x-data="{
+            open: false,
+            options: [
+                { value: 'Nam',   label: 'Nam' },
+                { value: 'Nữ',  label: 'Nữ' }
+            ],
+            highlight: -1,
+            search: '',
+            choose(opt) {
+                form.gender = opt.value;
+                this.search = opt.label;
+                this.open = false;
+            },
+            reset() {
+                const selected = this.options.find(o => o.value === form.gender);
+                this.search = selected ? selected.label : '';
+            }
+        }" x-effect="reset()" @click.away="open = false">
+
+        <label class="block text-sm text-black font-semibold mb-1">Giới tính</label>
+
+        <div class="relative">
+            <input type="text" x-model="search" @focus="open = true" readonly placeholder="-- Chọn giới tính --"
+                class="w-full border rounded px-3 py-2 pr-8 bg-white text-sm cursor-pointer focus:ring-1 focus:ring-[#002975] focus:border-[#002975]" />
+
+            <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" fill="none"
+                stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+        </div>
+
+        <!-- Dropdown -->
+        <div x-show="open" class="absolute z-20 mt-1 w-full bg-white border rounded shadow max-h-60 overflow-auto">
+            <template x-for="(opt, i) in options" :key="opt.value">
+                <div @click="choose(opt)" @mouseenter="highlight = i" @mouseleave="highlight = -1" :class="[
+                    highlight === i ? 'bg-[#002975] text-white' :
+                    (form.gender === opt.value ? 'bg-[#002975] text-white' :
+                    'hover:bg-[#002975] hover:text-white text-black'),
+                    'px-3 py-2 cursor-pointer text-sm transition-colors'
+                 ]" x-text="opt.label">
+                </div>
+            </template>
+        </div>
     </div>
 
     <!-- Vai trò -->
@@ -125,7 +172,8 @@
         <input x-model="form.username" @input="clearError('username'); validateField('username')"
             @blur="touched.username = true; validateField('username')" class="border rounded px-3 py-2 w-full"
             placeholder="Nhập tài khoản" maxlength="50" required :disabled="!!form.user_id">
-        <p x-show="touched.username && errors.username" x-text="errors.username" class="text-red-500 text-xs mt-1"></p>
+        <p x-show="touched.username && errors.username" x-text="errors.username" class="text-red-500 text-xs mt-1">
+        </p>
     </div>
 
     <!-- Mật khẩu (chỉ khi tạo mới) -->

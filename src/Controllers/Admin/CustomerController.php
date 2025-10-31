@@ -232,82 +232,109 @@ class CustomerController extends BaseAdminController
         }
     }
 
-    /** GET /admin/api/customers/template - Download Excel template */
+    /**
+     * API: Lấy lịch sử giao dịch điểm của khách hàng
+     * GET /admin/api/customers/{id}/loyalty-transactions
+     */
+    public function getLoyaltyTransactions($id): void
+    {
+        try {
+            $transactions = $this->repo->getLoyaltyTransactions($id);
+            $this->json(['transactions' => $transactions]);
+        } catch (\PDOException $e) {
+            $this->json([
+                'error' => 'Không thể tải lịch sử điểm',
+                'detail' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /** GET /admin/api/customers/template - Tải file mẫu Excel */
     public function downloadTemplate()
     {
+        require_once __DIR__ . '/../../../vendor/autoload.php';
+
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        // Define headers
+        // Headers (thêm cột Tài khoản)
         $headers = [
             'STT',
-            'Họ tên*',
-            'Email*',
-            'Số điện thoại*',
-            'Ngày sinh',
-            'Giới tính',
+            ['text' => 'Tài khoản ', 'required' => true, 'note' => '(Không dấu, 6-32 ký tự)'],
+            ['text' => 'Họ tên ', 'required' => true],
+            ['text' => 'Email ', 'required' => true],
+            ['text' => 'Số điện thoại ', 'required' => true],
+            ['text' => 'Ngày sinh', 'note' => '(dd/mm/yyyy)'],
+            ['text' => 'Giới tính', 'note' => '(Nam/Nữ)'],
             'Địa chỉ',
-            'Điểm tích lũy',
-            'Trạng thái*'
+            ['text' => 'Trạng thái ', 'required' => true, 'note' => '(1: hoạt động, 0: khóa)']
         ];
 
-        // Write headers
         $col = 'A';
         foreach ($headers as $header) {
-            $sheet->setCellValue($col . '1', $header);
-            $sheet->getStyle($col . '1')->getFont()->setBold(true);
-            $sheet->getStyle($col . '1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle($col . '1')->getFill()
-                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-                ->getStartColor()->setRGB('4472C4');
-            $sheet->getStyle($col . '1')->getFont()->getColor()->setRGB('FFFFFF');
+            if (is_array($header)) {
+                $richText = new \PhpOffice\PhpSpreadsheet\RichText\RichText();
+                $richText->createText($header['text']);
+                if ($header['required'] ?? false) {
+                    $red = $richText->createTextRun('*');
+                    $red->getFont()->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('FFFF0000'));
+                }
+                if ($header['note'] ?? false) {
+                    $note = $richText->createTextRun("\n" . $header['note']);
+                    $note->getFont()->setSize(9)->setItalic(true)->getColor()->setRGB('666666');
+                }
+                $sheet->setCellValue($col . '1', $richText);
+            } else {
+                $sheet->setCellValue($col . '1', $header);
+            }
             $col++;
         }
 
-        // Sample data rows
-        $samples = [
-            [
-                1,
-                'Nguyễn Văn A',
-                'nguyenvana@example.com',
-                '0901234567',
-                '15/05/1990',
-                'Nam',
-                '123 Đường ABC, Q.1, TP.HCM',
-                100,
-                1
-            ],
-            [
-                2,
-                'Trần Thị B',
-                'tranthib@example.com',
-                '0907654321',
-                '20/08/1995',
-                'Nữ',
-                '456 Đường XYZ, Q.3, TP.HCM',
-                50,
-                1
-            ]
-        ];
+        // Style header
+        $sheet->getStyle('A1:I1')->getFont()->setBold(true)->setSize(11);
+        $sheet->getStyle('A1:I1')->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('002975');
+        $sheet->getStyle('A1:I1')->getFont()->getColor()->setRGB('FFFFFF');
+        $sheet->getStyle('A1:I1')->getAlignment()
+            ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER)
+            ->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER)
+            ->setWrapText(true);
+        $sheet->getRowDimension(1)->setRowHeight(50);
 
-        $row = 2;
-        foreach ($samples as $sample) {
-            $col = 'A';
-            foreach ($sample as $value) {
-                $sheet->setCellValue($col . $row, $value);
-                $col++;
-            }
-            $row++;
-        }
+        // Sample data (thêm tài khoản)
+        $sheet->setCellValue('A2', 1);
+        $sheet->setCellValue('B2', 'nguyenvana');
+        $sheet->setCellValue('C2', 'Nguyễn Văn A');
+        $sheet->setCellValue('D2', 'nguyenvana@example.com');
+        $sheet->setCellValue('E2', '0901234567');
+        $sheet->setCellValue('F2', '15/05/1990');
+        $sheet->setCellValue('G2', 'Nam');
+        $sheet->setCellValue('H2', '123 Đường ABC, Q.1, TP.HCM');
+        $sheet->setCellValue('I2', '1');
+
+        $sheet->setCellValue('A3', 2);
+        $sheet->setCellValue('B3', 'tranthib');
+        $sheet->setCellValue('C3', 'Trần Thị B');
+        $sheet->setCellValue('D3', 'tranthib@example.com');
+        $sheet->setCellValue('E3', '0907654321');
+        $sheet->setCellValue('F3', '20/08/1995');
+        $sheet->setCellValue('G3', 'Nữ');
+        $sheet->setCellValue('H3', '456 Đường XYZ, Q.3, TP.HCM');
+        $sheet->setCellValue('I3', '1');
+
+        // Borders
+        $sheet->getStyle('A1:I3')->getBorders()->getAllBorders()
+            ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
 
         // Auto-size columns
-        foreach (range('A', 'I') as $col) {
-            $sheet->getColumnDimension($col)->setAutoSize(true);
+        foreach (range('A', 'I') as $c) {
+            $sheet->getColumnDimension($c)->setAutoSize(true);
         }
 
         // Output
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment;filename="Mau_khachhang.xlsx"');
+        header('Content-Disposition: attachment;filename="Mau_khach_hang.xlsx"');
         header('Cache-Control: max-age=0');
 
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
@@ -318,61 +345,85 @@ class CustomerController extends BaseAdminController
     /** POST /admin/api/customers/import - Import Excel file */
     public function importExcel()
     {
-        // Check file upload
-        if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode([
-                'success' => false,
-                'message' => 'Không có file được tải lên hoặc có lỗi xảy ra'
-            ], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-
-        $file = $_FILES['file'];
-
-        // Validate file extension
-        $allowedExtensions = ['xls', 'xlsx'];
-        $fileExtension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-        if (!in_array($fileExtension, $allowedExtensions)) {
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode([
-                'success' => false,
-                'message' => 'Chỉ chấp nhận file Excel (.xls, .xlsx)'
-            ], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-
-        // Validate file size (5MB)
-        if ($file['size'] > 5 * 1024 * 1024) {
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode([
-                'success' => false,
-                'message' => 'File không được vượt quá 5MB'
-            ], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-
-        // Validate filename length
-        if (strlen($file['name']) > 255) {
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode([
-                'success' => false,
-                'message' => 'Tên file quá dài (tối đa 255 ký tự)'
-            ], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
-
-        // Validate special characters
-        if (preg_match('/[<>:"|?*]/', $file['name'])) {
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode([
-                'success' => false,
-                'message' => 'Tên file chứa ký tự không hợp lệ (< > : " | ? *)'
-            ], JSON_UNESCAPED_UNICODE);
-            exit;
-        }
+        // Set error reporting
+        error_reporting(E_ALL);
+        ini_set('display_errors', 0); // Don't display errors in output
 
         try {
+            require_once __DIR__ . '/../../../vendor/autoload.php';
+
+            // Check file upload
+            if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+                $errorMsg = 'Không có file được tải lên';
+                if (isset($_FILES['file']['error'])) {
+                    $errorMsg .= ' (Error code: ' . $_FILES['file']['error'] . ')';
+                }
+                // Xác định status cho frontend
+                $importStatus = 'success'; // xanh
+                if (count($success) === 0 && count($errors) > 0) {
+                    $importStatus = 'failed'; // đỏ
+                } elseif (count($errors) > 0 && count($success) > 0) {
+                    $importStatus = 'partial'; // vàng/cam
+                }
+
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode([
+                    'success' => true,
+                    'message' => $message,
+                    'status' => $importStatus, // ← THÊM DÒNG NÀY
+                    'summary' => [
+                        'total' => count($rows),
+                        'success' => count($success),
+                        'errors' => count($errors)
+                    ]
+                ], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            $file = $_FILES['file'];
+
+            // Validate file extension
+            $allowedExtensions = ['xls', 'xlsx'];
+            $fileExtension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            if (!in_array($fileExtension, $allowedExtensions)) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Chỉ chấp nhận file Excel (.xls, .xlsx)'
+                ], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            // Validate file size (5MB)
+            if ($file['size'] > 5 * 1024 * 1024) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'File không được vượt quá 5MB'
+                ], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            // Validate filename length
+            if (strlen($file['name']) > 255) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Tên file quá dài (tối đa 255 ký tự)'
+                ], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            // Validate special characters
+            if (preg_match('/[<>:"|?*]/', $file['name'])) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Tên file chứa ký tự không hợp lệ (< > : " | ? *)'
+                ], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
             // Load spreadsheet
             $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file['tmp_name']);
             $sheet = $spreadsheet->getActiveSheet();
@@ -400,7 +451,6 @@ class CustomerController extends BaseAdminController
                 ], JSON_UNESCAPED_UNICODE);
                 exit;
             }
-
             $currentUser = $this->currentUserId();
             $errors = [];
             $success = [];
@@ -408,23 +458,28 @@ class CustomerController extends BaseAdminController
 
             foreach ($rows as $row) {
                 $rowNumber++;
-                
+
                 // Skip empty rows
                 if (empty(array_filter($row))) {
                     continue;
                 }
 
-                // Map columns: STT, Họ tên*, Email*, SĐT*, Ngày sinh, Giới tính, Địa chỉ, Điểm, Trạng thái*
-                $full_name = trim($row[1] ?? '');
-                $email = trim($row[2] ?? '');
-                $phone = trim($row[3] ?? '');
-                $date_of_birth = trim($row[4] ?? '');
-                $gender = trim($row[5] ?? '');
-                $address = trim($row[6] ?? '');
-                $loyalty_points = trim($row[7] ?? '');
+                // Map columns: STT, Tài khoản*, Họ tên*, Email*, SĐT*, Ngày sinh, Giới tính, Địa chỉ, Trạng thái*
+                $username = trim($row[1] ?? '');
+                $full_name = trim($row[2] ?? '');
+                $email = trim($row[3] ?? '');
+                $phone = trim($row[4] ?? '');
+                $date_of_birth = trim($row[5] ?? '');
+                $gender = trim($row[6] ?? '');
+                $address = trim($row[7] ?? '');
                 $is_active = trim($row[8] ?? '');
 
                 $rowErrors = [];
+
+                // Validate username (optional)
+                if (!empty($username) && !preg_match('/^[a-z0-9_]{6,32}$/', $username)) {
+                    $rowErrors[] = 'Tài khoản phải không dấu, chỉ chứa chữ thường, số và gạch dưới, từ 6-32 ký tự';
+                }
 
                 // Validate required fields
                 if (empty($full_name)) {
@@ -472,11 +527,6 @@ class CustomerController extends BaseAdminController
                     $rowErrors[] = "Giới tính phải là 'Nam' hoặc 'Nữ'";
                 }
 
-                // Validate loyalty_points (optional)
-                if (!empty($loyalty_points) && (!is_numeric($loyalty_points) || $loyalty_points < 0)) {
-                    $rowErrors[] = 'Điểm tích lũy phải là số không âm';
-                }
-
                 // Validate is_active
                 if (!in_array($is_active, ['0', '1', 0, 1], true)) {
                     $rowErrors[] = "Trạng thái phải là 0 hoặc 1";
@@ -486,11 +536,11 @@ class CustomerController extends BaseAdminController
                 if (!empty($rowErrors)) {
                     $errors[] = [
                         'row' => $rowNumber,
+                        'username' => $username,
                         'full_name' => $full_name,
                         'email' => $email,
                         'phone' => $phone,
                         'gender' => $gender,
-                        'loyalty_points' => $loyalty_points,
                         'is_active' => $is_active,
                         'errors' => implode('; ', $rowErrors)
                     ];
@@ -499,36 +549,49 @@ class CustomerController extends BaseAdminController
 
                 // Create customer data
                 $customerData = [
+                    'username' => $username ?: null,
                     'full_name' => $full_name,
                     'email' => $email,
                     'phone' => $phone,
                     'date_of_birth' => $date_of_birth ?: null,
                     'gender' => $gender ?: null,
                     'address' => $address ?: null,
-                    'loyalty_points' => !empty($loyalty_points) ? (int)$loyalty_points : 0,
-                    'is_active' => (int)$is_active,
+                    'loyalty_points' => 0, // Mặc định 0
+                    'is_active' => (int) $is_active,
                     'created_by' => $currentUser
                 ];
 
                 try {
-                    $this->repo->create($customerData);
+                    $created = $this->repo->create($customerData);
+
+                    // Check if create was successful
+                    if ($created === false) {
+                        throw new \Exception('Không thể tạo khách hàng trong database');
+                    }
+
+                    if (is_string($created)) {
+                        throw new \Exception($created);
+                    }
+
                     $success[] = [
                         'row' => $rowNumber,
+                        'username' => $username,
                         'full_name' => $full_name,
                         'email' => $email,
                         'phone' => $phone,
                         'gender' => $gender,
-                        'loyalty_points' => $loyalty_points ?: 0,
+                        'loyalty_points' => 0,
                         'is_active' => $is_active
                     ];
                 } catch (\Exception $e) {
                     $errors[] = [
                         'row' => $rowNumber,
+                        'username' => $username,
                         'full_name' => $full_name,
                         'email' => $email,
                         'phone' => $phone,
                         'gender' => $gender,
-                        'loyalty_points' => $loyalty_points,
+                        'loyalty_points' => 0,
                         'is_active' => $is_active,
                         'errors' => $e->getMessage()
                     ];
@@ -538,29 +601,73 @@ class CustomerController extends BaseAdminController
             // Save import history
             $this->saveImportHistory($file['name'], count($success), count($errors), $success, $errors);
 
-            // Response
-            $message = "Nhập thành công " . count($success) . " khách hàng";
-            if (count($errors) > 0) {
-                $message .= ", " . count($errors) . " lỗi";
+            $totalRows = count($rows);
+            $successCount = count($success);
+            $failedRows = count($errors);
+
+            // Xác định status
+            if ($successCount === 0 && $failedRows > 0) {
+                $importStatus = 'failed';
+            } elseif ($successCount > 0 && $failedRows > 0) {
+                $importStatus = 'partial';
+            } else {
+                $importStatus = 'success';
             }
 
+            // Tạo thông báo kết quả chi tiết - chỉ hiển thị 1 lỗi đầu tiên
+            $message = '';
+            if ($importStatus === 'success') {
+                $message = "Nhập thành công $successCount/$totalRows bản ghi";
+            } elseif ($importStatus === 'partial') {
+                $message = "Nhập thành công $successCount/$totalRows bản ghi. Có $failedRows lỗi";
+                if (!empty($errors)) {
+                    // Chỉ hiển thị lỗi đầu tiên
+                    $firstError = is_array($errors[0]) ? $errors[0]['errors'] : $errors[0];
+                    $message .= ": " . $firstError;
+                    if ($failedRows > 1) {
+                        $message .= " (xem chi tiết trong lịch sử nhập)";
+                    }
+                }
+            } else {
+                $message = "Nhập thất bại. Có $failedRows lỗi";
+                if (!empty($errors)) {
+                    // Chỉ hiển thị lỗi đầu tiên
+                    $firstError = is_array($errors[0]) ? $errors[0]['errors'] : $errors[0];
+                    $message .= ": " . $firstError;
+                    if ($failedRows > 1) {
+                        $message .= " (xem chi tiết trong lịch sử nhập)";
+                    }
+                }
+            }
+
+            // ...phần trả về JSON giữ nguyên...
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
                 'success' => true,
                 'message' => $message,
+                'status' => $importStatus,
                 'summary' => [
-                    'total' => count($rows),
-                    'success' => count($success),
-                    'errors' => count($errors)
+                    'total' => $totalRows,
+                    'success' => $successCount,
+                    'errors' => $failedRows
                 ]
             ], JSON_UNESCAPED_UNICODE);
             exit;
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            // Log the error
+            error_log("Import Error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+            error_log("Stack trace: " . $e->getTraceAsString());
+
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
                 'success' => false,
-                'message' => 'Lỗi khi xử lý file Excel: ' . $e->getMessage()
+                'message' => 'Lỗi khi xử lý file Excel: ' . $e->getMessage(),
+                'detail' => [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => explode("\n", $e->getTraceAsString())
+                ]
             ], JSON_UNESCAPED_UNICODE);
             exit;
         }
@@ -584,15 +691,26 @@ class CustomerController extends BaseAdminController
     private function saveImportHistory($filename, $successCount, $errorCount, $successRows, $errorRows)
     {
         $importHistoryRepo = new \App\Models\Repositories\ImportHistoryRepository();
-        
+
+        // Prepare data matching ImportHistoryRepository::create expected fields
+        $total = $successCount + $errorCount;
+        $status = $errorCount > 0 ? 'partial' : 'completed';
+
+        // Merge success and error rows, then sort by row number
+        $allRows = array_merge($successRows, $errorRows);
+        usort($allRows, function ($a, $b) {
+            return ($a['row'] ?? 0) <=> ($b['row'] ?? 0);
+        });
+
         $importHistoryRepo->create([
-            'module' => 'customers',
-            'filename' => $filename,
-            'total_rows' => $successCount + $errorCount,
+            'table_name' => 'customers',
+            'file_name' => $filename,
+            'total_rows' => $total,
             'success_rows' => $successCount,
-            'error_rows' => $errorCount,
-            'success_data' => json_encode($successRows, JSON_UNESCAPED_UNICODE),
-            'error_data' => json_encode($errorRows, JSON_UNESCAPED_UNICODE),
+            'failed_rows' => $errorCount,
+            'status' => $status,
+            'error_details' => !empty($errorRows) ? json_encode($errorRows, JSON_UNESCAPED_UNICODE) : null,
+            'file_content' => !empty($allRows) ? json_encode($allRows, JSON_UNESCAPED_UNICODE) : null,
             'imported_by' => $this->currentUserId(),
             'imported_by_name' => $this->currentUserName()
         ]);
@@ -621,16 +739,16 @@ class CustomerController extends BaseAdminController
         // Tự động tìm ngày nhỏ nhất và lớn nhất từ created_at
         $fromDate = '';
         $toDate = '';
-        
+
         if (!empty($items)) {
-            $dates = array_filter(array_map(function($item) {
+            $dates = array_filter(array_map(function ($item) {
                 $date = $item['created_at'] ?? '';
                 if ($date && strpos($date, ' ') !== false) {
                     $date = explode(' ', $date)[0];
                 }
                 return $date;
             }, $items));
-            
+
             if (!empty($dates)) {
                 sort($dates);
                 $fromDate = reset($dates);

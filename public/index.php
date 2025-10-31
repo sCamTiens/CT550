@@ -184,6 +184,7 @@ $router->group('/admin', function (Router $r): void {
     $r->put('/api/customers/{id}/password', [AdminCustomer::class, 'changePassword']);
     $r->get('/api/customers/{id}/addresses', [AdminCustomer::class, 'getAddresses']);
     $r->get('/api/customers/{id}/detail', [AdminCustomer::class, 'getDetail']);
+    $r->get('/api/customers/{id}/loyalty-transactions', [AdminCustomer::class, 'getLoyaltyTransactions']);
     $r->delete('/api/customers/{id}', [AdminCustomer::class, 'destroy']);
 
     // Expense Vouchers

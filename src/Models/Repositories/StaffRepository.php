@@ -54,7 +54,9 @@ class StaffRepository
                     u.is_active,
                     s.staff_role,
                     s.hired_at,
-                    s.note
+                    s.note,
+                    u.gender,
+                    u.date_of_birth
                 FROM {$this->userTable} u
                 LEFT JOIN {$this->staffTable} s ON s.user_id = u.id
                 WHERE u.username = ? AND u.is_deleted = 0
@@ -84,7 +86,9 @@ class StaffRepository
                     s.staff_role,
                     s.hired_at,
                     s.note,
-                    u.avatar_url
+                    u.avatar_url,
+                    u.gender,
+                    u.date_of_birth
                 FROM {$this->userTable} u
                 INNER JOIN {$this->staffTable} s ON u.id = s.user_id
                 LEFT JOIN {$this->userTable} cu ON cu.id = u.created_by
@@ -111,7 +115,9 @@ class StaffRepository
                     s.staff_role,
                     s.hired_at,
                     s.note,
-                    u.avatar_url
+                    u.avatar_url,
+                    u.gender,
+                    u.date_of_birth
                 FROM {$this->userTable} u
                 INNER JOIN {$this->staffTable} s ON u.id = s.user_id
                 LEFT JOIN {$this->userTable} cu ON cu.id = u.created_by
@@ -191,11 +197,22 @@ class StaffRepository
                 return $err;
             }
 
-            $passwordHash = password_hash('123456', PASSWORD_BCRYPT);
+            // Use provided password or default
+            if (!empty($data['password'])) {
+                // If password is already hashed (starts with $2y$), use it directly
+                if (strpos($data['password'], '$2y$') === 0) {
+                    $passwordHash = $data['password'];
+                } else {
+                    // Otherwise, hash it
+                    $passwordHash = password_hash($data['password'], PASSWORD_BCRYPT);
+                }
+            } else {
+                $passwordHash = password_hash('123456', PASSWORD_BCRYPT);
+            }
 
             $sqlUser = "INSERT INTO {$this->userTable}
-                    (username, full_name, email, phone, password_hash, role_id, is_active, created_by, force_change_password, is_deleted)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    (username, full_name, email, phone, password_hash, role_id, is_active, created_by, force_change_password, is_deleted, gender, date_of_birth)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmtUser = DB::pdo()->prepare($sqlUser);
             $stmtUser->execute([
                 $username,
@@ -207,7 +224,9 @@ class StaffRepository
                 $data['is_active'] ?? 1,
                 $data['created_by'] ?? null,
                 1,   // force_change_password = true
-                0    // is_deleted = false
+                0,    // is_deleted = false
+                $data['gender'] ?? null,
+                $data['date_of_birth'] ?? null
             ]);
             $userId = DB::pdo()->lastInsertId();
 
@@ -279,7 +298,7 @@ class StaffRepository
             DB::pdo()->beginTransaction();
 
             $sqlUser = "UPDATE {$this->userTable}
-                    SET username=?, full_name=?, email=?, phone=?, is_active=?, updated_by=?, updated_at=CURRENT_TIMESTAMP
+                    SET username=?, full_name=?, email=?, phone=?, is_active=?, updated_by=?, updated_at=CURRENT_TIMESTAMP, gender=?, date_of_birth=?
                     WHERE id=? AND role_id=2 AND is_deleted=0";
             $stmtUser = DB::pdo()->prepare($sqlUser);
             $stmtUser->execute([
@@ -289,6 +308,8 @@ class StaffRepository
                 $data['phone'] ?? null,
                 $data['is_active'] ?? 1,
                 $data['updated_by'] ?? null,
+                $data['gender'] ?? null,
+                $data['date_of_birth'] ?? null,
                 $id
             ]);
 

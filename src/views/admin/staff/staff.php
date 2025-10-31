@@ -51,6 +51,11 @@ $items = $items ?? [];
                             'Nhân viên bán hàng' => 'Nhân viên bán hàng',
                             'Hỗ trợ trực tuyến' => 'Hỗ trợ trực tuyến'
                         ]) ?>
+                        <?= selectFilterPopover('gender', 'Giới tính', [
+                            '' => '-- Tất cả --',
+                            'Nam' => 'Nam',
+                            'Nữ' => 'Nữ',
+                        ]) ?>
                         <?= textFilterPopover('email', 'Email') ?>
                         <?= textFilterPopover('phone', 'Số điện thoại') ?>
                         <?= selectFilterPopover('is_active', 'Trạng thái', ['' => '-- Tất cả --', '1' => 'Hoạt động', '0' => 'Khóa']) ?>
@@ -117,6 +122,9 @@ $items = $items ?? [];
                                         'bg-purple-100 text-purple-800': s.staff_role === 'Admin',
                                     }" x-text="getStaffRoleText(s.staff_role)"></span>
                                 </div>
+                            </td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-center">
+                                <span x-text="s.gender ? (s.gender === 'Nam' ? 'Nam' : 'Nữ') : '—'"></span>
                             </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.email"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line"
@@ -522,7 +530,7 @@ $items = $items ?? [];
 
             // ===== FILTERS =====
             openFilter: {
-                username: false, full_name: false, staff_role: false, email: false, phone: false, is_active: false, hired_at: false, note: false,
+                username: false, full_name: false, staff_role: false, gender: false, email: false, phone: false, is_active: false, hired_at: false, note: false,
                 created_at: false, created_by: false, updated_at: false, updated_by: false
             },
 
@@ -531,6 +539,7 @@ $items = $items ?? [];
                 full_name: '',
                 staff_role: '',
                 email: '',
+                gender: '',
                 phone_type: '', phone_value: '', phone_from: '', phone_to: '',
                 is_active: '',
                 hired_at_type: '', hired_at_value: '', hired_at_from: '', hired_at_to: '',
@@ -662,7 +671,7 @@ $items = $items ?? [];
                 });
 
                 // --- Lọc theo select ---
-                ['is_active', 'staff_role'].forEach(key => {
+                ['is_active', 'staff_role', 'gender'].forEach(key => {
                     if (this.filters[key]) {
                         data = data.filter(o =>
                             this.applyFilter(o[key], 'eq', {
@@ -847,7 +856,8 @@ $items = $items ?? [];
             openEditModal(s) {
                 this.form = {
                     ...s,
-                    is_active: String(s.is_active ?? '1')
+                    is_active: String(s.is_active ?? '1'),
+                    gender: s.gender ?? '',
                 };
                 // Chuyển đổi ngày từ Y-m-d sang d/m/Y cho datepicker
                 if (this.form.hired_at && this.form.hired_at !== '0000-00-00') {
@@ -977,33 +987,45 @@ $items = $items ?? [];
                     });
             },
 
+            // ===== toast =====
             showToast(msg, type = 'error') {
                 const box = document.getElementById('toast-container');
                 if (!box) return;
                 box.innerHTML = '';
 
                 const toast = document.createElement('div');
-                toast.className =
-                    `fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 mb-4 text-base font-semibold
-                                        ${type === 'success'
-                        ? 'text-green-700 border-green-400'
-                        : 'text-red-700 border-red-400'}
-                                        bg-white rounded-xl shadow-lg border-2`;
+
+                // Xác định màu sắc theo type
+                let colorClasses = '';
+                let iconColor = '';
+                let iconSvg = '';
+
+                if (type === 'success') {
+                    colorClasses = 'text-green-700 border-green-400';
+                    iconColor = 'text-green-600';
+                    iconSvg = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />`;
+                } else if (type === 'warning') {
+                    colorClasses = 'text-yellow-700 border-yellow-400';
+                    iconColor = 'text-yellow-600';
+                    iconSvg = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5 12a7 7 0 1114 0 7 7 0 01-14 0z" />`;
+                } else {
+                    colorClasses = 'text-red-700 border-red-400';
+                    iconColor = 'text-red-600';
+                    iconSvg = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`;
+                }
+
+                toast.className = `fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 mb-4 text-base font-semibold ${colorClasses} bg-white rounded-xl shadow-lg border-2`;
 
                 toast.innerHTML = `
-                                        <svg class="flex-shrink-0 w-6 h-6 ${type === 'success' ? 'text-green-600' : 'text-red-600'} mr-3" 
-                                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            ${type === 'success'
-                        ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                                d="M5 13l4 4L19 7" />`
-                        : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                                d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`}
-                                        </svg>
-                                        <div class="flex-1">${msg}</div>
-                                    `;
+                        <svg class="flex-shrink-0 w-6 h-6 ${iconColor} mr-3" 
+                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        ${iconSvg}
+                        </svg>
+                        <div class="flex-1">${msg}</div>
+                    `;
 
                 box.appendChild(toast);
-                setTimeout(() => toast.remove(), 3000);
+                setTimeout(() => toast.remove(), 5000);
             },
 
             // ===== IMPORT EXCEL =====
@@ -1090,16 +1112,26 @@ $items = $items ?? [];
                     const data = await res.json();
 
                     if (data.success) {
-                        this.showToast(data.message || 'Nhập Excel thành công!', 'success');
+                        // Xác định loại toast dựa trên status
+                        let toastType = 'success';
+                        if (data.status === 'failed') {
+                            toastType = 'error'; // Đỏ
+                        } else if (data.status === 'partial') {
+                            toastType = 'warning'; // Vàng/Cam
+                        } else {
+                            toastType = 'success'; // Xanh
+                        }
+
+                        this.showToast(data.message || 'Nhập Excel thành công!', toastType);
                         this.showImportModal = false;
                         this.importFile = null;
                         await this.init();
                     } else {
-                        this.showToast(data.message || 'Có lỗi xảy ra');
+                        this.showToast(data.message || 'Có lỗi xảy ra', 'error');
                     }
                 } catch (err) {
                     console.error(err);
-                    this.showToast('Lỗi kết nối server');
+                    this.showToast('Lỗi kết nối server', 'error');
                 } finally {
                     this.importing = false;
                 }

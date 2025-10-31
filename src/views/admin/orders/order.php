@@ -496,10 +496,13 @@ $items = $items ?? [];
                 total_amountFormatted: '',
                 shipping_address: '',
                 note: '',
+                loyalty_points_used: 0,
+                coupon_code: '',
             },
 
             errors: {},
             touched: {},
+            customerLoyaltyPoints: 0,
 
             // ===== INIT =====
             async init() {
@@ -822,6 +825,25 @@ $items = $items ?? [];
             },
 
 
+            // Cập nhật điểm tích lũy khách hàng
+            async updateCustomerLoyaltyPoints() {
+                if (!this.form.customer_id) {
+                    this.customerLoyaltyPoints = 0;
+                    this.form.loyalty_points_used = 0;
+                    return;
+                }
+
+                try {
+                    const customer = this.customers.find(c => c.id == this.form.customer_id);
+                    if (customer) {
+                        this.customerLoyaltyPoints = Number(customer.loyalty_points) || 0;
+                    }
+                } catch (e) {
+                    console.error('Error loading customer loyalty points:', e);
+                    this.customerLoyaltyPoints = 0;
+                }
+            },
+
             calculateTotal(shouldCheckPromotions = false) {
                 // Tính tổng tiền từ danh sách sản phẩm
                 const subtotal = this.orderItems.reduce((sum, item) => {
@@ -831,9 +853,10 @@ $items = $items ?? [];
                 this.form.subtotal = subtotal;
                 this.form.subtotalFormatted = subtotal.toLocaleString('en-US');
 
-                // Tính giảm giá: Khuyến mãi tự động + Giảm giá thủ công
+                // Tính giảm giá: Khuyến mãi tự động + Giảm giá thủ công + Điểm tích lũy
                 const manualDiscount = Number(this.form.discount_amount) || 0;
-                const totalDiscount = this.promotionDiscount + manualDiscount;
+                const loyaltyDiscount = Number(this.form.loyalty_points_used) || 0; // 1 điểm = 1đ
+                const totalDiscount = this.promotionDiscount + manualDiscount + loyaltyDiscount;
                 
                 const total = Math.max(0, subtotal - totalDiscount);
 

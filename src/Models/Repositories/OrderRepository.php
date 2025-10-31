@@ -446,8 +446,72 @@ class OrderRepository
                 }
             }
 
+            // ===== SỬ DỤNG ĐIỂM TÍCH LŨY (NẾU CÓ) =====
+            // Trừ điểm trước khi commit
+            if ($customerId && !empty($data['loyalty_points_used']) && $data['loyalty_points_used'] > 0) {
+                try {
+                    $pointsUsed = (int)$data['loyalty_points_used'];
+                    error_log("Using loyalty points: $pointsUsed points for customer $customerId");
+                    
+                    $customerRepo = new \App\Models\Repositories\CustomerRepository();
+                    $result = $customerRepo->redeemLoyaltyPoints(
+                        $customerId,
+                        $pointsUsed,
+                        $id,
+                        "Sử dụng điểm cho đơn hàng {$data['code']} (Giảm: " . number_format($pointsUsed, 0, ',', '.') . "đ)"
+                    );
+                    
+                    if ($result !== true) {
+                        throw new \Exception($result ?: 'Không thể sử dụng điểm tích lũy');
+                    }
+                    
+                    // Cập nhật loyalty_points_used và loyalty_discount trong orders
+                    $stmt = $pdo->prepare("UPDATE orders SET loyalty_points_used = ?, loyalty_discount = ? WHERE id = ?");
+                    $stmt->execute([$pointsUsed, $pointsUsed, $id]);
+                    
+                    error_log("Successfully used $pointsUsed loyalty points");
+                } catch (\Exception $e) {
+                    error_log("Error using loyalty points: " . $e->getMessage());
+                    throw $e; // Throw để rollback transaction
+                }
+            }
+
             $pdo->commit();
             error_log("Transaction committed successfully");
+
+            // ===== TỰ ĐỘNG TÍCH ĐIỂM CHO KHÁCH HÀNG =====
+            // Quy tắc: 1,000đ = 1 điểm
+            // Chỉ tích điểm cho khách hàng thành viên (có user_id)
+            // Tích điểm dựa trên TỔNG TIỀN SAU KHI TRỪ ĐIỂM
+            if ($customerId && isset($data['total_amount']) && $data['total_amount'] > 0) {
+                try {
+                    $totalAmount = (float)$data['total_amount'];
+                    $pointsEarned = floor($totalAmount / 1000); // 1000đ = 1 điểm
+                    
+                    if ($pointsEarned > 0) {
+                        error_log("Earning loyalty points: $pointsEarned points for customer $customerId");
+                        
+                        $customerRepo = new \App\Models\Repositories\CustomerRepository();
+                        $result = $customerRepo->addLoyaltyPoints(
+                            $customerId,
+                            $pointsEarned,
+                            $id,
+                            "Tích điểm từ đơn hàng {$data['code']} (Tổng tiền: " . number_format($totalAmount, 0, ',', '.') . "đ)"
+                        );
+                        
+                        if ($result) {
+                            // Cập nhật loyalty_points_earned trong orders
+                            $stmt = $pdo->prepare("UPDATE orders SET loyalty_points_earned = ? WHERE id = ?");
+                            $stmt->execute([$pointsEarned, $id]);
+                            
+                            error_log("Successfully earned $pointsEarned loyalty points");
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // Log lỗi nhưng không throw để không ảnh hưởng đơn hàng
+                    error_log("Error earning loyalty points: " . $e->getMessage());
+                }
+            }
 
             // Log audit
             $this->logCreate('orders', $id, [
@@ -752,12 +816,32 @@ class OrderRepository
     /**
      * Lấy danh sách sản phẩm trong đơn hàng
      */
+    /**
+     * Lấy đường dẫn ảnh sản phẩm
+     */
+    private function getProductImage(int $productId): string
+    {
+        // Check if product image exists in filesystem
+        $imagePath = __DIR__ . '/../../../public/assets/images/products/' . $productId . '/1.png';
+
+        if (file_exists($imagePath)) {
+            return '/assets/images/products/' . $productId . '/1.png';
+        }
+
+        return '/assets/images/products/default.png';
+    }
+
     public function getOrderItems(int $orderId): array
     {
         $pdo = DB::pdo();
         $sql = "
             SELECT 
-                oi.*,
+                oi.id,
+                oi.order_id,
+                oi.product_id,
+                oi.qty as quantity,
+                oi.unit_price,
+                oi.line_total as total,
                 p.name as product_name, 
                 p.sku as product_sku
             FROM order_items oi
@@ -767,7 +851,14 @@ class OrderRepository
         ";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$orderId]);
-        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        
+        // Add image path for each product
+        foreach ($rows as &$row) {
+            $row['product_image'] = $this->getProductImage($row['product_id']);
+        }
+        
+        return $rows;
     }
 
     /**

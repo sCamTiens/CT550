@@ -227,10 +227,10 @@
                                     <table class="w-full text-sm">
                                         <thead class="bg-gray-100 sticky top-0">
                                             <tr>
-                                                <th class="py-2 px-3 text-center" style="width: 80px;">Dòng</th>
-                                                <th class="py-2 px-3 text-left">Dữ liệu</th>
-                                                <th class="py-2 px-3 text-center" style="width: 120px;">Kết quả</th>
-                                                <th class="py-2 px-3 text-left" style="width: 200px;">Lỗi</th>
+                                                <th class="py-2 px-3 text-center" style="width: 50px;">Dòng</th>
+                                                <th class="py-2 px-3 text-left" style="width: 120px;">Dữ liệu</th>
+                                                <th class="py-2 px-3 text-center" style="width: 50px;">Kết quả</th>
+                                                <th class="py-2 px-3 text-left" style="width: 300px;">Lỗi</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -405,7 +405,7 @@
                             this.fileContent = [];
                         }
                         
-                        // Parse error_details - format: [{row: X, errors: [...]}, ...] OR simple error strings
+                        // Parse error_details - format: [{row: X, errors: 'string'}, ...] OR [{row: X, errors: [...]}, ...] OR simple error strings
                         const rawErrors = this.detail.error_details ? JSON.parse(this.detail.error_details) : [];
                         console.log('Raw errors:', rawErrors);
                         
@@ -422,13 +422,20 @@
                                         const rowNum = parseInt(match[1]);
                                         this.errorMap[rowNum] = err.replace(`Dòng ${rowNum}: `, '');
                                     }
-                                } else if (err.errors && Array.isArray(err.errors)) {
-                                    // Format: {row: X, errors: [...]} - PRODUCTS
-                                    const errorMsg = err.errors.join(', ');
-                                    this.errorMap[err.row] = errorMsg;
-                                    err.errors.forEach(msg => {
-                                        this.errorDetails.push(`Dòng ${err.row}: ${msg}`);
-                                    });
+                                } else if (err.errors) {
+                                    // Format: {row: X, errors: 'string'} - CUSTOMERS (NEW)
+                                    if (typeof err.errors === 'string') {
+                                        this.errorMap[err.row] = err.errors;
+                                        this.errorDetails.push(`Dòng ${err.row}: ${err.errors}`);
+                                    } 
+                                    // Format: {row: X, errors: [...]} - PRODUCTS (ARRAY)
+                                    else if (Array.isArray(err.errors)) {
+                                        const errorMsg = err.errors.join(', ');
+                                        this.errorMap[err.row] = errorMsg;
+                                        err.errors.forEach(msg => {
+                                            this.errorDetails.push(`Dòng ${err.row}: ${msg}`);
+                                        });
+                                    }
                                 }
                             });
                         }
@@ -516,10 +523,10 @@
                         'units': ['name'],
                         'suppliers': ['name', 'phone', 'email', 'address'],
                         'customers': ['name', 'phone', 'email', 'address'],
-                        'staff': ['full_name', 'phone', 'email', 'role']
+                        'staff': ['username', 'full_name', 'staff_role', 'email', 'phone', 'gender', 'is_active']
                     };
                     
-                    const fields = fieldsMap[tableName] || Object.keys(row).filter(k => !['row', 'result', 'error', 'id'].includes(k));
+                    const fields = fieldsMap[tableName] || Object.keys(row).filter(k => !['row', 'result', 'error', 'errors', 'id'].includes(k));
                     
                     fields.forEach(field => {
                         if (row[field] !== undefined) {
@@ -554,6 +561,10 @@
                     'email': 'Email',
                     'address': 'Địa chỉ',
                     'full_name': 'Họ tên',
+                    'username': 'Tài khoản',
+                    'staff_role': 'Vai trò',
+                    'gender': 'Giới tính',
+                    'is_active': 'Trạng thái',
                     'role': 'Vai trò'
                 };
                 return labels[field] || field;

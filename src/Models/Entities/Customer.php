@@ -10,6 +10,7 @@ class Customer
     public $phone;
     public $gender;
     public $date_of_birth;
+    public $loyalty_points;
     public $is_active;
     public $created_at;
     public $updated_at;
