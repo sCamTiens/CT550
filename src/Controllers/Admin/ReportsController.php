@@ -25,8 +25,9 @@ class ReportsController extends BaseAdminController
         $data = [
             'totalRevenue' => $this->getTotalRevenue($fromDate, $toDate),
             'totalOrders' => $this->getTotalOrders($fromDate, $toDate),
+            'totalCountExpenses' => $this->getCountExpense($fromDate, $toDate),
             'avgOrderValue' => 0,
-            'newCustomers' => $this->getNewCustomers($fromDate, $toDate),
+            'totalExpenses' => $this->getTotalExpenses($fromDate, $toDate),
             'totalProductsSold' => $this->getTotalProductsSold($fromDate, $toDate)
         ];
 
@@ -482,6 +483,18 @@ class ReportsController extends BaseAdminController
         return (int)($row['count'] ?? 0);
     }
 
+    private function getCountExpense($from, $to)
+    {
+        $db = $this->getDB();
+        $sql = "SELECT COUNT(*) as count FROM expense_vouchers WHERE 1=1";
+        if ($from) $sql .= " AND DATE(created_at) >= '$from'";
+        if ($to) $sql .= " AND DATE(created_at) <= '$to'";
+        
+        $stmt = $db->query($sql);
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        return (int)($row['count'] ?? 0);
+    }
+
     private function getNewCustomers($from, $to)
     {
         $db = $this->getDB();
@@ -492,6 +505,18 @@ class ReportsController extends BaseAdminController
         $stmt = $db->query($sql);
         $row = $stmt->fetch(\PDO::FETCH_ASSOC);
         return (int)($row['count'] ?? 0);
+    }
+
+    private function getTotalExpenses($from, $to)
+    {
+        $db = $this->getDB();
+        $sql = "SELECT SUM(amount) as total FROM expense_vouchers WHERE 1=1";
+        if ($from) $sql .= " AND DATE(COALESCE(paid_at, created_at)) >= '$from'";
+        if ($to) $sql .= " AND DATE(COALESCE(paid_at, created_at)) <= '$to'";
+        
+        $stmt = $db->query($sql);
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        return (float)($row['total'] ?? 0);
     }
 
     private function getTotalProductsSold($from, $to)

@@ -146,10 +146,6 @@ require __DIR__ . '/partials/layout-start.php';
                         </button>
                         <ul x-show="filterTypeOpen"
                             class="absolute left-0 mt-1 w-full bg-white border rounded-lg shadow z-10">
-                            <li @click="selectFilterType('week', 'Theo tuần')"
-                                class="px-3 py-2 hover:bg-[#002975] hover:text-white cursor-pointer text-sm">
-                                Theo tuần
-                            </li>
                             <li @click="selectFilterType('month', 'Theo tháng')"
                                 class="px-3 py-2 hover:bg-[#002975] hover:text-white cursor-pointer text-sm">
                                 Theo tháng
@@ -158,64 +154,6 @@ require __DIR__ . '/partials/layout-start.php';
                                 class="px-3 py-2 hover:bg-[#002975] hover:text-white cursor-pointer text-sm">
                                 Theo năm
                             </li>
-                        </ul>
-                    </div>
-
-                    <!-- Week Selector - Only for week filter -->
-                    <div class="relative" x-show="filterType === 'week'" @click.away="weekOpen=false">
-                        <button type="button"
-                            class="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#002975] flex justify-between items-center min-w-[100px]"
-                            @click="weekOpen=!weekOpen">
-                            <span x-text="weekLabel"></span>
-                            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" stroke-width="2"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </button>
-                        <ul x-show="weekOpen"
-                            class="absolute left-0 mt-1 w-full bg-white border rounded-lg shadow z-10">
-                            <li @click="selectWeek(1, 'Tuần 1')"
-                                class="px-3 py-2 hover:bg-[#002975] hover:text-white cursor-pointer text-sm">
-                                Tuần 1
-                            </li>
-                            <li @click="selectWeek(2, 'Tuần 2')"
-                                class="px-3 py-2 hover:bg-[#002975] hover:text-white cursor-pointer text-sm">
-                                Tuần 2
-                            </li>
-                            <li @click="selectWeek(3, 'Tuần 3')"
-                                class="px-3 py-2 hover:bg-[#002975] hover:text-white cursor-pointer text-sm">
-                                Tuần 3
-                            </li>
-                            <li @click="selectWeek(4, 'Tuần 4')"
-                                class="px-3 py-2 hover:bg-[#002975] hover:text-white cursor-pointer text-sm">
-                                Tuần 4
-                            </li>
-                            <li @click="selectWeek(0, 'Tất cả')"
-                                class="px-3 py-2 hover:bg-[#002975] hover:text-white cursor-pointer text-sm border-t">
-                                Tất cả
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- Period Selector - Month/Year for week filter -->
-                    <div class="relative" x-show="filterType === 'week'" @click.away="periodOpen=false">
-                        <button type="button"
-                            class="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#002975] flex justify-between items-center min-w-[150px]"
-                            @click="periodOpen=!periodOpen">
-                            <span x-text="periodLabel"></span>
-                            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" stroke-width="2"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </button>
-                        <ul x-show="periodOpen"
-                            class="absolute left-0 mt-1 w-full bg-white border rounded-lg shadow z-10 max-h-60 overflow-y-auto">
-                            <template x-for="p in monthPeriods" :key="p.value">
-                                <li @click="selectPeriod(p.value, p.label)"
-                                    class="px-3 py-2 hover:bg-[#002975] hover:text-white cursor-pointer text-sm"
-                                    x-text="p.label">
-                                </li>
-                            </template>
                         </ul>
                     </div>
 
@@ -487,7 +425,7 @@ require __DIR__ . '/partials/layout-start.php';
             chartData: <?= json_encode($chart_data) ?>,
             categoryData: <?= json_encode($category_revenue ?? []) ?>,
             orderStatusData: <?= json_encode($order_status ?? ['completed' => 0, 'pending' => 0, 'cancelled' => 0]) ?>,
-            filterType: 'week',
+            filterType: 'month',
             filterPeriod: defaultPeriod,
             selectedWeek: 0, // 0 = tất cả, 1-4 = tuần cụ thể
             chart: null,
@@ -502,7 +440,7 @@ require __DIR__ . '/partials/layout-start.php';
             weekOpen: false,
             periodOpen: false,
             yearOpen: false,
-            filterTypeLabel: 'Theo tuần',
+            filterTypeLabel: 'Theo tháng',
             weekLabel: 'Tất cả',
             periodLabel: monthNames[currentMonth] + ' ' + currentYear,
             yearLabel: currentYear,
@@ -539,13 +477,7 @@ require __DIR__ . '/partials/layout-start.php';
                 const monthNames = ['', 'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 
                                     'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
 
-                if (type === 'week') {
-                    this.selectedWeek = 0;
-                    this.weekLabel = 'Tất cả';
-                    // Reset về tháng hiện tại
-                    this.filterPeriod = currentYear + '-' + String(currentMonth).padStart(2, '0');
-                    this.periodLabel = monthNames[currentMonth] + ' ' + currentYear;
-                } else if (type === 'month') {
+                if (type === 'month') {
                     // Reset về tháng và năm hiện tại
                     this.selectedMonth = String(currentMonth).padStart(2, '0');
                     this.filterYear = currentYear;
@@ -564,27 +496,13 @@ require __DIR__ . '/partials/layout-start.php';
                 const now = new Date();
                 const currentYear = now.getFullYear();
                 const currentMonth = now.getMonth() + 1;
-                const monthNames = ['', 'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 
-                                    'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
                 
-                // Reset về filter tuần, tháng hiện tại, tất cả tuần
-                this.filterType = 'week';
-                this.filterTypeLabel = 'Theo tuần';
-                this.selectedWeek = 0;
-                this.weekLabel = 'Tất cả';
-                this.filterPeriod = currentYear + '-' + String(currentMonth).padStart(2, '0');
-                this.periodLabel = monthNames[currentMonth] + ' ' + currentYear;
+                // Reset về filter tháng, tháng hiện tại
+                this.filterType = 'month';
+                this.filterTypeLabel = 'Theo tháng';
                 this.selectedMonth = String(currentMonth).padStart(2, '0');
                 this.filterYear = currentYear;
                 
-                this.changeFilter();
-            },
-
-            selectWeek(week, label) {
-                if (this.loading) return;
-                this.selectedWeek = week;
-                this.weekLabel = label;
-                this.weekOpen = false;
                 this.changeFilter();
             },
 
@@ -690,6 +608,27 @@ require __DIR__ . '/partials/layout-start.php';
                             x: {
                                 grid: {
                                     display: false
+                                },
+                                ticks: {
+                                    maxRotation: 0,
+                                    minRotation: 0,
+                                    autoSkip: true,
+                                    maxTicksLimit: 10,
+                                    callback: function(value, index, ticks) {
+                                        const label = this.getLabelForValue(value);
+                                        // Với tháng (31 ngày): hiển thị một số label để tránh rối
+                                        // Ngày 1 giữ nguyên "Ngày 1", các ngày khác chỉ hiển thị số
+                                        if (label.includes('Ngày')) {
+                                            const dayNum = parseInt(label.replace('Ngày ', ''));
+                                            // Chỉ hiển thị ngày 1, 5, 10, 15, 20, 25, 30
+                                            if ([1, 5, 10, 15, 20, 25, 30].includes(dayNum)) {
+                                                // Ngày 1 giữ nguyên, các ngày khác chỉ hiển thị số
+                                                return dayNum === 1 ? label : dayNum.toString();
+                                            }
+                                            return '';
+                                        }
+                                        return label;
+                                    }
                                 }
                             }
                         }
@@ -848,9 +787,7 @@ require __DIR__ . '/partials/layout-start.php';
 
                 try {
                     let period;
-                    if (this.filterType === 'week') {
-                        period = this.filterPeriod; // Y-m
-                    } else if (this.filterType === 'month') {
+                    if (this.filterType === 'month') {
                         // Ghép tháng + năm thành Y-m
                         period = this.filterYear + '-' + this.selectedMonth;
                     } else if (this.filterType === 'year') {
@@ -858,11 +795,7 @@ require __DIR__ . '/partials/layout-start.php';
                         period = this.filterYear.toString();
                     }
 
-                    // Thêm week parameter nếu filter type là week và đã chọn tuần cụ thể
                     let url = `/admin/api/dashboard/revenue-expense?type=${this.filterType}&period=${period}`;
-                    if (this.filterType === 'week' && this.selectedWeek > 0) {
-                        url += `&week=${this.selectedWeek}`;
-                    }
 
                     const res = await fetch(url);
                     if (res.ok) {

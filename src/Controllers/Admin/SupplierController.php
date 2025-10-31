@@ -472,4 +472,149 @@ class SupplierController extends BaseAdminController
     {
         return $_SESSION['user']['full_name'] ?? null;
     }
+
+    // ========== CÔNG NỢ NHÀ CUNG CẤP ==========
+
+    /** GET /admin/supplier-debts */
+    public function debtsIndex()
+    {
+        return $this->view('admin/supplier-debts/index');
+    }
+
+    /** GET /admin/api/supplier-debts/suppliers - Lấy danh sách NCC có công nợ > 0 */
+    public function apiGetSuppliersWithDebt()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        try {
+            $pdo = \App\Core\DB::pdo();
+            $sql = "
+                SELECT 
+                    s.id,
+                    s.name,
+                    s.phone,
+                    s.email,
+                    s.address,
+                    COALESCE(SUM(po.total_amount - po.paid_amount), 0) as total_debt,
+                    COUNT(DISTINCT po.id) as debt_orders_count
+                FROM suppliers s
+                LEFT JOIN purchase_orders po ON s.id = po.supplier_id 
+                    AND po.paid_amount < po.total_amount
+                GROUP BY s.id, s.name, s.phone, s.email, s.address
+                HAVING total_debt > 0
+                ORDER BY total_debt DESC
+            ";
+
+            $stmt = $pdo->query($sql);
+            $suppliers = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            echo json_encode([
+                'success' => true,
+                'data' => $suppliers
+            ], JSON_UNESCAPED_UNICODE);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Lỗi: ' . $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE);
+        }
+        exit;
+    }
+
+    /** GET /admin/api/supplier-debts/orders?id={id} - Lấy danh sách phiếu nhập còn nợ */
+    public function apiGetDebtOrders()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        $supplierId = $_GET['id'] ?? null;
+        
+        // Debug: kiểm tra parameter
+        if (empty($supplierId)) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Thiếu supplier_id'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        
+        try {
+            $pdo = \App\Core\DB::pdo();
+            $sql = "
+                SELECT 
+                    po.id,
+                    po.code as order_code,
+                    po.created_at as order_date,
+                    po.total_amount,
+                    po.paid_amount,
+                    (po.total_amount - po.paid_amount) as remaining_debt,
+                    po.payment_status,
+                    po.note as notes,
+                    s.name as supplier_name,
+                    u.full_name as created_by_name
+                FROM purchase_orders po
+                INNER JOIN suppliers s ON po.supplier_id = s.id
+                LEFT JOIN users u ON po.created_by = u.id
+                WHERE po.supplier_id = :supplier_id
+                    AND po.paid_amount < po.total_amount
+                ORDER BY po.created_at DESC, po.id DESC
+            ";
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute(['supplier_id' => $supplierId]);
+            $orders = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            echo json_encode([
+                'success' => true,
+                'data' => $orders
+            ], JSON_UNESCAPED_UNICODE);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Lỗi: ' . $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE);
+        }
+        exit;
+    }
+
+    /** GET /admin/supplier-debts/detail/{id} - Trang chi tiết công nợ */
+    public function debtDetail($supplierId)
+    {
+        try {
+            $pdo = \App\Core\DB::pdo();
+            
+            // Lấy thông tin nhà cung cấp
+            $sql = "SELECT * FROM suppliers WHERE id = :id";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute(['id' => $supplierId]);
+            $supplier = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+            if (!$supplier) {
+                $_SESSION['error'] = 'Không tìm thấy nhà cung cấp!';
+                header('Location: /admin/supplier-debts');
+                exit;
+            }
+
+            // Tính tổng công nợ
+            $sql = "
+                SELECT 
+                    COALESCE(SUM(total_amount - paid_amount), 0) as total_debt
+                FROM purchase_orders
+                WHERE supplier_id = :supplier_id
+                    AND paid_amount < total_amount
+            ";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute(['supplier_id' => $supplierId]);
+            $debtInfo = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+            return $this->view('admin/supplier-debts/detail', [
+                'supplier' => $supplier,
+                'totalDebt' => $debtInfo['total_debt']
+            ]);
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Lỗi: ' . $e->getMessage();
+            header('Location: /admin/supplier-debts');
+            exit;
+        }
+    }
 }

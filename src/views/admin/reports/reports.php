@@ -54,6 +54,19 @@ $pageTitle = 'Thống Kê & Báo Cáo';
             <div class="text-xs opacity-75 mt-1" x-text="'Từ ' + overview.totalOrders + ' đơn hàng'"></div>
         </div>
 
+        <!-- Tổng chi -->
+        <div class="bg-gradient-to-br from-red-500 to-red-600 text-white rounded-lg shadow-lg p-6">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-medium opacity-90">Tổng Chi</h3>
+                <svg class="w-8 h-8 opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+            </div>
+            <div class="text-3xl font-bold" x-text="formatMoney(overview.totalExpenses)"></div>
+            <div class="text-xs opacity-75 mt-1" x-text="'Từ ' + overview.totalCountExpenses + ' phiếu chi'"></div>
+        </div>
+
         <!-- Đơn hàng mới -->
         <div class="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-lg shadow-lg p-6">
             <div class="flex items-center justify-between mb-2">
@@ -65,19 +78,6 @@ $pageTitle = 'Thống Kê & Báo Cáo';
             </div>
             <div class="text-3xl font-bold" x-text="overview.totalOrders"></div>
             <div class="text-xs opacity-75 mt-1" x-text="'Giá trị TB: ' + formatMoney(overview.avgOrderValue)"></div>
-        </div>
-
-        <!-- Khách hàng mới -->
-        <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-lg shadow-lg p-6">
-            <div class="flex items-center justify-between mb-2">
-                <h3 class="text-sm font-medium opacity-90">Khách Hàng Mới</h3>
-                <svg class="w-8 h-8 opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-            </div>
-            <div class="text-3xl font-bold" x-text="overview.newCustomers"></div>
-            <div class="text-xs opacity-75 mt-1">Trong kỳ</div>
         </div>
 
         <!-- Sản phẩm bán ra -->
@@ -143,7 +143,8 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         <h4 class="font-bold text-lg mb-4">Top Nhân Viên (Doanh Thu)</h4>
                         <div class="space-y-3">
                             <template x-for="(item, index) in staffStats.byRevenue" :key="item.staff_id">
-                                <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                <div
+                                    class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-blue-50 transition cursor-pointer">
                                     <div class="text-2xl font-bold text-gray-400" x-text="'#' + (index + 1)"></div>
                                     <div class="flex-1">
                                         <div class="font-medium" x-text="item.full_name"></div>
@@ -177,7 +178,8 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         <h4 class="font-bold text-lg mb-4">Top Sản Phẩm (Doanh Thu)</h4>
                         <div class="space-y-3">
                             <template x-for="(item, index) in productStats.byRevenue" :key="item.product_id">
-                                <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                <div
+                                    class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-blue-50 transition cursor-pointer">
                                     <div class="text-2xl font-bold text-gray-400" x-text="'#' + (index + 1)"></div>
                                     <img :src="item.image_url"
                                         class="w-12 h-12 object-cover rounded-full border mx-auto" :alt="item.name">
@@ -214,16 +216,19 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         <h4 class="font-bold text-lg mb-4">Top Nhà Cung Cấp</h4>
                         <div class="space-y-3">
                             <template x-for="(item, index) in supplierStats" :key="item.supplier_id">
-                                <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                <div
+                                    class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-blue-50 transition cursor-pointer">
                                     <div class="text-2xl font-bold text-gray-400" x-text="'#' + (index + 1)"></div>
                                     <div class="flex-1">
                                         <div class="font-medium" x-text="item.supplier_name"></div>
-                                        <div class="text-sm text-gray-500" x-text="item.total_purchases + ' lần nhập'"></div>
+                                        <div class="text-sm text-gray-500" x-text="item.total_purchases + ' lần nhập'">
+                                        </div>
                                     </div>
                                     <div class="text-right">
                                         <div class="text-lg font-bold text-green-600"
                                             x-text="formatMoney(item.total_sales_value)"></div>
-                                        <div class="text-xs text-gray-500" x-text="formatMoney(item.total_purchase_value) + ' nhập'">
+                                        <div class="text-xs text-gray-500"
+                                            x-text="formatMoney(item.total_purchase_value) + ' nhập'">
                                         </div>
                                     </div>
                                 </div>
@@ -249,7 +254,8 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         <h4 class="font-bold text-lg mb-4">Top Khách Hàng (Chi Tiêu)</h4>
                         <div class="space-y-3">
                             <template x-for="(item, index) in customerStats.topSpenders" :key="item.user_id">
-                                <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                <div
+                                    class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-blue-50 transition cursor-pointer">
                                     <div class="text-2xl font-bold text-gray-400" x-text="'#' + (index + 1)"></div>
                                     <div class="flex-1">
                                         <div class="font-medium" x-text="item.full_name"></div>
@@ -272,10 +278,11 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <!-- Sản phẩm sắp hết hàng -->
                     <div>
-                        <h4 class="font-bold text-lg mb-4 text-red-600">Sản Phẩm Sắp Hết Hàng</h4>
+                        <h4 class="font-bold text-lg mb-4">Sản Phẩm Hết Hàng/Sắp Hết Hàng</h4>
                         <div class="space-y-3">
                             <template x-for="item in inventoryStats.lowStock" :key="item.product_id">
-                                <div class="flex items-center gap-3 p-3 bg-red-50 rounded-lg border border-red-200">
+                                <div
+                                    class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-blue-50 transition cursor-pointer">
                                     <img :src="item.image_url"
                                         class="w-12 h-12 object-cover rounded-full border mx-auto" :alt="item.name">
                                     <div class="flex-1">
@@ -296,11 +303,11 @@ $pageTitle = 'Thống Kê & Báo Cáo';
 
                     <!-- Sản phẩm tồn kho nhiều -->
                     <div>
-                        <h4 class="font-bold text-lg mb-4 text-orange-600">Sản Phẩm Tồn Kho Cao</h4>
+                        <h4 class="font-bold text-lg mb-4">Sản Phẩm Tồn Kho Cao</h4>
                         <div class="space-y-3">
                             <template x-for="item in inventoryStats.highStock" :key="item.product_id">
                                 <div
-                                    class="flex items-center gap-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                                    class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-blue-50 transition cursor-pointer">
                                     <img :src="item.image_url" class="w-12 h-12 object-cover rounded">
                                     <div class="flex-1">
                                         <div class="font-medium" x-text="item.name"></div>
@@ -318,7 +325,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
             </div>
         </div>
     </div>
-        <!-- Toast lỗi nổi -->
+    <!-- Toast lỗi nổi -->
     <div id="toast-container" class="z-[60]"></div>
 </div>
 
@@ -334,8 +341,9 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 totalRevenue: 0,
                 totalOrders: 0,
                 avgOrderValue: 0,
-                newCustomers: 0,
-                totalProductsSold: 0
+                totalExpenses: 0,
+                totalProductsSold: 0,
+                totalCountExpenses: 0,
             },
             staffStats: {
                 byOrders: [],
@@ -354,7 +362,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 lowStock: [],
                 highStock: []
             },
-            
+
             // Charts
             staffRevenueChart: null,
             productRevenueChart: null,
@@ -365,11 +373,11 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 const today = new Date();
                 const lastMonth = new Date();
                 lastMonth.setMonth(today.getMonth() - 1); // Lùi lại 1 tháng, giữ nguyên ngày
-                
+
                 // Reset dateRange values trước
                 this.dateRange.from = this.formatDate(lastMonth);
                 this.dateRange.to = this.formatDate(today);
-                
+
                 // Reset flatpickr instances và cập nhật input value
                 if (this.$refs.fromDate._flatpickr) {
                     this.$refs.fromDate._flatpickr.setDate(lastMonth, false);
@@ -379,7 +387,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     this.$refs.toDate._flatpickr.setDate(today, false);
                     this.$refs.toDate.value = this.dateRange.to; // Cập nhật input value thủ công
                 }
-                
+
                 // Manually fetch data once
                 this.fetchAllData();
             },
@@ -391,14 +399,14 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         clearInterval(checkLibraries);
                         this.initDatePickers();
                         this.fetchAllData();
-                        
+
                         // Watch activeTab để render biểu đồ khi chuyển tab
                         this.$watch('activeTab', (newTab, oldTab) => {
                             // Destroy chart của tab cũ trước khi chuyển
                             if (oldTab) {
                                 this.destroyChartForTab(oldTab);
                             }
-                            
+
                             this.$nextTick(() => {
                                 this.renderChartsForTab(newTab);
                             });
@@ -406,9 +414,9 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     }
                 }, 100);
             },
-            
+
             destroyChartForTab(tab) {
-                switch(tab) {
+                switch (tab) {
                     case 'staff':
                         if (this.staffRevenueChart) {
                             this.staffRevenueChart.stop(); // Stop animations
@@ -439,11 +447,11 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         break;
                 }
             },
-            
+
             renderChartsForTab(tab) {
                 // Đợi DOM update và x-show animation xong trước khi render chart
                 setTimeout(() => {
-                    switch(tab) {
+                    switch (tab) {
                         case 'staff':
                             this.renderStaffRevenueChart();
                             break;
@@ -475,12 +483,12 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     maxDate: today, // Không cho chọn ngày trong tương lai quá hôm nay
                     onChange: function (selectedDates, dateStr) {
                         self.dateRange.from = dateStr;
-                        
+
                         // Set maxDate cho toDate = ngày vừa chọn ở fromDate
                         if (self.$refs.toDate._flatpickr && selectedDates[0]) {
                             self.$refs.toDate._flatpickr.set('minDate', selectedDates[0]);
                         }
-                        
+
                         self.fetchAllData();
                     }
                 });
@@ -493,12 +501,12 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     maxDate: today, // Không cho chọn ngày trong tương lai
                     onChange: function (selectedDates, dateStr) {
                         self.dateRange.to = dateStr;
-                        
+
                         // Set maxDate cho fromDate = ngày vừa chọn ở toDate
                         if (self.$refs.fromDate._flatpickr && selectedDates[0]) {
                             self.$refs.fromDate._flatpickr.set('maxDate', selectedDates[0]);
                         }
-                        
+
                         self.fetchAllData();
                     }
                 });
@@ -582,27 +590,27 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     this.staffRevenueChart.destroy();
                     this.staffRevenueChart = null;
                 }
-                
+
                 const data = this.staffStats.byRevenue.slice(0, 10); // Top 10
-                
+
                 // Kiểm tra nếu không có dữ liệu
                 if (!data.length) {
                     return;
                 }
-                
+
                 // Kiểm tra canvas element tồn tại
                 const canvas = this.$refs.staffRevenueChartCanvas;
                 if (!canvas) {
                     console.log('Staff revenue canvas not found');
                     return;
                 }
-                
+
                 // Kiểm tra canvas có đang hiển thị không
                 if (canvas.offsetParent === null) {
                     console.log('Staff revenue canvas is not visible');
                     return;
                 }
-                
+
                 const labels = data.map(item => item.full_name);
                 const revenues = data.map(item => parseFloat(item.total_revenue));
                 const colors = [
@@ -616,52 +624,52 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         console.error('Cannot get context from staff revenue canvas');
                         return;
                     }
-                    
-                this.staffRevenueChart = new Chart(ctx, {
-                    type: 'pie',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            data: revenues,
-                            backgroundColor: colors.slice(0, revenues.length),
-                            borderWidth: 2,
-                            borderColor: '#fff'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        animation: false, // Tắt animation để tránh conflict khi switch tab
-                        plugins: {
-                            legend: {
-                                position: 'right',
-                                labels: {
-                                    padding: 10,
-                                    font: { size: 12 },
-                                    generateLabels: (chart) => {
-                                        const data = chart.data;
-                                        return data.labels.map((label, i) => {
-                                            const value = data.datasets[0].data[i];
-                                            return {
-                                                text: `${label}: ${this.formatMoney(value)}`,
-                                                fillStyle: data.datasets[0].backgroundColor[i],
-                                                hidden: false,
-                                                index: i
-                                            };
-                                        });
+
+                    this.staffRevenueChart = new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: revenues,
+                                backgroundColor: colors.slice(0, revenues.length),
+                                borderWidth: 2,
+                                borderColor: '#fff'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            animation: false, // Tắt animation để tránh conflict khi switch tab
+                            plugins: {
+                                legend: {
+                                    position: 'right',
+                                    labels: {
+                                        padding: 10,
+                                        font: { size: 12 },
+                                        generateLabels: (chart) => {
+                                            const data = chart.data;
+                                            return data.labels.map((label, i) => {
+                                                const value = data.datasets[0].data[i];
+                                                return {
+                                                    text: `${label}: ${this.formatMoney(value)}`,
+                                                    fillStyle: data.datasets[0].backgroundColor[i],
+                                                    hidden: false,
+                                                    index: i
+                                                };
+                                            });
+                                        }
                                     }
-                                }
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: (context) => {
-                                        return `${context.label}: ${this.formatMoney(context.raw)}`;
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: (context) => {
+                                            return `${context.label}: ${this.formatMoney(context.raw)}`;
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-                });
+                    });
                 } catch (err) {
                     console.error('Error rendering staff revenue chart:', err);
                 }
@@ -674,28 +682,28 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     this.productRevenueChart.destroy();
                     this.productRevenueChart = null;
                 }
-                
+
                 const data = this.productStats.byRevenue.slice(0, 10); // Top 10
-                
+
                 // Kiểm tra nếu không có dữ liệu
                 if (!data.length) {
                     console.log('No product revenue data');
                     return;
                 }
-                
+
                 // Kiểm tra canvas element tồn tại
                 const canvas = this.$refs.productRevenueChartCanvas;
                 if (!canvas) {
                     console.log('Product revenue canvas not found');
                     return;
                 }
-                
+
                 // Kiểm tra canvas có đang hiển thị không
                 if (canvas.offsetParent === null) {
                     console.log('Product revenue canvas is not visible');
                     return;
                 }
-                
+
                 const labels = data.map(item => item.name);
                 const revenues = data.map(item => parseFloat(item.total_revenue));
                 const colors = [
@@ -709,52 +717,52 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         console.error('Cannot get context from product revenue canvas');
                         return;
                     }
-                    
-                this.productRevenueChart = new Chart(ctx, {
-                    type: 'pie',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            data: revenues,
-                            backgroundColor: colors.slice(0, revenues.length),
-                            borderWidth: 2,
-                            borderColor: '#fff'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        animation: false, // Tắt animation để tránh conflict khi switch tab
-                        plugins: {
-                            legend: {
-                                position: 'right',
-                                labels: {
-                                    padding: 10,
-                                    font: { size: 12 },
-                                    generateLabels: (chart) => {
-                                        const data = chart.data;
-                                        return data.labels.map((label, i) => {
-                                            const value = data.datasets[0].data[i];
-                                            return {
-                                                text: `${label}: ${this.formatMoney(value)}`,
-                                                fillStyle: data.datasets[0].backgroundColor[i],
-                                                hidden: false,
-                                                index: i
-                                            };
-                                        });
+
+                    this.productRevenueChart = new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: revenues,
+                                backgroundColor: colors.slice(0, revenues.length),
+                                borderWidth: 2,
+                                borderColor: '#fff'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            animation: false, // Tắt animation để tránh conflict khi switch tab
+                            plugins: {
+                                legend: {
+                                    position: 'right',
+                                    labels: {
+                                        padding: 10,
+                                        font: { size: 12 },
+                                        generateLabels: (chart) => {
+                                            const data = chart.data;
+                                            return data.labels.map((label, i) => {
+                                                const value = data.datasets[0].data[i];
+                                                return {
+                                                    text: `${label}: ${this.formatMoney(value)}`,
+                                                    fillStyle: data.datasets[0].backgroundColor[i],
+                                                    hidden: false,
+                                                    index: i
+                                                };
+                                            });
+                                        }
                                     }
-                                }
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: (context) => {
-                                        return `${context.label}: ${this.formatMoney(context.raw)}`;
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: (context) => {
+                                            return `${context.label}: ${this.formatMoney(context.raw)}`;
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-                });
+                    });
                 } catch (err) {
                     console.error('Error rendering product revenue chart:', err);
                 }
@@ -767,28 +775,28 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     this.supplierRevenueChart.destroy();
                     this.supplierRevenueChart = null;
                 }
-                
+
                 const data = this.supplierStats.slice(0, 10); // Top 10
-                
+
                 // Kiểm tra nếu không có dữ liệu
                 if (!data.length) {
                     console.log('No supplier revenue data');
                     return;
                 }
-                
+
                 // Kiểm tra canvas element tồn tại
                 const canvas = this.$refs.supplierRevenueChartCanvas;
                 if (!canvas) {
                     console.log('Supplier revenue canvas not found');
                     return;
                 }
-                
+
                 // Kiểm tra canvas có đang hiển thị không
                 if (canvas.offsetParent === null) {
                     console.log('Supplier revenue canvas is not visible');
                     return;
                 }
-                
+
                 const labels = data.map(item => item.supplier_name);
                 const revenues = data.map(item => parseFloat(item.total_sales_value));
                 const colors = [
@@ -802,52 +810,52 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         console.error('Cannot get context from supplier revenue canvas');
                         return;
                     }
-                    
-                this.supplierRevenueChart = new Chart(ctx, {
-                    type: 'pie',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            data: revenues,
-                            backgroundColor: colors.slice(0, revenues.length),
-                            borderWidth: 2,
-                            borderColor: '#fff'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        animation: false, // Tắt animation để tránh conflict khi switch tab
-                        plugins: {
-                            legend: {
-                                position: 'right',
-                                labels: {
-                                    padding: 10,
-                                    font: { size: 12 },
-                                    generateLabels: (chart) => {
-                                        const data = chart.data;
-                                        return data.labels.map((label, i) => {
-                                            const value = data.datasets[0].data[i];
-                                            return {
-                                                text: `${label}: ${this.formatMoney(value)}`,
-                                                fillStyle: data.datasets[0].backgroundColor[i],
-                                                hidden: false,
-                                                index: i
-                                            };
-                                        });
+
+                    this.supplierRevenueChart = new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: revenues,
+                                backgroundColor: colors.slice(0, revenues.length),
+                                borderWidth: 2,
+                                borderColor: '#fff'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            animation: false, // Tắt animation để tránh conflict khi switch tab
+                            plugins: {
+                                legend: {
+                                    position: 'right',
+                                    labels: {
+                                        padding: 10,
+                                        font: { size: 12 },
+                                        generateLabels: (chart) => {
+                                            const data = chart.data;
+                                            return data.labels.map((label, i) => {
+                                                const value = data.datasets[0].data[i];
+                                                return {
+                                                    text: `${label}: ${this.formatMoney(value)}`,
+                                                    fillStyle: data.datasets[0].backgroundColor[i],
+                                                    hidden: false,
+                                                    index: i
+                                                };
+                                            });
+                                        }
                                     }
-                                }
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: (context) => {
-                                        return `${context.label}: ${this.formatMoney(context.raw)}`;
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: (context) => {
+                                            return `${context.label}: ${this.formatMoney(context.raw)}`;
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-                });
+                    });
                 } catch (err) {
                     console.error('Error rendering supplier revenue chart:', err);
                 }
@@ -860,28 +868,28 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     this.customerRevenueChart.destroy();
                     this.customerRevenueChart = null;
                 }
-                
+
                 const data = this.customerStats.topSpenders.slice(0, 10); // Top 10
-                
+
                 // Kiểm tra nếu không có dữ liệu
                 if (!data.length) {
                     console.log('No customer revenue data');
                     return;
                 }
-                
+
                 // Kiểm tra canvas element tồn tại
                 const canvas = this.$refs.customerRevenueChartCanvas;
                 if (!canvas) {
                     console.log('Customer revenue canvas not found');
                     return;
                 }
-                
+
                 // Kiểm tra canvas có đang hiển thị không
                 if (canvas.offsetParent === null) {
                     console.log('Customer revenue canvas is not visible');
                     return;
                 }
-                
+
                 const labels = data.map(item => item.full_name);
                 const revenues = data.map(item => parseFloat(item.total_spent));
                 const colors = [
@@ -895,52 +903,52 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         console.error('Cannot get context from customer revenue canvas');
                         return;
                     }
-                    
-                this.customerRevenueChart = new Chart(ctx, {
-                    type: 'pie',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            data: revenues,
-                            backgroundColor: colors.slice(0, revenues.length),
-                            borderWidth: 2,
-                            borderColor: '#fff'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        animation: false, // Tắt animation để tránh conflict khi switch tab
-                        plugins: {
-                            legend: {
-                                position: 'right',
-                                labels: {
-                                    padding: 10,
-                                    font: { size: 12 },
-                                    generateLabels: (chart) => {
-                                        const data = chart.data;
-                                        return data.labels.map((label, i) => {
-                                            const value = data.datasets[0].data[i];
-                                            return {
-                                                text: `${label}: ${this.formatMoney(value)}`,
-                                                fillStyle: data.datasets[0].backgroundColor[i],
-                                                hidden: false,
-                                                index: i
-                                            };
-                                        });
+
+                    this.customerRevenueChart = new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: revenues,
+                                backgroundColor: colors.slice(0, revenues.length),
+                                borderWidth: 2,
+                                borderColor: '#fff'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            animation: false, // Tắt animation để tránh conflict khi switch tab
+                            plugins: {
+                                legend: {
+                                    position: 'right',
+                                    labels: {
+                                        padding: 10,
+                                        font: { size: 12 },
+                                        generateLabels: (chart) => {
+                                            const data = chart.data;
+                                            return data.labels.map((label, i) => {
+                                                const value = data.datasets[0].data[i];
+                                                return {
+                                                    text: `${label}: ${this.formatMoney(value)}`,
+                                                    fillStyle: data.datasets[0].backgroundColor[i],
+                                                    hidden: false,
+                                                    index: i
+                                                };
+                                            });
+                                        }
                                     }
-                                }
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: (context) => {
-                                        return `${context.label}: ${this.formatMoney(context.raw)}`;
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: (context) => {
+                                            return `${context.label}: ${this.formatMoney(context.raw)}`;
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-                });
+                    });
                 } catch (err) {
                     console.error('Error rendering customer revenue chart:', err);
                 }

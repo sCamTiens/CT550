@@ -33,6 +33,7 @@ class RoleMiddleware
             '/admin/product-batches',
             '/admin/receipt_vouchers',
             '/admin/expense_vouchers',
+            '/admin/supplier-debts',
         ],
         'Hỗ trợ trực tuyến' => [
             '/admin/customers',
@@ -180,7 +181,7 @@ class RoleMiddleware
                 $sections['catalog'] = true;
             } elseif (in_array($path, ['/admin/stocks', '/admin/purchase-orders', '/admin/stock-outs', '/admin/stocktakes', '/admin/product-batches'])) {
                 $sections['inventory'] = true;
-            } elseif (in_array($path, ['/admin/receipt_vouchers', '/admin/expense_vouchers'])) {
+            } elseif (in_array($path, ['/admin/receipt_vouchers', '/admin/expense_vouchers', '/admin/supplier-debts'])) {
                 $sections['expense'] = true;
             } elseif (in_array($path, ['/admin/coupons', '/admin/promotions'])) {
                 $sections['promo'] = true;

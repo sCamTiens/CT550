@@ -24,6 +24,39 @@ $items = $items ?? [];
         </div>
     </div>
 
+    <!-- Thống kê tổng quan -->
+    <section class="grid gap-4 sm:grid-cols-2 mb-6">
+        <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-5 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-blue-100 text-sm font-medium">Tổng số phiếu thu</div>
+                    <div class="mt-2 text-3xl font-bold" x-text="getTotalReceipts()"></div>
+                    <div class="mt-2 text-xs text-blue-100">
+                        <i class="fa-solid fa-receipt"></i> Đang hiển thị
+                    </div>
+                </div>
+                <div class="bg-white/20 rounded-full p-4">
+                    <i class="fa-solid fa-file-invoice text-3xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-5 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-green-100 text-sm font-medium">Tổng tiền thu</div>
+                    <div class="mt-2 text-2xl font-bold" x-text="formatCurrency(getTotalAmount())"></div>
+                    <div class="mt-2 text-xs text-green-100">
+                        <i class="fa-solid fa-money-bill-wave"></i> Tổng trong danh sách
+                    </div>
+                </div>
+                <div class="bg-white/20 rounded-full p-4">
+                    <i class="fa-solid fa-coins text-3xl"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Table -->
     <div class="bg-white rounded-xl shadow pb-4">
         <div style="overflow-x:auto; max-width:100%;" class="pb-40">
@@ -480,6 +513,17 @@ $items = $items ?? [];
                 });
 
                 return data;
+            },
+
+            // ===== THỐNG KÊ =====
+            getTotalReceipts() {
+                return this.filtered().length;
+            },
+
+            getTotalAmount() {
+                return this.filtered().reduce((sum, receipt) => {
+                    return sum + (parseFloat(receipt.amount) || 0);
+                }, 0);
             },
 
             toggleFilter(key) {

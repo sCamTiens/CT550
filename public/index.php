@@ -205,6 +205,12 @@ $router->group('/admin', function (Router $r): void {
     $r->delete('/api/receipt_vouchers/{id}', [AdminReceiptVoucher::class, 'destroy']);
     $r->get('/api/receipt_vouchers/next-code', [AdminReceiptVoucher::class, 'nextCode']);
 
+    // Supplier Debts (Công nợ nhà cung cấp)
+    $r->get('/supplier-debts', [AdminSupplier::class, 'debtsIndex']);
+    $r->get('/api/supplier-debts/suppliers', [AdminSupplier::class, 'apiGetSuppliersWithDebt']);
+    $r->get('/api/supplier-debts/orders', [AdminSupplier::class, 'apiGetDebtOrders']);
+    $r->get('/supplier-debts/detail/{id}', [AdminSupplier::class, 'debtDetail']);
+
     // Orders (Quản lý bán hàng)
     $r->get('/orders', [AdminOrder::class, 'index']);
     $r->get('/api/orders', [AdminOrder::class, 'apiIndex']);

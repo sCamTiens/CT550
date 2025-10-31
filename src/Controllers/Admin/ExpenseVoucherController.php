@@ -40,12 +40,17 @@ class ExpenseVoucherController extends BaseAdminController
             $items = $this->repo->all();
             header('Content-Type: application/json; charset=utf-8');
             http_response_code(201);
-            echo json_encode(['items' => $items], JSON_UNESCAPED_UNICODE);
+            echo json_encode([
+                'success' => true,
+                'message' => 'Thêm phiếu chi thành công',
+                'items' => $items
+            ], JSON_UNESCAPED_UNICODE);
             exit;
         } catch (\Throwable $e) {
             http_response_code(500);
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
+                'success' => false,
                 'error' => $e->getMessage(),
                 'message' => $e->getMessage(),
                 'file' => $e->getFile(),
@@ -102,7 +107,7 @@ class ExpenseVoucherController extends BaseAdminController
     {
         $code = $this->repo->getNextCode();
         header('Content-Type: application/json; charset=utf-8');
-        echo json_encode(['code' => $code], JSON_UNESCAPED_UNICODE);
+        echo json_encode(['success' => true, 'code' => $code], JSON_UNESCAPED_UNICODE);
         exit;
     }
 

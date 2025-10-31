@@ -237,7 +237,8 @@ $allowedSections = RoleMiddleware::getAllowedSections();
             <button @click="groups.expense=!groups.expense" :class="[
                     'w-full flex justify-between items-center px-3 py-2 rounded',
                     (currentPath.includes('/admin/receipt_vouchers') 
-                    || currentPath.includes('/admin/expense_vouchers'))
+                    || currentPath.includes('/admin/expense_vouchers')
+                    || currentPath.includes('/admin/supplier-debts'))
                     ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white'
                 ]">
                 <div class="flex items-center gap-2">
@@ -278,6 +279,17 @@ $allowedSections = RoleMiddleware::getAllowedSections();
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 22v-4m0 0l-2 2m2-2l2 2" />
                     </svg>
                     Phiếu chi
+                </a>
+
+                <a href="/admin/supplier-debts"
+                    :class="['flex items-center gap-2 px-3 py-2 rounded', currentPath.startsWith('/admin/supplier-debts') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white']">
+                    <!-- Debt icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                    Công nợ NCC
                 </a>
             </div>
         </div>
