@@ -21,46 +21,54 @@ $items = $items ?? [];
       Tạo phiếu kiểm kê
     </button>
   </div>
+
+  <!-- Table -->
   <div class="bg-white rounded-xl shadow pb-4">
-    <div style="overflow-x:auto; max-width:100%;" class="pb-40">
-      <table style="width:1200px; min-width:900px; border-collapse:collapse;">
-        <thead>
-          <tr class="bg-gray-50 text-slate-600">
-            <th class="py-2 px-4 text-center" style="min-width: 120px;">Thao tác</th>
-            <?= textFilterPopover('id', 'Mã kiểm kê') ?>
-            <?= textFilterPopover('created_by_name', 'Người tạo') ?>
-            <?= dateFilterPopover('created_at', 'Ngày tạo') ?>
-            <?= textFilterPopover('note', 'Ghi chú') ?>
-          </tr>
-        </thead>
-        <tbody>
-          <template x-for="s in paginated()" :key="s.id">
-            <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
-              <td class="py-2 px-4 text-center">
-                <button @click.stop="viewDetail(s.id)"
-                  class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
-                  title="Xem chi tiết">
-                  <i class="fa-solid fa-eye"></i>
-                </button>
-              </td>
-              <td class="py-2 px-4 break-words whitespace-pre-line text-center" x-text="s.id"></td>
-              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.created_by_name"></td>
-              <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.created_at"></td>
-              <td class="py-2 px-4 break-words whitespace-pre-line"
-                :class="(s.note || '—') === '—' ? 'text-center' : 'text-left'" x-text="s.note || '—'"></td>
+    <!-- Loading overlay bên trong bảng -->
+    <template x-if="loading">
+      <div class="absolute inset-0 flex flex-col items-center justify-center bg-white bg-opacity-70 z-10">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <p class="mt-2 text-gray-600">Đang tải dữ liệu...</p>
+        </div>
+        </template> <div style="overflow-x:auto; max-width:100%;" class="pb-40">
+        <table style="width:100%; min-width:1200px; border-collapse:collapse;">
+          <thead>
+            <tr class="bg-gray-50 text-slate-600">
+              <th class="py-2 px-4 text-center" style="min-width: 120px;">Thao tác</th>
+              <?= textFilterPopover('id', 'Mã kiểm kê') ?>
+              <?= textFilterPopover('created_by_name', 'Người tạo') ?>
+              <?= dateFilterPopover('created_at', 'Ngày tạo') ?>
+              <?= textFilterPopover('note', 'Ghi chú') ?>
             </tr>
-          </template>
-          <tr x-show="!loading && filtered().length===0">
-            <td colspan="5" class="py-12 text-center text-slate-500">
-              <div class="flex flex-col items-center justify-center">
-                <img src="/assets/images/Null.png" alt="Trống" class="w-40 h-24 mb-3 opacity-80">
-                <div class="text-lg text-slate-300">Trống</div>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            <template x-for="s in paginated()" :key="s.id">
+              <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
+                <td class="py-2 px-4 text-center">
+                  <button @click.stop="viewDetail(s.id)"
+                    class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                    title="Xem chi tiết">
+                    <i class="fa-solid fa-eye"></i>
+                  </button>
+                </td>
+                <td class="py-2 px-4 break-words whitespace-pre-line text-center" x-text="s.id"></td>
+                <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.created_by_name"></td>
+                <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.created_at"></td>
+                <td class="py-2 px-4 break-words whitespace-pre-line"
+                  :class="(s.note || '—') === '—' ? 'text-center' : 'text-left'" x-text="s.note || '—'"></td>
+              </tr>
+            </template>
+            <tr x-show="!loading && filtered().length===0">
+              <td colspan="5" class="py-12 text-center text-slate-500">
+                <div class="flex flex-col items-center justify-center">
+                  <img src="/assets/images/Null.png" alt="Trống" class="w-40 h-24 mb-3 opacity-80">
+                  <div class="text-lg text-slate-300">Trống</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+          </table>
+      </div>
   </div>
   <!-- Pagination -->
   <div class="flex items-center justify-center mt-4 px-4 gap-6">
@@ -303,7 +311,7 @@ $items = $items ?? [];
   function stocktakePage() {
     const api = {
       list: '/admin/api/stocktakes',
-      create: '/admin/api/stocktakes/create',
+      create:  '/admin/api/stocktakes/create',
       detail: '/admin/api/stocktakes/',
       products: '/admin/api/products/stock-list',
     };
@@ -686,7 +694,7 @@ $items = $items ?? [];
                     <div class="flex-1">${msg}</div>
                 `;
 
-        box.appendChild(toast);
+                box.appendChild(toast);
         setTimeout(() => toast.remove(), 3000);
       },
     }

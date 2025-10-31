@@ -5,6 +5,36 @@ $items = $items ?? [];
 
 <?php require __DIR__ . '/../partials/layout-start.php'; ?>
 
+<style>
+    /* Cải thiện hiển thị filter trong bảng modal */
+    .modal-table thead th {
+        white-space: nowrap;
+        vertical-align: middle;
+        text-align: center;
+        padding: 0.6rem 0.85rem;
+    }
+
+    .modal-table th .filter-trigger {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        font-weight: 500;
+        color: #334155;
+    }
+
+    .modal-table th .filter-popover {
+        width: 220px !important;
+        right: 0 !important;
+    }
+
+    .modal-table td {
+        white-space: nowrap;
+        padding: 0.5rem 0.75rem;
+        vertical-align: middle;
+    }
+</style>
+
 <!-- Breadcrumb + Title -->
 <nav class="text-sm text-slate-500 mb-4">
     Admin / Quản lý công nợ / <span class="text-slate-800 font-medium">Công nợ nhà cung cấp</span>
@@ -71,14 +101,15 @@ $items = $items ?? [];
         </div>
     </div>
 
-    <!-- Loading -->
-    <div x-show="loading" class="text-center py-8">
-        <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        <p class="mt-2 text-gray-600">Đang tải dữ liệu...</p>
-    </div>
-
     <!-- Table -->
     <div x-show="!loading" class="bg-white rounded-xl shadow pb-4">
+        <!-- Loading overlay bên trong bảng -->
+        <template x-if="loading">
+            <div class="absolute inset-0 flex flex-col items-center justify-center bg-white bg-opacity-70 z-10">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <p class="mt-2 text-gray-600">Đang tải dữ liệu...</p>
+            </div>
+        </template>
         <div style="overflow-x:auto; max-width:100%;" class="pb-40">
             <table style="width:120%; min-width:1200px; border-collapse:collapse;">
                 <thead>
@@ -226,30 +257,26 @@ $items = $items ?? [];
                     </div>
 
                     <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
+                        <table style="width:140%; min-width:1200px; border-collapse:collapse;">
                             <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Thao
-                                        tác</th>
-                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mã
-                                        phiếu</th>
-                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ngày
-                                        nhập</th>
-                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                                        Người tạo</th>
-                                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                                        Tổng tiền</th>
-                                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Đã
-                                        trả</th>
-                                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Còn
-                                        nợ</th>
-                                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
-                                        Trạng thái</th>
+                                <tr class="text-slate-600 text-xs font-semibold uppercase tracking-wide">
+                                    <th class="px-4 py-3 text-center">Thao tác</th>
+                                    <?= textFilterPopover('code', 'Mã phiếu nhập') ?>
+                                    <?= DateFilterPopover('date', 'Ngày nhập') ?>
+                                    <?= textFilterPopover('created_by_name', 'Người tạo') ?>
+                                    <?= numberFilterPopover('total_amount', 'Tổng tiền') ?>
+                                    <?= numberFilterPopover('paid_amount', 'Đã thanh toán') ?>
+                                    <?= numberFilterPopover('remaining_amount', 'Còn nợ') ?>
+                                    <?= selectFilterPopover('status', 'Trạng thái', [
+                                        '' => '-- Tất cả --',
+                                        'Chưa đối soát' => 'Tiền mặt',
+                                        'Đã thanh toán một phần' => 'Chuyển khoản'
+                                    ]) ?>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
-                                <template x-for="order in debtOrders" :key="order.id">
-                                    <tr class="hover:bg-gray-50">
+                                <template x-for="order in filteredDetail()" :key="order.id">
+                                    <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
                                         <td class="px-4 py-3 text-center">
                                             <button @click.stop="openPaymentModal(order)"
                                                 class="px-3 py-1 border border-[#002975] hover:bg-[#002975] hover:text-white text-[#002975] text-xs font-medium rounded transition-colors"
@@ -269,11 +296,16 @@ $items = $items ?? [];
                                             x-text="formatMoney(order.paid_amount)"></td>
                                         <td class="px-4 py-3 text-sm text-right text-red-600 font-bold"
                                             x-text="formatMoney(order.remaining_debt)"></td>
-                                        <td class="px-4 py-3 text-center">
-                                            <span class="px-2 py-1 text-xs font-semibold rounded-full" :class="{
-                                                      'bg-yellow-100 text-yellow-800': getPaymentStatus(order) === 'Đã thanh toán một phần',
-                                                      'bg-red-100 text-red-800': getPaymentStatus(order) === 'Chưa đối soát',
-                                                  }" x-text="getPaymentStatus(order)"></span>
+                                        <td class="px-3 py-2 text-center align-middle">
+                                            <div class="flex justify-center items-center h-full">
+                                                <span class="px-2 py-[3px] rounded text-xs font-medium" :class="[
+                                                        getPaymentStatus(order) === 'Chưa đối soát' && 'bg-red-100 text-red-800',
+                                                        getPaymentStatus(order) === 'Đã thanh toán một phần' && 'bg-yellow-100 text-yellow-800',
+                                                        getPaymentStatus(order) === 'Đã thanh toán hết' && 'bg-green-100 text-green-800'
+                                                    ]" x-text="getPaymentStatus(order)">
+                                                </span>
+
+                                            </div>
                                         </td>
                                     </tr>
                                 </template>
@@ -598,6 +630,110 @@ $items = $items ?? [];
                 this.openFilter[key] = false;
             },
 
+            getPaymentStatus(order) {
+                const paid = parseFloat(order.paid_amount || 0);
+                const total = parseFloat(order.total_amount || 0);
+
+                if (paid === 0) return 'Chưa đối soát';
+                if (paid >= total) return 'Đã thanh toán hết';
+                return 'Đã thanh toán một phần';
+            },
+
+            openFilterDetail: {
+                code: false,
+                date: false,
+                total_amount: false,
+                paid_amount: false,
+                remaining_amount: false,
+                created_by_name: false,
+                status: false,
+            },
+
+            filtersDetail: {
+                code: '',
+                date: '',
+                total_amount_type: '', total_amount_value: '', total_amount_from: '', total_amount_to: '',
+                paid_amount_type: '', paid_amount_value: '', paid_amount_from: '', paid_amount_to: '',
+                remaining_amount_type: '', remaining_amount_value: '', remaining_amount_from: '', remaining_amount_to: '',
+                created_by_name: '',
+                status: '',
+            },
+
+            filteredDetail() {
+                let data = this.debtOrders || [];
+
+                // --- Lọc theo text (mã phiếu, ngày) ---
+                ['code'].forEach(key => {
+                    if (this.filtersDetail[key]) {
+                        data = data.filter(o =>
+                            this.applyFilter(o[key], 'contains', {
+                                value: this.filtersDetail[key],
+                                dataType: 'text'
+                            })
+                        );
+                    }
+                });
+
+                // --- Lọc theo trạng thái ---
+                if (this.filtersDetail.status) {
+                    data = data.filter(o =>
+                        this.getPaymentStatus(o) === this.filtersDetail.status
+                    );
+                }
+
+                // --- Lọc theo ngày ---
+                ['date'].forEach(key => {
+                    if (this.filters[`${key}_type`]) {
+                        data = data.filter(s =>
+                            this.applyFilter(s[key], this.filters[`${key}_type`], {
+                                value: this.filters[`${key}_value`],
+                                from: this.filters[`${key}_from`],
+                                to: this.filters[`${key}_to`],
+                                dataType: 'date'
+                            })
+                        );
+                    }
+                });
+
+                // --- Lọc theo số ---
+                ['total_amount', 'paid_amount', 'remaining_amount'].forEach(key => {
+                    if (this.filtersDetail[`${key}_type`]) {
+                        data = data.filter(o =>
+                            this.applyFilter(o[key], this.filtersDetail[`${key}_type`], {
+                                value: this.filtersDetail[`${key}_value`],
+                                from: this.filtersDetail[`${key}_from`],
+                                to: this.filtersDetail[`${key}_to`],
+                                dataType: 'number'
+                            })
+                        );
+                    }
+                });
+
+                return data;
+            },
+
+            toggleFilterDetail(key) {
+                for (const k in this.openFilterDetail) this.openFilterDetail[k] = false;
+                this.openFilterDetail[key] = true;
+            },
+            closeFilterDetail(key) { this.openFilterDetail[key] = false; },
+            resetFilterDetail(key) {
+                if (['total_amount', 'paid_amount', 'remaining_amount'].includes(key)) {
+                    this.filtersDetail[`${key}_type`] = '';
+                    this.filtersDetail[`${key}_value`] = '';
+                    this.filtersDetail[`${key}_from`] = '';
+                    this.filtersDetail[`${key}_to`] = '';
+                } else if (['date'].includes(key)) {
+                    this.filters[`${key}_type`] = '';
+                    this.filters[`${key}_value`] = '';
+                    this.filters[`${key}_from`] = '';
+                    this.filters[`${key}_to`] = '';
+                } else {
+                    this.filtersDetail[key] = '';
+                }
+                this.openFilterDetail[key] = false;
+            },
+
             paginated() {
                 const start = (this.currentPage - 1) * this.perPage;
                 return this.filtered().slice(start, start + this.perPage);
@@ -610,7 +746,6 @@ $items = $items ?? [];
                 if (p > this.totalPages()) p = this.totalPages();
                 this.currentPage = p;
             },
-
 
             // ===== UTILITIES =====
             formatCurrency(n) {
@@ -705,15 +840,6 @@ $items = $items ?? [];
                 return this.items.reduce((sum, s) => sum + parseInt(s.debt_orders_count || 0), 0);
             },
 
-            getPaymentStatus(order) {
-                const paid = parseFloat(order.paid_amount || 0);
-                const total = parseFloat(order.total_amount || 0);
-
-                if (paid === 0) return 'Chưa đối soát';
-                if (paid >= total) return 'Đã thanh toán hết';
-                return 'Đã thanh toán một phần';
-            },
-
             openPaymentModal(order) {
                 this.selectedOrder = order;
                 this.paymentForm = {
@@ -775,22 +901,22 @@ $items = $items ?? [];
 
                     if (data.success) {
                         this.showToast('Thêm phiếu chi thành công!', 'success');
-                        
+
                         // Lưu lại supplier ID trước khi reload
                         const currentSupplierId = this.selectedSupplier.id;
-                        
+
                         // Đóng modal thanh toán
                         this.showPaymentModal = false;
 
                         // Reload lại danh sách suppliers (cập nhật tổng nợ)
                         await this.loadSuppliers();
-                        
+
                         // Tìm lại supplier từ danh sách mới và cập nhật selectedSupplier
                         const updatedSupplier = this.items.find(s => s.id === currentSupplierId);
                         if (updatedSupplier) {
                             this.selectedSupplier = updatedSupplier;
                         }
-                        
+
                         // Reload lại danh sách orders trong modal chi tiết
                         await this.reloadOrders(currentSupplierId);
                     } else {

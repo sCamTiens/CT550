@@ -36,6 +36,13 @@ $items = $items ?? [];
 
     <!-- Table -->
     <div class="bg-white rounded-xl shadow pb-4">
+        <!-- Loading overlay bên trong bảng -->
+        <template x-if="loading">
+            <div class="absolute inset-0 flex flex-col items-center justify-center bg-white bg-opacity-70 z-10">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <p class="mt-2 text-gray-600">Đang tải dữ liệu...</p>
+            </div>
+        </template>
         <div style="overflow-x:auto; max-width:100%;" class="pb-40">
             <table style="width:230%; min-width:1250px; border-collapse:collapse;">
                 <thead>
@@ -438,8 +445,12 @@ $items = $items ?? [];
                                     <template x-for="(item, idx) in viewItem.items" :key="idx">
                                         <tr class="border-t hover:bg-gray-50">
                                             <td class="py-2 px-3" x-text="idx + 1"></td>
-                                            <td class="py-2 px-3 break-words" style="max-width: 200px; word-wrap: break-word; white-space: normal;" x-text="item.product_name || '—'"></td>
-                                            <td class="py-2 px-3 break-words" style="max-width: 150px; word-wrap: break-word; white-space: normal;" x-text="item.batch_code || '—'"></td>
+                                            <td class="py-2 px-3 break-words"
+                                                style="max-width: 200px; word-wrap: break-word; white-space: normal;"
+                                                x-text="item.product_name || '—'"></td>
+                                            <td class="py-2 px-3 break-words"
+                                                style="max-width: 150px; word-wrap: break-word; white-space: normal;"
+                                                x-text="item.batch_code || '—'"></td>
                                             <td class="py-2 px-3 text-right"
                                                 x-text="formatCurrency(item.quantity || 0)">
                                             </td>

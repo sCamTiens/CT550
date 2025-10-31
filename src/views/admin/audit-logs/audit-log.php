@@ -167,6 +167,13 @@ $pageTitle = 'Lịch Sử Thao Tác';
 
     <!-- Table -->
     <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <!-- Loading overlay bên trong bảng -->
+        <template x-if="loading">
+            <div class="absolute inset-0 flex flex-col items-center justify-center bg-white bg-opacity-70 z-10">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <p class="mt-2 text-gray-600">Đang tải dữ liệu...</p>
+            </div>
+        </template>
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead class="bg-gray-50">

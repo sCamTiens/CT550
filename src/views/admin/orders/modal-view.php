@@ -49,11 +49,11 @@
                             <div class="font-medium" x-text="item.product_name"></div>
                             <div class="text-xs text-gray-500">SKU: <span x-text="item.product_sku || '—'"></span></div>
                         </td>
-                        <td class="px-3 py-2 text-center font-semibold" x-text="item.qty"></td>
+                        <td class="px-3 py-2 text-center font-semibold" x-text="item.quantity"></td>
                         <td class="px-3 py-2 text-right" x-text="formatCurrency(item.unit_price)">
                         </td>
                         <td class="px-3 py-2 text-right font-semibold"
-                            x-text="formatCurrency(item.qty * item.unit_price)"></td>
+                            x-text="formatCurrency(item.quantity * item.unit_price)"></td>
                     </tr>
                 </template>
                 <tr x-show="!viewOrder.items || viewOrder.items.length === 0">

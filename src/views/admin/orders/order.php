@@ -32,6 +32,13 @@ $items = $items ?? [];
 
     <!-- Table -->
     <div class="bg-white rounded-xl shadow pb-4">
+        <!-- Loading overlay bên trong bảng -->
+        <template x-if="loading">
+            <div class="absolute inset-0 flex flex-col items-center justify-center bg-white bg-opacity-70 z-10">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <p class="mt-2 text-gray-600">Đang tải dữ liệu...</p>
+            </div>
+        </template>
         <div style="overflow-x:auto; max-width:100%;" class="pb-40">
             <table style="width:280%; min-width:1250px; border-collapse:collapse;">
                 <thead>
@@ -264,7 +271,7 @@ $items = $items ?? [];
                                                         </div>
                                                         <!-- Số lượng -->
                                                         <div>
-                                                            <div class="text-right" x-text="item.qty || 0"></div>
+                                                            <div class="text-right" x-text="item.quantity || 0"></div>
                                                         </div>
                                                         <!-- Đơn giá -->
                                                         <div>
@@ -707,7 +714,7 @@ $items = $items ?? [];
                 // --- Lọc theo số ---
                 if (this.filters.qty_type) {
                     data = data.filter(o => {
-                        const allQty = o.items?.map(i => Number(i.qty) || 0) || [];
+                        const allQty = o.items?.map(i => Number(i.quantity) || 0) || [];
                         const totalQty = allQty.reduce((a, b) => a + b, 0);
                         return this.applyFilter(totalQty, this.filters.qty_type, {
                             value: this.filters.qty_value,
@@ -1294,24 +1301,22 @@ $items = $items ?? [];
 
             async openViewModal(o) {
 
-                // Copy order data và đảm bảo items được load
+                // Copy order data
                 this.viewOrder = {
                     ...o,
-                    items: o.items || []
+                    items: []
                 };
 
-
-                // Nếu chưa có items, load lại
-                if (!this.viewOrder.items || this.viewOrder.items.length === 0) {
-                    try {
-                        const res = await fetch(`/admin/api/orders/${o.id}/items`);
-                        if (res.ok) {
-                            const data = await res.json();
-                            this.viewOrder.items = data.items || [];
-                        }
-                    } catch (e) {
-                        this.viewOrder.items = [];
+                // LUÔN load lại items từ API để đảm bảo có đầy đủ dữ liệu qty
+                try {
+                    const res = await fetch(`/admin/api/orders/${o.id}/items`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        this.viewOrder.items = data.items || [];
                     }
+                } catch (e) {
+                    console.error('Error loading order items:', e);
+                    this.viewOrder.items = [];
                 }
 
                 // Load customers và products trước để hiển thị đúng tên
@@ -1336,7 +1341,7 @@ $items = $items ?? [];
                 // Map items từ viewOrder sang orderItems để hiển thị trong form.php
                 this.orderItems = (this.viewOrder.items || []).map(item => ({
                     product_id: String(item.product_id),
-                    quantity: item.qty,
+                    quantity: item.quantity,
                     unit_price: item.unit_price
                 }));
 
@@ -1364,7 +1369,7 @@ $items = $items ?? [];
                     const data = await res.json();
                     this.orderItems = (data.items || []).map(item => ({
                         product_id: String(item.product_id),
-                        quantity: item.qty,
+                        quantity: item.quantity,
                         unit_price: item.unit_price
                     }));
                     if (this.orderItems.length === 0) {

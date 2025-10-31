@@ -33,7 +33,16 @@ $items = $items ?? [];
         @click="openCreate()">+ Thêm khách hàng</button>
     </div>
   </div>
+
+  <!-- Table -->
   <div class="bg-white rounded-xl shadow pb-4">
+    <!-- Loading overlay bên trong bảng -->
+    <template x-if="loading">
+      <div class="absolute inset-0 flex flex-col items-center justify-center bg-white bg-opacity-70 z-10">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <p class="mt-2 text-gray-600">Đang tải dữ liệu...</p>
+      </div>
+    </template>
     <div style="overflow-x:auto; max-width:100%;" class="pb-40">
       <table style="width:190%; min-width:1200px; border-collapse:collapse;">
         <thead>
