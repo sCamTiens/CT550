@@ -70,7 +70,7 @@
 
   <!-- Giá nhập (cost_price) -->
   <div>
-    <label class="block text-sm text-black font-semibold mb-1">Giá nhập</label>
+    <label class="block text-sm text-black font-semibold mb-1">Giá nhập <span class="text-red-500">*</span></label>
     <input x-model="form.cost_priceFormatted"
       @input="onCostPriceInput($event); touched.cost_price && validateField('cost_price')"
       @blur="touched.cost_price = true; validateField('cost_price')"

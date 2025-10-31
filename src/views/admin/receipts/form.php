@@ -112,13 +112,15 @@
         <div class="relative">
             <input type="text" x-model="search" @focus="open = true; filtered = filteredOrders"
                 @input="open = true; filtered = filteredOrders.filter(o => o.code.toLowerCase().includes(search.toLowerCase()))"
-                @blur="touched.order_id = true; validateField('order_id')"
+                @blur="touched.order_id = true; validateField('order_id')" :disabled="!form.customer_id"
                 class="w-full border rounded px-3 py-2 pr-8 bg-white text-sm cursor-pointer focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
-                :class="(touched.order_id && errors.order_id) ? 'border-red-500' : 'border-gray-300'"
-                :placeholder="form.customer_id ? '-- Chọn đơn hàng --' : 'Chọn khách hàng trước'"
-                :disabled="!form.customer_id" />
+                :class="[
+            (touched.order_id && errors.order_id) ? 'border-red-500' : 'border-gray-300',
+            form.order_id === '' ? 'text-slate-400' : 'text-slate-900',
+            !form.customer_id ? 'bg-gray-100 cursor-not-allowed' : ''
+        ]" :placeholder="form.customer_id ? '-- Chọn đơn hàng --' : 'Chọn khách hàng trước'" />
 
-            <button x-show="form.order_id" type="button" @click.stop="clear()"
+            <button x-show="form.order_id" type="button" @click.stop="clear()" :disabled="!form.customer_id"
                 class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 focus:outline-none">
                 ✕
             </button>

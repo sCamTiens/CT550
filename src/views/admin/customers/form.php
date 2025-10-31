@@ -5,6 +5,7 @@
     <label class="block text-sm text-black font-semibold mb-1">Họ tên <span class="text-red-500">*</span></label>
     <input x-model="form.full_name" @input="clearError('full_name'); validateField('full_name')"
       @blur="touched.full_name = true; validateField('full_name')" class="border rounded px-3 py-2 w-full"
+      :class="(touched.full_name && errors.full_name) ? 'border-red-500' : 'border-gray-300'"
       placeholder="Nhập họ tên" maxlength="250" required>
     <p x-show="touched.full_name && errors.full_name" x-text="errors.full_name" class="text-red-500 text-xs mt-1"></p>
   </div>
@@ -14,15 +15,17 @@
     <label class="block text-sm text-black font-semibold mb-1">Email <span class="text-red-500">*</span></label>
     <input type="email" x-model="form.email" @input="clearError('email'); validateField('email')"
       @blur="touched.email = true; validateField('email')" class="border rounded px-3 py-2 w-full"
+      :class="(touched.email && errors.email) ? 'border-red-500' : 'border-gray-300'"
       placeholder="Nhập email" maxlength="250" required>
     <p x-show="touched.email && errors.email" x-text="errors.email" class="text-red-500 text-xs mt-1"></p>
   </div>
 
   <!-- Số điện thoại -->
   <div>
-    <label class="block text-sm text-black font-semibold mb-1">Số điện thoại</label>
+    <label class="block text-sm text-black font-semibold mb-1">Số điện thoại<span class="text-red-500">*</span></label>
     <input type="text" x-model="form.phone" @input="clearError('phone'); validateField('phone')"
       @blur="touched.phone = true; validateField('phone')" class="border rounded px-3 py-2 w-full"
+      :class="(touched.phone && errors.phone) ? 'border-red-500' : 'border-gray-300'"
       placeholder="Nhập số điện thoại" maxlength="32">
     <p x-show="touched.phone && errors.phone" x-text="errors.phone" class="text-red-500 text-xs mt-1"></p>
   </div>
@@ -92,6 +95,7 @@
     </label>
     <input x-model="form.username" @input="clearError('username'); validateField('username')"
       @blur="touched.username = true; validateField('username')" class="border rounded px-3 py-2 w-full"
+      :class="(touched.username && errors.username) ? 'border-red-500' : 'border-gray-300'"
       placeholder="Nhập tài khoản" maxlength="50" required :disabled="form.id">
     <p x-show="touched.username && errors.username" x-text="errors.username" class="text-red-500 text-xs mt-1"></p>
   </div>
@@ -106,6 +110,7 @@
             @input="clearError('password'); validateField('password')"
             @blur="touched.password = true; validateField('password'); if (!form.password) { errors.password = 'Mật khẩu không được để trống' } else if (form.password.length < 6) { errors.password = 'Mật khẩu phải ít nhất 6 ký tự' }"
             class="border rounded px-3 py-2 w-full pr-10" placeholder="Nhập mật khẩu" minlength="6" maxlength="50"
+            :class="(touched.password && errors.password) ? 'border-red-500' : 'border-gray-300'"
             autocomplete="new-password" required>
           <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900"
             @click="showPassword = !showPassword" tabindex="-1">
@@ -129,6 +134,7 @@
           @input="clearError('password_confirm'); validateField('password_confirm')"
           @blur="touched.password_confirm = true; validateField('password_confirm'); if (!form.password_confirm) { errors.password_confirm = 'Vui lòng nhập lại mật khẩu' } else if (form.password !== form.password_confirm) { errors.password_confirm = 'Mật khẩu không khớp' }"
           class="border rounded px-3 py-2 w-full pr-10" placeholder="Nhập lại mật khẩu" minlength="6" maxlength="50"
+          :class="(touched.password_confirm && errors.password_confirm) ? 'border-red-500' : 'border-gray-300'"
           autocomplete="new-password" required>
         <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900"
           @click="showPasswordConfirm = !showPasswordConfirm" tabindex="-1">
@@ -160,7 +166,7 @@
             }
         }" x-effect="reset()" @click.away="open = false">
 
-    <label class="block text-sm text-black font-semibold mb-1">Trạng thái</label>
+    <label class="block text-sm text-black font-semibold mb-1">Trạng thái <span class="text-red-500">*</span></label>
 
     <div class="relative">
       <input type="text" x-model="search" @focus="open = true" readonly

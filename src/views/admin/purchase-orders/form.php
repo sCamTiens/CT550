@@ -81,6 +81,7 @@
                 <input x-model="form.created_at" @blur="touched.created_at=true; validateField('created_at')"
                     @input="touched.created_at && validateField('created_at')" type="text"
                     class="w-full border border-gray-300 rounded-md px-3 py-2 purchase-date-picker"
+                    :class="(touched.created_at && errors.created_at) ? 'border-red-500' : 'border-gray-300'"
                     placeholder="Chọn ngày nhập" autocomplete="off">
                 <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                     <i class="fa-regular fa-calendar"></i>
@@ -104,7 +105,8 @@
                     touched.payment_status=true; 
                     validateField('payment_status')
                 "
-                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]">
+                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
+                :class="(touched.payment_status && errors.payment_status) ? 'border-red-500' : 'border-gray-300'">
                 <option value="Chưa đối soát">Chưa đối soát</option>
                 <option value="Đã thanh toán một phần">Đã thanh toán một phần</option>
                 <option value="Đã thanh toán hết">Đã thanh toán hết</option>
@@ -144,23 +146,32 @@
         <!-- Công nợ (Tổng tiền - Số tiền thanh toán) -->
         <div x-show="form.payment_status === 'Đã thanh toán một phần' || form.payment_status === 'Chưa đối soát'">
             <label class="block text-sm text-black font-semibold mb-1">Công nợ</label>
-            <input readonly 
-                :value="(calculateTotal() - (form.paid_amount || 0)).toLocaleString('vn-VN') + ' đ'"
+            <input readonly :value="(calculateTotal() - (form.paid_amount || 0)).toLocaleString('vn-VN') + ' đ'"
                 class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-gray-50 font-semibold text-red-600">
         </div>
 
         <!-- Ngày hẹn thanh toán (chỉ hiện khi chưa đối soát hoặc thanh toán một phần) -->
         <div x-show="form.payment_status === 'Chưa đối soát' || form.payment_status === 'Đã thanh toán một phần'">
-            <label class="block text-sm text-black font-semibold mb-1">Ngày hẹn thanh toán</label>
-            
+            <label class="block text-sm text-black font-semibold mb-1">
+                Ngày hẹn thanh toán <span class="text-red-500">*</span>
+            </label>
+
             <div class="relative">
-                <input x-model="form.due_date" type="text"
-                    class="w-full border border-gray-300 rounded-md px-3 py-2 due-date-picker"
-                    placeholder="Chọn ngày" autocomplete="off">
+                <input x-model="form.due_date" type="text" placeholder="Chọn ngày" autocomplete="off"
+                    class="w-full border rounded-md px-3 py-2 due-date-picker text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
+                    :class="{
+                'border-gray-300': !(touched.due_date && !form.due_date),
+                'border-red-500': touched.due_date && !form.due_date
+            }" @blur="touched.due_date = true">
                 <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                     <i class="fa-regular fa-calendar"></i>
                 </span>
             </div>
+
+            <!-- Hiển thị lỗi -->
+            <p x-show="touched.due_date && !form.due_date" class="text-red-500 text-xs mt-1">
+                Vui lòng chọn ngày hẹn thanh toán
+            </p>
         </div>
 
         <!-- Danh sách mặt hàng -->
@@ -179,8 +190,8 @@
                     <div class="col-span-3">Tên sản phẩm</div>
                     <div class="col-span-1">SL</div>
                     <div class="col-span-2">Giá nhập</div>
-                    <div class="col-span-2">NSX</div>
-                    <div class="col-span-2">HSD</div>
+                    <div class="col-span-2">Ngày sản xuất <span class="text-red-500">*</span></div>
+                    <div class="col-span-2">Hạn sử dụng <span class="text-red-500">*</span></div>
                     <div class="col-span-2"></div>
                 </div>
 
@@ -239,8 +250,7 @@
                                 <input type="text" x-model="search" @focus="open = true; filter()" @input="filter()"
                                     @blur="touchedLines[idx]=true; validateField('product', idx)"
                                     class="w-full border border-gray-300 rounded-md px-3 py-2 pr-8 bg-white text-sm cursor-pointer focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
-                                    :placeholder="l.product_id ? '' : '-- Chọn sản phẩm --'"
-                                    :class="l.product_id ? 'text-black' : 'text-gray-500'" />
+                                    :placeholder="l.product_id ? '' : '-- Chọn sản phẩm --'" />
 
                                 <!-- Xóa -->
                                 <button x-show="l.product_id" type="button" @click.stop="clear()"
@@ -309,22 +319,35 @@
 
                         <!-- Ngày sản xuất (NSX) -->
                         <div class="col-span-2">
-                            <input x-model="l.mfg_date" type="text" :class="'line-mfg-date-' + idx"
-                                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                                placeholder="Chọn ngày" autocomplete="off" />
+                            <input x-model="l.mfg_date" type="text"
+                                :class="'w-full border border-gray-300 rounded-md px-3 py-2 text-sm line-mfg-date-' + idx"
+                                placeholder="Chọn ngày" autocomplete="off" @blur="touchedLines[idx] = true" />
+
+                            <!-- Hiển thị lỗi nếu bỏ trống -->
+                            <p x-show="touchedLines[idx] && !l.mfg_date" class="text-red-500 text-xs mt-1">
+                                Vui lòng chọn ngày sản xuất.
+                            </p>
                         </div>
 
                         <!-- Hạn sử dụng (HSD) -->
                         <div class="col-span-2">
+
                             <div class="relative">
-                                <input x-model="l.exp_date" type="text" :class="'line-exp-date-' + idx"
-                                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                                    placeholder="Chọn ngày" autocomplete="off" @blur="touchedLines[idx]=true" />
+                                <input x-model="l.exp_date" type="text"
+                                    :class="'w-full border border-gray-300 rounded-md px-3 py-2 text-sm line-exp-date-' + idx"
+                                    placeholder="Chọn ngày" autocomplete="off" @blur="touchedLines[idx] = true" />
+
+                                <!-- Hiện lỗi khi bỏ trống -->
+                                <p x-show="touchedLines[idx] && !l.exp_date" class="text-red-500 text-xs mt-1">
+                                    Vui lòng chọn hạn sử dụng.
+                                </p>
 
                                 <!-- Hiện lỗi khi HSD < NSX -->
-                                <p x-show="touchedLines[idx] && l.exp_date && l.mfg_date && (new Date(l.exp_date.split('/').reverse().join('-')) < new Date(l.mfg_date.split('/').reverse().join('-')))"
+                                <p x-show="touchedLines[idx] && l.exp_date && l.mfg_date && 
+                                    (new Date(l.exp_date.split('/').reverse().join('-')) < 
+                                    new Date(l.mfg_date.split('/').reverse().join('-')))"
                                     class="text-red-500 text-xs mt-1">
-                                    Hạn sử dụng phải lớn hơn hoặc bằng ngày sản xuất
+                                    Hạn sử dụng phải lớn hơn hoặc bằng ngày sản xuất.
                                 </p>
                             </div>
                         </div>
@@ -373,7 +396,7 @@
                 if (!input._flatpickr) {
                     flatpickr(input, {
                         dateFormat: 'd/m/Y',
-                        locale: 'vn',  
+                        locale: 'vn',
                         allowInput: true,
                         clickOpens: true,
                         static: true
@@ -387,7 +410,7 @@
                 if (!input._flatpickr) {
                     flatpickr(input, {
                         dateFormat: 'd/m/Y',
-                        locale: 'vn', 
+                        locale: 'vn',
                         allowInput: true,
                         clickOpens: true,
                         static: true
@@ -411,7 +434,7 @@
                 if (!input._flatpickr) {
                     flatpickr(input, {
                         dateFormat: 'd/m/Y',
-                        locale: 'vn',  
+                        locale: 'vn',
                         allowInput: true,
                         clickOpens: true,
                         static: true
@@ -425,7 +448,7 @@
                 if (!input._flatpickr) {
                     flatpickr(input, {
                         dateFormat: 'd/m/Y',
-                        locale: 'vn', 
+                        locale: 'vn',
                         allowInput: true,
                         clickOpens: true,
                         static: true

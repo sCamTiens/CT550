@@ -95,12 +95,13 @@
             }
         }" x-effect="reset()" @click.away="open = false">
         <label class="block text-sm text-black font-semibold mb-1">
-            Mã đơn hàng
+            Mã đơn hàng <span class="text-red-500">*</span>
         </label>
 
         <div class="relative">
             <input type="text" x-model="search" @focus="open = true; filter()" @input="filter()"
                 class="w-full border rounded px-3 py-2 pr-8 bg-white text-sm cursor-pointer focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
+                :class="(touched.order_id && errors.order_id) ? 'border-red-500' : 'border-gray-300'"
                 placeholder="-- Chọn đơn hàng --" />
 
             <button x-show="form.order_id" type="button" @click.stop="clear()"
@@ -198,11 +199,17 @@
 
     <!-- Tổng tiền -->
     <div>
-        <label class="block text-sm text-black font-semibold mb-1">Tổng tiền <span class="text-red-500">*</span></label>
+        <label class="block text-sm text-black font-semibold mb-1">
+            Tổng tiền <span class="text-red-500">*</span>
+        </label>
+
         <input x-model="form.total_amountFormatted" @input="onAmountInput($event)"
-            class="w-full border rounded px-3 py-2" placeholder="Nhập tổng tiền">
-        <p class="text-red-600 text-xs mt-1" x-show="touched.total_amount && errors.total_amount"
-            x-text="errors.total_amount"></p>
+            @blur="touched.total_amount = true; validateField('total_amount')" placeholder="Nhập tổng tiền"
+            class="w-full border rounded px-3 py-2 text-sm focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
+            :class="(touched.total_amount && errors.total_amount) ? 'border-red-500' : 'border-gray-300'">
+
+        <p x-show="touched.total_amount && errors.total_amount" x-text="errors.total_amount"
+            class="text-red-600 text-xs mt-1"></p>
     </div>
 
     <!-- Ghi chú -->

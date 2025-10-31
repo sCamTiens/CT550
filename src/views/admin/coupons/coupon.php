@@ -274,8 +274,12 @@ $items = $items ?? [];
             openForm: false,
             submitting: false,
             form: {},
-            errors: {},
-            touched: {},
+            errors: {
+                code: '', discount_value: '', starts_at: '', ends_at: ''
+            },
+            touched: {
+                code: false, discount_value: false, starts_at: false, ends_at: false
+            },
 
             // Import Excel
             showImportModal: false,

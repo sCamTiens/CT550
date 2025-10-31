@@ -737,17 +737,19 @@ $items = $items ?? [];
                 }
 
                 // Số tiền thanh toán
-                if (field === 'paid_amount') {
-                    const total = this.calculateTotal();
-                    if (this.form.payment_status === 'Đã thanh toán một phần') {
-                        if (!this.form.paid_amount || this.form.paid_amount <= 0) {
-                            this.errors[field] = 'Số tiền phải lớn hơn 0';
-                        } else if (this.form.paid_amount >= total) {
-                            this.errors[field] = 'Số tiền phải nhỏ hơn tổng tiền (' + total.toLocaleString('vi-VN') + ' đ)';
-                        }
+                if (field === 'due_date' && this.form.due_date) {
+                    this.errors[field] = 'Vui lòng chọn ngày hẹn thanh toán';
+                }
+
+                if (field === 'payment_status') {
+                    // Reset paid_amount nếu chuyển trạng thái
+                    if (this.form.payment_status === 'Chưa đối soát') {
+                        this.form.paid_amount = 0;
                     } else if (this.form.payment_status === 'Đã thanh toán hết') {
+                        const total = this.calculateTotal();
                         this.form.paid_amount = total;
                     }
+                    this.errors['paid_amount'] = '';
                 }
 
                 // Dòng sản phẩm

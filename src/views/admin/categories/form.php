@@ -7,6 +7,7 @@
     </label>
     <input x-model="form.name" @input="onNameInput(); clearError('name'); validateField('name')"
       @blur="touched.name = true; validateField('name')" class="border rounded px-3 py-2 w-full"
+      :class="(touched.name && errors.name) ? 'border-red-500' : 'border-gray-300'"
       placeholder="Nhập tên loại sản phẩm" required maxlength="250">
     <p x-show="touched.name && errors.name" x-text="errors.name" class="text-red-500 text-xs mt-1"></p>
   </div>
@@ -21,6 +22,7 @@
     <div class="flex gap-2">
       <input x-model="form.slug" @input="clearError('slug'); validateField('slug')"
         @blur="touched.slug = true; validateField('slug')" class="border rounded px-3 py-2 w-full"
+        :class="(touched.slug && errors.slug) ? 'border-red-500' : 'border-gray-300'" 
         placeholder="Tự tạo từ tên hoặc bấm nút Tạo" maxlength="250">
       <button type="button"
         class="px-3 py-2 rounded border text-[#002975] border-[#002975] hover:bg-[#002975] hover:text-white"
