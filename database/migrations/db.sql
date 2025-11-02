@@ -1251,3 +1251,9 @@ CREATE TABLE IF NOT EXISTS import_history (
     INDEX idx_imported_by (imported_by),
     INDEX idx_imported_at (imported_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Lịch sử nhập file Excel';
+
+-- Bảng quản lý thông báo hằng ngày
+CREATE TABLE IF NOT EXISTS system_jobs (
+    job_name VARCHAR(100) PRIMARY KEY,
+    last_run DATETIME DEFAULT NULL
+);

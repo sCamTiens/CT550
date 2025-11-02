@@ -44,7 +44,7 @@ $items = $items ?? [];
       </div>
     </template>
     <div style="overflow-x:auto; max-width:100%;" class="pb-40">
-      <table style="width:190%; min-width:1200px; border-collapse:collapse;">
+      <table style="width:200%; min-width:1200px; border-collapse:collapse;">
         <thead>
           <tr class="bg-gray-50 text-slate-600">
             <th class="py-2 px-4 whitespace-nowrap text-center" style="width:300px;">Thao tác</th>

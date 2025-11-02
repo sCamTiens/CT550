@@ -631,7 +631,8 @@ $items = $items ?? [];
                 this.form = {
                     payment_status: 'Chưa đối soát',
                     paid_amount: 0,
-                    due_date: null
+                    due_date: null,
+                    created_at: null
                 };
                 this.supplier_id = null;
                 this.product_id = null;
@@ -1109,7 +1110,7 @@ $items = $items ?? [];
                         if (typeof window.initAllDatePickers === 'function') {
                             window.initAllDatePickers();
                         }
-                    }, 100);
+                    }, 300);
                 });
             },
 
@@ -1135,10 +1136,10 @@ $items = $items ?? [];
                         // Fill lines với dữ liệu từ API
                         this.lines = data.lines.map(line => ({
                             product_id: line.product_id,
-                            qty: line.qty,
+                            qty: line.quantity, // Backend trả về 'quantity', không phải 'qty'
                             unit_cost: line.unit_cost,
-                            mfg_date: line.mfg_date || '', // đã được convert sang d/m/Y
-                            exp_date: line.exp_date || ''  // đã được convert sang d/m/Y
+                            mfg_date: line.manufacture_date || '', // Backend trả về 'manufacture_date'
+                            exp_date: line.expiry_date || ''  // Backend trả về 'expiry_date'
                         }));
 
                         // Nếu suppliers hoặc products chưa được fetch, fetch chúng
@@ -1154,7 +1155,7 @@ $items = $items ?? [];
                                 if (typeof window.initAllDatePickers === 'function') {
                                     window.initAllDatePickers();
                                 }
-                            }, 100);
+                            }, 300);
                         });
                     })
                     .catch(e => {

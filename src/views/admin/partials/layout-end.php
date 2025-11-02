@@ -18,7 +18,7 @@
 
         // Đợi để Alpine.js bind giá trị x-model vào input trước
         setTimeout(() => {
-            rootEl.querySelectorAll('input.flatpickr:not([data-fp])').forEach(el => {
+            rootEl.querySelectorAll('input.flatpickr').forEach(el => {
                 // Lấy thông tin filter key/field
                 const filterKey = el.getAttribute('data-filter-key');
                 const filterField = el.getAttribute('data-filter-field');
@@ -33,13 +33,30 @@
                     }
                 }
 
-                // Khởi tạo Flatpickr
+                // Nếu đã có Flatpickr instance, cập nhật giá trị và return
+                if (el._flatpickr) {
+                    // Force update giá trị từ Alpine.js filters
+                    if (initialValue) {
+                        el._flatpickr.setDate(initialValue, false);
+                    } else {
+                        el._flatpickr.clear();
+                    }
+                    return;
+                }
+
+                // Khởi tạo Flatpickr lần đầu
                 const fp = flatpickr(el, {
                     altInput: true,
                     altFormat: "d/m/Y",
                     dateFormat: "Y-m-d",
                     locale: "vn",
                     defaultDate: initialValue || null,
+                    onReady: function(selectedDates, dateStr, instance) {
+                        // Đảm bảo giá trị ban đầu được set đúng
+                        if (initialValue && !dateStr) {
+                            instance.setDate(initialValue, false);
+                        }
+                    },
                     onChange: function (selectedDates, dateStr, instance) {
                         // Cập nhật giá trị vào Alpine.js filters
                         const fKey = instance.input.getAttribute('data-filter-key');
@@ -82,7 +99,6 @@
                     }
                 });
 
-                el.setAttribute('data-fp', '1');
                 el._flatpickr = fp;
             });
         }, 150);
@@ -104,6 +120,41 @@
             console.debug('Cannot open Flatpickr:', e);
         }
     };
+
+    // 3.1. Ngăn đóng filter khi click vào Flatpickr calendar
+    document.addEventListener('click', function (e) {
+        const flatpickrCalendar = e.target.closest('.flatpickr-calendar');
+        if (flatpickrCalendar) {
+            // Thêm thuộc tính để đánh dấu click này là từ Flatpickr
+            e._isFlatpickrClick = true;
+        }
+    }, true); // Use capture phase
+
+    // Override Alpine.js click.outside để bỏ qua click từ Flatpickr
+    document.addEventListener('alpine:init', () => {
+        Alpine.directive('click-outside', (el, { expression }, { evaluateLater, effect }) => {
+            const evaluate = evaluateLater(expression);
+            
+            const onClick = (e) => {
+                // Bỏ qua nếu click vào chính element hoặc con của nó
+                if (el.contains(e.target)) return;
+                
+                // Bỏ qua nếu click vào Flatpickr calendar
+                if (e._isFlatpickrClick || e.target.closest('.flatpickr-calendar')) return;
+                
+                evaluate();
+            };
+            
+            setTimeout(() => {
+                document.addEventListener('click', onClick);
+            }, 0);
+            
+            el._x_cleanups = el._x_cleanups || [];
+            el._x_cleanups.push(() => {
+                document.removeEventListener('click', onClick);
+            });
+        });
+    });
 
     // 4. Auto init cho date_of_birth (profile page)
     document.addEventListener('DOMContentLoaded', function () {

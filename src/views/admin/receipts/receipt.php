@@ -109,8 +109,8 @@ $items = $items ?? [];
                                 :class="(r.code || '—') === '—' ? 'text-center' : 'text-left'" x-text="r.code || '—'">
                             </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
-                                :class="(r.payer_user_name || '—') === '—' ? 'text-center' : 'text-left'"
-                                x-text="r.payer_user_name || '—'"></td>
+                                :class="(r.payer_user_name || 'Khách vãng lai') === 'Khách vãng lai' ? 'text-left' : 'text-left'"
+                                x-text="r.payer_user_name || 'Khách vãng lai'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
                                 :class="(r.order_id || '—') === '—' ? 'text-center' : 'text-center'"
                                 x-text="r.order_id || '—'"></td>

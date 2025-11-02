@@ -157,7 +157,7 @@ if (!function_exists('dateFilterPopover')) {
 
   <div x-cloak x-show="openFilter.{$keyEsc}" x-transition
        x-effect="if(openFilter.{$keyEsc} && window.__initFlatpickr) window.__initFlatpickr(\$el)"
-       @click.outside="openFilter.{$keyEsc}=false"
+       @click.outside="if (!\$event.target.closest('.flatpickr-calendar')) openFilter.{$keyEsc}=false"
        class="absolute z-40 mt-2 w-80 bg-white rounded-lg shadow border p-3 space-y-3 text-left"
        style="position:absolute;">
        

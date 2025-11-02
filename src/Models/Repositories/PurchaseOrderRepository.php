@@ -65,27 +65,14 @@ class PurchaseOrderRepository
             }
 
             // Xử lý trạng thái thanh toán và số tiền đã trả
-            $paymentStatusText = $data['payment_status'] ?? 'Chưa đối soát';
-
-            // Convert text sang số để lưu vào database
-            // 1 = Chưa đối soát, 0 = Đã thanh toán một phần, 2 = Đã thanh toán hết
-            switch ($paymentStatusText) {
-                case 'Đã thanh toán một phần':
-                    $paymentStatus = '0';
-                    break;
-                case 'Đã thanh toán hết':
-                    $paymentStatus = '2';
-                    break;
-                default:
-                    $paymentStatus = '1'; // Chưa đối soát
-                    break;
-            }
+            // Database sử dụng ENUM với giá trị TEXT, không cần convert sang số
+            $paymentStatus = $data['payment_status'] ?? 'Chưa đối soát';
 
             // Xử lý số tiền đã trả
             $paidAmount = isset($data['paid_amount']) ? (float) $data['paid_amount'] : 0;
             
             // Nếu trạng thái là "Đã thanh toán hết", ưu tiên lấy tổng tiền
-            if ($paymentStatusText === 'Đã thanh toán hết') {
+            if ($paymentStatus === 'Đã thanh toán hết') {
                 $paidAmount = $totalAmount;
             }
 
@@ -346,18 +333,7 @@ class PurchaseOrderRepository
             $po['due_date'] = date('d/m/Y', strtotime($po['due_date']));
         }
 
-        // Convert payment_status từ số sang text
-        switch ($po['payment_status']) {
-            case '0':
-                $po['payment_status'] = 'Đã thanh toán một phần';
-                break;
-            case '2':
-                $po['payment_status'] = 'Đã thanh toán hết';
-                break;
-            default:
-                $po['payment_status'] = 'Chưa đối soát';
-                break;
-        }
+        // payment_status đã là text từ database (ENUM), không cần convert
 
         // Lấy các dòng sản phẩm từ product_batches
         $sql = "SELECT 
@@ -400,8 +376,8 @@ class PurchaseOrderRepository
         // Lấy dữ liệu cũ trước khi update
         $po = $this->findById($id);
 
-        // Kiểm tra xem phiếu nhập đã thanh toán một phần chưa
-        if ($po && ($po['payment_status'] === '0' || $po['payment_status'] === '2')) {
+        // Kiểm tra xem phiếu nhập đã thanh toán một phần chưa (sử dụng TEXT thay vì số)
+        if ($po && ($po['payment_status'] === 'Đã thanh toán một phần' || $po['payment_status'] === 'Đã thanh toán hết')) {
             throw new \Exception("Không thể sửa phiếu nhập kho đã thanh toán một phần hoặc thanh toán hết");
         }
 
@@ -444,8 +420,8 @@ class PurchaseOrderRepository
                 throw new \Exception('Không tìm thấy phiếu nhập');
             }
 
-            // Kiểm tra xem phiếu nhập đã thanh toán hết chưa
-            if ($po['payment_status'] === '2') {
+            // Kiểm tra xem phiếu nhập đã thanh toán hết chưa (sử dụng TEXT thay vì số)
+            if ($po['payment_status'] === 'Đã thanh toán hết') {
                 throw new \Exception('Không thể xóa phiếu nhập kho đã thanh toán hết');
             }
 

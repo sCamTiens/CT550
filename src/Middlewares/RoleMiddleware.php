@@ -16,9 +16,15 @@ class RoleMiddleware
         'Nhân viên bán hàng' => [
             '/admin/orders',
             '/admin/customers',
-            '/admin/products', // Chỉ xem
+            // Đã xóa /admin/products - không cho phép xem danh mục sản phẩm
             '/admin/coupons',
             '/admin/promotions',
+            // API endpoints
+            '/admin/api/orders',
+            '/admin/api/customers',
+            // Đã xóa /admin/api/products
+            '/admin/api/coupons',
+            '/admin/api/promotions',
         ],
         'Kho' => [
             '/admin/categories',
@@ -34,10 +40,27 @@ class RoleMiddleware
             '/admin/receipt_vouchers',
             '/admin/expense_vouchers',
             '/admin/supplier-debts',
+            // API endpoints
+            '/admin/api/categories',
+            '/admin/api/brands',
+            '/admin/api/products',
+            '/admin/api/suppliers',
+            '/admin/api/units',
+            '/admin/api/stocks',
+            '/admin/api/purchase-orders',
+            '/admin/api/stock-outs',
+            '/admin/api/stocktakes',
+            '/admin/api/product-batches',
+            '/admin/api/receipt_vouchers',
+            '/admin/api/expense_vouchers',
+            '/admin/api/supplier-debts',
         ],
         'Hỗ trợ trực tuyến' => [
             '/admin/customers',
             '/admin/orders', // Chỉ xem
+            // API endpoints
+            '/admin/api/customers',
+            '/admin/api/orders',
         ],
     ];
 
@@ -137,12 +160,28 @@ class RoleMiddleware
      */
     public static function getAllowedSections(): array
     {
+        // Khởi tạo mặc định tất cả sections = false để tránh "Undefined array key"
+        $sections = [
+            'dashboard' => false,
+            'orders' => false,
+            'catalog' => false,
+            'inventory' => false,
+            'expense' => false,
+            'promo' => false,
+            'staff' => false,
+            'customers' => false,
+            'reports' => false,
+            'audit-logs' => false,
+        ];
+
+        // Nếu chưa đăng nhập hoặc không có staff_role
         if (empty($_SESSION['user']['staff_role'])) {
-            return [];
+            return $sections;
         }
 
         $staffRole = $_SESSION['user']['staff_role'];
 
+        // Admin có quyền truy cập tất cả
         if ($staffRole === 'Admin') {
             return [
                 'dashboard' => true,
@@ -159,18 +198,7 @@ class RoleMiddleware
         }
 
         // Tất cả role đều được truy cập dashboard
-        $sections = [
-            'dashboard' => true, // ← TẤT CẢ đều vào được dashboard
-            'orders' => false,
-            'catalog' => false,
-            'inventory' => false,
-            'expense' => false,
-            'promo' => false,
-            'staff' => false,
-            'customers' => false,
-            'reports' => false, // Chỉ Admin
-            'audit-logs' => false, // Chỉ Admin
-        ];
+        $sections['dashboard'] = true;
 
         $allowedPaths = self::$rolePermissions[$staffRole] ?? [];
 
@@ -187,6 +215,8 @@ class RoleMiddleware
                 $sections['promo'] = true;
             } elseif ($path === '/admin/customers') {
                 $sections['customers'] = true;
+            } elseif ($path === '/admin/staff') {
+                $sections['staff'] = true;
             }
         }
 

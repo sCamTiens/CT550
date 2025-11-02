@@ -19,7 +19,7 @@ class AuditLogController extends BaseAdminController
      * Kiểm tra quyền admin (role_id = 2 VÀ staff_role = 'Admin')
      * Nếu chưa đăng nhập hoặc không phải admin -> chuyển về trang login
      */
-    private function requireAdmin(bool $forApi = false): void
+    protected function requireAdmin(bool $forApi = false): void
     {
         if (!isset($_SESSION['user'])) {
             if ($forApi) {

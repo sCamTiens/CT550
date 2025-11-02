@@ -4,6 +4,7 @@ namespace App\Controllers\Admin;
 use App\Core\Controller;
 use App\Models\Repositories\UserRepository;
 use App\Services\DailyStockAlertService;
+use App\Services\DailyPaymentDueAlertService;
 
 class AuthController extends Controller
 {
@@ -151,11 +152,16 @@ class AuthController extends Controller
 
         if ($lastRun !== $today) {
             try {
+                // Kiểm tra tồn kho thấp
                 DailyStockAlertService::runDailyCheck();
+                
+                // Kiểm tra phiếu nhập sắp đến hạn thanh toán
+                DailyPaymentDueAlertService::runDailyCheck();
+                
                 $_SESSION['last_stock_check'] = $today;
             } catch (\Exception $e) {
                 // Bỏ qua lỗi, không ảnh hưởng đăng nhập
-                error_log("Stock alert error: " . $e->getMessage());
+                error_log("Alert services error: " . $e->getMessage());
             }
         }
 
@@ -191,7 +197,25 @@ class AuthController extends Controller
 
     public function logout()
     {
-        unset($_SESSION['admin_user'], $_SESSION['user']);
+        // Debug log
+        error_log("=== LOGOUT CALLED ===");
+        error_log("Session before logout: " . json_encode($_SESSION));
+        
+        // Xóa session
+        unset($_SESSION['admin_user']);
+        unset($_SESSION['user']);
+        unset($_SESSION['last_stock_check']);
+        
+        // Xóa cookie remember nếu có
+        if (isset($_COOKIE['admin_remember'])) {
+            setcookie('admin_remember', '', time() - 3600, '/', '', false, true);
+        }
+        
+        // Debug log
+        error_log("Session after logout: " . json_encode($_SESSION));
+        error_log("Redirecting to /admin/login");
+        
+        // Redirect về trang login
         header('Location: /admin/login');
         exit;
     }

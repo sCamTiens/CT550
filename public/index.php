@@ -33,6 +33,7 @@ use App\Controllers\Admin\PromotionController as AdminPromotion;
 use App\Controllers\Admin\AuditLogController as AdminAuditLog;
 use App\Controllers\Admin\NotificationController as AdminNotification;
 use App\Controllers\Admin\StockAlertController as AdminStockAlert;
+use App\Controllers\Admin\PaymentDueAlertController as AdminPaymentDueAlert;
 use App\Controllers\Admin\ReportsController as AdminReports;
 use App\Controllers\Admin\ImportHistoryController as AdminImportHistory;
 
@@ -297,6 +298,12 @@ $router->group('/admin', function (Router $r): void {
     $r->post('/api/stock-alerts/run-check', [AdminStockAlert::class, 'runCheck']);
     $r->get('/api/stock-alerts/stats', [AdminStockAlert::class, 'stats']);
     $r->post('/api/stock-alerts/cleanup', [AdminStockAlert::class, 'cleanup']);
+
+    // Payment Due Alerts (Cảnh báo hạn thanh toán)
+    $r->get('/api/payment-due-alerts/stats', [AdminPaymentDueAlert::class, 'getStats']);
+    $r->post('/api/payment-due-alerts/run', [AdminPaymentDueAlert::class, 'runCheck']);
+    $r->get('/api/payment-due-alerts/list', [AdminPaymentDueAlert::class, 'getList']);
+    $r->post('/api/payment-due-alerts/cleanup', [AdminPaymentDueAlert::class, 'cleanup']);
 });
 
 /* --- chạy router --- */

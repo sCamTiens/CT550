@@ -58,4 +58,29 @@ class BaseAdminController extends Controller
     {
         return $_SESSION['user']['full_name'] ?? 'Unknown';
     }
+
+    /**
+     * Kiểm tra xem user hiện tại có phải Admin không
+     */
+    protected function isAdmin(): bool
+    {
+        $staffRole = $_SESSION['user']['staff_role'] ?? '';
+        return $staffRole === 'Admin';
+    }
+
+    /**
+     * Yêu cầu quyền Admin - throw exception nếu không phải Admin
+     */
+    protected function requireAdmin(): void
+    {
+        if (!$this->isAdmin()) {
+            http_response_code(403);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'error' => 'Forbidden',
+                'message' => 'Bạn không có quyền thực hiện hành động này. Chỉ Admin mới được phép.'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+    }
 }

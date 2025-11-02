@@ -33,6 +33,9 @@ class CouponController extends BaseAdminController
     /** POST /admin/coupons (create) */
     public function store()
     {
+        // Chỉ Admin mới được tạo mới
+        $this->requireAdmin();
+        
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
         $currentUser = $this->currentUserId();
 
@@ -61,6 +64,9 @@ class CouponController extends BaseAdminController
     /** PUT /admin/coupons/{id} */
     public function update($id)
     {
+        // Chỉ Admin mới được cập nhật
+        $this->requireAdmin();
+        
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
         $currentUser = $this->currentUserId();
 
@@ -90,6 +96,9 @@ class CouponController extends BaseAdminController
     /** DELETE /admin/coupons/{id} */
     public function destroy($id)
     {
+        // Chỉ Admin mới được xóa
+        $this->requireAdmin();
+        
         header('Content-Type: application/json; charset=utf-8');
         try {
             // Kiểm tra xem mã đã được sử dụng chưa

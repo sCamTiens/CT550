@@ -26,15 +26,11 @@
 
             <!-- Dropdown thông báo -->
             <div x-show="isOpen" @click.away="isOpen = false" x-transition x-cloak
-                class="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border z-50 max-h-[500px] overflow-hidden flex flex-col">
+                class="absolute right-0 mt-2 w-[700px] bg-white rounded-lg shadow-xl border z-50 max-h-[500px] overflow-hidden flex flex-col">
 
                 <!-- Header -->
-                <div class="px-4 py-3 border-b bg-gray-50 flex justify-between items-center">
-                    <h3 class="font-semibold text-gray-700">Thông báo</h3>
-                    <button @click="markAllAsRead" x-show="unreadCount > 0"
-                        class="text-sm text-blue-600 hover:text-blue-800">
-                        Đọc tất cả
-                    </button>
+                <div class="px-4 py-3 border-b bg-gray-50 flex justify-center items-center">
+                    <h3 class="font-bold text-[#002975]">Thông báo</h3>
                 </div>
 
                 <!-- Danh sách thông báo -->
@@ -47,39 +43,45 @@
                     </template>
 
                     <template x-for="notif in notifications" :key="notif.id">
-                        <div @click="markAsRead(notif.id)" :class="notif.is_read ? 'bg-gray-100' : 'bg-blue-50'"
-                            class="px-4 py-3 border-b hover:bg-gray-200 cursor-pointer transition-colors">
+                        <div @click="markAsRead(notif.id)"
+                            class="px-4 py-3 border-b hover:bg-gray-200 cursor-pointer transition-colors"
+                            :class="notif.is_read ? 'bg-gray-100 italic' : 'bg-white'">
 
                             <div class="flex items-start gap-3">
                                 <!-- Icon theo loại -->
                                 <div class="mt-1">
                                     <i :class="{
-                                        'fa-solid fa-triangle-exclamation text-yellow-500': notif.type === 'warning',
-                                        'fa-solid fa-info-circle text-blue-500': notif.type === 'info',
-                                        'fa-solid fa-check-circle text-green-500': notif.type === 'success',
-                                        'fa-solid fa-exclamation-circle text-red-500': notif.type === 'error'
-                                    }"></i>
+                                    'fa-solid fa-triangle-exclamation text-yellow-600': notif.type === 'warning',
+                                    'fa-solid fa-info-circle text-blue-500': notif.type === 'info',
+                                    'fa-solid fa-check-circle text-green-500': notif.type === 'success',
+                                    'fa-solid fa-exclamation-circle text-red-600': notif.type === 'error'
+                                }" class="text-lg"></i>
                                 </div>
 
                                 <div class="flex-1 min-w-0">
-                                    <p :class="notif.is_read ? 'font-normal text-gray-600' : 'font-bold text-gray-900'"
-                                        class="text-sm" x-text="notif.title"></p>
-                                    <p :class="notif.is_read ? 'text-gray-500' : 'text-gray-700'" class="text-sm mt-1"
-                                        x-text="notif.message"></p>
+                                    <p :class="{
+                                    'font-bold text-red-900': notif.type === 'error' && !notif.is_read,
+                                    'font-bold text-yellow-900': notif.type === 'warning' && !notif.is_read,
+                                    'font-bold text-gray-900': !notif.is_read && notif.type !== 'error' && notif.type !== 'warning',
+                                    'text-gray-600 italic': notif.is_read
+                                }" class="text-sm" x-html="notif.title"></p>
+
+                                    <p :class="notif.is_read ? 'text-gray-500 italic' : 'text-gray-700'"
+                                        class="text-sm mt-1"
+                                        x-html="notif.message + (notif.is_read ? ' <span class=\'text-gray-400\'>(Đã đọc)</span>' : '')">
+                                    </p>
+
                                     <p class="text-xs text-gray-400 mt-1 flex items-center gap-2">
                                         <span x-text="formatTime(notif.created_at)"></span>
-                                        <span x-show="!notif.is_read"
-                                            class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500 text-white">
+                                        <span x-show="!notif.is_read" :class="{
+                                            'bg-red-500': notif.type === 'error',
+                                            'bg-yellow-500': notif.type === 'warning',
+                                            'bg-blue-500': notif.type !== 'error' && notif.type !== 'warning'
+                                        }" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white">
                                             Mới
                                         </span>
                                     </p>
                                 </div>
-
-                                <!-- Nút xóa -->
-                                <button @click.stop="deleteNotification(notif.id)"
-                                    class="text-gray-400 hover:text-red-500 p-1">
-                                    <i class="fa-solid fa-times"></i>
-                                </button>
                             </div>
                         </div>
                     </template>
@@ -87,9 +89,10 @@
 
                 <!-- Footer -->
                 <div class="px-4 py-2 border-t bg-gray-50 text-center">
-                    <a href="/admin/stocks" class="text-sm text-blue-600 hover:text-blue-800">
-                        Xem tồn kho →
-                    </a>
+                    <button @click="markAllAsRead" x-show="unreadCount > 0"
+                        class="text-sm text-blue-600 hover:text-blue-800">
+                        Đọc tất cả
+                    </button>
                 </div>
             </div>
         </div>
@@ -221,26 +224,6 @@
                 }
             },
 
-            async deleteNotification(id) {
-                try {
-                    const res = await fetch(`/admin/api/notifications/${id}`, {
-                        method: 'DELETE'
-                    });
-
-                    if (res.ok) {
-                        const index = this.notifications.findIndex(n => n.id == id);
-                        if (index !== -1) {
-                            if (!this.notifications[index].is_read) {
-                                this.unreadCount = Math.max(0, this.unreadCount - 1);
-                            }
-                            this.notifications.splice(index, 1);
-                        }
-                    }
-                } catch (e) {
-                    console.error('Error deleting notification:', e);
-                }
-            },
-
             formatTime(dateStr) {
                 if (!dateStr) return '';
                 const date = new Date(dateStr);
@@ -258,16 +241,22 @@
     }
 
     // User dropdown (existing code)
-    const btn = document.getElementById('user-menu-btn');
-    const dropdown = document.getElementById('user-dropdown');
-    btn?.addEventListener('click', () => {
-        dropdown.classList.toggle('hidden');
-    });
+    document.addEventListener('DOMContentLoaded', function () {
+        const btn = document.getElementById('user-menu-btn');
+        const dropdown = document.getElementById('user-dropdown');
 
-    // Click ra ngoài thì ẩn dropdown
-    document.addEventListener('click', (e) => {
-        if (!btn.contains(e.target) && !dropdown.contains(e.target)) {
-            dropdown.classList.add('hidden');
+        if (btn && dropdown) {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropdown.classList.toggle('hidden');
+            });
+
+            // Click ra ngoài thì ẩn dropdown
+            document.addEventListener('click', (e) => {
+                if (!btn.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            });
         }
     });
 

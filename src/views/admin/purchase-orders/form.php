@@ -300,14 +300,24 @@
                         <!-- Đơn giá -->
                         <div class="col-span-2">
                             <input data-unit-cost-input
-                                :value="l.unit_cost !== undefined && l.unit_cost !== null && l.unit_cost !== '' ? l.unit_cost.toLocaleString('en-US') : ''"
+                                :value="(() => {
+                                    const cost = parseFloat(l.unit_cost || 0);
+                                    return cost > 0 ? Math.floor(cost).toLocaleString('en-US') : '';
+                                })()"
                                 @input="
                                     let val = $event.target.value.replace(/[^\d]/g, '');
-                                    l.unit_cost = val ? parseInt(val, 10) : '';
-                                    $event.target.value = l.unit_cost !== '' ? l.unit_cost.toLocaleString('en-US') : '';
+                                    l.unit_cost = val ? parseInt(val, 10) : 0;
+                                    $event.target.value = l.unit_cost > 0 ? l.unit_cost.toLocaleString('en-US') : '';
                                 "
-                                @blur="$event.target.value = l.unit_cost !== '' ? l.unit_cost.toLocaleString('en-US') : ''; touchedLines[idx]=true; validateField('unit_cost', idx)"
-                                @focus="$event.target.select()" required placeholder="Đơn giá" inputmode="numeric"
+                                @blur="
+                                    $event.target.value = l.unit_cost > 0 ? l.unit_cost.toLocaleString('en-US') : '';
+                                    touchedLines[idx]=true; 
+                                    validateField('unit_cost', idx);
+                                "
+                                @focus="$event.target.select()" 
+                                required 
+                                placeholder="Đơn giá" 
+                                inputmode="numeric"
                                 class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
                             <template x-if="touchedLines[idx]">
                                 <div>
@@ -378,7 +388,8 @@
         <!-- Nút hành động -->
         <div class="flex justify-end gap-3 mt-6 col-span-2">
             <button type="button" class="px-4 py-2 rounded-md text-red-600 border border-red-600 
-                  hover:bg-red-600 hover:text-white transition-colors" @click="openAdd=false">Hủy</button>
+                  hover:bg-red-600 hover:text-white transition-colors" 
+                  @click="openAdd=false; openEdit=false">Hủy</button>
             <button
                 class="px-4 py-2 rounded-md text-[#002975] hover:bg-[#002975] hover:text-white border border-[#002975]"
                 :disabled="submitting" x-text="submitting?'Đang lưu...':'Lưu'"></button>
@@ -428,8 +439,11 @@
         }
 
         setTimeout(() => {
+            console.log('🔧 Initializing all date pickers...');
+            
             // Ngày nhập
             const dateInputs = document.querySelectorAll('.purchase-date-picker');
+            console.log('📅 Purchase date inputs:', dateInputs.length);
             dateInputs.forEach(function (input) {
                 if (!input._flatpickr) {
                     flatpickr(input, {
@@ -444,6 +458,7 @@
 
             // Ngày hẹn thanh toán
             const dueDateInputs = document.querySelectorAll('.due-date-picker');
+            console.log('📅 Due date inputs:', dueDateInputs.length);
             dueDateInputs.forEach(function (input) {
                 if (!input._flatpickr) {
                     flatpickr(input, {
@@ -458,6 +473,7 @@
 
             // Khởi tạo cho tất cả các dòng hiện có
             const lines = document.querySelectorAll('[class*="line-mfg-date-"], [class*="line-exp-date-"]');
+            console.log('📦 Line date inputs:', lines.length);
             const indices = new Set();
             lines.forEach(input => {
                 const classList = Array.from(input.classList);
@@ -469,6 +485,7 @@
                 });
             });
 
+            console.log('📊 Found line indices:', Array.from(indices));
             indices.forEach(idx => {
                 initLineFlatpickr(idx);
             });

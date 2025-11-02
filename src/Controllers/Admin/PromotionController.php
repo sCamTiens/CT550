@@ -32,6 +32,9 @@ class PromotionController extends BaseAdminController
     /** POST /admin/promotions (create) */
     public function store()
     {
+        // Chỉ Admin mới được tạo mới
+        $this->requireAdmin();
+        
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
         $currentUser = $this->currentUserId();
 
@@ -140,6 +143,9 @@ class PromotionController extends BaseAdminController
     /** PUT /admin/promotions/{id} */
     public function update($id)
     {
+        // Chỉ Admin mới được cập nhật
+        $this->requireAdmin();
+        
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
         $currentUser = $this->currentUserId();
 
@@ -198,6 +204,9 @@ class PromotionController extends BaseAdminController
     /** DELETE /admin/promotions/{id} */
     public function destroy($id)
     {
+        // Chỉ Admin mới được xóa
+        $this->requireAdmin();
+        
         header('Content-Type: application/json; charset=utf-8');
         try {
             $this->promotionRepo->delete($id);
