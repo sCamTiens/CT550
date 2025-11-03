@@ -25,6 +25,10 @@ class RoleMiddleware
             // Đã xóa /admin/api/products
             '/admin/api/coupons',
             '/admin/api/promotions',
+            '/admin/import-history',
+            '/admin/api/import-history',
+            '/admin/api/import-history/{id}',
+            '/admin/api/import-history/{id}'
         ],
         'Kho' => [
             '/admin/categories',
@@ -54,6 +58,10 @@ class RoleMiddleware
             '/admin/api/receipt_vouchers',
             '/admin/api/expense_vouchers',
             '/admin/api/supplier-debts',
+            '/admin/import-history',
+            '/admin/api/import-history',
+            '/admin/api/import-history/{id}',
+            '/admin/api/import-history/{id}'
         ],
         'Hỗ trợ trực tuyến' => [
             '/admin/customers',

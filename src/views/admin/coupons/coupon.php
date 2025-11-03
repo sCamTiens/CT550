@@ -13,23 +13,27 @@ $items = $items ?? [];
     <div class="flex items-center justify-between mb-4">
         <h1 class="text-3xl font-bold text-[#002975]">Quản lý mã giảm giá</h1>
         <div class="flex gap-2">
-            <a href="/admin/import-history?table=coupons"
-                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975] flex items-center gap-2">
-                <i class="fa-solid fa-clock-rotate-left"></i> Lịch sử nhập
-            </a>
-            <button
-                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975] flex items-center gap-2"
-                @click="openImportModal()">
-                <i class="fa-solid fa-file-import"></i> Nhập Excel
-            </button>
+            <?php if (($_SESSION['user']['staff_role'] ?? '') === 'Admin'): ?>
+                <a href="/admin/import-history?table=coupons"
+                    class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975] flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left"></i> Lịch sử nhập
+                </a>
+                <button
+                    class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975] flex items-center gap-2"
+                    @click="openImportModal()">
+                    <i class="fa-solid fa-file-import"></i> Nhập Excel
+                </button>
+            <?php endif; ?>
             <button
                 class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975] flex items-center gap-2"
                 @click="exportExcel()">
                 <i class="fa-solid fa-file-excel"></i> Xuất Excel
             </button>
-            <button
-                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
-                @click="openCreate()">+ Thêm mã giảm giá</button>
+            <?php if (($_SESSION['user']['staff_role'] ?? '') === 'Admin'): ?>
+                <button
+                    class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
+                    @click="openCreate()">+ Thêm mã giảm giá</button>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -76,22 +80,26 @@ $items = $items ?? [];
                     <template x-for="c in paginated()" :key="c.id">
                         <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
                             <td class="py-2 px-4 text-center space-x-2">
-                                <template x-if="c.used_count > 0">
-                                </template>
-                                <template x-if="!c.used_count || c.used_count === 0">
-                                    <div class="space-x-2">
-                                        <button @click="openEdit(c)"
-                                            class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
-                                            title="Sửa">
-                                            <i class="fa-solid fa-pen"></i>
-                                        </button>
-                                        <button @click="remove(c.id)"
-                                            class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
-                                            title="Xóa">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </template>
+                                <?php if (($_SESSION['user']['staff_role'] ?? '') === 'Admin'): ?>
+                                    <template x-if="c.used_count > 0">
+                                    </template>
+                                    <template x-if="!c.used_count || c.used_count === 0">
+                                        <div class="space-x-2">
+                                            <button @click="openEdit(c)"
+                                                class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                                                title="Sửa">
+                                                <i class="fa-solid fa-pen"></i>
+                                            </button>
+                                            <button @click="remove(c.id)"
+                                                class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                                                title="Xóa">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </template>
+                                <?php else: ?>
+                                    <span class="text-gray-400">—</span>
+                                <?php endif; ?>
                             </td>
                             <td class="py-2 px-4" x-text="c.code"></td>
                             <td class="py-2 px-4" x-text="c.description || '—'"></td>
@@ -134,7 +142,11 @@ $items = $items ?? [];
         <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
             x-show="openForm" x-transition.opacity style="display:none">
             <div class="bg-white w-full max-w-3xl rounded-xl shadow max-h-[90vh] flex flex-col animate__animated animate__zoomIn animate__faster"
-                @click.outside="openForm=false">
+                @click.outside="
+                    if (!$event.target.closest('.flatpickr-calendar')) {
+                        openForm = false;
+                    }
+                ">
                 <div class="px-5 py-3 border-b flex justify-center items-center relative flex-shrink-0">
                     <h3 class="font-semibold text-2xl text-[#002975]"
                         x-text="form.id ? 'Sửa mã giảm giá' : 'Thêm mã giảm giá'"></h3>
@@ -668,8 +680,12 @@ $items = $items ?? [];
                     if (!r.ok) {
                         const errorData = await r.json().catch(() => ({}));
                         console.error('Server error:', errorData);
-                        throw new Error(errorData.error || 'Lỗi server');
+
+                        // Ưu tiên message tiếng Việt từ server
+                        const msg = errorData.message || errorData.error || 'Lỗi server';
+                        throw new Error(msg);
                     }
+
 
                     await this.fetchAll();
                     this.openForm = false;

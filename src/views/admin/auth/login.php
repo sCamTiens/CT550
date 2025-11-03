@@ -234,9 +234,16 @@ unset($_SESSION['errors'], $_SESSION['flash_error']);
             })
           });
 
+          console.log('Response status:', res.status);
+          console.log('Response ok:', res.ok);
+          
           const ct = res.headers.get('content-type') || '';
+          console.log('Content-Type:', ct);
+          
           if (ct.includes('application/json')) {
             const data = await res.json().catch(() => ({}));
+            console.log('Response data:', data);
+            
             if (res.ok && (data.ok || data.success)) {
               window.location.href = '/admin';
               return;
@@ -249,6 +256,7 @@ unset($_SESSION['errors'], $_SESSION['flash_error']);
             showToast(data.message || 'Tài khoản hoặc mật khẩu sai');
           } else {
             const txt = await res.text();
+            console.log('Response text:', txt);
             showToast('Tài khoản hoặc mật khẩu sai');
           }
 

@@ -25,7 +25,7 @@ require __DIR__ . '/partials/layout-start.php';
     <div class="flex items-center justify-between mb-6">
         <div>
             <h1 class="text-3xl font-bold text-[#002975]">Dashboard</h1>
-            <p class="text-slate-500 text-sm mt-1">Tổng quan hệ thống siêu thị mini</p>
+            <p class="text-slate-500 text-sm mt-1">Tổng quan hệ thống siêu thị MINIGO</p>
         </div>
         <div class="text-right">
             <div class="text-sm text-slate-500">Hôm nay</div>
@@ -132,7 +132,7 @@ require __DIR__ . '/partials/layout-start.php';
                     </div>
                 </div>
                 <!-- Filter -->
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 flex-wrap">
                     <!-- Filter Type Dropdown -->
                     <div class="relative" @click.away="filterTypeOpen=false">
                         <button type="button"
@@ -150,10 +150,60 @@ require __DIR__ . '/partials/layout-start.php';
                                 class="px-3 py-2 hover:bg-[#002975] hover:text-white cursor-pointer text-sm">
                                 Theo tháng
                             </li>
+                            <li @click="selectFilterType('quarter', 'Theo quý')"
+                                class="px-3 py-2 hover:bg-[#002975] hover:text-white cursor-pointer text-sm">
+                                Theo quý
+                            </li>
                             <li @click="selectFilterType('year', 'Theo năm')"
                                 class="px-3 py-2 hover:bg-[#002975] hover:text-white cursor-pointer text-sm">
                                 Theo năm
                             </li>
+                            <li @click="selectFilterType('custom', 'Tùy chỉnh')"
+                                class="px-3 py-2 hover:bg-[#002975] hover:text-white cursor-pointer text-sm">
+                                Tùy chọn
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Quarter Selector for quarter filter -->
+                    <div class="relative" x-show="filterType === 'quarter'" @click.away="quarterOpen=false">
+                        <button type="button"
+                            class="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#002975] flex justify-between items-center min-w-[100px]"
+                            @click="quarterOpen=!quarterOpen">
+                            <span x-text="'Quý ' + selectedQuarter"></span>
+                            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" stroke-width="2"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <ul x-show="quarterOpen"
+                            class="absolute left-0 mt-1 w-full bg-white border rounded-lg shadow z-10">
+                            <template x-for="q in [1, 2, 3, 4]" :key="q">
+                                <li @click="selectQuarter(q)"
+                                    class="px-3 py-2 hover:bg-[#002975] hover:text-white cursor-pointer text-sm"
+                                    x-text="'Quý ' + q"></li>
+                            </template>
+                        </ul>
+                    </div>
+
+                    <!-- Year Selector for quarter filter -->
+                    <div class="relative" x-show="filterType === 'quarter'" @click.away="yearOpen=false">
+                        <button type="button"
+                            class="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#002975] flex justify-between items-center min-w-[100px]"
+                            @click="yearOpen=!yearOpen">
+                            <span x-text="'Năm ' + filterYear"></span>
+                            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" stroke-width="2"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <ul x-show="yearOpen"
+                            class="absolute left-0 mt-1 w-full bg-white border rounded-lg shadow z-10 max-h-60 overflow-y-auto">
+                            <template x-for="yr in yearPeriods" :key="yr">
+                                <li @click="selectYear(yr)"
+                                    class="px-3 py-2 hover:bg-[#002975] hover:text-white cursor-pointer text-sm"
+                                    x-text="yr"></li>
+                            </template>
                         </ul>
                     </div>
 
@@ -218,6 +268,31 @@ require __DIR__ . '/partials/layout-start.php';
                                     x-text="yr"></li>
                             </template>
                         </ul>
+                    </div>
+
+                    <!-- Custom Date Range for custom filter -->
+                    <div x-show="filterType === 'custom'" class="flex items-center gap-2">
+                        <div class="relative">
+                            <input type="text" 
+                                x-model="customFromDate"
+                                class="flatpickr text-sm border border-gray-300 rounded-lg px-3 py-2 pr-10 bg-white focus:outline-none focus:ring-2 focus:ring-[#002975]"
+                                placeholder="Từ ngày"
+                                autocomplete="off"
+                                data-filter-key="custom"
+                                data-filter-field="from">
+                            <i class="fa-solid fa-calendar absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                        </div>
+                        <span class="text-gray-500">→</span>
+                        <div class="relative">
+                            <input type="text" 
+                                x-model="customToDate"
+                                class="flatpickr text-sm border border-gray-300 rounded-lg px-3 py-2 pr-10 bg-white focus:outline-none focus:ring-2 focus:ring-[#002975]"
+                                placeholder="Đến ngày"
+                                autocomplete="off"
+                                data-filter-key="custom"
+                                data-filter-field="to">
+                            <i class="fa-solid fa-calendar absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                        </div>
                     </div>
 
                     <!-- Reset Button -->
@@ -428,18 +503,22 @@ require __DIR__ . '/partials/layout-start.php';
             filterType: 'month',
             filterPeriod: defaultPeriod,
             selectedWeek: 0, // 0 = tất cả, 1-4 = tuần cụ thể
+            selectedQuarter: 1, // Quý hiện tại
             chart: null,
             categoryChart: null,
             orderStatusChart: null,
             loading: false,
             selectedMonth: String(currentMonth).padStart(2, '0'), // Khởi tạo tháng hiện tại
             filterYear: currentYear,
+            customFromDate: '',
+            customToDate: '',
 
             // Filter controls
             filterTypeOpen: false,
             weekOpen: false,
             periodOpen: false,
             yearOpen: false,
+            quarterOpen: false,
             filterTypeLabel: 'Theo tháng',
             weekLabel: 'Tất cả',
             periodLabel: monthNames[currentMonth] + ' ' + currentYear,
@@ -457,11 +536,79 @@ require __DIR__ . '/partials/layout-start.php';
             }),
 
             init() {
+                // Tính quý hiện tại
+                const now = new Date();
+                const currentMonth = now.getMonth() + 1;
+                this.selectedQuarter = Math.ceil(currentMonth / 3);
+                
+                // Khởi tạo custom date range (30 ngày gần nhất)
+                const today = new Date();
+                const thirtyDaysAgo = new Date(today);
+                thirtyDaysAgo.setDate(today.getDate() - 30);
+                this.customFromDate = thirtyDaysAgo.toISOString().split('T')[0];
+                this.customToDate = today.toISOString().split('T')[0];
+                
                 this.$nextTick(() => {
                     this.initChart();
                     this.initCategoryChart();
                     this.initOrderStatusChart();
+                    this.initCustomDatePickers();
                 });
+            },
+
+            initCustomDatePickers() {
+                if (!window.flatpickr) return;
+
+                const fromInput = document.querySelector('input[data-filter-key="custom"][data-filter-field="from"]');
+                const toInput = document.querySelector('input[data-filter-key="custom"][data-filter-field="to"]');
+
+                if (fromInput && !fromInput._flatpickr) {
+                    const fromPicker = flatpickr(fromInput, {
+                        dateFormat: "Y-m-d",
+                        altInput: true,
+                        altFormat: "d/m/Y",
+                        locale: "vn",
+                        maxDate: "today",
+                        defaultDate: this.customFromDate,
+                        onChange: (selectedDates, dateStr) => {
+                            // Cập nhật giá trị Alpine.js
+                            this.customFromDate = dateStr;
+                            
+                            if (selectedDates.length > 0 && toInput._flatpickr) {
+                                toInput._flatpickr.set('minDate', selectedDates[0]);
+                            }
+                            
+                            // Trigger changeFilter khi cả 2 ngày đều đã chọn
+                            if (this.customFromDate && this.customToDate) {
+                                this.changeFilter();
+                            }
+                        }
+                    });
+                }
+
+                if (toInput && !toInput._flatpickr) {
+                    const toPicker = flatpickr(toInput, {
+                        dateFormat: "Y-m-d",
+                        altInput: true,
+                        altFormat: "d/m/Y",
+                        locale: "vn",
+                        maxDate: "today",
+                        defaultDate: this.customToDate,
+                        onChange: (selectedDates, dateStr) => {
+                            // Cập nhật giá trị Alpine.js
+                            this.customToDate = dateStr;
+                            
+                            if (selectedDates.length > 0 && fromInput._flatpickr) {
+                                fromInput._flatpickr.set('maxDate', selectedDates[0]);
+                            }
+                            
+                            // Trigger changeFilter khi cả 2 ngày đều đã chọn
+                            if (this.customFromDate && this.customToDate) {
+                                this.changeFilter();
+                            }
+                        }
+                    });
+                }
             },
 
             selectFilterType(type, label) {
@@ -481,10 +628,16 @@ require __DIR__ . '/partials/layout-start.php';
                     // Reset về tháng và năm hiện tại
                     this.selectedMonth = String(currentMonth).padStart(2, '0');
                     this.filterYear = currentYear;
+                } else if (type === 'quarter') {
+                    // Reset về quý hiện tại
+                    this.selectedQuarter = Math.ceil(currentMonth / 3);
+                    this.filterYear = currentYear;
                 } else if (type === 'year') {
                     // Reset về năm hiện tại
                     this.filterYear = currentYear;
                     this.yearLabel = currentYear;
+                } else if (type === 'custom') {
+                    // Giữ nguyên customFromDate và customToDate đã được init
                 }
 
                 this.changeFilter();
@@ -503,6 +656,14 @@ require __DIR__ . '/partials/layout-start.php';
                 this.selectedMonth = String(currentMonth).padStart(2, '0');
                 this.filterYear = currentYear;
                 
+                this.changeFilter();
+            },
+
+            // Chọn quý (khi filterType = 'quarter')
+            selectQuarter(quarter) {
+                if (this.loading) return;
+                this.selectedQuarter = quarter;
+                this.quarterOpen = false;
                 this.changeFilter();
             },
 
@@ -787,15 +948,24 @@ require __DIR__ . '/partials/layout-start.php';
 
                 try {
                     let period;
+                    let url;
+                    
                     if (this.filterType === 'month') {
                         // Ghép tháng + năm thành Y-m
                         period = this.filterYear + '-' + this.selectedMonth;
+                        url = `/admin/api/dashboard/revenue-expense?type=${this.filterType}&period=${period}`;
+                    } else if (this.filterType === 'quarter') {
+                        // Gửi quý + năm
+                        period = this.filterYear + '-Q' + this.selectedQuarter;
+                        url = `/admin/api/dashboard/revenue-expense?type=${this.filterType}&period=${period}`;
                     } else if (this.filterType === 'year') {
                         // Gửi năm đã chọn
                         period = this.filterYear.toString();
+                        url = `/admin/api/dashboard/revenue-expense?type=${this.filterType}&period=${period}`;
+                    } else if (this.filterType === 'custom') {
+                        // Gửi from_date và to_date
+                        url = `/admin/api/dashboard/revenue-expense?type=${this.filterType}&from_date=${this.customFromDate}&to_date=${this.customToDate}`;
                     }
-
-                    let url = `/admin/api/dashboard/revenue-expense?type=${this.filterType}&period=${period}`;
 
                     const res = await fetch(url);
                     if (res.ok) {

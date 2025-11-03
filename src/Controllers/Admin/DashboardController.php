@@ -140,15 +140,19 @@ class DashboardController extends BaseAdminController
 
     /**
      * API: Lấy dữ liệu thu chi theo filter
-     * GET /admin/api/dashboard/revenue-expense?type=week&period=2025-10&week=1
+     * GET /admin/api/dashboard/revenue-expense?type=month&period=2025-10
+     * GET /admin/api/dashboard/revenue-expense?type=quarter&period=2025-Q1
+     * GET /admin/api/dashboard/revenue-expense?type=year&period=2025
+     * GET /admin/api/dashboard/revenue-expense?type=custom&from_date=2025-01-01&to_date=2025-01-31
      */
     public function apiRevenueExpense()
     {
-        $type = $_GET['type'] ?? 'week';
+        $type = $_GET['type'] ?? 'month';
         $period = $_GET['period'] ?? date('Y-m');
-        $week = isset($_GET['week']) ? (int) $_GET['week'] : 0; // 0 = tất cả, 1-4 = tuần cụ thể
+        $fromDate = $_GET['from_date'] ?? null;
+        $toDate = $_GET['to_date'] ?? null;
 
-        $data = $this->getRevenueExpenseData($type, $period, $week);
+        $data = $this->getRevenueExpenseData($type, $period, $fromDate, $toDate);
 
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode($data, JSON_UNESCAPED_UNICODE);
@@ -158,13 +162,19 @@ class DashboardController extends BaseAdminController
     /**
      * Lấy dữ liệu thu chi theo loại filter
      */
-    private function getRevenueExpenseData(string $type, string $period, int $week = 0): array
+    private function getRevenueExpenseData(string $type, string $period, ?string $fromDate = null, ?string $toDate = null): array
     {
         $pdo = DB::pdo();
 
         if ($type === 'month') {
             // period là Y-m (ví dụ: "2025-10"), trả về dữ liệu theo ngày trong tháng
             return $this->getMonthlyData($pdo, $period);
+        } elseif ($type === 'quarter') {
+            // period là Y-Q# (ví dụ: "2025-Q1"), trả về dữ liệu theo tháng trong quý
+            return $this->getQuarterlyData($pdo, $period);
+        } elseif ($type === 'custom') {
+            // Khoảng ngày tùy chỉnh
+            return $this->getCustomRangeData($pdo, $fromDate, $toDate);
         } else {
             // type === 'year', truyền $period (năm) vào getYearlyData
             return $this->getYearlyData($pdo, $period);
@@ -338,6 +348,207 @@ class DashboardController extends BaseAdminController
         foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $r) {
             $monthIndex = (int)$r['m'] - 1; // 0-indexed
             $expense[$monthIndex] = round($r['amt'], 1);
+        }
+
+        return [
+            'labels' => $labels,
+            'revenue' => $revenue,
+            'expense' => $expense,
+            'total_revenue' => array_sum($revenue),
+            'total_expense' => array_sum($expense),
+            'profit' => array_sum($revenue) - array_sum($expense)
+        ];
+    }
+
+    /**
+     * Dữ liệu thu chi theo quý (hiển thị 3 tháng trong quý)
+     * $period dạng YYYY-Q# (vd: 2025-Q1)
+     */
+    private function getQuarterlyData($pdo, string $period): array
+    {
+        // Parse period: "2025-Q1" -> year=2025, quarter=1
+        if (!preg_match('/^(\d{4})-Q([1-4])$/', $period, $matches)) {
+            throw new \Exception('Invalid quarter format. Expected: YYYY-Q#');
+        }
+
+        $year = (int) $matches[1];
+        $quarter = (int) $matches[2];
+
+        // Tính tháng bắt đầu và kết thúc của quý
+        $startMonth = ($quarter - 1) * 3 + 1;
+        $endMonth = $startMonth + 2;
+
+        $labels = [];
+        $revenue = [0, 0, 0];
+        $expense = [0, 0, 0];
+
+        // Tạo labels cho 3 tháng
+        for ($m = $startMonth; $m <= $endMonth; $m++) {
+            $labels[] = 'Tháng ' . $m;
+        }
+
+        // Doanh thu theo tháng trong quý
+        $stmt = $pdo->prepare("
+            SELECT MONTH(created_at) as m, COALESCE(SUM(grand_total),0)/1000000 as amt
+            FROM orders
+            WHERE YEAR(created_at) = ? 
+                AND MONTH(created_at) BETWEEN ? AND ?
+                AND status='Hoàn tất'
+            GROUP BY m
+        ");
+        $stmt->execute([$year, $startMonth, $endMonth]);
+        foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $r) {
+            $monthIndex = (int)$r['m'] - $startMonth; // 0-indexed trong quý
+            $revenue[$monthIndex] = round($r['amt'], 1);
+        }
+
+        // Chi phí theo tháng trong quý
+        $stmt = $pdo->prepare("
+            SELECT MONTH(COALESCE(paid_at, created_at)) as m, COALESCE(SUM(amount),0)/1000000 as amt
+            FROM expense_vouchers
+            WHERE YEAR(COALESCE(paid_at, created_at)) = ?
+                AND MONTH(COALESCE(paid_at, created_at)) BETWEEN ? AND ?
+            GROUP BY m
+        ");
+        $stmt->execute([$year, $startMonth, $endMonth]);
+        foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $r) {
+            $monthIndex = (int)$r['m'] - $startMonth; // 0-indexed trong quý
+            $expense[$monthIndex] = round($r['amt'], 1);
+        }
+
+        return [
+            'labels' => $labels,
+            'revenue' => $revenue,
+            'expense' => $expense,
+            'total_revenue' => array_sum($revenue),
+            'total_expense' => array_sum($expense),
+            'profit' => array_sum($revenue) - array_sum($expense)
+        ];
+    }
+
+    /**
+     * Dữ liệu thu chi theo khoảng ngày tùy chỉnh
+     * Nếu khoảng <= 31 ngày: hiển thị theo ngày
+     * Nếu khoảng > 31 ngày: hiển thị theo tuần
+     */
+    private function getCustomRangeData($pdo, ?string $fromDate, ?string $toDate): array
+    {
+        if (!$fromDate || !$toDate) {
+            throw new \Exception('from_date and to_date are required for custom range');
+        }
+
+        $from = new \DateTime($fromDate);
+        $to = new \DateTime($toDate);
+        $interval = $from->diff($to);
+        $days = (int) $interval->format('%a') + 1;
+
+        if ($days <= 31) {
+            // Hiển thị theo ngày
+            return $this->getCustomDailyData($pdo, $fromDate, $toDate, $days);
+        } else {
+            // Hiển thị theo tuần
+            return $this->getCustomWeeklyData($pdo, $fromDate, $toDate);
+        }
+    }
+
+    /**
+     * Dữ liệu theo ngày cho khoảng ngày tùy chỉnh (≤ 31 ngày)
+     */
+    private function getCustomDailyData($pdo, string $fromDate, string $toDate, int $days): array
+    {
+        $labels = [];
+        $revenue = [];
+        $expense = [];
+
+        // Doanh thu theo ngày
+        $stmt = $pdo->prepare("
+            SELECT DATE(created_at) as d, COALESCE(SUM(grand_total),0)/1000000 as amt
+            FROM orders
+            WHERE DATE(created_at) BETWEEN ? AND ? AND status='Hoàn tất'
+            GROUP BY d
+            ORDER BY d
+        ");
+        $stmt->execute([$fromDate, $toDate]);
+        $revenueData = $stmt->fetchAll(\PDO::FETCH_KEY_PAIR);
+
+        // Chi phí theo ngày
+        $stmt = $pdo->prepare("
+            SELECT DATE(COALESCE(paid_at, created_at)) as d, COALESCE(SUM(amount),0)/1000000 as amt
+            FROM expense_vouchers
+            WHERE DATE(COALESCE(paid_at, created_at)) BETWEEN ? AND ?
+            GROUP BY d
+            ORDER BY d
+        ");
+        $stmt->execute([$fromDate, $toDate]);
+        $expenseData = $stmt->fetchAll(\PDO::FETCH_KEY_PAIR);
+
+        // Build mảng theo từng ngày
+        $current = new \DateTime($fromDate);
+        $end = new \DateTime($toDate);
+        
+        while ($current <= $end) {
+            $dateStr = $current->format('Y-m-d');
+            $labels[] = $current->format('d/m');
+            $revenue[] = isset($revenueData[$dateStr]) ? round($revenueData[$dateStr], 1) : 0;
+            $expense[] = isset($expenseData[$dateStr]) ? round($expenseData[$dateStr], 1) : 0;
+            $current->modify('+1 day');
+        }
+
+        return [
+            'labels' => $labels,
+            'revenue' => $revenue,
+            'expense' => $expense,
+            'total_revenue' => array_sum($revenue),
+            'total_expense' => array_sum($expense),
+            'profit' => array_sum($revenue) - array_sum($expense)
+        ];
+    }
+
+    /**
+     * Dữ liệu theo tuần cho khoảng ngày tùy chỉnh (> 31 ngày)
+     */
+    private function getCustomWeeklyData($pdo, string $fromDate, string $toDate): array
+    {
+        $labels = [];
+        $revenue = [];
+        $expense = [];
+
+        // Doanh thu theo tuần
+        $stmt = $pdo->prepare("
+            SELECT YEARWEEK(created_at, 1) as yw, COALESCE(SUM(grand_total),0)/1000000 as amt
+            FROM orders
+            WHERE DATE(created_at) BETWEEN ? AND ? AND status='Hoàn tất'
+            GROUP BY yw
+            ORDER BY yw
+        ");
+        $stmt->execute([$fromDate, $toDate]);
+        $revenueData = $stmt->fetchAll(\PDO::FETCH_KEY_PAIR);
+
+        // Chi phí theo tuần
+        $stmt = $pdo->prepare("
+            SELECT YEARWEEK(COALESCE(paid_at, created_at), 1) as yw, COALESCE(SUM(amount),0)/1000000 as amt
+            FROM expense_vouchers
+            WHERE DATE(COALESCE(paid_at, created_at)) BETWEEN ? AND ?
+            GROUP BY yw
+            ORDER BY yw
+        ");
+        $stmt->execute([$fromDate, $toDate]);
+        $expenseData = $stmt->fetchAll(\PDO::FETCH_KEY_PAIR);
+
+        // Tạo danh sách tuần từ fromDate đến toDate
+        $current = new \DateTime($fromDate);
+        $current->modify('monday this week'); // Bắt đầu từ thứ 2
+        $end = new \DateTime($toDate);
+        
+        $weekNum = 1;
+        while ($current <= $end) {
+            $yearWeek = $current->format('oW'); // Format: YYYYWW (ISO-8601)
+            $labels[] = 'Tuần ' . $weekNum;
+            $revenue[] = isset($revenueData[$yearWeek]) ? round($revenueData[$yearWeek], 1) : 0;
+            $expense[] = isset($expenseData[$yearWeek]) ? round($expenseData[$yearWeek], 1) : 0;
+            
+            $current->modify('+1 week');
+            $weekNum++;
         }
 
         return [

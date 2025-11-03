@@ -23,9 +23,11 @@ $items = $items ?? [];
                 <i class="fa-solid fa-file-excel"></i>
                 Xuất Excel
             </button>
+            <?php if (($_SESSION['user']['staff_role'] ?? '') === 'Admin'): ?>
             <button
                 class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
                 @click="openCreate()">+ Thêm khuyến mãi</button>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -71,6 +73,7 @@ $items = $items ?? [];
                     <template x-for="p in paginated()" :key="p.id">
                         <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
                             <td class="py-2 px-4 space-x-2 text-center">
+                                <?php if (($_SESSION['user']['staff_role'] ?? '') === 'Admin'): ?>
                                 <button @click="openEditModal(p)" class="p-2 rounded hover:bg-gray-100 text-[#002975]"
                                     title="Sửa">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
@@ -79,6 +82,7 @@ $items = $items ?? [];
                                             d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                     </svg>
                                 </button>
+                                <?php endif; ?>
                                 <button @click="openDetailModal(p)" class="p-2 rounded hover:bg-gray-100 text-[#002975]"
                                     title="Xem chi tiết">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
@@ -89,6 +93,7 @@ $items = $items ?? [];
                                             d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                     </svg>
                                 </button>
+                                <?php if (($_SESSION['user']['staff_role'] ?? '') === 'Admin'): ?>
                                 <button @click="remove(p.id)" class="p-2 rounded hover:bg-gray-100 text-[#002975]"
                                     title="Xóa">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
@@ -97,6 +102,7 @@ $items = $items ?? [];
                                             d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                     </svg>
                                 </button>
+                                <?php endif; ?>
                             </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.name"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line text-center">
@@ -174,7 +180,11 @@ $items = $items ?? [];
         <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
             x-show="openAdd" x-transition.opacity style="display:none">
             <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster"
-                @click.outside="openAdd=false" style="max-height: 90vh; overflow-y: auto;">
+                @click.outside="
+                    if (!$event.target.closest('.flatpickr-calendar')) {
+                        openForm = false;
+                    }
+                " style="max-height: 90vh; overflow-y: auto;">
                 <div class="px-5 py-3 border-b flex justify-center items-center relative">
                     <h3 class="font-semibold text-2xl text-[#002975]">Thêm khuyến mãi</h3>
                     <button class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
@@ -334,7 +344,7 @@ $items = $items ?? [];
                         </template>
                         <template x-if="!form.gift_rules || form.gift_rules.length === 0">
                             <div class="p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
-                                ⚠️ Chưa có quy tắc quà tặng nào được thiết lập
+                                Chưa có quy tắc quà tặng nào được thiết lập
                             </div>
                         </template>
                     </div>
@@ -366,7 +376,7 @@ $items = $items ?? [];
                         </template>
                         <template x-if="!form.combo_items || form.combo_items.length === 0">
                             <div class="p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
-                                ⚠️ Chưa có sản phẩm nào trong combo
+                                Chưa có sản phẩm nào trong combo
                             </div>
                         </template>
                     </div>
@@ -408,7 +418,11 @@ $items = $items ?? [];
         <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
             x-show="openEdit" x-transition.opacity style="display:none">
             <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster"
-                @click.outside="openEdit=false" style="max-height: 90vh; overflow-y: auto;">
+                @click.outside="
+                    if (!$event.target.closest('.flatpickr-calendar')) {
+                        openForm = false;
+                    }
+                " style="max-height: 90vh; overflow-y: auto;">
                 <div class="px-5 py-3 border-b flex justify-center items-center relative">
                     <h3 class="font-semibold text-2xl text-[#002975]">Sửa khuyến mãi</h3>
                     <button class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>

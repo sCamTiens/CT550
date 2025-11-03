@@ -21,8 +21,13 @@ class AuthController extends Controller
     }
     public function showLogin()
     {
+        // Kiểm tra nếu vừa đăng nhập thất bại thì không tự động đăng nhập bằng cookie
+        $justFailed = $_SESSION['login_failed'] ?? false;
+        unset($_SESSION['login_failed']);
+        
         // Tự động đăng nhập lại nếu có cookie admin_remember và chưa có session
-        if (empty($_SESSION['user']) && !empty($_COOKIE['admin_remember'])) {
+        // NHƯNG chỉ khi KHÔNG vừa đăng nhập thất bại
+        if (!$justFailed && empty($_SESSION['user']) && !empty($_COOKIE['admin_remember'])) {
             $username = $_COOKIE['admin_remember'];
             $user = UserRepository::findByUsername($username);
             if ($user && (int) $user->force_change_password === 0) {
@@ -58,6 +63,10 @@ class AuthController extends Controller
 
     public function login()
     {
+        error_log("=== LOGIN ATTEMPT START ===");
+        error_log("REQUEST_METHOD: " . ($_SERVER['REQUEST_METHOD'] ?? 'NONE'));
+        error_log("CONTENT_TYPE: " . ($_SERVER['CONTENT_TYPE'] ?? 'NONE'));
+        
         $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
         if (stripos($contentType, 'application/json') !== false) {
             $raw = file_get_contents('php://input');
@@ -97,6 +106,16 @@ class AuthController extends Controller
         $user = UserRepository::findByUsername($username);
 
         $fail = function (string $msg) use ($isJsonReq) {
+            // Xóa session để tránh tự động đăng nhập lại khi reload
+            unset($_SESSION['admin_user']);
+            unset($_SESSION['user']);
+            
+            // Đánh dấu là vừa đăng nhập thất bại để không tự động login bằng cookie
+            $_SESSION['login_failed'] = true;
+            
+            // KHÔNG xóa cookie ở đây vì có thể user nhập sai 1 lần
+            // Cookie chỉ nên xóa khi logout
+            
             if ($isJsonReq) {
                 http_response_code(401);
                 header('Content-Type: application/json; charset=utf-8');
@@ -119,6 +138,11 @@ class AuthController extends Controller
         if (!password_verify($password, $user->password_hash ?? ''))
             return $fail('Tài khoản hoặc mật khẩu sai.');
 
+        // Debug log để kiểm tra
+        error_log("=== LOGIN SUCCESS ===");
+        error_log("Username: " . $username);
+        error_log("User ID: " . $user->id);
+        error_log("Is JSON request: " . ($isJsonReq ? 'YES' : 'NO'));
 
         // Lấy staff_role nếu có
         $staffRole = null;
@@ -145,6 +169,9 @@ class AuthController extends Controller
         ];
         $_SESSION['admin_user'] = $sessData;
         $_SESSION['user'] = $sessData; // để CategoryController dùng
+        
+        // Xóa flag login_failed khi đăng nhập thành công
+        unset($_SESSION['login_failed']);
 
         // Tự động reset thông báo khi đăng nhập (chỉ 1 lần/ngày)
         $lastRun = $_SESSION['last_stock_check'] ?? null;

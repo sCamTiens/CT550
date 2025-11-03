@@ -172,7 +172,7 @@ class DailyPaymentDueAlertService
         // Xác định trạng thái thanh toán
         $paymentStatusText = self::getPaymentStatusText($po['payment_status'], $po['paid_amount']);
 
-        $title = sprintf('%s Sắp đến hạn thanh toán (%d ngày)', $days);
+        $title = sprintf('Sắp đến hạn thanh toán (%d ngày)', $days);
         $message = sprintf(
             "Phiếu nhập <strong>#%s</strong> (<strong>%s</strong>) sẽ <strong>đến hạn thanh toán trong %d ngày</strong> " .
             "(%s). Trạng thái: %s. <strong>Còn nợ: %s VNĐ</strong>",
