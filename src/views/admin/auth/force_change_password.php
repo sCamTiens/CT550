@@ -2,7 +2,8 @@
 // views/admin/auth/force_change_password.php
 $errors = $_SESSION['errors'] ?? [];
 $flash_error = $_SESSION['flash_error'] ?? null;
-unset($_SESSION['errors'], $_SESSION['flash_error']);
+$first_time_info = $_SESSION['first_time_password_change'] ?? null;
+unset($_SESSION['errors'], $_SESSION['flash_error'], $_SESSION['first_time_password_change']);
 ?>
 <head>
   <?php
@@ -58,6 +59,51 @@ unset($_SESSION['errors'], $_SESSION['flash_error']);
     <div class="mt-6 text-center text-xs text-slate-400">© <?= date('Y') ?> MiniGo - B2105563</div>
   </div>
   <div id="toast-container" class="z-[60]"></div>
+  
+  <?php if ($flash_error): ?>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const toastContainer = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = "fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 text-red-700 bg-red-50 border-l-4 border-red-400 rounded-lg shadow-lg";
+        toast.innerHTML = `
+          <svg class="flex-shrink-0 w-6 h-6 mr-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM10 15a1 1 0 1 1 0-2 1 1 0 0 1 0 2Zm1-4a1 1 0 0 1-2 0V6a1 1 0 0 1 2 0v5Z"/>
+          </svg>
+          <div class="text-sm font-medium"><?= htmlspecialchars($flash_error) ?></div>
+        `;
+        toastContainer.appendChild(toast);
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          toast.style.transition = 'opacity 0.3s ease';
+          setTimeout(() => toast.remove(), 300);
+        }, 4000);
+      });
+    </script>
+  <?php endif; ?>
+  
+  <?php if ($first_time_info): ?>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const toastContainer = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = "fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 text-blue-700 bg-blue-50 border-l-4 border-blue-400 rounded-lg shadow-lg";
+        toast.innerHTML = `
+          <svg class="flex-shrink-0 w-6 h-6 mr-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"/>
+          </svg>
+          <div class="text-sm font-medium"><?= htmlspecialchars($first_time_info) ?></div>
+        `;
+        toastContainer.appendChild(toast);
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          toast.style.transition = 'opacity 0.3s ease';
+          setTimeout(() => toast.remove(), 300);
+        }, 5000);
+      });
+    </script>
+  <?php endif; ?>
+  
   <script>
     (() => {
       // Toggle password

@@ -28,7 +28,8 @@ class RoleMiddleware
             '/admin/import-history',
             '/admin/api/import-history',
             '/admin/api/import-history/{id}',
-            '/admin/api/import-history/{id}'
+            '/admin/api/import-history/{id}',
+            '/admin/api/attendance/today-shift'
         ],
         'Kho' => [
             '/admin/categories',
@@ -61,7 +62,8 @@ class RoleMiddleware
             '/admin/import-history',
             '/admin/api/import-history',
             '/admin/api/import-history/{id}',
-            '/admin/api/import-history/{id}'
+            '/admin/api/import-history/{id}',
+            '/admin/api/attendance/today-shift'
         ],
         'Hỗ trợ trực tuyến' => [
             '/admin/customers',
@@ -69,6 +71,7 @@ class RoleMiddleware
             // API endpoints
             '/admin/api/customers',
             '/admin/api/orders',
+            '/admin/api/attendance/today-shift'
         ],
     ];
 

@@ -6,6 +6,10 @@ require __DIR__ . '/../vendor/autoload.php';
 use Dotenv\Dotenv;
 use App\Core\Router;
 use App\Core\Request;
+use App\Support\EnvHelper;
+
+// Load .env file
+EnvHelper::load(__DIR__ . '/../.env');
 
 use App\Controllers\HomeController;
 use App\Controllers\AuthController;
@@ -36,6 +40,9 @@ use App\Controllers\Admin\StockAlertController as AdminStockAlert;
 use App\Controllers\Admin\PaymentDueAlertController as AdminPaymentDueAlert;
 use App\Controllers\Admin\ReportsController as AdminReports;
 use App\Controllers\Admin\ImportHistoryController as AdminImportHistory;
+use App\Controllers\Admin\ScheduleController as AdminSchedule;
+use App\Controllers\Admin\AttendanceController as AdminAttendance;
+use App\Controllers\Admin\PayrollController as AdminPayroll;
 
 
 /* --- load biến môi trường từ .env (đặt ở thư mục gốc dự án) --- */
@@ -174,6 +181,39 @@ $router->group('/admin', function (Router $r): void {
     $r->put('/api/staff/{id}/password', [AdminStaff::class, 'changePassword']);
     $r->delete('/api/staff/{id}', [AdminStaff::class, 'delete']);
 
+    // Lịch làm việc (Schedule)
+    $r->get('/schedules', [AdminSchedule::class, 'index']);
+    $r->get('/api/schedules', [AdminSchedule::class, 'apiList']);
+    $r->get('/api/schedules/by-date', [AdminSchedule::class, 'apiByDate']);
+    $r->get('/api/schedules/staff-list', [AdminSchedule::class, 'apiStaffList']);
+    $r->get('/api/schedules/shifts', [AdminSchedule::class, 'apiShiftList']);
+    $r->post('/api/schedules', [AdminSchedule::class, 'create']);
+    $r->post('/api/schedules/bulk', [AdminSchedule::class, 'bulkCreate']);
+    $r->post('/api/schedules/copy-week', [AdminSchedule::class, 'copyWeek']);
+    $r->put('/api/schedules/{id}', [AdminSchedule::class, 'update']);
+    $r->delete('/api/schedules/{id}', [AdminSchedule::class, 'delete']);
+    $r->get('/api/schedules/monthly-stats', [AdminSchedule::class, 'monthlyStats']);
+    
+
+    // Chấm công (Attendance)
+    $r->get('/attendance', [AdminAttendance::class, 'index']);
+    $r->get('/api/attendance', [AdminAttendance::class, 'apiList']);
+    $r->post('/api/attendance', [AdminAttendance::class, 'store']);
+    $r->put('/api/attendance/{id}', [AdminAttendance::class, 'update']);
+    $r->delete('/api/attendance/{id}', [AdminAttendance::class, 'delete']);
+    
+    // Attendance Check-in/Check-out API
+    $r->get('/api/attendance/today-shift', [AdminAttendance::class, 'getTodayShift']);
+    $r->post('/api/attendance/check-in', [AdminAttendance::class, 'checkIn']);
+    $r->post('/api/attendance/check-out', [AdminAttendance::class, 'checkOut']);
+
+    // Quản lý lương (Payroll)
+    $r->get('/payroll', [AdminPayroll::class, 'index']);
+    $r->get('/api/payroll', [AdminPayroll::class, 'apiList']);
+    $r->post('/api/payroll', [AdminPayroll::class, 'store']);
+    $r->put('/api/payroll/{id}', [AdminPayroll::class, 'update']);
+    $r->delete('/api/payroll/{id}', [AdminPayroll::class, 'delete']);
+
     // Customers
     $r->get('/customers', [AdminCustomer::class, 'index']);
     $r->get('/api/customers', [AdminCustomer::class, 'apiIndex']);
@@ -304,6 +344,15 @@ $router->group('/admin', function (Router $r): void {
     $r->post('/api/payment-due-alerts/run', [AdminPaymentDueAlert::class, 'runCheck']);
     $r->get('/api/payment-due-alerts/list', [AdminPaymentDueAlert::class, 'getList']);
     $r->post('/api/payment-due-alerts/cleanup', [AdminPaymentDueAlert::class, 'cleanup']);
+
+    // Attendance (Chấm công)
+    $r->get('/api/attendance/today-shift', [AdminAttendance::class, 'getTodayShift']);
+    $r->post('/api/attendance/check-in', [AdminAttendance::class, 'checkIn']);
+    $r->post('/api/attendance/check-out', [AdminAttendance::class, 'checkOut']);
+    $r->get('/api/attendance', [AdminAttendance::class, 'apiIndex']);
+    $r->get('/attendance', [AdminAttendance::class, 'index']);
+    $r->delete('/api/attendance/{id}', [AdminAttendance::class, 'delete']);
+    $r->post('/api/attendance/{id}/approve', [AdminAttendance::class, 'approve']);
 });
 
 /* --- chạy router --- */

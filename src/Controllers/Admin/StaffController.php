@@ -64,9 +64,11 @@ class StaffController extends BaseAdminController
                     'full_name' => $r['full_name'] ?? '',
                     'email' => $r['email'] ?? '',
                     'phone' => $r['phone'] ?? '',
+                    'gender' => $r['gender'] ?? '',
                     'staff_role' => $r['staff_role'] ?? '',
                     'hired_at' => $r['hired_at'] ?? null,
                     'is_active' => $r['is_active'] ?? 1,
+                    'base_salary' => $r['base_salary'] ?? 0,
                     'note' => $r['note'] ?? '',
                     'avatar_url' => $r['avatar_url'] ?? '',
                     'created_by_name' => $r['created_by_name'] ?? '',
@@ -100,7 +102,7 @@ class StaffController extends BaseAdminController
         }
     }
 
-    /** API: Tạo mới nhân viên */
+        /** API: Tạo mới nhân viên */
     public function store()
     {
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
@@ -108,6 +110,15 @@ class StaffController extends BaseAdminController
         // Validate cơ bản
         if (empty(trim($data['username'] ?? ''))) {
             return $this->json(['error' => 'Tên tài khoản không được để trống'], 422);
+        }
+        if (empty(trim($data['full_name'] ?? ''))) {
+            return $this->json(['error' => 'Họ tên không được để trống'], 422);
+        }
+        if (empty(trim($data['staff_role'] ?? ''))) {
+            return $this->json(['error' => 'Vai trò không được để trống'], 422);
+        }
+        if (!isset($data['base_salary']) || $data['base_salary'] <= 0) {
+            return $this->json(['error' => 'Lương tháng phải lớn hơn 0'], 422);
         }
         if (!empty($data['email']) && !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
             return $this->json(['error' => 'Email không hợp lệ'], 422);
@@ -120,26 +131,28 @@ class StaffController extends BaseAdminController
         try {
             $data['created_by'] = $this->currentUserId();
             $result = $this->repo->create($data);
-            if ($result === false) {
-                return $this->json(['error' => 'Không thể tạo nhân viên'], 500);
-            }
-            // Nếu repository trả về chuỗi lỗi (VD: "Email đã tồn tại trong hệ thống")
             if (is_string($result)) {
-                return $this->json(['error' => $result], 422);
+                return $this->json(['error' => $result], 409);
             }
             $this->json($result);
         } catch (\PDOException $e) {
-            $this->json(['error' => 'Lỗi cơ sở dữ liệu khi tạo nhân viên', 'detail' => $e->getMessage()], 500);
+            $this->json(['error' => 'Lỗi khi thêm nhân viên', 'detail' => $e->getMessage()], 500);
         }
     }
 
-    /** API: Cập nhật nhân viên */
+        /** API: Cập nhật nhân viên */
     public function update($id)
     {
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
 
         if (empty(trim($data['full_name'] ?? ''))) {
             return $this->json(['error' => 'Họ tên không được để trống'], 422);
+        }
+        if (empty(trim($data['staff_role'] ?? ''))) {
+            return $this->json(['error' => 'Vai trò không được để trống'], 422);
+        }
+        if (!isset($data['base_salary']) || $data['base_salary'] <= 0) {
+            return $this->json(['error' => 'Lương tháng phải lớn hơn 0'], 422);
         }
         if (!empty($data['email']) && !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
             return $this->json(['error' => 'Email không hợp lệ'], 422);
@@ -152,16 +165,15 @@ class StaffController extends BaseAdminController
         try {
             $data['updated_by'] = $this->currentUserId();
             $result = $this->repo->update($id, $data);
-            if ($result === false) {
-                return $this->json(['error' => 'Không thể cập nhật nhân viên'], 500);
-            }
-            // Nếu repository trả về chuỗi lỗi (VD: "Email đã tồn tại trong hệ thống")
             if (is_string($result)) {
-                return $this->json(['error' => $result], 422);
+                return $this->json(['error' => $result], 409);
+            }
+            if (!$result) {
+                return $this->json(['error' => 'Không tìm thấy nhân viên'], 404);
             }
             $this->json($result);
         } catch (\PDOException $e) {
-            $this->json(['error' => 'Lỗi cơ sở dữ liệu khi cập nhật nhân viên', 'detail' => $e->getMessage()], 500);
+            $this->json(['error' => 'Lỗi khi cập nhật nhân viên', 'detail' => $e->getMessage()], 500);
         }
     }
 

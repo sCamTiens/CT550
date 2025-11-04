@@ -86,6 +86,7 @@ class StaffRepository
                     s.staff_role,
                     s.hired_at,
                     s.note,
+                    s.base_salary,
                     u.avatar_url,
                     u.gender,
                     u.date_of_birth
@@ -115,6 +116,7 @@ class StaffRepository
                     s.staff_role,
                     s.hired_at,
                     s.note,
+                    s.base_salary,
                     u.avatar_url,
                     u.gender,
                     u.date_of_birth
@@ -231,17 +233,18 @@ class StaffRepository
             $userId = DB::pdo()->lastInsertId();
 
             $sqlStaff = "INSERT INTO {$this->staffTable}
-                     (user_id, staff_role, hired_at, note)
-                     VALUES (?, ?, ?, ?)";
+                     (user_id, staff_role, hired_at, note, base_salary)
+                     VALUES (?, ?, ?, ?, ?)";
             $stmtStaff = DB::pdo()->prepare($sqlStaff);
 
             $hiredAt = $this->convertDateToMysql($data['hired_at'] ?? null);
             
             $stmtStaff->execute([
                 $userId,
-                $data['staff_role'] ?? 'Kho',
+                $data['staff_role'] ?? null,
                 $hiredAt,
-                $data['note'] ?? null
+                $data['note'] ?? null,
+                $data['base_salary'] ?? 0
             ]);
 
             DB::pdo()->commit();
@@ -314,16 +317,17 @@ class StaffRepository
             ]);
 
             $sqlStaff = "UPDATE {$this->staffTable}
-                     SET staff_role=?, hired_at=?, note=?
+                     SET staff_role=?, hired_at=?, note=?, base_salary=?
                      WHERE user_id=?";
             $stmtStaff = DB::pdo()->prepare($sqlStaff);
             
             $hiredAt = $this->convertDateToMysql($data['hired_at'] ?? null);
             
             $stmtStaff->execute([
-                $data['staff_role'] ?? 'Kho',
+                $data['staff_role'] ?? null,
                 $hiredAt,
                 $data['note'] ?? null,
+                $data['base_salary'] ?? 0,
                 $id
             ]);
 

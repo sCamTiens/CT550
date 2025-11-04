@@ -7,7 +7,7 @@ $allowedSections = RoleMiddleware::getAllowedSections();
 <!-- SIDEBAR -->
 <aside class="w-72 shrink-0 transition-all duration-200 bg-blue-50 text-slate-800" x-data="{
         openSidebar: true,
-        groups: { catalog:false, inventory:false, expense:false, promo:false },
+        groups: { catalog:false, inventory:false, expense:false, promo:false, staff:false },
         currentPath: window.location.pathname,
         init() {
         if (this.currentPath.includes('/admin/categories') 
@@ -32,6 +32,12 @@ $allowedSections = RoleMiddleware::getAllowedSections();
         if (this.currentPath.includes('/admin/coupons') 
             || this.currentPath.includes('/admin/promotions')) {
             this.groups.promo = true;
+        }
+        if (this.currentPath.includes('/admin/staff') 
+            || this.currentPath.includes('/admin/schedules') 
+            || this.currentPath.includes('/admin/attendance') 
+            || this.currentPath.includes('/admin/payroll')) {
+            this.groups.staff = true;
         }
         }
     }" x-init="init()" :class="openSidebar ? 'translate-x-0' : '-translate-x-full'">
@@ -352,15 +358,70 @@ $allowedSections = RoleMiddleware::getAllowedSections();
 
         <?php if ($allowedSections['staff']): ?>
             <div class="mt-2">
-                <!-- Nhân viên -->
-                <a href="/admin/staff"
-                    :class="['flex items-center gap-2 px-3 py-2 mt-2 rounded', currentPath.startsWith('/admin/staff') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white']">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M17 20h5V4H2v16h5m10 0v-4a4 4 0 00-8 0v4h8z" />
+                <button @click="groups.staff=!groups.staff" :class="[
+                    'w-full flex justify-between items-center px-3 py-2 rounded',
+                    (currentPath.includes('/admin/staff') 
+                    || currentPath.includes('/admin/schedules') 
+                    || currentPath.includes('/admin/attendance') 
+                    || currentPath.includes('/admin/payroll'))
+                        ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white'
+                ]">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M17 20h5V4H2v16h5m10 0v-4a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        <span>Quản lý nhân viên</span>
+                    </div>
+                    <svg class="w-4 h-4 transition-transform" :class="groups.staff?'rotate-90':''" viewBox="0 0 20 20">
+                        <path d="M6 6l4 4 4-4" fill="currentColor" />
                     </svg>
-                    <span>Quản lý nhân viên</span>
-                </a>
+                </button>
+                <div class="pl-4 space-y-1 mt-1" x-show="groups.staff" x-collapse>
+                    <!-- Nhân viên -->
+                    <a href="/admin/staff"
+                        :class="['flex items-center gap-2 px-3 py-2 rounded', currentPath.startsWith('/admin/staff') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white']">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        Danh sách nhân viên
+                    </a>
+
+                    <!-- Lịch làm việc -->
+                    <a href="/admin/schedules"
+                        :class="['flex items-center gap-2 px-3 py-2 rounded', currentPath.startsWith('/admin/schedules') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white']">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        Lịch làm việc
+                    </a>
+
+                    <!-- Chấm công -->
+                    <a href="/admin/attendance"
+                        :class="['flex items-center gap-2 px-3 py-2 rounded', currentPath.startsWith('/admin/attendance') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white']">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                        </svg>
+                        Chấm công
+                    </a>
+
+                    <!-- Quản lý lương -->
+                    <a href="/admin/payroll"
+                        :class="['flex items-center gap-2 px-3 py-2 rounded', currentPath.startsWith('/admin/payroll') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white']">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V4m0 16v-4" />
+                        </svg>
+                        Quản lý lương
+                    </a>
+                </div>
             </div>
         <?php endif; ?>
 

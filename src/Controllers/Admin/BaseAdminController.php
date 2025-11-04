@@ -10,6 +10,20 @@ class BaseAdminController extends Controller
     {
         // Nếu chưa đăng nhập admin -> về trang login
         if (empty($_SESSION['admin_user'])) {
+            // Nếu là API request, trả về JSON thay vì redirect
+            $requestPath = $_SERVER['REQUEST_URI'];
+            $requestPath = parse_url($requestPath, PHP_URL_PATH);
+            
+            if (strpos($requestPath, '/admin/api/') === 0) {
+                http_response_code(401);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Chưa đăng nhập'
+                ]);
+                exit;
+            }
+            
             header('Location: /admin/login');
             exit;
         }
@@ -31,6 +45,9 @@ class BaseAdminController extends Controller
             '/admin/force-change-password',
             '/admin/logout-force',
             '/admin', // Dashboard - tất cả role đều truy cập được
+            '/admin/api/attendance/today-shift',
+            '/admin/api/attendance/check-in',
+            '/admin/api/attendance/check-out',
         ];
         
         // Kiểm tra nếu path là exact match hoặc bắt đầu bằng public path

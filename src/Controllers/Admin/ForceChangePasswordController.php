@@ -48,8 +48,8 @@ class ForceChangePasswordController extends Controller
         // Đăng xuất hoàn toàn
         unset($_SESSION['user'], $_SESSION['admin_user']);
 
-        // Gửi thông báo
-        $_SESSION['flash_error'] = 'Đổi mật khẩu thành công. Vui lòng đăng nhập lại.';
+        // Gửi thông báo thành công
+        $_SESSION['change_password_success'] = 'Đổi mật khẩu thành công! Vui lòng đăng nhập lại.';
 
         // Xóa cookie ghi nhớ (nếu có)
         if (isset($_COOKIE['admin_remember'])) {

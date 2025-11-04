@@ -66,6 +66,7 @@ $items = $items ?? [];
                         <?= textFilterPopover('email', 'Email') ?>
                         <?= textFilterPopover('phone', 'Số điện thoại') ?>
                         <?= selectFilterPopover('is_active', 'Trạng thái', ['' => '-- Tất cả --', '1' => 'Hoạt động', '0' => 'Khóa']) ?>
+                        <th class="py-2 px-4 whitespace-nowrap text-center">Lương tháng</th>
                         <?= dateFilterPopover('hired_at', 'Ngày vào làm') ?>
                         <?= textFilterPopover('note', 'Ghi chú') ?>
                         <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
@@ -131,7 +132,7 @@ $items = $items ?? [];
                                 </div>
                             </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line text-center">
-                                <span x-text="s.gender ? (s.gender === 'Nam' ? 'Nam' : 'Nữ') : '—'"></span>
+                                <span x-text="s.gender || '—'"></span>
                             </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.email"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line"
@@ -140,6 +141,10 @@ $items = $items ?? [];
                             <td class="py-2 px-4 break-words whitespace-pre-line text-center">
                                 <span x-text="s.is_active ? 'Hoạt động' : 'Khóa'"
                                     :class="s.is_active ? 'text-green-600' : 'text-red-600'"></span>
+                            </td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line text-right">
+                                <span
+                                    x-text="s.base_salary ? new Intl.NumberFormat('vi-VN').format(s.base_salary) : '—'"></span>
                             </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line text-right"
                                 x-text="formatDate(s.hired_at) || '—'"></td>
@@ -173,6 +178,7 @@ $items = $items ?? [];
             </table>
         </div>
     </div>
+
     <!-- MODAL: Create -->
     <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
         x-show="openAdd" x-transition.opacity style="display:none">
@@ -748,6 +754,15 @@ $items = $items ?? [];
                     const staffRes = await fetch('/admin/api/staff');
                     const staffData = await staffRes.json();
                     this.items = staffData.items || [];
+                    
+                    // Debug: In ra console để kiểm tra dữ liệu
+                    console.log('=== DEBUG STAFF DATA ===');
+                    console.log('Total items:', this.items.length);
+                    if (this.items.length > 0) {
+                        console.log('First item:', this.items[0]);
+                        console.log('Gender of first item:', this.items[0].gender);
+                        console.log('Base salary of first item:', this.items[0].base_salary);
+                    }
                 } catch (e) {
                     console.error('Lỗi khi tải dữ liệu nhân viên:', e);
                 } finally {
@@ -783,6 +798,22 @@ $items = $items ?? [];
                     case 'staff_role':
                         if (!value) msg = 'Vai trò không được để trống';
                         break;
+                    case 'base_salary':
+                        const salary = parseFloat(this.form.base_salary);
+                        if (!this.form.base_salary || salary <= 0) msg = 'Vui lòng nhập lương tháng hợp lệ';
+                        break;
+                    case 'password':
+                        if (!this.form.user_id) { // Chỉ validate khi tạo mới
+                            if (!value) msg = 'Mật khẩu không được để trống';
+                            else if (value.length < 6) msg = 'Mật khẩu phải ít nhất 6 ký tự';
+                        }
+                        break;
+                    case 'password_confirm':
+                        if (!this.form.user_id) { // Chỉ validate khi tạo mới
+                            if (!value) msg = 'Vui lòng nhập lại mật khẩu';
+                            else if (value !== this.form.password) msg = 'Mật khẩu không khớp';
+                        }
+                        break;
                 }
 
                 this.errors[field] = msg;
@@ -796,12 +827,19 @@ $items = $items ?? [];
 
             // Validate toàn bộ form
             validateAll() {
-                const requiredFields = ['username', 'full_name', 'staff_role', 'email'];
+                const requiredFields = ['username', 'full_name', 'staff_role', 'email', 'base_salary'];
                 let ok = true;
                 requiredFields.forEach(f => {
                     if (!this.validateField(f)) ok = false;
                 });
                 if (!this.validateField('phone')) ok = false;
+
+                // Validate password khi tạo mới
+                if (!this.form.user_id) {
+                    if (!this.validateField('password')) ok = false;
+                    if (!this.validateField('password_confirm')) ok = false;
+                }
+
                 return ok;
             },
 
@@ -823,8 +861,18 @@ $items = $items ?? [];
             // Khi bấm thêm nhân viên
             openCreate() {
                 this.form = {
+                    username: '',
+                    full_name: '',
+                    email: '',
+                    phone: '',
+                    gender: '',
+                    staff_role: '',
+                    hired_at: '',
                     is_active: '1', // Mặc định là Hoạt động
-                    hired_at: ''
+                    note: '',
+                    base_salary: '6000000', // Lương tháng mặc định 6 triệu
+                    password: '',
+                    password_confirm: ''
                 };
                 this.errors = {};
                 this.touched = {};
@@ -838,6 +886,16 @@ $items = $items ?? [];
             },
 
             async submitCreate() {
+                // Validate form trước khi submit
+                if (!this.validateAll()) {
+                    this.showToast('Vui lòng kiểm tra lại thông tin', 'error');
+                    // Đánh dấu tất cả các trường đã touched để hiển thị lỗi
+                    Object.keys(this.form).forEach(key => {
+                        this.touched[key] = true;
+                    });
+                    return;
+                }
+
                 this.submitting = true;
                 try {
                     const res = await fetch('/admin/api/staff', {
@@ -865,6 +923,8 @@ $items = $items ?? [];
                     ...s,
                     is_active: String(s.is_active ?? '1'),
                     gender: s.gender ?? '',
+                    base_salary: s.base_salary ?? '', // Lương tháng
+                    note: s.note ?? ''
                 };
                 // Chuyển đổi ngày từ Y-m-d sang d/m/Y cho datepicker
                 if (this.form.hired_at && this.form.hired_at !== '0000-00-00') {
@@ -878,10 +938,27 @@ $items = $items ?? [];
                 // Khởi tạo lại datepicker sau khi modal mở
                 this.$nextTick(() => {
                     this.initDatepicker();
+                    // Trigger event để update display value của lương
+                    window.dispatchEvent(new CustomEvent('form-updated'));
                 });
             },
 
             async submitUpdate() {
+                // Validate form trước khi submit (không cần validate password khi update)
+                const fieldsToValidate = ['full_name', 'email', 'phone', 'staff_role', 'base_salary'];
+                let ok = true;
+                fieldsToValidate.forEach(f => {
+                    if (!this.validateField(f)) ok = false;
+                });
+
+                if (!ok) {
+                    this.showToast('Vui lòng kiểm tra lại thông tin', 'error');
+                    fieldsToValidate.forEach(f => {
+                        this.touched[f] = true;
+                    });
+                    return;
+                }
+
                 this.submitting = true;
                 try {
                     const res = await fetch(`/admin/api/staff/${this.form.user_id}`, {

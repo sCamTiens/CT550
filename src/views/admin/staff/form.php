@@ -18,8 +18,8 @@
         </label>
         <input type="email" x-model="form.email" @input="clearError('email'); validateField('email')"
             @blur="touched.email = true; validateField('email')" class="border rounded px-3 py-2 w-full"
-            :class="(touched.email && errors.email) ? 'border-red-500' : 'border-gray-300'"
-            placeholder="Nhập email" maxlength="250" required>
+            :class="(touched.email && errors.email) ? 'border-red-500' : 'border-gray-300'" placeholder="Nhập email"
+            maxlength="250" required>
         <p x-show="touched.email && errors.email" x-text="errors.email" class="text-red-500 text-xs mt-1"></p>
     </div>
 
@@ -180,6 +180,40 @@
         </p>
     </div>
 
+    <!-- Lương tháng (28 ngày công) -->
+    <div x-data="{
+        displayValue: '',
+        formatNumber(value) {
+            if (!value) return '';
+            return new Intl.NumberFormat('vi-VN').format(value);
+        },
+        parseNumber(str) {
+            if (!str) return '';
+            return str.replace(/[^\d]/g, '');
+        },
+        updateDisplay() {
+            this.displayValue = this.formatNumber(form.base_salary);
+        },
+        handleInput(e) {
+            const raw = this.parseNumber(e.target.value);
+            form.base_salary = raw;
+            this.displayValue = this.formatNumber(raw);
+        }
+    }" x-init="updateDisplay()" @form-updated.window="updateDisplay()">
+        <label class="block text-sm text-black font-semibold mb-1">
+            Lương tháng (VNĐ) <span class="text-red-500">*</span>
+        </label>
+        <input type="text" x-model="displayValue"
+            @input="handleInput($event); clearError('base_salary'); validateField('base_salary')"
+            @blur="touched.base_salary = true; validateField('base_salary')" @focus="$event.target.select()"
+            class="border rounded px-3 py-2 w-full"
+            :class="(touched.base_salary && errors.base_salary) ? 'border-red-500' : 'border-gray-300'"
+            placeholder="Nhập lương tháng" inputmode="numeric" required>
+        <p class="text-xs text-gray-500 mt-1">Lương nhận được khi làm đủ 28 ngày (mỗi ngày 1 ca 8 tiếng)</p>
+        <p x-show="touched.base_salary && errors.base_salary" x-text="errors.base_salary"
+            class="text-red-500 text-xs mt-1"></p>
+    </div>
+
     <!-- Mật khẩu (chỉ khi tạo mới) -->
     <template x-if="!form.user_id">
         <div>
@@ -215,7 +249,7 @@
                     class="text-red-500">*</span></label>
             <div class="flex gap-2 items-center relative">
                 <input :type="showPasswordConfirm ? 'text' : 'password'" x-model="form.password_confirm"
-                :class="(touched.password_confirm && errors.password_confirm) ? 'border-red-500' : 'border-gray-300'"
+                    :class="(touched.password_confirm && errors.password_confirm) ? 'border-red-500' : 'border-gray-300'"
                     @input="clearError('password_confirm'); validateField('password_confirm')"
                     @blur="touched.password_confirm = true; validateField('password_confirm'); if (!form.password_confirm) { errors.password_confirm = 'Vui lòng nhập lại mật khẩu' } else if (form.password !== form.password_confirm) { errors.password_confirm = 'Mật khẩu không khớp' }"
                     class="border rounded px-3 py-2 w-full pr-10" placeholder="Nhập lại mật khẩu" minlength="6"
@@ -267,8 +301,8 @@
                         errors.is_active = '';
                     }
                 " placeholder="-- Chọn trạng thái --"
-                class="w-full border rounded px-3 py-2 pr-8 bg-white text-sm cursor-pointer focus:ring-1 focus:ring-[#002975] focus:border-[#002975]" 
-                :class="(touched.customer_id && errors.customer_id) ? 'border-red-500' : 'border-gray-300'"/>
+                class="w-full border rounded px-3 py-2 pr-8 bg-white text-sm cursor-pointer focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
+                :class="(touched.customer_id && errors.customer_id) ? 'border-red-500' : 'border-gray-300'" />
 
             <svg class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" fill="none"
                 stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -297,7 +331,7 @@
     <div class="md:col-span-2">
         <label class="block text-sm text-black font-semibold mb-1">Ghi chú</label>
         <textarea x-model="form.note" maxlength="255" class="border rounded px-3 py-2 w-full"
-            placeholder="Ghi chú thêm về nhân viên"></textarea>
+            placeholder="Nhập ghi chú (nếu có)"></textarea>
     </div>
 </div>
 

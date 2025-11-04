@@ -2,6 +2,23 @@
     [x-cloak] {
         display: none !important;
     }
+
+    @keyframes slide-in {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    .animate-slide-in {
+        animation: slide-in 0.3s ease-out;
+        transition: all 0.3s ease-out;
+    }
 </style>
 
 <!-- Header -->
@@ -11,8 +28,33 @@
         <h1 class="p-4 font-bold text-lg tracking-wide text-[#002975]" style="font-size: 50px;">MiniGo</h1>
     </div>
 
-    <!-- Bên phải: thông báo + dropdown user -->
+    <!-- Bên phải: chấm công + thông báo + dropdown user -->
     <div class="flex items-center gap-4">
+        <?php
+        // Chỉ hiển thị nút chấm công cho nhân viên (không phải Admin)
+        $isAdmin = ($_SESSION['user']['staff_role'] ?? '') === 'Admin';
+        if (!$isAdmin):
+            ?>
+            <!-- Nút chấm công -->
+            <div class="relative" x-data="attendanceButtonData()">
+                <template x-if="currentShift && isInWorkingHours">
+                    <button @click="handleAttendance()" :disabled="processing"
+                        class="flex items-center gap-2 p-2 rounded-lg font-semibold transition-all border-2 disabled:opacity-50"
+                        :class="{
+                        'border border-green-600 text-green-600 hover:bg-green-600 hover:text-white': !hasCheckedIn,
+                        'border border-orange-500 hover:bg-orange-600 text-orange-600 border-orange-600 hover:text-white': hasCheckedIn && !hasCheckedOut
+                    }">
+                        <i class="fa-solid" :class="{
+                        'fa-right-to-bracket': !hasCheckedIn,
+                        'fa-right-from-bracket': hasCheckedIn && !hasCheckedOut
+                    }"></i>
+                        <span
+                            x-text="processing ? 'Đang xử lý...' : (hasCheckedIn && !hasCheckedOut ? 'Ra ca' : 'Vào ca')"></span>
+                    </button>
+                </template>
+            </div>
+        <?php endif; ?>
+
         <!-- Icon chuông thông báo -->
         <div class="relative" x-data="notificationBellData()">
             <button @click="toggleDropdown()"
@@ -77,7 +119,8 @@
                                             'bg-red-500': notif.type === 'error',
                                             'bg-yellow-500': notif.type === 'warning',
                                             'bg-blue-500': notif.type !== 'error' && notif.type !== 'warning'
-                                        }" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white">
+                                        }"
+                                            class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white">
                                             Mới
                                         </span>
                                     </p>
@@ -135,6 +178,187 @@
 </header>
 
 <script>
+    // Attendance Button Component
+    function attendanceButtonData() {
+        return {
+            currentShift: null,
+            hasCheckedIn: false,
+            hasCheckedOut: false,
+            isInWorkingHours: false,
+            processing: false,
+
+            async init() {
+                await this.checkCurrentShift();
+                // Cập nhật mỗi phút
+                setInterval(() => {
+                    this.checkCurrentShift();
+                }, 60000);
+            },
+
+            async checkCurrentShift() {
+                try {
+                    const res = await fetch('/admin/api/attendance/today-shift');
+
+                    // Lấy raw text trước để debug
+                    const rawText = await res.text();
+
+                    if (!res.ok) {
+                        console.error('Failed to fetch shift:', res.status);
+                        return;
+                    }
+
+                    // Parse JSON từ text
+                    const data = JSON.parse(rawText);
+
+                    if (!data.success || !data.data || data.data.length === 0) {
+
+                        // DEMO MODE: Hiển thị nút với ca giả lập
+                        this.currentShift = {
+                            shift_id: 1,
+                            shift_name: 'Ca sáng (Demo)',
+                            start_time: '06:00:00',
+                            end_time: '14:00:00',
+                            check_in_time: null,
+                            check_out_time: null
+                        };
+                        this.hasCheckedIn = false;
+                        this.hasCheckedOut = false;
+                        this.isInWorkingHours = true; // Always show in demo mode
+                        return;
+                    }
+
+                    // Lấy giờ hiện tại
+                    const now = new Date();
+                    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+                    // Tìm ca làm việc hiện tại (trong khung giờ làm việc)
+                    for (const shift of data.data) {
+                        const [startHour, startMin] = shift.start_time.split(':').map(Number);
+                        const [endHour, endMin] = shift.end_time.split(':').map(Number);
+
+                        const shiftStart = startHour * 60 + startMin;
+                        const shiftEnd = endHour * 60 + endMin;
+
+                        // Cho phép hiển thị nút từ 2 giờ trước ca đến 30 phút sau ca kết thúc
+                        // Nhân viên có thể check-in bất cứ lúc nào, kể cả đi trễ
+                        const canShowButton = currentMinutes >= (shiftStart - 120) && currentMinutes <= (shiftEnd + 30);
+
+                        // Nếu trong khung giờ ca làm việc
+                        if (canShowButton) {
+                            this.currentShift = shift;
+                            this.hasCheckedIn = !!shift.check_in_time;
+                            this.hasCheckedOut = !!shift.check_out_time;
+                            this.isInWorkingHours = true;
+
+                            return;
+                        }
+                    }
+
+                    // Không có ca nào phù hợp
+                    console.log('No matching shift for current time');
+                    this.currentShift = null;
+                    this.isInWorkingHours = false;
+
+                } catch (e) {
+                    console.error('Error checking shift:', e);
+                    this.isInWorkingHours = false;
+                }
+            },
+
+            async handleAttendance() {
+                if (this.processing || !this.currentShift) return;
+
+                this.processing = true;
+
+                try {
+                    const endpoint = this.hasCheckedIn && !this.hasCheckedOut
+                        ? '/admin/api/attendance/check-out'
+                        : '/admin/api/attendance/check-in';
+
+                    const res = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            shift_id: this.currentShift.shift_id
+                        })
+                    });
+
+                    const data = await res.json();
+
+                    if (data.success) {
+                        // Hiển thị thông báo thành công
+                        this.showNotification(data.message, 'success');
+
+                        // Cập nhật trạng thái
+                        await this.checkCurrentShift();
+                    } else {
+                        this.showNotification(data.message, 'error');
+                    }
+
+                } catch (e) {
+                    this.showNotification('Lỗi kết nối: ' + e.message, 'error');
+                } finally {
+                    this.processing = false;
+                }
+            },
+
+            showNotification(message, type) {
+                // Tạo toast notification
+                const toast = document.createElement('div');
+                toast.className = `
+        fixed top-5 right-5 z-[60] flex items-center justify-between w-[400px] p-4 mb-4 text-base font-semibold
+        ${type === 'success'
+                        ? 'text-green-700 border-green-400'
+                        : 'text-red-700 border-red-400'}
+        bg-white rounded-xl shadow-lg border-2 animate-slide-in
+    `;
+
+                toast.innerHTML = `
+        <div class="flex items-center flex-1">
+            <svg class="flex-shrink-0 w-6 h-6 ${type === 'success' ? 'text-green-600' : 'text-red-600'} mr-3"
+                xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+                ${type === 'success'
+                        ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M5 13l4 4L19 7" />`
+                        : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`}
+            </svg>
+            <div class="flex-1">${message}</div>
+        </div>
+        <button class="ml-4 text-gray-400 hover:text-gray-700 transition" id="toast-close-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+    `;
+
+                document.body.appendChild(toast);
+
+                // Auto ẩn sau 5s
+                const timer = setTimeout(() => hideToast(), 5000);
+
+                // Click nút X để đóng
+                toast.querySelector('#toast-close-btn').addEventListener('click', () => {
+                    clearTimeout(timer);
+                    hideToast();
+                });
+
+                // Hàm ẩn toast
+                function hideToast() {
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateX(100%)';
+                    toast.style.transition = 'all 0.3s ease';
+                    setTimeout(() => toast.remove(), 300);
+                }
+            }
+        };
+    }
+
     // Notification Bell Component
     function notificationBellData() {
         return {

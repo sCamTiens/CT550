@@ -96,7 +96,7 @@ unset($_SESSION['errors'], $_SESSION['flash_error']);
           <input id="password" name="password" type="password"
             class="w-full border rounded-lg px-3 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
             placeholder="Vui lòng nhập mật khẩu">
-            
+
           <!-- nút toggle hiện/ẩn -->
           <button type="button" id="toggle-password"
             class="absolute inset-y-0 right-0 px-3 flex items-center text-slate-500 hover:text-slate-700"
@@ -132,6 +132,84 @@ unset($_SESSION['errors'], $_SESSION['flash_error']);
   <!-- Toast lỗi nổi -->
   <div id="toast-container" class="z-[60]"></div>
 
+  <?php if (!empty($_SESSION['flash_error'])): ?>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        const box = document.getElementById('toast-container');
+        if (!box) return;
+        box.innerHTML = '';
+
+        const toast = document.createElement('div');
+
+        // Màu & icon kiểu error
+        const colorClasses = 'text-red-700 border-red-400';
+        const iconColor = 'text-red-600';
+        const iconSvg = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`;
+
+        toast.className = `fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 mb-4 text-base font-semibold ${colorClasses} bg-white rounded-xl shadow-lg border-2 animate-slide-in`;
+
+        toast.innerHTML = `
+        <svg class="flex-shrink-0 w-6 h-6 ${iconColor} mr-3"
+            xmlns="http://www.w3.org/2000/svg" fill="none"
+            viewBox="0 0 24 24" stroke="currentColor">
+            ${iconSvg}
+        </svg>
+        <div class="flex-1"><?= htmlspecialchars($_SESSION['flash_error']) ?></div>
+    `;
+
+        box.appendChild(toast);
+
+        // Tự ẩn sau 10 giây (lâu hơn vì thông báo IP quan trọng)
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateX(100%)';
+          toast.style.transition = 'all 0.3s ease';
+          setTimeout(() => toast.remove(), 300);
+        }, 10000);
+      });
+    </script>
+    <?php unset($_SESSION['flash_error']); ?>
+  <?php endif; ?>
+
+  <?php if (!empty($_SESSION['change_password_success'])): ?>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        const box = document.getElementById('toast-container');
+        if (!box) return;
+        box.innerHTML = '';
+
+        const toast = document.createElement('div');
+
+        // Màu & icon kiểu success
+        const colorClasses = 'text-green-700 border-green-400';
+        const iconColor = 'text-green-600';
+        const iconSvg = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />`;
+
+        toast.className = `fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 mb-4 text-base font-semibold ${colorClasses} bg-white rounded-xl shadow-lg border-2 animate-slide-in`;
+
+        toast.innerHTML = `
+        <svg class="flex-shrink-0 w-6 h-6 ${iconColor} mr-3"
+            xmlns="http://www.w3.org/2000/svg" fill="none"
+            viewBox="0 0 24 24" stroke="currentColor">
+            ${iconSvg}
+        </svg>
+        <div class="flex-1"><?= htmlspecialchars($_SESSION['change_password_success']) ?></div>
+    `;
+
+        box.appendChild(toast);
+
+        // Tự ẩn mượt sau 5 giây
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateX(100%)';
+          toast.style.transition = 'all 0.3s ease';
+          setTimeout(() => toast.remove(), 300);
+        }, 5000);
+      });
+    </script>
+    <?php unset($_SESSION['change_password_success']); ?>
+  <?php endif; ?>
+
   <!-- Toggle hiện/ẩn mật khẩu -->
   <script>
     (() => {
@@ -163,21 +241,62 @@ unset($_SESSION['errors'], $_SESSION['flash_error']);
       const toastContainer = document.getElementById('toast-container');
 
       let toastTimer = null;
-      function showToast(msg) {
+
+      function showToast(msg, type = 'error') {
+        const toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) return;
+
         toastContainer.innerHTML = '';
         if (toastTimer) { clearTimeout(toastTimer); toastTimer = null; }
+
         const toast = document.createElement('div');
-        toast.className =
-          "fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 mb-4 text-base font-semibold text-red-700 bg-white rounded-xl shadow-lg border-2 border-red-400";
+
+        // Mặc định màu và icon
+        let colorClasses = '';
+        let iconColor = '';
+        let iconSvg = '';
+
+        switch (type) {
+          case 'success':
+            colorClasses = 'text-green-700 border-green-400';
+            iconColor = 'text-green-600';
+            iconSvg = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />`;
+            break;
+          case 'warning':
+            colorClasses = 'text-yellow-700 border-yellow-400';
+            iconColor = 'text-yellow-500';
+            iconSvg = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`;
+            break;
+          case 'info':
+            colorClasses = 'text-blue-700 border-blue-400';
+            iconColor = 'text-blue-600';
+            iconSvg = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`;
+            break;
+          default: // error
+            colorClasses = 'text-red-700 border-red-400';
+            iconColor = 'text-red-600';
+            iconSvg = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`;
+        }
+
+        toast.className = `fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 mb-4 text-base font-semibold ${colorClasses} bg-white rounded-xl shadow-lg border-2 animate-slide-in`;
+
         toast.innerHTML = `
-      <svg class="flex-shrink-0 w-6 h-6 text-red-600 me-3" xmlns="http://www.w3.org/2000/svg" fill="none"
-        viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />
-      </svg>
-      <div class="flex-1">${msg}</div>`;
+          <svg class="flex-shrink-0 w-6 h-6 ${iconColor} mr-3"
+            xmlns="http://www.w3.org/2000/svg" fill="none"
+            viewBox="0 0 24 24" stroke="currentColor">
+            ${iconSvg}
+          </svg>
+          <div class="flex-1">${msg}</div>
+        `;
+
         toastContainer.appendChild(toast);
-        toastTimer = setTimeout(() => toast.remove(), 3000);
+
+        toastTimer = setTimeout(() => {
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateX(100%)';
+          toast.style.transition = 'all 0.3s ease';
+          setTimeout(() => toast.remove(), 300);
+        }, 4000);
       }
 
       function validateInput(input, errorEl, message) {
@@ -236,18 +355,27 @@ unset($_SESSION['errors'], $_SESSION['flash_error']);
 
           console.log('Response status:', res.status);
           console.log('Response ok:', res.ok);
-          
+
           const ct = res.headers.get('content-type') || '';
           console.log('Content-Type:', ct);
-          
+
           if (ct.includes('application/json')) {
             const data = await res.json().catch(() => ({}));
             console.log('Response data:', data);
-            
+
             if (res.ok && (data.ok || data.success)) {
               window.location.href = '/admin';
               return;
             }
+            
+            // Xử lý IP blocked
+            if (data.ip_blocked) {
+              showToast(data.message || 'IP không được phép đăng nhập', 'error');
+              formCard.classList.add('shake');
+              setTimeout(() => formCard.classList.remove('shake'), 400);
+              return;
+            }
+            
             // Nếu server trả về force_change_password thì chuyển hướng
             if (data.force_change_password && data.redirect) {
               window.location.href = data.redirect;

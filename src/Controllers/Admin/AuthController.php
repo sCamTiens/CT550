@@ -5,6 +5,7 @@ use App\Core\Controller;
 use App\Models\Repositories\UserRepository;
 use App\Services\DailyStockAlertService;
 use App\Services\DailyPaymentDueAlertService;
+use App\Support\EnvHelper;
 
 class AuthController extends Controller
 {
@@ -63,6 +64,25 @@ class AuthController extends Controller
 
     public function login()
     {
+        // Kiểm tra IP ngay từ đầu
+        $clientIP = EnvHelper::getClientIP();
+        if (!EnvHelper::isAllowedIP($clientIP)) {
+            $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+            $isJsonReq = stripos($contentType, 'application/json') !== false;
+            
+            $errorMsg = 'IP của bạn (' . $clientIP . ') không được phép đăng nhập. Vui lòng kết nối từ văn phòng.';
+            
+            if ($isJsonReq) {
+                http_response_code(403);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['ok' => false, 'message' => $errorMsg, 'ip_blocked' => true]);
+                return;
+            }
+            $_SESSION['flash_error'] = $errorMsg;
+            header('Location: /admin/login');
+            exit;
+        }
+
         error_log("=== LOGIN ATTEMPT START ===");
         error_log("REQUEST_METHOD: " . ($_SERVER['REQUEST_METHOD'] ?? 'NONE'));
         error_log("CONTENT_TYPE: " . ($_SERVER['CONTENT_TYPE'] ?? 'NONE'));
@@ -198,6 +218,7 @@ class AuthController extends Controller
 
         // Nếu user cần đổi mật khẩu lần đầu, chuyển hướng sang trang đổi mật khẩu
         if (!empty($sessData['force_change_password'])) {
+            $_SESSION['first_time_password_change'] = 'Vui lòng đặt mật khẩu mới cho lần đăng nhập đầu tiên';
             if ($isJsonReq) {
                 header('Content-Type: application/json; charset=utf-8');
                 echo json_encode(['ok' => false, 'force_change_password' => true, 'redirect' => '/admin/force-change-password']);
@@ -206,6 +227,9 @@ class AuthController extends Controller
             header('Location: /admin/force-change-password');
             exit;
         }
+
+        // Lưu thông báo đăng nhập thành công
+        $_SESSION['login_success'] = 'Đăng nhập thành công!';
 
         if ($isJsonReq) {
             header('Content-Type: application/json; charset=utf-8');
