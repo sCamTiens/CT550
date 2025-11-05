@@ -104,6 +104,98 @@
         }, 150);
     };
 
+    // 2.1. Hàm __initFlatpickrDateTime cho datetime filter (có cả giờ phút)
+    window.__initFlatpickrDateTime = function (rootEl) {
+        if (!window.flatpickr) return;
+        if (!rootEl) return;
+
+        setTimeout(() => {
+            rootEl.querySelectorAll('input.flatpickr-datetime').forEach(el => {
+                const filterKey = el.getAttribute('data-filter-key');
+                const field = el.getAttribute('data-filter-field');
+                if (!filterKey || !field) return;
+
+                // Lấy giá trị ban đầu từ Alpine
+                const initialValue = el.value || el.getAttribute(':value');
+
+                // Nếu đã có Flatpickr instance, cập nhật giá trị và return
+                if (el._flatpickr) {
+                    if (initialValue && initialValue !== 'null' && initialValue !== '') {
+                        el._flatpickr.setDate(initialValue, false);
+                    } else {
+                        el._flatpickr.clear();
+                    }
+                    return;
+                }
+
+                // Khởi tạo Flatpickr lần đầu với chế độ datetime
+                const fp = flatpickr(el, {
+                    dateFormat: "d/m/Y H:i",
+                    enableTime: true,
+                    time_24hr: true,
+                    locale: "vn",
+                    allowInput: true,
+                    defaultDate: initialValue || null,
+                    onChange: function (selectedDates, dateStr, instance) {
+                        const component = Alpine.$data(rootEl.closest('[x-data]'));
+                        if (!component || !component.filters) return;
+
+                        // Format datetime theo định dạng MySQL: YYYY-MM-DD HH:MM:SS
+                        let formattedDate = '';
+                        if (selectedDates.length > 0) {
+                            const d = selectedDates[0];
+                            const year = d.getFullYear();
+                            const month = String(d.getMonth() + 1).padStart(2, '0');
+                            const day = String(d.getDate()).padStart(2, '0');
+                            const hours = String(d.getHours()).padStart(2, '0');
+                            const minutes = String(d.getMinutes()).padStart(2, '0');
+                            formattedDate = `${year}-${month}-${day} ${hours}:${minutes}:00`;
+                        }
+
+                        // Cập nhật filter value
+                        component.filters[`${filterKey}_${field}`] = formattedDate;
+
+                        // Đồng bộ min/max nếu là khoảng between
+                        const fromInput = rootEl.querySelector(`input[data-filter-key="${filterKey}"][data-filter-field="from"]`);
+                        const toInput = rootEl.querySelector(`input[data-filter-key="${filterKey}"][data-filter-field="to"]`);
+
+                        if (field === 'from' && toInput && fromInput._flatpickr && toInput._flatpickr) {
+                            toInput._flatpickr.set('minDate', selectedDates[0]);
+                        }
+
+                        if (field === 'to' && fromInput && fromInput._flatpickr && toInput._flatpickr) {
+                            fromInput._flatpickr.set('maxDate', selectedDates[0]);
+                        }
+
+                        // Reset về trang 1
+                        if (component.currentPage) {
+                            component.currentPage = 1;
+                        }
+                    }
+                });
+
+                el._flatpickr = fp;
+            });
+        }, 150);
+    };
+
+    // 2.2. Hàm openFlatpickrDateTime (click icon cho datetime)
+    window.openFlatpickrDateTime = function (el) {
+        try {
+            const parent = el.closest('div');
+            const input = parent?.querySelector('input.flatpickr-datetime');
+            if (!input) return;
+
+            if (input._flatpickr) input._flatpickr.open();
+            else {
+                input.focus();
+                setTimeout(() => input._flatpickr?.open(), 200);
+            }
+        } catch (e) {
+            console.debug('Cannot open Flatpickr DateTime:', e);
+        }
+    };
+
     // 3. Hàm openFlatpickr (click icon)
     window.openFlatpickr = function (el) {
         try {

@@ -219,7 +219,8 @@ class StaffController extends BaseAdminController
             ['text' => 'Ngày vào làm', 'note' => '(dd/mm/yyyy)'],
             ['text' => 'Giới tính', 'note' => '(Nam/Nữ)'],
             'Ghi chú',
-            ['text' => 'Trạng thái ', 'required' => true, 'note' => '(1: hoạt động, 0: khóa)']
+            ['text' => 'Trạng thái ', 'required' => true, 'note' => '(1: hoạt động, 0: khóa)'],
+            ['text' => 'Lương tháng ', 'required' => true, 'note' => '(VNĐ, > 0)']
         ];
 
         $col = 'A';
@@ -243,12 +244,12 @@ class StaffController extends BaseAdminController
         }
 
         // Style header
-        $sheet->getStyle('A1:L1')->getFont()->setBold(true)->setSize(11);
-        $sheet->getStyle('A1:L1')->getFill()
+        $sheet->getStyle('A1:M1')->getFont()->setBold(true)->setSize(11);
+        $sheet->getStyle('A1:M1')->getFill()
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
             ->getStartColor()->setRGB('002975');
-        $sheet->getStyle('A1:L1')->getFont()->getColor()->setRGB('FFFFFF');
-        $sheet->getStyle('A1:L1')->getAlignment()
+        $sheet->getStyle('A1:M1')->getFont()->getColor()->setRGB('FFFFFF');
+        $sheet->getStyle('A1:M1')->getAlignment()
             ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER)
             ->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER)
             ->setWrapText(true);
@@ -268,6 +269,7 @@ class StaffController extends BaseAdminController
         $sheet->setCellValue('J2', 'Nam');
         $sheet->setCellValue('K2', 'Nhân viên mẫu 1');
         $sheet->setCellValue('L2', '1');
+        $sheet->setCellValue('M2', '6000000');
 
         $sheet->setCellValue('A3', 2);
         $sheet->setCellValue('B3', 'nhanvien' . ($timestamp + 1));
@@ -281,13 +283,14 @@ class StaffController extends BaseAdminController
         $sheet->setCellValue('J3', 'Nữ');
         $sheet->setCellValue('K3', 'Nhân viên mẫu 2');
         $sheet->setCellValue('L3', '1');
+        $sheet->setCellValue('M3', '7000000');
 
         // Borders
-        $sheet->getStyle('A1:L3')->getBorders()->getAllBorders()
+        $sheet->getStyle('A1:M3')->getBorders()->getAllBorders()
             ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
 
         // Auto-size columns
-        foreach (range('A', 'L') as $c) {
+        foreach (range('A', 'M') as $c) {
             $sheet->getColumnDimension($c)->setAutoSize(true);
         }
 
@@ -406,7 +409,7 @@ class StaffController extends BaseAdminController
                     continue;
                 }
 
-                // Map columns: STT, Tài khoản*, Mật khẩu*, Họ tên*, Vai trò*, Email*, SĐT*, Ngày sinh, Ngày vào làm, Giới tính, Ghi chú, Trạng thái*
+                // Map columns: STT, Tài khoản*, Mật khẩu*, Họ tên*, Vai trò*, Email*, SĐT*, Ngày sinh, Ngày vào làm, Giới tính, Ghi chú, Trạng thái*, Lương tháng*
                 $username = trim($row[1] ?? '');
                 $password = trim($row[2] ?? '');
                 $full_name = trim($row[3] ?? '');
@@ -418,6 +421,7 @@ class StaffController extends BaseAdminController
                 $gender = trim($row[9] ?? '');
                 $note = trim($row[10] ?? '');
                 $is_active = trim($row[11] ?? '');
+                $base_salary = trim($row[12] ?? '');
 
                 $rowErrors = [];
 
@@ -495,6 +499,15 @@ class StaffController extends BaseAdminController
                     $rowErrors[] = "Trạng thái phải là 0 hoặc 1";
                 }
 
+                // Validate base_salary
+                if (empty($base_salary)) {
+                    $rowErrors[] = 'Lương tháng không được để trống';
+                } elseif (!is_numeric($base_salary)) {
+                    $rowErrors[] = 'Lương tháng phải là số';
+                } elseif ($base_salary <= 0) {
+                    $rowErrors[] = 'Lương tháng phải lớn hơn 0';
+                }
+
                 if (!empty($gender) && !in_array($gender, ['Nam', 'Nữ'])) {
                     $rowErrors[] = "Giới tính phải là 'Nam' hoặc 'Nữ'";
                 }
@@ -527,6 +540,7 @@ class StaffController extends BaseAdminController
                     'hired_at' => $hired_at ?: null,
                     'note' => $note ?: null,
                     'is_active' => (int) $is_active,
+                    'base_salary' => (float) $base_salary,
                     'created_by' => $currentUser
                 ];
 

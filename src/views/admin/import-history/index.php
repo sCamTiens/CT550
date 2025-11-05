@@ -253,9 +253,9 @@
                                                             :class="getRowStatus(row, index) === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
                                                             x-text="getRowStatus(row, index) === 'success' ? 'Thành công' : 'Thất bại'"></span>
                                                     </td>
-                                                    <td class="py-2 px-3 text-red-600 text-xs" 
+                                                    <td class="py-2 px-3 text-red-600 text-xs break-words whitespace-pre-line" 
                                                         :title="getRowErrorMsg(row, index)"
-                                                        x-text="truncateText(getRowErrorMsg(row, index) || '—', 50)"></td>
+                                                        x-text="getRowErrorMsg(row, index)"></td>
                                                 </tr>
                                             </template>
                                         </tbody>

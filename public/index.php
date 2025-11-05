@@ -319,6 +319,8 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/api/reports/inventory/low-stock', [AdminReports::class, 'apiLowStock']);
     $r->get('/api/reports/inventory/high-stock', [AdminReports::class, 'apiHighStock']);
     $r->get('/api/reports/order-status', [AdminReports::class, 'apiOrderStatus']);
+    $r->get('/api/reports/filter', [AdminReports::class, 'apiFilter']);
+    $r->get('/api/reports/export', [AdminReports::class, 'apiExport']);
 
     // Import History (Lịch sử nhập file - Tất cả modules)
     $r->get('/import-history', [AdminImportHistory::class, 'index']);

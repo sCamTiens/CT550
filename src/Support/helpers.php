@@ -238,6 +238,114 @@ HTML;
   }
 }
 
+if (!function_exists('datetimeFilterPopover')) {
+  /**
+   * Render filter theo ngày giờ (datetime - hỗ trợ cả ngày và giờ)
+   *
+   * @param string $key   Tên filter (vd: check_in_time, check_out_time)
+   * @param string $label Label hiển thị
+   * @param int $minWidth Độ rộng tối thiểu (mặc định 150px)
+   * @return string
+   */
+  function datetimeFilterPopover(string $key, string $label, int $minWidth = 150): string
+  {
+    $labelEsc = htmlspecialchars($label, ENT_QUOTES, 'UTF-8');
+    $keyEsc = htmlspecialchars($key, ENT_QUOTES, 'UTF-8');
+
+    return <<<HTML
+<th class="py-2 px-4 relative text-center align-middle" style="min-width: {$minWidth}px;">
+  <div class="flex items-center justify-center gap-2">
+    <span>{$labelEsc}</span>
+    <button @click.stop="toggleFilter('{$keyEsc}')" class="p-1 rounded hover:bg-[#002975] hover:text-white" title="Lọc theo {$labelEsc}">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" />
+      </svg>
+    </button>
+  </div>
+
+  <div x-cloak x-show="openFilter.{$keyEsc}" x-transition
+       x-effect="if(openFilter.{$keyEsc} && window.__initFlatpickrDateTime) window.__initFlatpickrDateTime(\$el)"
+       @click.outside="if (!\$event.target.closest('.flatpickr-calendar')) openFilter.{$keyEsc}=false"
+       class="absolute z-40 mt-2 w-80 bg-white rounded-lg shadow border p-3 space-y-3 text-left"
+       style="position:absolute;">
+       
+    <div class="font-semibold mb-1">Tìm theo "{$labelEsc}"</div>
+
+    <select x-model="filters.{$keyEsc}_type" class="w-full border rounded px-3 py-2">
+      <option value="">-- Chọn kiểu lọc --</option>
+      <option value="eq">Ngày giờ cụ thể</option>
+      <option value="between">Trong khoảng thời gian</option>
+      <option value="lt">Trước thời điểm</option>
+      <option value="gt">Sau thời điểm</option>
+      <option value="lte">Trước hoặc bằng</option>
+      <option value="gte">Sau hoặc bằng</option>
+    </select>
+
+    <!-- Kiểu lọc: datetime đơn -->
+    <div x-show="filters.{$keyEsc}_type==='eq'">
+      <div class="relative">
+        <input type="text" placeholder="Chọn ngày và giờ"
+               autocomplete="off" class="flatpickr-datetime w-full border rounded px-3 py-2 pr-10"
+               data-filter-key="{$keyEsc}" data-filter-field="value"
+               :value="filters.{$keyEsc}_value">
+        <span @click.stop="openFlatpickrDateTime(this)"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer">
+          <i class="fa-regular fa-clock"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- Kiểu lọc: khoảng datetime -->
+    <div x-show="filters.{$keyEsc}_type==='between'" class="space-y-2">
+      <div class="relative">
+        <input type="text" placeholder="Từ ngày giờ"
+               autocomplete="off"
+               class="flatpickr-datetime w-full border rounded px-3 py-2 pr-10"
+               data-filter-key="{$keyEsc}" data-filter-field="from"
+               :value="filters.{$keyEsc}_from">
+        <span @click.stop="openFlatpickrDateTime(this)"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer">
+          <i class="fa-regular fa-clock"></i>
+        </span>
+      </div>
+      <div class="relative">
+        <input type="text" placeholder="Đến ngày giờ"
+               autocomplete="off"
+               class="flatpickr-datetime w-full border rounded px-3 py-2 pr-10"
+               data-filter-key="{$keyEsc}" data-filter-field="to"
+               :value="filters.{$keyEsc}_to">
+        <span @click.stop="openFlatpickrDateTime(this)"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer">
+          <i class="fa-regular fa-clock"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- Kiểu lọc: so sánh datetime -->
+    <div x-show="['lt','gt','lte','gte'].includes(filters.{$keyEsc}_type)">
+      <div class="relative">
+        <input type="text" placeholder="Chọn ngày và giờ"
+               autocomplete="off" class="flatpickr-datetime w-full border rounded px-3 py-2 pr-10"
+               data-filter-key="{$keyEsc}" data-filter-field="value"
+               :value="filters.{$keyEsc}_value">
+        <span @click.stop="openFlatpickrDateTime(this)"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer">
+          <i class="fa-regular fa-clock"></i>
+        </span>
+      </div>
+    </div>
+
+    <div class="flex gap-2 justify-end">
+      <button @click="closeFilter('{$keyEsc}')" class="px-3 py-1 rounded bg-[#002975] text-white hover:opacity-90">Tìm</button>
+      <button @click="resetFilter('{$keyEsc}')" class="px-3 py-1 rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Làm mới</button>
+      <button @click="openFilter.{$keyEsc}=false" class="px-3 py-1 rounded border border-[#002975] text-[#002975] hover:bg-[#002975] hover:text-white">Đóng</button>
+    </div>
+  </div>
+</th>
+HTML;
+  }
+}
+
 // Helper: render filter dạng select (dropdown)
 if (!function_exists('selectFilterPopover')) {
   /**
