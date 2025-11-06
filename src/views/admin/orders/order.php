@@ -1312,7 +1312,10 @@ $items = $items ?? [];
                     const res = await fetch(`/admin/api/orders/${o.id}/items`);
                     if (res.ok) {
                         const data = await res.json();
+                        console.log('Items loaded from API:', data.items);
                         this.viewOrder.items = data.items || [];
+                    } else {
+                        console.error('Failed to load items:', res.status);
                     }
                 } catch (e) {
                     console.error('Error loading order items:', e);

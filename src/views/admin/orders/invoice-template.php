@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="UTF-8">
     <title>Hóa đơn #<?= htmlspecialchars($order['code'] ?? '') ?></title>
@@ -10,10 +11,12 @@
             max-width: 800px;
             margin: 0 auto;
         }
+
         .header {
             text-align: center;
             margin-bottom: 30px;
         }
+
         .logo-section {
             display: flex;
             align-items: center;
@@ -21,75 +24,92 @@
             gap: 15px;
             margin-bottom: 10px;
         }
+
         .company-name {
             font-size: 28px;
             font-weight: bold;
             color: #002975;
         }
+
         .company-sub {
             font-size: 14px;
             color: #666;
         }
+
         .invoice-title {
             font-size: 20px;
             font-weight: bold;
             margin-top: 10px;
         }
+
         .invoice-code {
             font-size: 14px;
             color: #666;
         }
+
         .info-section {
             border-bottom: 1px solid #ddd;
             padding-bottom: 15px;
             margin-bottom: 20px;
         }
+
         .info-title {
             font-weight: bold;
             margin-bottom: 10px;
         }
+
         .info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 8px;
             font-size: 14px;
         }
+
         .info-label {
             color: #666;
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 20px;
             font-size: 14px;
         }
+
         th {
             background-color: #f5f5f5;
             padding: 10px;
             text-align: left;
             border-bottom: 2px solid #ddd;
         }
+
         td {
             padding: 10px;
         }
+
         .border-b {
             border-bottom: 1px solid #e5e7eb;
         }
+
         .summary {
             border-top: 2px solid #ddd;
             padding-top: 15px;
         }
+
         .summary-row {
             display: flex;
             justify-content: space-between;
             margin-bottom: 8px;
         }
+
         .summary-label {
             color: #666;
         }
+
         .summary-value {
             font-weight: 600;
         }
+
         .total-row {
             font-size: 18px;
             font-weight: bold;
@@ -97,6 +117,7 @@
             padding-top: 10px;
             border-top: 1px solid #ddd;
         }
+
         .note-section {
             margin-top: 20px;
             padding: 15px;
@@ -104,11 +125,15 @@
             border-radius: 5px;
             font-size: 14px;
         }
+
         @media print {
-            body { padding: 0; }
+            body {
+                padding: 0;
+            }
         }
     </style>
 </head>
+
 <body>
     <div class="header">
         <div class="logo-section">
@@ -122,6 +147,28 @@
     </div>
 
     <div class="info-section">
+        <div class="info-title">Thông tin người tạo</div>
+        <div class="info-grid">
+            <div>
+                <span class="info-label">Mã nhân viên:</span>
+                <strong><?= htmlspecialchars($order['staff_code'] ?? '—') ?></strong>
+            </div>
+            <div>
+                <span class="info-label">Tên nhân viên:</span>
+                <strong><?= htmlspecialchars($order['created_by_name'] ?? '—') ?></strong>
+            </div>
+            <div>
+                <span class="info-label">Ngày tạo:</span>
+                <strong><?= htmlspecialchars($order['created_at'] ?? '—') ?></strong>
+            </div>
+            <div>
+                <span class="info-label">Ca làm việc:</span>
+                <strong><?= htmlspecialchars($order['shift_name'] ?? '—') ?></strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-section">
         <div class="info-title">Thông tin khách hàng</div>
         <div class="info-grid">
             <div>
@@ -129,8 +176,8 @@
                 <strong><?= htmlspecialchars($order['customer_name'] ?? 'Khách vãng lai') ?></strong>
             </div>
             <div>
-                <span class="info-label">Ngày:</span>
-                <strong><?= htmlspecialchars($order['created_at'] ?? '') ?></strong>
+                <span class="info-label">Số điện thoại:</span>
+                <strong><?= htmlspecialchars($order['customer_phone'] ?? '—') ?></strong>
             </div>
             <div style="grid-column: 1 / -1;">
                 <span class="info-label">Địa chỉ:</span>
@@ -143,27 +190,29 @@
         <thead>
             <tr>
                 <th>Sản phẩm</th>
+                <th style="text-align:center;">Đơn vị</th>
                 <th style="text-align:center;">Đơn giá</th>
                 <th style="text-align:center;">Số lượng</th>
                 <th style="text-align:right;">Tổng tiền</th>
             </tr>
         </thead>
         <tbody>
-            <?php 
+            <?php
             $items = $order['items'] ?? [];
             $totalQty = 0;
-            foreach ($items as $item): 
-                $qty = $item['qty'] ?? 0;
+            foreach ($items as $item):
+                $qty = $item['quantity'] ?? 0;
                 $unitPrice = $item['unit_price'] ?? 0;
                 $itemTotal = $qty * $unitPrice;
                 $totalQty += $qty;
-            ?>
-            <tr class="border-b">
-                <td><?= htmlspecialchars($item['product_name'] ?? '') ?></td>
-                <td style="text-align:center;"><?= number_format($unitPrice, 0, ',', '.') ?></td>
-                <td style="text-align:center;"><?= $qty ?></td>
-                <td style="text-align:right;"><?= number_format($itemTotal, 0, ',', '.') ?></td>
-            </tr>
+                ?>
+                <tr class="border-b">
+                    <td><?= htmlspecialchars($item['product_name'] ?? '') ?></td>
+                    <td style="text-align:center;"><?= htmlspecialchars($item['unit'] ?? '—') ?></td>
+                    <td style="text-align:center;"><?= number_format($unitPrice, 0, ',', '.') ?></td>
+                    <td style="text-align:center;"><?= $qty ?></td>
+                    <td style="text-align:right;"><?= number_format($itemTotal, 0, ',', '.') ?></td>
+                </tr>
             <?php endforeach; ?>
         </tbody>
     </table>
@@ -188,9 +237,22 @@
     </div>
 
     <?php if (!empty($order['note'])): ?>
-    <div class="note-section">
-        <strong>Ghi chú:</strong> <?= htmlspecialchars($order['note']) ?>
-    </div>
+        <div class="note-section">
+            <strong>Ghi chú:</strong> <?= htmlspecialchars($order['note']) ?>
+        </div>
     <?php endif; ?>
+
+    <div style="margin-top: 40px; text-align: center; padding: 20px; border-top: 2px solid #002975;">
+        <div style="font-size: 18px; font-weight: bold; color: #002975; margin-bottom: 10px;">
+            Cảm ơn quý khách đã mua hàng tại MINIGO!
+        </div>
+        <div style="font-size: 16px; color: #666; margin-bottom: 15px;">
+            Hẹn gặp lại quý khách
+        </div>
+        <div style="font-size: 14px; color: #666;">
+            <strong>Hotline:</strong> 0901 234 567 | <strong>Địa chỉ:</strong> 123 Đường ABC, TP. Cần Thơ
+        </div>
+    </div>
 </body>
+
 </html>

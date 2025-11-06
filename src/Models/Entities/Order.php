@@ -29,6 +29,8 @@ class Order
     public $updated_at;
     public $created_by;
     public $created_by_name;
+    public $staff_code;
+    public $shift_name;
     public $updated_by;
     public $updated_by_name;
 

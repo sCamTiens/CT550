@@ -25,38 +25,25 @@ $items = $items ?? [];
     </div>
 
     <!-- Thống kê tổng quan -->
-    <section class="grid gap-4 sm:grid-cols-2 mb-6">
-        <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg p-5 text-white">
-            <div class="flex items-center justify-between">
-                <div>
-                    <div class="text-orange-100 text-sm font-medium">Tổng số phiếu chi</div>
-                    <div class="mt-2 text-3xl font-bold" x-text="getTotalExpenses()"></div>
-                    <div class="mt-2 text-xs text-orange-100">
-                        <i class="fa-solid fa-receipt"></i> Đang hiển thị
-                    </div>
-                </div>
-                <div class="bg-white/20 rounded-full p-4">
-                    <i class="fa-solid fa-file-invoice text-3xl"></i>
-                </div>
-            </div>
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Tổng số phiếu chi</div>
+            <div class="text-2xl font-bold text-blue-600" x-text="getTotalExpenses()"></div>
         </div>
-
-        <div class="bg-gradient-to-br from-red-500 to-red-600 rounded-xl shadow-lg p-5 text-white">
-            <div class="flex items-center justify-between">
-                <div>
-                    <div class="text-red-100 text-sm font-medium">Tổng tiền chi</div>
-                    <div class="mt-2 text-2xl font-bold" x-text="formatCurrency(getTotalAmount())"></div>
-                    <div class="mt-2 text-xs text-red-100">
-                        <i class="fa-solid fa-money-bill-wave"></i> Tổng trong danh sách
-                    </div>
-                </div>
-                <div class="bg-white/20 rounded-full p-4">
-                    <i class="fa-solid fa-coins text-3xl"></i>
-                </div>
-            </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Tổng tiền chi</div>
+            <div class="text-lg font-bold text-green-600" x-text="formatCurrency(getTotalAmount())"></div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Chi nhà cung cấp</div>
+            <div class="text-2xl font-bold text-purple-600" x-text="countByType('Nhà cung cấp')"></div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Chi lương nhân viên</div>
+            <div class="text-2xl font-bold text-orange-600" x-text="countByType('Lương nhân viên')"></div>
         </div>
     </section>
-    
+
     <!-- Table -->
     <div class="bg-white rounded-xl shadow pb-4">
         <!-- Loading overlay bên trong bảng -->
@@ -72,8 +59,14 @@ $items = $items ?? [];
                     <tr class="bg-gray-50 text-slate-600">
                         <th class="py-2 px-4 text-center">Thao tác</th>
                         <?= textFilterPopover('code', 'Mã phiếu chi') ?>
+                        <?= selectFilterPopover('type', 'Loại phiếu chi', [
+                            '' => '-- Tất cả --',
+                            'Nhà cung cấp' => 'Nhà cung cấp',
+                            'Lương nhân viên' => 'Lương nhân viên'
+                        ]) ?>
                         <?= textFilterPopover('purchase_order_code', 'Phiếu nhập') ?>
                         <?= textFilterPopover('supplier_name', 'Nhà cung cấp') ?>
+                        <?= textFilterPopover('staff_name', 'Tên nhân viên') ?>
                         <?= selectFilterPopover('method', 'PT thanh toán', [
                             '' => '-- Tất cả --',
                             'Tiền mặt' => 'Tiền mặt',
@@ -93,19 +86,35 @@ $items = $items ?? [];
                     <template x-for="(e, idx) in paginated()" :key="e.id">
                         <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
                             <td class="py-2 px-4 text-center space-x-2">
-                                <button @click="remove(e.id)"
+                                <button @click="openViewModal(e)"
+                                    class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                                    title="Xem chi tiết">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                                <button @click="remove(e.id)" x-show="canDelete(e)"
                                     class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
                                     title="Xóa">
                                     <i class="fa-solid fa-trash"></i>
                                 </button>
                             </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line" x-text="e.code"></td>
+                            <td class="px-3 py-2 text-center align-middle">
+                                <div class="flex justify-center items-center h-full">
+                                    <span class="px-2 py-[3px] rounded text-xs font-medium" :class="{
+                                        'bg-blue-100 text-blue-800': e.type === 'Nhà cung cấp',
+                                        'bg-purple-100 text-purple-800': e.type === 'Lương nhân viên',
+                                    }" x-text="e.type || '—'"></span>
+                                </div>
+                            </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line"
                                 :class="(e.purchase_order_code || '—') === '—' ? 'text-center' : 'text-left'"
                                 x-text="e.purchase_order_code || '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
                                 :class="(e.supplier_name || '—') === '—' ? 'text-center' : 'text-left'"
                                 x-text="e.supplier_name || '—'"></td>
+                            <td class="px-3 py-2 break-words whitespace-pre-line"
+                                :class="(e.staff_name || '—') === '—' ? 'text-center' : 'text-left'"
+                                x-text="e.staff_name || '—'"></td>
                             <td class="px-3 py-2 text-center align-middle">
                                 <div class="flex justify-center items-center h-full">
                                     <span class="px-2 py-[3px] rounded text-xs font-medium" :class="{
@@ -141,7 +150,7 @@ $items = $items ?? [];
                         </tr>
                     </template>
                     <tr x-show="!loading && filtered().length===0">
-                        <td colspan="13" class="py-12 text-center text-slate-500">
+                        <td colspan="16" class="py-12 text-center text-slate-500">
                             <div class="flex flex-col items-center justify-center">
                                 <img src="/assets/images/Null.png" alt="Trống" class="w-40 h-24 mb-3 opacity-80">
                                 <div class="text-lg text-slate-300">Trống</div>
@@ -150,6 +159,152 @@ $items = $items ?? [];
                     </tr>
                 </tbody>
             </table>
+        </div>
+
+        <!-- MODAL: View Details -->
+        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
+            x-show="openView" x-transition.opacity style="display:none">
+
+            <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl animate__animated animate__zoomIn animate__faster"
+                @click.outside="openView=false">
+
+                <!-- Header -->
+                <div class="px-5 py-3 border-b flex justify-center items-center relative">
+                    <h3 class="font-semibold text-xl text-[#002975]">Chi tiết phiếu chi</h3>
+                    <button class="absolute right-5 text-gray-400 hover:text-gray-600"
+                        @click="openView=false">✕</button>
+                </div>
+
+                <!-- Body -->
+                <div class="p-6 space-y-6 max-h-[600px] overflow-y-auto">
+                    <template x-if="viewItem">
+                        <div class="space-y-6">
+
+                            <!-- Thông tin cơ bản -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <div class="text-sm text-gray-500">Mã phiếu chi</div>
+                                    <div class="font-semibold text-gray-800" x-text="viewItem.code"></div>
+                                </div>
+                                <div>
+                                    <div class="text-sm text-gray-500">Loại phiếu chi</div>
+                                    <span class="px-3 py-1 rounded-lg text-sm font-medium" :class="{
+                                    'bg-blue-100 text-blue-800': viewItem.type === 'Nhà cung cấp',
+                                    'bg-purple-100 text-purple-800': viewItem.type === 'Lương nhân viên',
+                                }" x-text="viewItem.type || '—'"></span>
+                                </div>
+                            </div>
+
+                            <!-- Nhà cung cấp -->
+                            <template x-if="viewItem.type === 'Nhà cung cấp'">
+                                <div class="border-t pt-4">
+                                    <h4 class="font-semibold text-gray-700 mb-3">Thông tin nhà cung cấp</h4>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <div class="text-sm text-gray-500">Nhà cung cấp</div>
+                                            <div class="font-medium" x-text="viewItem.supplier_name || '—'"></div>
+                                        </div>
+                                        <div>
+                                            <div class="text-sm text-gray-500">Mã phiếu nhập</div>
+                                            <div class="font-medium" x-text="viewItem.purchase_order_code || '—'"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Lương nhân viên -->
+                            <template x-if="viewItem.type === 'Lương nhân viên'">
+                                <div class="border-t pt-4">
+                                    <h4 class="font-semibold text-gray-700 mb-3">Thông tin nhân viên</h4>
+                                    <div>
+                                        <div class="text-sm text-gray-500">Tên nhân viên</div>
+                                        <div class="font-medium" x-text="viewItem.staff_name || '—'"></div>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Thanh toán -->
+                            <div class="border-t pt-4">
+                                <h4 class="font-semibold text-gray-700 mb-3">Thông tin thanh toán</h4>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <div class="text-sm text-gray-500">Số tiền</div>
+                                        <div class="text-xl font-bold text-green-700"
+                                            x-text="formatCurrency(viewItem.amount)"></div>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm text-gray-500">Phương thức</div>
+                                        <span class="px-3 py-1 rounded-lg text-sm font-medium" :class="{
+                                        'bg-green-100 text-green-800': viewItem.method === 'Tiền mặt',
+                                        'bg-orange-100 text-orange-800': viewItem.method === 'Chuyển khoản',
+                                    }" x-text="viewItem.method"></span>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-4 mt-4">
+                                    <div>
+                                        <div class="text-sm text-gray-500">Người chi</div>
+                                        <div class="font-medium text-gray-800" x-text="viewItem.paid_by_name || '—'">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm text-gray-500">Ngày chi</div>
+                                        <div class="font-medium text-gray-800" x-text="viewItem.paid_at || '—'"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Giao dịch ngân hàng -->
+                            <template x-if="viewItem.method === 'Chuyển khoản'">
+                                <div class="border-t pt-4">
+                                    <h4 class="font-semibold text-gray-700 mb-3">Giao dịch ngân hàng</h4>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <div class="text-sm text-gray-500">Mã giao dịch</div>
+                                            <div class="font-medium" x-text="viewItem.txn_ref || '—'"></div>
+                                        </div>
+                                        <div>
+                                            <div class="text-sm text-gray-500">Thời gian xác nhận</div>
+                                            <div class="font-medium" x-text="viewItem.bank_time || '—'"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Ghi chú -->
+                            <template x-if="viewItem.note">
+                                <div class="border-t pt-4">
+                                    <h4 class="font-semibold text-gray-700 mb-2">Ghi chú</h4>
+                                    <p class="text-gray-700 bg-yellow-50 p-3 rounded-lg" x-text="viewItem.note"></p>
+                                </div>
+                            </template>
+
+                            <!-- Hệ thống -->
+                            <div class="border-t pt-4 text-sm text-gray-500">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <span class="font-medium text-gray-600">Người tạo:</span>
+                                        <span x-text="viewItem.created_by_name || '—'"></span>
+                                    </div>
+                                    <div>
+                                        <span class="font-medium text-gray-600">Thời gian tạo:</span>
+                                        <span x-text="viewItem.created_at || '—'"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Footer -->
+                <div class="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
+                    <button type="button"
+                        class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition"
+                        @click="openView=false">
+                        Đóng
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- MODAL: Create -->
@@ -244,10 +399,13 @@ $items = $items ?? [];
             submitting: false,
             openAdd: false,
             openEdit: false,
+            openView: false,
+            viewItem: null,
 
             suppliers: [],
             purchaseOrders: [],
             users: [],
+            staffs: [], // Danh sách nhân viên để chọn khi chi trả lương
 
             items: [], // Sẽ được load từ PHP hoặc API
 
@@ -323,14 +481,16 @@ $items = $items ?? [];
 
             // ===== FILTERS =====
             openFilter: {
-                code: false, purchase_order_code: false, supplier_name: false, method: false,
+                code: false, type: false, purchase_order_code: false, supplier_name: false, staff_name: false, method: false,
                 amount: false, paid_by_name: false, paid_at: false, txn_ref: false,
                 bank_time: false, note: false, created_at: false, created_by: false
             },
             filters: {
                 code: '',
+                type: '',
                 purchase_order_code: '',
                 supplier_name: '',
+                staff_name: '',
                 method: '',
                 amount_type: '', amount_value: '', amount_from: '', amount_to: '',
                 paid_by_name: '',
@@ -450,7 +610,7 @@ $items = $items ?? [];
                 let data = this.items;
 
                 // --- Lọc theo chuỗi ---
-                ['code', 'purchase_order_code', 'supplier_name', 'paid_by_name', 'received_by', 'txn_ref', 'note', 'created_by'].forEach(key => {
+                ['code', 'purchase_order_code', 'supplier_name', 'staff_name', 'paid_by_name', 'received_by', 'txn_ref', 'note', 'created_by'].forEach(key => {
                     if (this.filters[key]) {
                         const field = key === 'created_by' ? 'created_by_name' : key;
                         data = data.filter(o =>
@@ -463,7 +623,7 @@ $items = $items ?? [];
                 });
 
                 // --- Lọc theo select ---
-                ['method'].forEach(key => {
+                ['method', 'type'].forEach(key => {
                     if (this.filters[key]) {
                         data = data.filter(o =>
                             this.applyFilter(o[key], 'eq', {
@@ -517,6 +677,23 @@ $items = $items ?? [];
                 }, 0);
             },
 
+            countByType(type) {
+                return this.filtered().filter(e => e.type === type).length;
+            },
+
+            canDelete(expense) {
+                // Không cho xóa phiếu chi lương nhân viên
+                if (expense.type === 'Lương nhân viên') {
+                    return false;
+                }
+                // Không cho xóa phiếu chi khi phiếu nhập đã thanh toán hết
+                // payment_status: null/undefined = không có phiếu nhập, '0'/'1' = chưa thanh toán hết, '2' = đã thanh toán hết
+                if (expense.purchase_order_id && (expense.payment_status == '2' || expense.payment_status == 2)) {
+                    return false;
+                }
+                return true;
+            },
+
             toggleFilter(key) {
                 for (const k in this.openFilter) this.openFilter[k] = false;
                 this.openFilter[key] = true;
@@ -560,11 +737,17 @@ $items = $items ?? [];
             validateField(field) {
                 this.errors[field] = '';
 
-                if (field === 'supplier_id' && !this.form.supplier_id) {
+                if (field === 'type' && !this.form.type) {
+                    this.errors.type = 'Vui lòng chọn loại phiếu chi';
+                }
+                if (field === 'supplier_id' && this.form.type === 'Nhà cung cấp' && !this.form.supplier_id) {
                     this.errors.supplier_id = 'Vui lòng chọn nhà cung cấp';
                 }
-                if (field === 'purchase_order_id' && !this.form.purchase_order_id) {
+                if (field === 'purchase_order_id' && this.form.type === 'Nhà cung cấp' && !this.form.purchase_order_id) {
                     this.errors.purchase_order_id = 'Vui lòng chọn phiếu nhập';
+                }
+                if (field === 'staff_user_id' && this.form.type === 'Lương nhân viên' && !this.form.staff_user_id) {
+                    this.errors.staff_user_id = 'Vui lòng chọn nhân viên';
                 }
                 if (field === 'method' && !this.form.method) {
                     this.errors.method = 'Vui lòng chọn phương thức thanh toán';
@@ -577,7 +760,7 @@ $items = $items ?? [];
                         this.errors.amount = 'Số tiền phải lớn hơn 0';
                     } else if (this.form.amount > MAX_AMOUNT) {
                         this.errors.amount = 'Số tiền quá lớn';
-                    } else if (this.selectedPurchaseOrderDebt > 0 && this.form.amount > this.selectedPurchaseOrderDebt) {
+                    } else if (this.form.type === 'Nhà cung cấp' && this.selectedPurchaseOrderDebt > 0 && this.form.amount > this.selectedPurchaseOrderDebt) {
                         this.errors.amount = 'Số tiền không được lớn hơn công nợ còn lại (' + this.formatCurrency(this.selectedPurchaseOrderDebt) + ')';
                     }
                 }
@@ -588,8 +771,16 @@ $items = $items ?? [];
 
             validateForm() {
                 this.errors = {};
-                const fields = ['supplier_id', 'purchase_order_id', 'method', 'paid_at', 'amount', 'paid_by'];
-                for (const f of fields) this.validateField(f);
+                const baseFields = ['type', 'method', 'paid_at', 'amount', 'paid_by'];
+
+                // Thêm validation theo loại phiếu chi
+                if (this.form.type === 'Nhà cung cấp') {
+                    baseFields.push('supplier_id', 'purchase_order_id');
+                } else if (this.form.type === 'Lương nhân viên') {
+                    baseFields.push('staff_user_id');
+                }
+
+                for (const f of baseFields) this.validateField(f);
                 return Object.values(this.errors).every(v => !v);
             },
 
@@ -597,8 +788,11 @@ $items = $items ?? [];
                 this.form = {
                     id: null,
                     code: '',
+                    type: 'Nhà cung cấp', // Mặc định là chi cho nhà cung cấp
                     supplier_id: '',
                     purchase_order_id: '',
+                    payroll_id: '',
+                    staff_user_id: '',
                     method: '',
                     txn_ref: '',
                     amount: 0,
@@ -644,6 +838,8 @@ $items = $items ?? [];
                         id: u.user_id,
                         name: u.full_name
                     }));
+                    // staffs cũng dùng chung danh sách này
+                    this.staffs = this.users;
                 } catch (e) {
                     this.showToast('Không thể tải danh sách nhân viên');
                 }
@@ -705,6 +901,11 @@ $items = $items ?? [];
                 this.openEdit = true;
             },
 
+            openViewModal(item) {
+                this.viewItem = item;
+                this.openView = true;
+            },
+
             async submitCreate() {
                 if (!this.validateForm()) return;
                 this.submitting = true;
@@ -761,7 +962,16 @@ $items = $items ?? [];
             },
 
             async remove(id) {
-                if (!confirm('Bạn có chắc muốn xóa phiếu chi này?')) return;
+                const item = this.items.find(e => e.id === id);
+                const confirmMsg = item
+                    ? `Bạn có chắc muốn xóa phiếu chi "${item.code}"?\n\n` +
+                    `Loại: ${item.type || 'N/A'}\n` +
+                    `Số tiền: ${this.formatCurrency(item.amount)}\n\n` +
+                    `Lưu ý: Nếu phiếu nhập đã thanh toán hết, bạn không thể xóa phiếu chi này.`
+                    : 'Bạn có chắc muốn xóa phiếu chi này?';
+
+                if (!confirm(confirmMsg)) return;
+
                 try {
                     const res = await fetch(api.remove(id), { method: 'DELETE' });
                     if (res.ok) {
@@ -807,8 +1017,10 @@ $items = $items ?? [];
             exportExcel() {
                 const data = this.filtered().map(e => ({
                     code: e.code || '',
+                    type: e.type || '',
                     purchase_order_code: e.purchase_order_code || '',
                     supplier_name: e.supplier_name || '',
+                    staff_name: e.staff_name || '',
                     method: this.getPaymentMethodText(e.method),
                     amount: e.amount || 0,
                     txn_ref: e.txn_ref || '',

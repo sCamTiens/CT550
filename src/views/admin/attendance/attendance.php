@@ -205,9 +205,7 @@ $year = $year ?? date('Y');
                             <?= dateFilterPopover('attendance_date', 'Ngày') ?>
                             <?= datetimeFilterPopover('check_in_time', 'Giờ vào') ?>
                             <?= datetimeFilterPopover('check_out_time', 'Giờ ra') ?>
-                            <th class="py-2 px-4 text-center align-middle" style="min-width: 130px;">
-                                <span>Tổng giờ làm</span>
-                            </th>
+                            <?= numberFilterPopover('work_minutes', 'Tổng giờ làm (phút)') ?>
                             <?= selectFilterPopover('check_in_status', 'Trạng thái vào', [
                                 '' => '--Tất cả--',
                                 'Đúng giờ' => 'Đúng giờ',
@@ -239,9 +237,12 @@ $year = $year ?? date('Y');
                                 </td>
                                 <td class="px-4 py-3 text-right" x-text="formatDate(item.attendance_date)"></td>
                                 <td class="px-4 py-3 text-right" x-text="formatDateTime(item.check_in_time)"></td>
-                                <td class="px-4 py-3 text-right" x-text="formatDateTime(item.check_out_time) || '-'"></td>
+                                <td class="px-4 py-3 text-right" x-text="formatDateTime(item.check_out_time) || '-'">
+                                </td>
                                 <td class="px-4 py-3 text-center">
-                                    <span class="font-semibold text-blue-600" x-text="calculateWorkHours(item.check_in_time, item.check_out_time)"></span>
+                                    <span class="font-semibold text-blue-600"
+                                        x-text="calculateWorkHours(item.check_in_time, item.check_out_time)"></span>
+                                    <span class="text-xs text-gray-400 block" x-text="item.work_minutes ? '('+item.work_minutes+'p)' : ''"></span>
                                 </td>
                                 <td class="px-4 py-3">
                                     <span class="px-2 py-1 rounded-full text-xs font-semibold"
@@ -316,6 +317,16 @@ $year = $year ?? date('Y');
             // Labels
             filterModeLabel: 'Theo tháng',
             weekLabel: 'Tuần 1',
+
+            // Thêm vào object attendancePage()
+            getWorkMinutes(checkIn, checkOut) {
+                if (!checkIn || !checkOut) return null;
+                const start = new Date(checkIn);
+                const end = new Date(checkOut);
+                const diffMs = end - start;
+                if (diffMs < 0) return null;
+                return Math.floor(diffMs / (1000 * 60)); // số phút
+            },
 
             async init() {
                 // Khởi tạo tuần hiện tại
@@ -507,8 +518,17 @@ $year = $year ?? date('Y');
                     const data = await res.json();
                     this.allItems = data.items || [];
 
+                    console.log('⏰ Loaded attendance data:', this.allItems.length, 'records');
+                    console.log('🔍 Filter mode:', this.filterMode, '| Month:', this.month, '| Year:', this.year);
+
                     // Filter dữ liệu theo mode
                     this.filterItems();
+
+                    // Sau khi load xong dữ liệu, tính work_minutes cho từng item
+                    this.items = this.items.map(item => ({
+                        ...item,
+                        work_minutes: this.getWorkMinutes(item.check_in_time, item.check_out_time)
+                    }));
                 } catch (err) {
                     console.error('Lỗi tải dữ liệu:', err);
                     this.items = [];
@@ -521,6 +541,7 @@ $year = $year ?? date('Y');
                 if (this.filterMode === 'month') {
                     // Hiển thị toàn bộ tháng
                     this.items = this.allItems;
+                    console.log('✅ Filter MONTH:', this.items.length, 'records');
                 } else if (this.filterMode === 'week') {
                     // Filter theo tuần trong tháng
                     const weekRange = this.getWeekDateRange(this.currentWeek, this.month, this.year);
@@ -528,6 +549,7 @@ $year = $year ?? date('Y');
                         const itemDate = new Date(item.attendance_date);
                         return itemDate >= weekRange.start && itemDate <= weekRange.end;
                     });
+                    console.log('✅ Filter WEEK:', this.items.length, 'records from', weekRange.start, 'to', weekRange.end);
                 } else if (this.filterMode === 'custom') {
                     // Filter theo custom date range (format dd/mm/yyyy)
                     const start = this.parseDateDDMMYYYY(this.customStartDate);
@@ -704,20 +726,20 @@ $year = $year ?? date('Y');
 
             calculateWorkHours(checkIn, checkOut) {
                 if (!checkIn || !checkOut) return '—';
-                
+
                 const start = new Date(checkIn);
                 const end = new Date(checkOut);
-                
+
                 // Tính số milliseconds chênh lệch
                 const diffMs = end - start;
-                
+
                 // Nếu checkout trước checkin (lỗi dữ liệu)
                 if (diffMs < 0) return 'Lỗi';
-                
+
                 // Chuyển sang giờ và phút
                 const hours = Math.floor(diffMs / (1000 * 60 * 60));
                 const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                
+
                 // Format: 8h 30m hoặc 8h nếu không có phút
                 if (minutes === 0) {
                     return `${hours}h`;
@@ -734,6 +756,7 @@ $year = $year ?? date('Y');
                 check_out_time: false,
                 check_in_status: false,
                 check_out_status: false,
+                work_minutes: false,
             },
 
             filters: {
@@ -744,7 +767,11 @@ $year = $year ?? date('Y');
                 check_in_time_type: '', check_in_time_value: '', check_in_time_from: '', check_in_time_to: '',
                 check_out_time_type: '', check_out_time_value: '', check_out_time_from: '', check_out_time_to: '',
                 check_in_status: '',
-                check_out_status: ''
+                check_out_status: '',
+                work_minutes_type: '',
+                work_minutes_value: '',
+                work_minutes_from: '',
+                work_minutes_to: ''
             },
 
             // -------------------------------------------
@@ -902,6 +929,28 @@ $year = $year ?? date('Y');
                     }
                 });
 
+                // --- Lọc theo tổng giờ làm (phút) ---
+                if (this.filters.work_minutes_type) {
+                    data = data.filter(o => {
+                        const val = o.work_minutes ?? this.getWorkMinutes(o.check_in_time, o.check_out_time);
+                        if (val == null) return false;
+                        
+                        const type = this.filters.work_minutes_type;
+                        const value = parseFloat(this.filters.work_minutes_value);
+                        const from = parseFloat(this.filters.work_minutes_from);
+                        const to = parseFloat(this.filters.work_minutes_to);
+                        
+                        if (type === 'eq') return value ? val === value : true;
+                        if (type === 'lt') return value ? val < value : true;
+                        if (type === 'gt') return value ? val > value : true;
+                        if (type === 'lte') return value ? val <= value : true;
+                        if (type === 'gte') return value ? val >= value : true;
+                        if (type === 'between') return from && to ? val >= from && val <= to : true;
+                        
+                        return true;
+                    });
+                }
+
                 return data;
             },
 
@@ -919,6 +968,11 @@ $year = $year ?? date('Y');
                     this.filters[`${key}_value`] = '';
                     this.filters[`${key}_from`] = '';
                     this.filters[`${key}_to`] = '';
+                } else if (key === 'work_minutes') {
+                    this.filters.work_minutes_type = '';
+                    this.filters.work_minutes_value = '';
+                    this.filters.work_minutes_from = '';
+                    this.filters.work_minutes_to = '';
                 } else {
                     this.filters[key] = '';
                 }

@@ -25,38 +25,25 @@ $items = $items ?? [];
     </div>
 
     <!-- Thống kê tổng quan -->
-    <section class="grid gap-4 sm:grid-cols-2 mb-6">
-        <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-5 text-white">
-            <div class="flex items-center justify-between">
-                <div>
-                    <div class="text-blue-100 text-sm font-medium">Tổng số phiếu thu</div>
-                    <div class="mt-2 text-3xl font-bold" x-text="getTotalReceipts()"></div>
-                    <div class="mt-2 text-xs text-blue-100">
-                        <i class="fa-solid fa-receipt"></i> Đang hiển thị
-                    </div>
-                </div>
-                <div class="bg-white/20 rounded-full p-4">
-                    <i class="fa-solid fa-file-invoice text-3xl"></i>
-                </div>
-            </div>
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Tổng số phiếu thu</div>
+            <div class="text-2xl font-bold text-blue-600" x-text="getTotalReceipts()"></div>
         </div>
-
-        <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-5 text-white">
-            <div class="flex items-center justify-between">
-                <div>
-                    <div class="text-green-100 text-sm font-medium">Tổng tiền thu</div>
-                    <div class="mt-2 text-2xl font-bold" x-text="formatCurrency(getTotalAmount())"></div>
-                    <div class="mt-2 text-xs text-green-100">
-                        <i class="fa-solid fa-money-bill-wave"></i> Tổng trong danh sách
-                    </div>
-                </div>
-                <div class="bg-white/20 rounded-full p-4">
-                    <i class="fa-solid fa-coins text-3xl"></i>
-                </div>
-            </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Tổng tiền thu</div>
+            <div class="text-lg font-bold text-green-600" x-text="formatCurrency(getTotalAmount())"></div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Thu từ đơn hàng</div>
+            <div class="text-2xl font-bold text-purple-600" x-text="countWithOrder()"></div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Thu khác</div>
+            <div class="text-2xl font-bold text-orange-600" x-text="countWithoutOrder()"></div>
         </div>
     </section>
-    
+
     <!-- Table -->
     <div class="bg-white rounded-xl shadow pb-4">
         <!-- Loading overlay bên trong bảng -->
@@ -94,16 +81,27 @@ $items = $items ?? [];
                     <template x-for="(r, idx) in paginated()" :key="r.id">
                         <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
                             <td class="py-2 px-4 text-center space-x-2">
-                                <button @click="openEditModal(r)"
+                                <?php if (($_SESSION['user']['staff_role'] ?? '') === 'Admin'): ?>
+                                    <button @click="openEditModal(r)"
+                                        class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                                        title="Sửa">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                <?php endif; ?>
+
+                                <button @click="openViewModal(r)"
                                     class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
-                                    title="Sửa">
-                                    <i class="fa-solid fa-pen"></i>
+                                    title="Xem chi tiết">
+                                    <i class="fa-solid fa-eye"></i>
                                 </button>
-                                <button @click="remove(r.id)"
-                                    class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
-                                    title="Xóa">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
+
+                                <?php if (($_SESSION['user']['staff_role'] ?? '') === 'Admin'): ?>
+                                    <button @click="remove(r.id)"
+                                        class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                                        title="Xóa">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                <?php endif; ?>
                             </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
                                 :class="(r.code || '—') === '—' ? 'text-center' : 'text-left'" x-text="r.code || '—'">
@@ -161,6 +159,130 @@ $items = $items ?? [];
                     </tr>
                 </tbody>
             </table>
+        </div>
+
+        <!-- MODAL: View Details -->
+        <div class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
+            x-show="openView" x-transition.opacity style="display:none">
+
+            <div class="bg-white w-full max-w-2xl rounded-2xl shadow-xl animate__animated animate__zoomIn animate__faster"
+                @click.outside="openView=false">
+
+                <!-- Header -->
+                <div class="px-5 py-3 border-b flex justify-center items-center relative">
+                    <h3 class="font-semibold text-xl text-[#002975]">Chi tiết phiếu thu</h3>
+                    <button class="absolute right-5 text-gray-400 hover:text-gray-600"
+                        @click="openView=false">✕</button>
+                </div>
+
+                <!-- Nội dung -->
+                <div class="p-6 space-y-5 max-h-[600px] overflow-y-auto" x-data>
+                    <template x-if="viewItem">
+                        <div class="space-y-6">
+                            <!-- Thông tin cơ bản -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <div class="text-sm text-gray-500">Mã phiếu thu</div>
+                                    <div class="font-semibold text-gray-800" x-text="viewItem.code"></div>
+                                </div>
+                                <div>
+                                    <div class="text-sm text-gray-500">Khách hàng</div>
+                                    <div class="font-medium" x-text="viewItem.payer_user_name || 'Khách vãng lai'">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Thông tin đơn hàng -->
+                            <template x-if="viewItem.order_id">
+                                <div>
+                                    <div class="border-t pt-4">
+                                        <div class="text-sm text-gray-500 mb-1">Mã đơn hàng</div>
+                                        <div class="font-medium" x-text="viewItem.order_id || '—'"></div>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Thanh toán -->
+                            <div class="border-t pt-4">
+                                <h4 class="font-semibold text-gray-700 mb-3">Thông tin thanh toán</h4>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <div class="text-sm text-gray-500">Số tiền</div>
+                                        <div class="text-xl font-bold text-green-700"
+                                            x-text="formatCurrency(viewItem.amount)"></div>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm text-gray-500">Phương thức</div>
+                                        <span class="px-3 py-1 rounded-lg text-sm font-medium" :class="{
+                                        'bg-green-100 text-green-800': viewItem.method === 'Tiền mặt',
+                                        'bg-orange-100 text-orange-800': viewItem.method === 'Chuyển khoản',
+                                    }" x-text="viewItem.method"></span>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-4 mt-4">
+                                    <div>
+                                        <div class="text-sm text-gray-500">Người thu</div>
+                                        <div class="font-medium text-gray-800"
+                                            x-text="viewItem.received_by_name || '—'"></div>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm text-gray-500">Ngày thu</div>
+                                        <div class="font-medium text-gray-800" x-text="viewItem.received_at || '—'">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Thông tin ngân hàng -->
+                            <template x-if="viewItem.method === 'Chuyển khoản'">
+                                <div class="border-t pt-4">
+                                    <h4 class="font-semibold text-gray-700 mb-3">Giao dịch ngân hàng</h4>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <div class="text-sm text-gray-500">Mã giao dịch</div>
+                                            <div class="font-medium" x-text="viewItem.txn_ref || '—'"></div>
+                                        </div>
+                                        <div>
+                                            <div class="text-sm text-gray-500">Thời gian xác nhận</div>
+                                            <div class="font-medium" x-text="viewItem.bank_time || '—'"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Ghi chú -->
+                            <template x-if="viewItem.note">
+                                <div class="border-t pt-4">
+                                    <h4 class="font-semibold text-gray-700 mb-2">Ghi chú</h4>
+                                    <p class="text-gray-700 bg-yellow-50 p-3 rounded-lg" x-text="viewItem.note"></p>
+                                </div>
+                            </template>
+
+                            <!-- Hệ thống -->
+                            <div class="border-t pt-4 text-sm text-gray-500">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <span class="font-medium text-gray-600">Người tạo:</span>
+                                        <span x-text="viewItem.created_by_name || '—'"></span>
+                                    </div>
+                                    <div>
+                                        <span class="font-medium text-gray-600">Thời gian tạo:</span>
+                                        <span x-text="viewItem.created_at || '—'"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Footer -->
+                <div class="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
+                    <button type="button"
+                        class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition"
+                        @click="openView=false">Đóng</button>
+                </div>
+            </div>
         </div>
 
         <!-- MODAL: Create -->
@@ -264,6 +386,8 @@ $items = $items ?? [];
             submitting: false,
             openAdd: false,
             openEdit: false,
+            openView: false,
+            viewItem: null,
             customer_id: null,
             customers: [],
             staffs: [],
@@ -533,6 +657,14 @@ $items = $items ?? [];
                 }, 0);
             },
 
+            countWithOrder() {
+                return this.filtered().filter(r => r.order_id && r.order_id !== '').length;
+            },
+
+            countWithoutOrder() {
+                return this.filtered().filter(r => !r.order_id || r.order_id === '').length;
+            },
+
             toggleFilter(key) {
                 for (const k in this.openFilter) this.openFilter[k] = false;
                 this.openFilter[key] = true;
@@ -747,6 +879,11 @@ $items = $items ?? [];
                 this.openEdit = true;
             },
 
+            openViewModal(item) {
+                this.viewItem = item;
+                this.openView = true;
+            },
+
             async submitCreate() {
                 if (!this.validateForm()) {
                     this.showToast('Vui lòng kiểm tra lại thông tin!', 'error');
@@ -800,14 +937,24 @@ $items = $items ?? [];
             },
 
             async remove(id) {
-                if (!confirm('Bạn có chắc muốn xóa phiếu thu này?')) return;
+                const item = this.items.find(r => r.id === id);
+                const confirmMsg = item
+                    ? `Bạn có chắc muốn xóa phiếu thu "${item.code}"?\n\n` +
+                    `Khách hàng: ${item.payer_user_name || 'Khách vãng lai'}\n` +
+                    `Số tiền: ${this.formatCurrency(item.amount)}\n\n` +
+                    `Lưu ý: Nếu đơn hàng đã thanh toán hết, bạn không thể xóa phiếu thu này.`
+                    : 'Bạn có chắc muốn xóa phiếu thu này?';
+
+                if (!confirm(confirmMsg)) return;
+
                 try {
                     const res = await fetch(api.remove(id), { method: 'DELETE' });
                     if (res.ok) {
                         this.items = this.items.filter(r => r.id !== id);
                         this.showToast('Xóa phiếu thu thành công!', 'success');
                     } else {
-                        this.showToast('Không thể xóa phiếu thu');
+                        const error = await res.json();
+                        this.showToast(error.error || 'Không thể xóa phiếu thu');
                     }
                 } catch (e) {
                     this.showToast('Không thể xóa phiếu thu');

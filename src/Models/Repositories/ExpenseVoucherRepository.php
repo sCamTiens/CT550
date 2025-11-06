@@ -38,17 +38,21 @@ class ExpenseVoucherRepository
         $pdo = DB::pdo();
         $sql = "
             SELECT 
-                e.id, e.code, e.purchase_order_id, e.supplier_id, e.method, e.txn_ref, e.amount, e.paid_by, e.paid_at, e.bank_time, e.note, 
+                e.id, e.code, e.type, e.purchase_order_id, e.supplier_id, e.payroll_id, e.staff_user_id,
+                e.method, e.txn_ref, e.amount, e.paid_by, e.paid_at, e.bank_time, e.note, 
                 e.created_at, e.updated_at, e.created_by,
                 cu.full_name AS created_by_name,
                 s.name AS supplier_name,
                 po.code AS purchase_order_code,
-                pb.full_name AS paid_by_name
+                po.payment_status AS payment_status,
+                pb.full_name AS paid_by_name,
+                su.full_name AS staff_name
             FROM expense_vouchers e
             LEFT JOIN users cu ON cu.id = e.created_by
             LEFT JOIN suppliers s ON s.id = e.supplier_id
             LEFT JOIN purchase_orders po ON po.id = e.purchase_order_id
             LEFT JOIN users pb ON pb.id = e.paid_by
+            LEFT JOIN users su ON su.id = e.staff_user_id
             ORDER BY e.id DESC
             LIMIT 500
         ";
@@ -65,12 +69,14 @@ class ExpenseVoucherRepository
             cu.full_name AS created_by_name, 
             s.name AS supplier_name,
             po.code AS purchase_order_code,
-            pb.full_name AS paid_by_name
+            pb.full_name AS paid_by_name,
+            su.full_name AS staff_name
         FROM expense_vouchers e
         LEFT JOIN users cu ON cu.id = e.created_by
         LEFT JOIN suppliers s ON s.id = e.supplier_id
         LEFT JOIN purchase_orders po ON po.id = e.purchase_order_id
         LEFT JOIN users pb ON pb.id = e.paid_by
+        LEFT JOIN users su ON su.id = e.staff_user_id
         WHERE e.id = ?
     ";
         $st = $pdo->prepare($sql);
@@ -102,14 +108,17 @@ class ExpenseVoucherRepository
             // 2. Tạo phiếu chi
             $stmt = $pdo->prepare("
                 INSERT INTO expense_vouchers
-                (code, purchase_order_id, supplier_id, method, txn_ref, amount, paid_by, paid_at, bank_time, note, created_by, created_at)
+                (code, type, purchase_order_id, supplier_id, payroll_id, staff_user_id, method, txn_ref, amount, paid_by, paid_at, bank_time, note, created_by, created_at)
                 VALUES
-                (:code, :purchase_order_id, :supplier_id, :method, :txn_ref, :amount, :paid_by, :paid_at, :bank_time, :note, :created_by, NOW())
+                (:code, :type, :purchase_order_id, :supplier_id, :payroll_id, :staff_user_id, :method, :txn_ref, :amount, :paid_by, :paid_at, :bank_time, :note, :created_by, NOW())
             ");
             $stmt->execute([
                 ':code' => $data['code'] ?? null,
+                ':type' => $data['type'] ?? 'Nhà cung cấp',
                 ':purchase_order_id' => $data['purchase_order_id'] ?? null,
                 ':supplier_id' => $data['supplier_id'] ?? null,
+                ':payroll_id' => $data['payroll_id'] ?? null,
+                ':staff_user_id' => $data['staff_user_id'] ?? null,
                 ':method' => $data['method'] ?? null,
                 ':txn_ref' => $data['txn_ref'] ?? null,
                 ':amount' => $data['amount'] ?? 0,
@@ -124,60 +133,76 @@ class ExpenseVoucherRepository
 
             $expenseId = (int) $pdo->lastInsertId();
             $amount = (float) ($data['amount'] ?? 0);
+            $type = $data['type'] ?? 'Nhà cung cấp';
             $purchaseOrderId = $data['purchase_order_id'] ?? null;
             $supplierId = $data['supplier_id'] ?? null;
+            $payrollId = $data['payroll_id'] ?? null;
 
-            // 3. Cập nhật paid_amount và payment_status của phiếu nhập
-            if ($purchaseOrderId) {
-                // Lấy thông tin phiếu nhập hiện tại
-                $poStmt = $pdo->prepare("SELECT total_amount, paid_amount FROM purchase_orders WHERE id = ?");
-                $poStmt->execute([$purchaseOrderId]);
-                $po = $poStmt->fetch(\PDO::FETCH_ASSOC);
+            // 3. Xử lý theo loại phiếu chi
+            if ($type === 'Nhà cung cấp') {
+                // 3.1. Cập nhật paid_amount và payment_status của phiếu nhập
+                if ($purchaseOrderId) {
+                    // Lấy thông tin phiếu nhập hiện tại
+                    $poStmt = $pdo->prepare("SELECT total_amount, paid_amount FROM purchase_orders WHERE id = ?");
+                    $poStmt->execute([$purchaseOrderId]);
+                    $po = $poStmt->fetch(\PDO::FETCH_ASSOC);
 
-                if ($po) {
-                    $newPaidAmount = $po['paid_amount'] + $amount;
-                    $totalAmount = $po['total_amount'];
+                    if ($po) {
+                        $newPaidAmount = $po['paid_amount'] + $amount;
+                        $totalAmount = $po['total_amount'];
 
-                    // Xác định payment_status mới
-                    // 1 = Chưa đối soát, 0 = Đã thanh toán một phần, 2 = Đã thanh toán hết
-                    if ($newPaidAmount >= $totalAmount) {
-                        $newStatus = '2'; // Đã thanh toán hết
-                    } elseif ($newPaidAmount > 0) {
-                        $newStatus = '0'; // Đã thanh toán một phần
-                    } else {
-                        $newStatus = '1'; // Chưa đối soát
+                        // Xác định payment_status mới
+                        // 1 = Chưa đối soát, 0 = Đã thanh toán một phần, 2 = Đã thanh toán hết
+                        if ($newPaidAmount >= $totalAmount) {
+                            $newStatus = '2'; // Đã thanh toán hết
+                        } elseif ($newPaidAmount > 0) {
+                            $newStatus = '0'; // Đã thanh toán một phần
+                        } else {
+                            $newStatus = '1'; // Chưa đối soát
+                        }
+
+                        // Cập nhật phiếu nhập
+                        $updatePO = $pdo->prepare("
+                            UPDATE purchase_orders 
+                            SET paid_amount = :paid_amount, 
+                                payment_status = :payment_status
+                            WHERE id = :id
+                        ");
+                        $updatePO->execute([
+                            ':paid_amount' => $newPaidAmount,
+                            ':payment_status' => $newStatus,
+                            ':id' => $purchaseOrderId
+                        ]);
                     }
+                }
 
-                    // Cập nhật phiếu nhập
-                    $updatePO = $pdo->prepare("
-                        UPDATE purchase_orders 
-                        SET paid_amount = :paid_amount, 
-                            payment_status = :payment_status
+                // 3.2. Tạo bút toán giảm công nợ (credit) trong ap_ledger
+                if ($supplierId && $amount > 0) {
+                    $apStmt = $pdo->prepare("
+                        INSERT INTO ap_ledger (supplier_id, ref_type, ref_id, debit, credit, note, created_by, created_at)
+                        VALUES (:supplier_id, 'Phiếu chi', :ref_id, 0, :credit, :note, :created_by, NOW())
+                    ");
+                    $apStmt->execute([
+                        ':supplier_id' => $supplierId,
+                        ':ref_id' => $expenseId,
+                        ':credit' => $amount,
+                        ':note' => 'Chi tiền cho nhà cung cấp - Phiếu ' . ($data['code'] ?? ''),
+                        ':created_by' => $currentUser
+                    ]);
+                }
+            } elseif ($type === 'Lương nhân viên') {
+                // 3.3. Cập nhật trạng thái bảng lương thành "Đã trả"
+                if ($payrollId) {
+                    $updatePayroll = $pdo->prepare("
+                        UPDATE payrolls 
+                        SET status = 'Đã trả'
                         WHERE id = :id
                     ");
-                    $updatePO->execute([
-                        ':paid_amount' => $newPaidAmount,
-                        ':payment_status' => $newStatus,
-                        ':id' => $purchaseOrderId
-                    ]);
+                    $updatePayroll->execute([':id' => $payrollId]);
                 }
             }
 
-            // 4. Tạo bút toán giảm công nợ (credit) trong ap_ledger
-            if ($supplierId && $amount > 0) {
-                $apStmt = $pdo->prepare("
-                    INSERT INTO ap_ledger (supplier_id, ref_type, ref_id, debit, credit, note, created_by, created_at)
-                    VALUES (:supplier_id, 'Phiếu chi', :ref_id, 0, :credit, :note, :created_by, NOW())
-                ");
-                $apStmt->execute([
-                    ':supplier_id' => $supplierId,
-                    ':ref_id' => $expenseId,
-                    ':credit' => $amount,
-                    ':note' => 'Thanh toán phiếu chi #' . ($data['code'] ?? $expenseId),
-                    ':created_by' => $currentUser
-                ]);
-            }
-
+            // 4. Commit transaction
             $pdo->commit();
             error_log("Transaction committed successfully. Expense ID: " . $expenseId);
             return $expenseId;

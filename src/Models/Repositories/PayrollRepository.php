@@ -99,13 +99,19 @@ class PayrollRepository
             $baseSalary = $salaryInfo['base_salary'] ?? 0;
             $salaryType = $salaryInfo['salary_type'] ?? 'Theo ca';
             $requiredShifts = $salaryInfo['required_shifts_per_month'] ?? 28;
-            $wagePerShift = $salaryInfo['wage_per_shift'] ?? 0;
+            
+            // Tự động tính wage_per_shift nếu là "Theo ca"
+            if ($salaryType === 'Theo ca') {
+                $wagePerShift = $requiredShifts > 0 ? ($baseSalary / $requiredShifts) : 0;
+            } else {
+                $wagePerShift = $salaryInfo['wage_per_shift'] ?? 0;
+            }
 
             // Đếm số ca làm việc trong tháng
             $attRepo = new AttendanceRepository();
             $totalShiftsWorked = $attRepo->countShiftsByUserAndMonth($userId, $month, $year);
 
-            // Tính lương thực tế
+            // Tính lương thực tế ban đầu
             $actualSalary = 0;
             
             if ($salaryType === 'Theo tháng') {
@@ -120,6 +126,10 @@ class PayrollRepository
                 $actualSalary = $wagePerShift * $totalShiftsWorked;
             }
 
+            // ==================== TÍNH PHẠT ĐI TRỄ/VỀ SỚM ====================
+            $lateDeduction = $this->calculateLateDeduction($userId, $month, $year, $wagePerShift, $baseSalary, $salaryType);
+            $actualSalary -= $lateDeduction; // Trừ lương do đi trễ/về sớm
+
             // Kiểm tra xem đã có bảng lương chưa
             $existing = $this->getByUserAndMonth($userId, $month, $year);
             
@@ -130,7 +140,8 @@ class PayrollRepository
                         required_shifts = ?,
                         base_salary = ?,
                         actual_salary = ?,
-                        total_salary = actual_salary + bonus - deduction,
+                        late_deduction = ?,
+                        total_salary = actual_salary + bonus - deduction - late_deduction,
                         status = 'Nháp',
                         updated_by = ?
                         WHERE user_id = ? AND month = ? AND year = ?";
@@ -140,6 +151,7 @@ class PayrollRepository
                     $requiredShifts,
                     $baseSalary,
                     $actualSalary,
+                    $lateDeduction,
                     $createdBy,
                     $userId,
                     $month,
@@ -153,8 +165,8 @@ class PayrollRepository
                 
                 $sql = "INSERT INTO {$this->table} 
                         (user_id, month, year, total_shifts_worked, required_shifts, 
-                         base_salary, actual_salary, total_salary, created_by, status)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Nháp')";
+                         base_salary, actual_salary, late_deduction, total_salary, created_by, status)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Nháp')";
                 $stmt = DB::pdo()->prepare($sql);
                 $stmt->execute([
                     $userId,
@@ -164,6 +176,7 @@ class PayrollRepository
                     $requiredShifts,
                     $baseSalary,
                     $actualSalary,
+                    $lateDeduction,
                     $totalSalary,
                     $createdBy
                 ]);
@@ -181,6 +194,128 @@ class PayrollRepository
     }
 
     /**
+     * Tính phạt đi trễ/về sớm theo quy định
+     * 
+     * Quy định:
+     * - 1-15 phút: Không trừ lương
+     * - 16-30 phút: Trừ theo phút (lương 1 giờ / 60 × số phút trễ)
+     * - >30 phút hoặc tổng giờ làm <7.5h: Trừ 50% lương ngày
+     * - Liên tục 3 ngày trễ: Cảnh cáo và trừ thêm 10% lương ngày
+     */
+    private function calculateLateDeduction(int $userId, int $month, int $year, float $wagePerShift, float $baseSalary, string $salaryType): float
+    {
+        $totalDeduction = 0;
+        
+        // Lấy lương 1 giờ dựa vào loại lương
+        $hourlyWage = 0;
+        if ($salaryType === 'Theo ca') {
+            $hourlyWage = $wagePerShift / 8; // 1 ca = 8 giờ
+        } else {
+            // Theo tháng: giả sử 1 tháng = 28 ca × 8h = 224h
+            $hourlyWage = $baseSalary / 224;
+        }
+        
+        // Lương 1 ngày (1 ca)
+        $dailyWage = $hourlyWage * 8;
+
+        // Lấy tất cả bản ghi chấm công trong tháng
+        $sql = "SELECT 
+                    a.*,
+                    ws.start_time,
+                    ws.end_time
+                FROM attendances a
+                INNER JOIN work_shifts ws ON a.shift_id = ws.id
+                WHERE a.user_id = ?
+                AND MONTH(a.attendance_date) = ?
+                AND YEAR(a.attendance_date) = ?
+                AND a.check_in_time IS NOT NULL
+                ORDER BY a.attendance_date";
+        
+        $stmt = DB::pdo()->prepare($sql);
+        $stmt->execute([$userId, $month, $year]);
+        $attendances = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $consecutiveLate = 0; // Đếm số ngày trễ liên tục
+        $lastDate = null;
+
+        foreach ($attendances as $att) {
+            $checkInTime = new \DateTime($att['check_in_time']);
+            $checkOutTime = $att['check_out_time'] ? new \DateTime($att['check_out_time']) : null;
+            
+            // Giờ bắt đầu và kết thúc ca theo quy định
+            $shiftStart = new \DateTime($att['attendance_date'] . ' ' . $att['start_time']);
+            $shiftEnd = new \DateTime($att['attendance_date'] . ' ' . $att['end_time']);
+            
+            // Tính số phút trễ khi check-in
+            $lateMinutes = 0;
+            if ($checkInTime > $shiftStart) {
+                $lateMinutes = ($checkInTime->getTimestamp() - $shiftStart->getTimestamp()) / 60;
+            }
+            
+            // Tính số phút về sớm khi check-out
+            $earlyMinutes = 0;
+            if ($checkOutTime && $checkOutTime < $shiftEnd) {
+                $earlyMinutes = ($shiftEnd->getTimestamp() - $checkOutTime->getTimestamp()) / 60;
+            }
+            
+            // Tổng số phút vi phạm
+            $totalViolationMinutes = $lateMinutes + $earlyMinutes;
+            
+            // Tính tổng giờ làm việc thực tế
+            $actualWorkHours = 0;
+            if ($checkOutTime) {
+                $actualWorkHours = ($checkOutTime->getTimestamp() - $checkInTime->getTimestamp()) / 3600;
+            }
+            
+            $dayDeduction = 0;
+            $isLateToday = false;
+
+            // Quy tắc 1: >30 phút hoặc tổng giờ làm <7.5h → trừ 50% lương ngày
+            if ($totalViolationMinutes > 30 || ($actualWorkHours > 0 && $actualWorkHours < 7.5)) {
+                $dayDeduction = $dailyWage * 0.5;
+                $isLateToday = true;
+            }
+            // Quy tắc 2: 16-30 phút → trừ theo phút
+            elseif ($totalViolationMinutes >= 16 && $totalViolationMinutes <= 30) {
+                $dayDeduction = ($hourlyWage / 60) * $totalViolationMinutes;
+                $isLateToday = true;
+            }
+            // Quy tắc 3: 1-15 phút → không trừ (nhưng vẫn tính là trễ cho quy tắc liên tục)
+            elseif ($totalViolationMinutes >= 1 && $totalViolationMinutes < 16) {
+                $dayDeduction = 0;
+                $isLateToday = true;
+            }
+            
+            $totalDeduction += $dayDeduction;
+
+            // Kiểm tra ngày trễ liên tục
+            if ($isLateToday) {
+                $currentDate = new \DateTime($att['attendance_date']);
+                
+                // Nếu là ngày liên tiếp (hoặc ngày đầu tiên)
+                if ($lastDate === null || $currentDate->diff($lastDate)->days == 1) {
+                    $consecutiveLate++;
+                } else {
+                    $consecutiveLate = 1; // Reset về 1
+                }
+                
+                // Quy tắc 4: Liên tục 3 ngày trễ → cảnh cáo và trừ thêm 10% lương ngày
+                if ($consecutiveLate == 3) {
+                    $totalDeduction += $dailyWage * 0.1;
+                    // Log cảnh cáo (có thể thêm vào bảng notifications hoặc logs)
+                }
+                
+                $lastDate = $currentDate;
+            } else {
+                $consecutiveLate = 0;
+                $lastDate = null;
+            }
+        }
+
+        return round($totalDeduction, 2);
+    }
+
+    /**
      * Cập nhật thưởng/phạt
      */
     public function updateBonusDeduction(int $id, float $bonus, float $deduction, int $updatedBy): bool
@@ -188,7 +323,7 @@ class PayrollRepository
         $sql = "UPDATE {$this->table} SET
                 bonus = ?,
                 deduction = ?,
-                total_salary = actual_salary + ? - ?,
+                total_salary = actual_salary + ? - ? - COALESCE(late_deduction, 0),
                 updated_by = ?
                 WHERE id = ?";
         $stmt = DB::pdo()->prepare($sql);

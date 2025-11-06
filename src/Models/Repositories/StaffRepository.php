@@ -94,7 +94,9 @@ class StaffRepository
                 INNER JOIN {$this->staffTable} s ON u.id = s.user_id
                 LEFT JOIN {$this->userTable} cu ON cu.id = u.created_by
                 LEFT JOIN {$this->userTable} uu ON uu.id = u.updated_by
-                WHERE u.role_id = 2 AND u.is_deleted = 0
+                WHERE u.role_id = 2 
+                  AND u.is_deleted = 0 
+                  AND u.username != 'admin'
                 ORDER BY u.id DESC";
         return DB::pdo()->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -124,7 +126,10 @@ class StaffRepository
                 INNER JOIN {$this->staffTable} s ON u.id = s.user_id
                 LEFT JOIN {$this->userTable} cu ON cu.id = u.created_by
                 LEFT JOIN {$this->userTable} uu ON uu.id = u.updated_by
-                WHERE u.id = ? AND u.role_id = 2 AND u.is_deleted = 0";
+                WHERE u.id = ? 
+                  AND u.role_id = 2 
+                  AND u.is_deleted = 0
+                  AND u.username != 'admin'";
         $stmt = DB::pdo()->prepare($sql);
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);

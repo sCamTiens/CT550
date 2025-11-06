@@ -308,34 +308,34 @@
                 // Tạo toast notification
                 const toast = document.createElement('div');
                 toast.className = `
-        fixed top-5 right-5 z-[60] flex items-center justify-between w-[400px] p-4 mb-4 text-base font-semibold
-        ${type === 'success'
-                        ? 'text-green-700 border-green-400'
-                        : 'text-red-700 border-red-400'}
-        bg-white rounded-xl shadow-lg border-2 animate-slide-in
-    `;
+                        fixed top-5 right-5 z-[60] flex items-center justify-between w-[400px] p-4 mb-4 text-base font-semibold
+                        ${type === 'success'
+                                        ? 'text-green-700 border-green-400'
+                                        : 'text-red-700 border-red-400'}
+                        bg-white rounded-xl shadow-lg border-2 animate-slide-in
+                    `;
 
-                toast.innerHTML = `
-        <div class="flex items-center flex-1">
-            <svg class="flex-shrink-0 w-6 h-6 ${type === 'success' ? 'text-green-600' : 'text-red-600'} mr-3"
-                xmlns="http://www.w3.org/2000/svg" fill="none"
-                viewBox="0 0 24 24" stroke="currentColor">
-                ${type === 'success'
-                        ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M5 13l4 4L19 7" />`
-                        : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`}
-            </svg>
-            <div class="flex-1">${message}</div>
-        </div>
-        <button class="ml-4 text-gray-400 hover:text-gray-700 transition" id="toast-close-btn">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none"
-                viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
-                class="w-5 h-5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-        </button>
-    `;
+                                toast.innerHTML = `
+                        <div class="flex items-center flex-1">
+                            <svg class="flex-shrink-0 w-6 h-6 ${type === 'success' ? 'text-green-600' : 'text-red-600'} mr-3"
+                                xmlns="http://www.w3.org/2000/svg" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                ${type === 'success'
+                                        ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M5 13l4 4L19 7" />`
+                                        : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`}
+                            </svg>
+                            <div class="flex-1">${message}</div>
+                        </div>
+                        <button class="ml-4 text-gray-400 hover:text-gray-700 transition" id="toast-close-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none"
+                                viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                                class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    `;
 
                 document.body.appendChild(toast);
 

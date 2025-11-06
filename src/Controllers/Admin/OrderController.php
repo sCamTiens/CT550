@@ -167,11 +167,17 @@ class OrderController extends BaseAdminController
 
         // Convert object sang array để sử dụng trong view
         $order = json_decode(json_encode($orderObj), true);
+        
+        // Debug: Log order data
+        error_log("Order data: " . print_r($order, true));
+        
         $items = $this->orderRepo->getOrderItems($id);
         
+        // Gán items vào order
+        $order['items'] = $items;
+        
         return $this->view('admin/orders/invoice-template', [
-            'order' => $order,
-            'items' => $items
+            'order' => $order
         ]);
     }
 

@@ -6,8 +6,85 @@
         <input :value="form.code" disabled class="w-full border rounded px-3 py-2 bg-gray-100 text-gray-700" />
     </div>
 
-    <!-- Nhà cung cấp -->
+    <!-- Loại phiếu chi -->
     <div class="relative" x-data="{
+            open: false,
+            search: '',
+            filtered: [],
+            highlight: -1,
+            types: [
+                {id: 'Nhà cung cấp', name: 'Chi cho nhà cung cấp'},
+                {id: 'Lương nhân viên', name: 'Chi trả lương nhân viên'}
+            ],
+            choose(t) {
+                form.type = t.id;
+                this.search = t.name;
+                this.open = false;
+                // Reset các trường liên quan khi đổi loại
+                if (t.id === 'Lương nhân viên') {
+                    form.supplier_id = '';
+                    form.purchase_order_id = '';
+                } else {
+                    form.payroll_id = '';
+                    form.staff_user_id = '';
+                }
+                touched.type = true;
+                validateField('type');
+            },
+            clear() {
+                form.type = '';
+                this.search = '';
+                this.filtered = this.types;
+                this.open = false;
+            },
+            reset() {
+                const selected = this.types.find(t => t.id == form.type);
+                this.search = selected ? selected.name : '';
+                this.filtered = this.types;
+                this.highlight = -1;
+            }
+        }" x-effect="reset()" @click.away="open = false">
+        <label class="block text-sm text-black font-semibold mb-1">
+            Loại phiếu chi <span class="text-red-500">*</span>
+        </label>
+
+        <div class="relative">
+            <input type="text" x-model="search" @focus="open = true; filtered = types"
+                @input="open = true; filtered = types.filter(t => t.name.toLowerCase().includes(search.toLowerCase()))"
+                @blur="touched.type = true; validateField('type')"
+                class="w-full border rounded px-3 py-2 pr-8 bg-white text-sm cursor-pointer focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
+                :class="(touched.type && errors.type) ? 'border-red-500' : 'border-gray-300'"
+                placeholder="-- Chọn loại phiếu chi --" />
+
+            <button x-show="form.type" type="button" @click.stop="clear()"
+                class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 focus:outline-none">
+                ✕
+            </button>
+
+            <svg x-show="!form.type"
+                class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" fill="none"
+                stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+        </div>
+
+        <div x-show="open" class="absolute z-20 mt-1 w-full bg-white border rounded shadow max-h-60 overflow-auto">
+            <template x-for="(t, i) in filtered" :key="t.id">
+                <div @click="choose(t)" @mouseenter="highlight = i" @mouseleave="highlight = -1" :class="[
+                    highlight === i ? 'bg-[#002975] text-white'
+                    : (form.type == t.id ? 'bg-[#002975] text-white'
+                    : 'hover:bg-[#002975] hover:text-white text-black'),
+                    'px-3 py-2 cursor-pointer transition-colors text-sm'
+                ]" x-text="t.name">
+                </div>
+            </template>
+        </div>
+
+        <p x-show="touched.type && errors.type" x-text="errors.type" class="text-red-500 text-xs mt-1"></p>
+    </div>
+
+    <!-- Nhà cung cấp (chỉ hiện khi type = 'Nhà cung cấp') -->
+    <div x-show="form.type === 'Nhà cung cấp'" class="relative" x-data="{
             open: false,
             search: '',
             filtered: [],
@@ -81,8 +158,8 @@
             class="text-red-500 text-xs mt-1"></p>
     </div>
 
-    <!-- Phiếu nhập -->
-    <div class="relative" x-data="{
+    <!-- Phiếu nhập (chỉ hiện khi type = 'Nhà cung cấp') -->
+    <div x-show="form.type === 'Nhà cung cấp'" class="relative" x-data="{
             open: false,
             search: '',
             filtered: [],
@@ -172,6 +249,79 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Nhân viên nhận lương (chỉ hiện khi type = 'Lương nhân viên') -->
+    <div x-show="form.type === 'Lương nhân viên'" class="relative" x-data="{
+            open: false,
+            search: '',
+            filtered: [],
+            highlight: -1,
+            choose(staff) {
+                form.staff_user_id = staff.id;
+                this.search = staff.name;
+                this.open = false;
+                touched.staff_user_id = true;
+                validateField('staff_user_id');
+            },
+            clear() {
+                form.staff_user_id = '';
+                this.search = '';
+                this.filtered = staffs;
+                this.open = false;
+            },
+            reset() {
+                const selected = staffs.find(s => s.id == form.staff_user_id);
+                this.search = selected ? selected.name : '';
+                this.filtered = staffs;
+                this.highlight = -1;
+            }
+        }" x-effect="reset()" @click.away="open = false">
+        <label class="block text-sm text-black font-semibold mb-1">
+            Nhân viên nhận lương <span class="text-red-500">*</span>
+        </label>
+
+        <div class="relative">
+            <input type="text" x-model="search" @focus="open = true; filtered = staffs"
+                @input="open = true; filtered = staffs.filter(s => s.name.toLowerCase().includes(search.toLowerCase()))"
+                @blur="touched.staff_user_id = true; validateField('staff_user_id')"
+                class="w-full border rounded px-3 py-2 pr-8 bg-white text-sm cursor-pointer focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
+                :class="(touched.staff_user_id && errors.staff_user_id) ? 'border-red-500' : 'border-gray-300'"
+                placeholder="-- Chọn nhân viên --" />
+
+            <button x-show="form.staff_user_id" type="button" @click.stop="clear()"
+                class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 focus:outline-none">
+                ✕
+            </button>
+
+            <svg x-show="!form.staff_user_id"
+                class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" fill="none"
+                stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+        </div>
+
+        <div x-show="open" class="absolute z-20 mt-1 w-full bg-white border rounded shadow max-h-60 overflow-auto">
+            <template x-for="(staff, i) in filtered" :key="staff.id">
+                <div @click="choose(staff)" @mouseenter="highlight = i" @mouseleave="highlight = -1" :class="[
+                    highlight === i ? 'bg-[#002975] text-white'
+                    : (form.staff_user_id == staff.id ? 'bg-[#002975] text-white'
+                    : 'hover:bg-[#002975] hover:text-white text-black'),
+                    'px-3 py-2 cursor-pointer transition-colors text-sm'
+                ]" x-text="staff.name">
+                </div>
+            </template>
+            <div x-show="filtered.length === 0" class="px-3 py-2 text-gray-400 text-sm">
+                Không tìm thấy nhân viên
+            </div>
+        </div>
+
+        <p x-show="staffs.length === 0" class="text-red-400 text-xs italic mt-1">
+            Danh sách trống
+        </p>
+
+        <p x-show="touched.staff_user_id && errors.staff_user_id" x-text="errors.staff_user_id"
+            class="text-red-500 text-xs mt-1"></p>
     </div>
 
     <!-- Phương thức thanh toán -->

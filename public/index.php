@@ -209,9 +209,12 @@ $router->group('/admin', function (Router $r): void {
 
     // Quản lý lương (Payroll)
     $r->get('/payroll', [AdminPayroll::class, 'index']);
-    $r->get('/api/payroll', [AdminPayroll::class, 'apiList']);
-    $r->post('/api/payroll', [AdminPayroll::class, 'store']);
-    $r->put('/api/payroll/{id}', [AdminPayroll::class, 'update']);
+    $r->get('/api/payroll', [AdminPayroll::class, 'apiIndex']);
+    $r->post('/api/payroll/calculate', [AdminPayroll::class, 'calculate']);
+    $r->post('/api/payroll/calculate/{id}', [AdminPayroll::class, 'calculateOne']);
+    $r->put('/api/payroll/{id}/bonus-deduction', [AdminPayroll::class, 'updateBonusDeduction']);
+    $r->post('/api/payroll/{id}/approve', [AdminPayroll::class, 'approve']);
+    $r->post('/api/payroll/{id}/mark-paid', [AdminPayroll::class, 'markAsPaid']);
     $r->delete('/api/payroll/{id}', [AdminPayroll::class, 'delete']);
 
     // Customers
@@ -355,6 +358,19 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/attendance', [AdminAttendance::class, 'index']);
     $r->delete('/api/attendance/{id}', [AdminAttendance::class, 'delete']);
     $r->post('/api/attendance/{id}/approve', [AdminAttendance::class, 'approve']);
+
+    // Payroll (Quản lý bảng lương)
+    $r->get('/payroll', [AdminPayroll::class, 'index']);
+    $r->get('/api/payroll', [AdminPayroll::class, 'apiIndex']);
+    $r->get('/api/payroll/export', [AdminPayroll::class, 'export']);
+    $r->post('/api/payroll/calculate', [AdminPayroll::class, 'calculate']);
+    $r->post('/api/payroll/calculate/{userId}', [AdminPayroll::class, 'calculateOne']);
+    $r->put('/api/payroll/{id}/bonus-deduction', [AdminPayroll::class, 'updateBonusDeduction']);
+    $r->post('/api/payroll/{id}/approve', [AdminPayroll::class, 'approve']);
+    $r->post('/api/payroll/{id}/mark-paid', [AdminPayroll::class, 'markAsPaid']);
+    $r->post('/api/payroll/{id}/pay', [AdminPayroll::class, 'pay']);
+    $r->post('/api/payroll/pay-all', [AdminPayroll::class, 'payAll']);
+    $r->delete('/api/payroll/{id}', [AdminPayroll::class, 'delete']);
 });
 
 /* --- chạy router --- */

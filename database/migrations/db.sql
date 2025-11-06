@@ -729,12 +729,15 @@ CREATE TABLE purchase_order_items (
   INDEX idx_poi_prod   (product_id)
 ) ENGINE=InnoDB;
 
--- Phiếu chi: chi tiền cho nhà cung cấp
+-- Phiếu chi: chi tiền cho nhà cung cấp hoặc chi trả lương
 CREATE TABLE expense_vouchers (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   code VARCHAR(32) NOT NULL UNIQUE,      -- mã phiếu chi hiển thị
-  purchase_order_id BIGINT NOT NULL,         -- phiếu nhập liên quan
+  type ENUM('Nhà cung cấp','Lương nhân viên') NOT NULL DEFAULT 'Nhà cung cấp', -- loại phiếu chi
+  purchase_order_id BIGINT NULL,         -- phiếu nhập liên quan (chỉ cho type = 'Nhà cung cấp')
   supplier_id BIGINT NULL,               -- nhà cung cấp (nếu chi rời/hoặc trùng với phiếu nhập)
+  payroll_id BIGINT NULL,                -- bảng lương liên quan (chỉ cho type = 'Lương nhân viên')
+  staff_user_id BIGINT NULL,             -- nhân viên nhận lương (chỉ cho type = 'Lương nhân viên')
   method ENUM('Tiền mặt','Chuyển khoản') NOT NULL,
   txn_ref VARCHAR(250) NULL,                -- mã giao dịch ngân hàng (nếu có)
   amount DECIMAL(12,2) NOT NULL CHECK (amount >= 0),
@@ -749,10 +752,15 @@ CREATE TABLE expense_vouchers (
 
   CONSTRAINT fk_ev_po      FOREIGN KEY(purchase_order_id) REFERENCES purchase_orders(id) ON DELETE RESTRICT,
   CONSTRAINT fk_ev_sup     FOREIGN KEY(supplier_id)       REFERENCES suppliers(id)       ON DELETE SET NULL,
+  CONSTRAINT fk_ev_payroll FOREIGN KEY(payroll_id)        REFERENCES payrolls(id)        ON DELETE RESTRICT,
+  CONSTRAINT fk_ev_staff   FOREIGN KEY(staff_user_id)     REFERENCES users(id)           ON DELETE SET NULL,
   CONSTRAINT fk_ev_paid_by FOREIGN KEY(paid_by)           REFERENCES users(id)           ON DELETE SET NULL,
 
+  INDEX idx_ev_type  (type),
   INDEX idx_ev_po    (purchase_order_id),
   INDEX idx_ev_sup   (supplier_id),
+  INDEX idx_ev_payroll (payroll_id),
+  INDEX idx_ev_staff (staff_user_id),
   INDEX idx_ev_paid  (paid_at)
 ) ENGINE=InnoDB;
 
@@ -1257,3 +1265,11 @@ CREATE TABLE IF NOT EXISTS system_jobs (
     job_name VARCHAR(100) PRIMARY KEY,
     last_run DATETIME DEFAULT NULL
 );
+
+ALTER TABLE payrolls 
+ADD COLUMN late_deduction DECIMAL(15,2) DEFAULT 0 COMMENT 'Phạt đi trễ/về sớm' AFTER deduction;
+
+-- Cập nhật công thức tính tổng lương
+-- total_salary = actual_salary + bonus - deduction - late_deduction
+ALTER TABLE payrolls 
+MODIFY COLUMN total_salary DECIMAL(15,2) DEFAULT 0 COMMENT 'Tổng lương = actual_salary + bonus - deduction - late_deduction';

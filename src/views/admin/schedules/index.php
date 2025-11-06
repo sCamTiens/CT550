@@ -25,6 +25,29 @@
 </style>
 
 <div x-data="scheduleApp()" x-init="init()" class="p-6">
+    <!-- Confirm Dialog -->
+    <div x-show="confirmDialog.show"
+        class="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-5" style="display: none;">
+        <div class="bg-white w-full max-w-md rounded-xl shadow-lg" @click.outside="confirmDialog.show = false">
+            <div class="px-5 py-4 border-b">
+                <h3 class="text-xl font-bold text-[#002975]" x-text="confirmDialog.title"></h3>
+            </div>
+            <div class="p-5">
+                <p class="text-gray-600" x-text="confirmDialog.message"></p>
+            </div>
+            <div class="px-5 py-4 border-t flex gap-2 justify-end">
+                <button @click="confirmDialog.show = false; confirmDialog.onCancel()"
+                    class="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-600 hover:text-white">
+                    Hủy
+                </button>
+                <button @click="confirmDialog.show = false; confirmDialog.onConfirm()"
+                    class="px-4 py-2 border border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white">
+                    Xác nhận
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold text-gray-800">Quản lý lịch làm việc</h1>
@@ -323,6 +346,13 @@
             showModal: false,
             showBulkModal: false,
             showCopyModal: false,
+            confirmDialog: {
+                show: false,
+                title: '',
+                message: '',
+                onConfirm: () => {},
+                onCancel: () => {}
+            },
             form: {
                 id: null,
                 staff_id: '',
@@ -414,8 +444,16 @@
                     const data = JSON.parse(resText);
 
                     this.schedules = data.schedules || [];
+                    console.log('📅 Loaded schedules:', this.schedules.length, 'records');
+                    console.log('🔍 Filter params:', {
+                        start_date: this.weekDays[0],
+                        end_date: this.weekDays[6],
+                        staff_id: this.filterStaff || 'all',
+                        shift_id: this.filterShift || 'all',
+                        status: this.filterStatus || 'all'
+                    });
                 } catch (e) {
-                    console.error('Error:', e);
+                    console.error('❌ Error loading schedules:', e);
                     this.showToast('Lỗi tải lịch: ' + e.message);
                 } finally {
                     this.loading = false;
@@ -473,24 +511,28 @@
             },
 
             async deleteSchedule() {
-                if (!confirm('Xóa lịch này?')) return;
+                this.showConfirm(
+                    'Xác nhận xóa',
+                    'Xóa lịch này? Hành động không thể hoàn tác.',
+                    async () => {
+                        try {
+                            const res = await fetch(`/admin/api/schedules/${this.form.id}`, {
+                                method: 'DELETE'
+                            });
 
-                try {
-                    const res = await fetch(`/admin/api/schedules/${this.form.id}`, {
-                        method: 'DELETE'
-                    });
-
-                    if (res.ok) {
-                        this.showToast('Xóa thành công', 'success');
-                        this.showModal = false;
-                        await this.loadWeekSchedules();
-                    } else {
-                        const data = await res.json();
-                        this.showToast(data.error || 'Lỗi khi xóa', 'error');
+                            if (res.ok) {
+                                this.showToast('Xóa thành công', 'success');
+                                this.showModal = false;
+                                await this.loadWeekSchedules();
+                            } else {
+                                const data = await res.json();
+                                this.showToast(data.error || 'Lỗi khi xóa', 'error');
+                            }
+                        } catch (e) {
+                            this.showToast('Lỗi: ' + e.message, 'error');
+                        }
                     }
-                } catch (e) {
-                    this.showToast('Lỗi: ' + e.message, 'error');
-                }
+                );
             },
 
             openBulkModal() {
@@ -898,21 +940,27 @@
                 toast.className = `fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 mb-4 text-base font-semibold ${colorClasses} bg-white rounded-xl shadow-lg border-2`;
 
                 toast.innerHTML = `
-                        <svg class="flex-shrink-0 w-6 h-6 ${iconColor} mr-3" 
-                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg class="flex-shrink-0 w-6 h-6 ${iconColor} mr-3" 
+                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         ${iconSvg}
-                        </svg>
-                        <div class="flex-1">${msg}</div>
-                    `;
+                    </svg>
+                    <div class="flex-1">${msg}</div>
+                `;
 
                 box.appendChild(toast);
                 setTimeout(() => toast.remove(), 5000);
             },
+
+            showConfirm(title, message, onConfirm, onCancel = () => {}) {
+                this.confirmDialog.title = title;
+                this.confirmDialog.message = message;
+                this.confirmDialog.onConfirm = onConfirm;
+                this.confirmDialog.onCancel = onCancel;
+                this.confirmDialog.show = true;
+            },
         }
     }
-</script>
-
-<script>
+</script><script>
     /* Helper */
     function formatDDMMYYYY(d) {
         const day = String(d.getDate()).padStart(2, '0');
