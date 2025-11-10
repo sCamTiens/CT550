@@ -34,6 +34,26 @@ $items = $items ?? [];
     </div>
   </div>
 
+  <!-- Thống kê tổng quan -->
+  <section class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-gray-500 text-sm mb-1">Tổng khách hàng</div>
+      <div class="text-2xl font-bold text-blue-600" x-text="getTotalCustomers()"></div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-gray-500 text-sm mb-1">Đang hoạt động</div>
+      <div class="text-2xl font-bold text-green-600" x-text="countByStatus(1)"></div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-gray-500 text-sm mb-1">Ngừng hoạt động</div>
+      <div class="text-2xl font-bold text-red-600" x-text="countByStatus(0)"></div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-gray-500 text-sm mb-1">Khách hàng mới trong tháng</div>
+      <div class="text-2xl font-bold text-purple-600" x-text="countThisMonth()"></div>
+    </div>
+  </section>
+
   <!-- Table -->
   <div class="bg-white rounded-xl shadow pb-4">
     <!-- Loading overlay bên trong bảng -->
@@ -745,6 +765,29 @@ $items = $items ?? [];
     </div>
   </div>
 
+  <!-- Confirm Dialog -->
+  <div x-show="confirmDialog.show" class="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-5 mt-[-200px]"
+    style="display: none;">
+    <div class="bg-white w-full max-w-md rounded-xl shadow-lg" @click.outside="confirmDialog.show = false">
+      <div class="px-5 py-4 border-b">
+        <h3 class="text-xl font-bold text-[#002975]" x-text="confirmDialog.title"></h3>
+      </div>
+      <div class="p-5">
+        <p class="text-gray-600" x-text="confirmDialog.message"></p>
+      </div>
+      <div class="px-5 py-4 border-t flex gap-2 justify-end">
+        <button @click="confirmDialog.show = false; confirmDialog.onCancel()"
+          class="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-600 hover:text-white">
+          Hủy
+        </button>
+        <button @click="confirmDialog.show = false; confirmDialog.onConfirm()"
+          class="px-4 py-2 border border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white">
+          Xác nhận
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast-container" class="z-[60]"></div>
 </div>
 
@@ -829,6 +872,24 @@ $items = $items ?? [];
         created_by_name: false,
         updated_at: false,
         updated_by_name: false
+      },
+
+      confirmDialog: {
+        show: false,
+        title: '',
+        message: '',
+        onConfirm: () => { },
+        onCancel: () => { }
+      },
+
+      showConfirm(title, message, onConfirm, onCancel = () => {}) {
+        this.confirmDialog = {
+          show: true,
+          title,
+          message,
+          onConfirm,
+          onCancel
+        };
       },
 
       formatDate(d) {
@@ -1162,6 +1223,28 @@ $items = $items ?? [];
         this.openFilter[key] = false;
       },
 
+      // ===== Statistics Functions =====
+      getTotalCustomers() {
+        return this.filtered().length;
+      },
+
+      countByStatus(status) {
+        return this.filtered().filter(c => c.is_active == status).length;
+      },
+
+      countThisMonth() {
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+        
+        return this.filtered().filter(c => {
+          if (!c.created_at) return false;
+          const createdDate = new Date(c.created_at);
+          return createdDate.getMonth() === currentMonth && 
+                 createdDate.getFullYear() === currentYear;
+        }).length;
+      },
+
       exportExcel() {
         const data = this.filtered();
 
@@ -1490,20 +1573,28 @@ $items = $items ?? [];
       },
 
       async remove(id) {
-        if (!confirm('Xóa khách hàng này?')) return;
-        try {
-          const resp = await fetch(api.remove(id), { method: 'DELETE' });
-          const data = await resp.json().catch(() => ({}));
-          if (resp.ok) {
-            this.items = this.items.filter(item => Number(item.id) !== Number(id));
-            this.showToast('Đã xoá khách hàng', 'success');
-          } else {
-            this.showToast(data.error || 'Không thể xoá khách hàng');
+        const customer = this.items.find(c => Number(c.id) === Number(id));
+        const name = customer ? customer.full_name : 'khách hàng này';
+        
+        this.showConfirm(
+          'Xác nhận xóa',
+          `Bạn có chắc chắn muốn xóa khách hàng "${name}"?`,
+          async () => {
+            try {
+              const resp = await fetch(api.remove(id), { method: 'DELETE' });
+              const data = await resp.json().catch(() => ({}));
+              if (resp.ok) {
+                this.items = this.items.filter(item => Number(item.id) !== Number(id));
+                this.showToast('Đã xoá khách hàng', 'success');
+              } else {
+                this.showToast(data.error || 'Không thể xoá khách hàng');
+              }
+            } catch (e) {
+              console.error(e);
+              this.showToast('Không thể xoá khách hàng');
+            }
           }
-        } catch (e) {
-          console.error(e);
-          this.showToast('Không thể xoá khách hàng');
-        }
+        );
       },
 
       resetForm() {

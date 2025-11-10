@@ -30,6 +30,26 @@ $items = $items ?? [];
         </div>
     </div>
 
+    <!-- Thống kê tổng quan -->
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Tổng số đơn hàng</div>
+            <div class="text-2xl font-bold text-blue-600" x-text="getTotalOrders()"></div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Tổng doanh thu</div>
+            <div class="text-lg font-bold text-green-600" x-text="formatCurrency(getTotalRevenue())"></div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Đơn hàng hoàn thành</div>
+            <div class="text-2xl font-bold text-purple-600" x-text="countByStatus('Hoàn thành')"></div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Đơn hàng chờ xử lý</div>
+            <div class="text-2xl font-bold text-orange-600" x-text="countByStatus('Chờ xử lý')"></div>
+        </div>
+    </section>
+
     <!-- Table -->
     <div class="bg-white rounded-xl shadow pb-4">
         <!-- Loading overlay bên trong bảng -->
@@ -430,6 +450,29 @@ $items = $items ?? [];
         </div>
     </template>
 
+    <!-- Confirm Dialog -->
+    <div x-show="confirmDialog.show"
+        class="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-5 mt-[-200px]" style="display: none;">
+        <div class="bg-white w-full max-w-md rounded-xl shadow-lg" @click.outside="confirmDialog.show = false">
+            <div class="px-5 py-4 border-b">
+                <h3 class="text-xl font-bold text-[#002975]" x-text="confirmDialog.title"></h3>
+            </div>
+            <div class="p-5">
+                <p class="text-gray-600" x-text="confirmDialog.message"></p>
+            </div>
+            <div class="px-5 py-4 border-t flex gap-2 justify-end">
+                <button @click="confirmDialog.show = false; confirmDialog.onCancel()"
+                    class="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-600 hover:text-white">
+                    Hủy
+                </button>
+                <button @click="confirmDialog.show = false; confirmDialog.onConfirm()"
+                    class="px-4 py-2 border border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white">
+                    Xác nhận
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div id="toast-container" class="z-[60]"></div>
 </div>
@@ -465,6 +508,14 @@ $items = $items ?? [];
             appliedPromotions: [],
             promotionDiscount: 0,
             checkingPromotions: false,
+
+            confirmDialog: {
+                show: false,
+                title: '',
+                message: '',
+                onConfirm: () => {},
+                onCancel: () => {}
+            },
 
             // ===== PAGINATION =====
             currentPage: 1,
@@ -797,6 +848,28 @@ $items = $items ?? [];
                     this.filters[key] = '';
                 }
                 this.openFilter[key] = false;
+            },
+
+            // ===== THỐNG KÊ =====
+            getTotalOrders() {
+                return this.filtered().length;
+            },
+
+            getTotalRevenue() {
+                return this.filtered().reduce((sum, order) => {
+                    return sum + (parseFloat(order.total_amount) || 0);
+                }, 0);
+            },
+
+            countByStatus(status) {
+                if (status === 'Hoàn thành') {
+                    // Đếm các đơn hàng có trạng thái "Hoàn tất"
+                    return this.filtered().filter(o => o.status === 'Hoàn tất').length;
+                } else if (status === 'Chờ xử lý') {
+                    // Đếm tất cả các đơn hàng còn lại (không phải "Hoàn tất")
+                    return this.filtered().filter(o => o.status !== 'Hoàn tất').length;
+                }
+                return this.filtered().filter(o => o.status === status).length;
             },
 
             // ===== UTILITIES =====
@@ -1431,18 +1504,36 @@ $items = $items ?? [];
             },
 
             async remove(id) {
-                if (!confirm('Bạn có chắc muốn xóa đơn hàng này?')) return;
-                try {
-                    const res = await fetch(api.remove(id), { method: 'DELETE' });
-                    if (res.ok) {
-                        this.items = this.items.filter(r => r.id !== id);
-                        this.showToast('Xóa đơn hàng thành công!', 'success');
-                    } else {
-                        this.showToast('Không thể xóa đơn hàng');
+                const order = this.items.find(o => o.id === id);
+                const code = order ? order.code : 'đơn hàng này';
+
+                this.showConfirm(
+                    'Xác nhận xóa',
+                    `Bạn có chắc chắn muốn xóa đơn hàng "${code}"?`,
+                    async () => {
+                        try {
+                            const res = await fetch(api.remove(id), { method: 'DELETE' });
+                            if (res.ok) {
+                                this.items = this.items.filter(r => r.id !== id);
+                                this.showToast('Xóa đơn hàng thành công!', 'success');
+                            } else {
+                                this.showToast('Không thể xóa đơn hàng');
+                            }
+                        } catch (e) {
+                            this.showToast('Không thể xóa đơn hàng');
+                        }
                     }
-                } catch (e) {
-                    this.showToast('Không thể xóa đơn hàng');
-                }
+                );
+            },
+
+            showConfirm(title, message, onConfirm, onCancel = () => {}) {
+                this.confirmDialog = {
+                    show: true,
+                    title,
+                    message,
+                    onConfirm,
+                    onCancel
+                };
             },
 
             // ===== EXPORT EXCEL =====

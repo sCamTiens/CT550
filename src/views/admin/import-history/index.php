@@ -275,6 +275,29 @@
         </div>
     </div>
 
+    <!-- Confirm Dialog -->
+    <div x-show="confirmDialog.show"
+        class="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-5 mt-[-200px]" style="display: none;">
+        <div class="bg-white w-full max-w-md rounded-xl shadow-lg" @click.outside="confirmDialog.show = false">
+            <div class="px-5 py-4 border-b">
+                <h3 class="text-xl font-bold text-[#002975]" x-text="confirmDialog.title"></h3>
+            </div>
+            <div class="p-5">
+                <p class="text-gray-600" x-text="confirmDialog.message"></p>
+            </div>
+            <div class="px-5 py-4 border-t flex gap-2 justify-end">
+                <button @click="confirmDialog.show = false; confirmDialog.onCancel()"
+                    class="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-600 hover:text-white">
+                    Hủy
+                </button>
+                <button @click="confirmDialog.show = false; confirmDialog.onConfirm()"
+                    class="px-4 py-2 border border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white">
+                    Xác nhận
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div id="toast-container" class="z-[60]"></div>
 
@@ -333,6 +356,14 @@
             currentPage: 1,
             perPage: 20,
             perPageOptions: [10, 20, 50, 100],
+
+            confirmDialog: {
+                show: false,
+                title: '',
+                message: '',
+                onConfirm: () => {},
+                onCancel: () => {}
+            },
 
             async init() {
                 await this.fetchAll();
@@ -664,20 +695,37 @@
             },
 
             async deleteItem(id) {
-                if (!confirm('Xóa lịch sử nhập này?')) return;
+                const item = this.items.find(i => i.id === id);
+                const module = item ? this.getModuleName(item.table_name) : 'lịch sử này';
 
-                try {
-                    const r = await fetch(`/admin/api/import-history/${id}`, { method: 'DELETE' });
-                    if (r.ok) {
-                        this.items = this.items.filter(x => x.id != id);
-                        this.applyFilters();
-                        this.showToast('Xóa lịch sử thành công!', 'success');
-                    } else {
-                        throw new Error('Không thể xóa');
+                this.showConfirm(
+                    'Xác nhận xóa',
+                    `Bạn có chắc chắn muốn xóa lịch sử nhập "${module}"?`,
+                    async () => {
+                        try {
+                            const r = await fetch(`/admin/api/import-history/${id}`, { method: 'DELETE' });
+                            if (r.ok) {
+                                this.items = this.items.filter(x => x.id != id);
+                                this.applyFilters();
+                                this.showToast('Xóa lịch sử thành công!', 'success');
+                            } else {
+                                this.showToast('Không thể xóa lịch sử');
+                            }
+                        } catch (e) {
+                            this.showToast('Không thể xóa lịch sử');
+                        }
                     }
-                } catch (e) {
-                    this.showToast(e.message || 'Không thể xóa lịch sử');
-                }
+                );
+            },
+
+            showConfirm(title, message, onConfirm, onCancel = () => {}) {
+                this.confirmDialog = {
+                    show: true,
+                    title,
+                    message,
+                    onConfirm,
+                    onCancel
+                };
             },
 
             getModuleName(tableName) {

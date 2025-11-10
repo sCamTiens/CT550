@@ -346,6 +346,29 @@ $items = $items ?? [];
             </div>
         </div> -->
 
+        <!-- Confirm Dialog -->
+        <div x-show="confirmDialog.show"
+            class="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-5 mt-[-200px]" style="display: none;">
+            <div class="bg-white w-full max-w-md rounded-xl shadow-lg" @click.outside="confirmDialog.show = false">
+                <div class="px-5 py-4 border-b">
+                    <h3 class="text-xl font-bold text-[#002975]" x-text="confirmDialog.title"></h3>
+                </div>
+                <div class="p-5">
+                    <p class="text-gray-600" x-text="confirmDialog.message"></p>
+                </div>
+                <div class="px-5 py-4 border-t flex gap-2 justify-end">
+                    <button @click="confirmDialog.show = false; confirmDialog.onCancel()"
+                        class="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-600 hover:text-white">
+                        Hủy
+                    </button>
+                    <button @click="confirmDialog.show = false; confirmDialog.onConfirm()"
+                        class="px-4 py-2 border border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white">
+                        Xác nhận
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Toast lỗi nổi -->
         <div id="toast-container" class="z-[60]"></div>
     </div>
@@ -408,6 +431,14 @@ $items = $items ?? [];
             staffs: [], // Danh sách nhân viên để chọn khi chi trả lương
 
             items: [], // Sẽ được load từ PHP hoặc API
+
+            confirmDialog: {
+                show: false,
+                title: '',
+                message: '',
+                onConfirm: () => {},
+                onCancel: () => {}
+            },
 
             // ===== PAGINATION =====
             currentPage: 1,
@@ -963,27 +994,39 @@ $items = $items ?? [];
 
             async remove(id) {
                 const item = this.items.find(e => e.id === id);
-                const confirmMsg = item
-                    ? `Bạn có chắc muốn xóa phiếu chi "${item.code}"?\n\n` +
-                    `Loại: ${item.type || 'N/A'}\n` +
-                    `Số tiền: ${this.formatCurrency(item.amount)}\n\n` +
-                    `Lưu ý: Nếu phiếu nhập đã thanh toán hết, bạn không thể xóa phiếu chi này.`
-                    : 'Bạn có chắc muốn xóa phiếu chi này?';
+                const code = item ? item.code : 'phiếu chi này';
+                const details = item
+                    ? `\n\nLoại: ${item.type || 'N/A'}\nSố tiền: ${this.formatCurrency(item.amount)}\n\nLưu ý: Nếu phiếu nhập đã thanh toán hết, bạn không thể xóa phiếu chi này.`
+                    : '';
 
-                if (!confirm(confirmMsg)) return;
-
-                try {
-                    const res = await fetch(api.remove(id), { method: 'DELETE' });
-                    if (res.ok) {
-                        this.items = this.items.filter(e => e.id !== id);
-                        this.showToast('Xóa phiếu chi thành công!', 'success');
-                    } else {
-                        const error = await res.json();
-                        this.showToast(error.error || 'Không thể xóa phiếu chi');
+                this.showConfirm(
+                    'Xác nhận xóa',
+                    `Bạn có chắc chắn muốn xóa phiếu chi "${code}"?${details}`,
+                    async () => {
+                        try {
+                            const res = await fetch(api.remove(id), { method: 'DELETE' });
+                            if (res.ok) {
+                                this.items = this.items.filter(e => e.id !== id);
+                                this.showToast('Xóa phiếu chi thành công!', 'success');
+                            } else {
+                                const error = await res.json();
+                                this.showToast(error.error || 'Không thể xóa phiếu chi');
+                            }
+                        } catch (e) {
+                            this.showToast('Không thể xóa phiếu chi');
+                        }
                     }
-                } catch (e) {
-                    this.showToast('Không thể xóa phiếu chi');
-                }
+                );
+            },
+
+            showConfirm(title, message, onConfirm, onCancel = () => {}) {
+                this.confirmDialog = {
+                    show: true,
+                    title,
+                    message,
+                    onConfirm,
+                    onCancel
+                };
             },
 
             // ===== TOAST =====

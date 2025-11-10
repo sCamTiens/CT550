@@ -10,7 +10,7 @@ $items = $items ?? [];
   Admin / Danh mục sản phẩm / <span class="text-slate-800 font-medium">Loại sản phẩm</span>
 </nav>
 
-<div x-data="categoryPage()" x-init="init()">
+<section x-data="categoryPage()" x-init="init()">
   <div class="flex items-center justify-between mb-4">
     <h1 class="text-3xl font-bold text-[#002975]">Quản lý loại sản phẩm</h1>
     <div class="flex gap-2">
@@ -33,6 +33,26 @@ $items = $items ?? [];
         @click="openCreate()">+ Thêm loại sản phẩm</button>
     </div>
   </div>
+
+  <!-- Thống kê tổng quan -->
+  <section class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-gray-500 text-sm mb-1">Tổng loại sản phẩm</div>
+      <div class="text-2xl font-bold text-blue-600" x-text="getTotalCategories()"></div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-gray-500 text-sm mb-1">Đang hiển thị</div>
+      <div class="text-2xl font-bold text-green-600" x-text="countByStatus(1)"></div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-gray-500 text-sm mb-1">Đang ẩn</div>
+      <div class="text-2xl font-bold text-purple-600" x-text="countByStatus(0)"></div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-gray-500 text-sm mb-1">Loại cấp cha</div>
+      <div class="text-2xl font-bold text-orange-600" x-text="countParentCategories()"></div>
+    </div>
+  </section>
 
   <!-- Table -->
   <div class="bg-white rounded-xl shadow pb-4">
@@ -240,6 +260,29 @@ $items = $items ?? [];
     </div>
   </div>
 
+  <!-- Confirm Dialog -->
+  <div x-show="confirmDialog.show"
+    class="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-5  mt-[-200px]" style="display: none;">
+    <div class="bg-white w-full max-w-md rounded-xl shadow-lg" @click.outside="confirmDialog.show = false">
+      <div class="px-5 py-4 border-b">
+        <h3 class="text-xl font-bold text-[#002975]" x-text="confirmDialog.title"></h3>
+      </div>
+      <div class="p-5">
+        <p class="text-gray-600" x-text="confirmDialog.message"></p>
+      </div>
+      <div class="px-5 py-4 border-t flex gap-2 justify-end">
+        <button @click="confirmDialog.show = false; confirmDialog.onCancel()"
+          class="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-600 hover:text-white">
+          Hủy
+        </button>
+        <button @click="confirmDialog.show = false; confirmDialog.onConfirm()"
+          class="px-4 py-2 border border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white">
+          Xác nhận
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast lỗi nổi -->
   <div id="toast-container" class="z-[60]"></div>
 
@@ -282,427 +325,466 @@ $items = $items ?? [];
       </div>
     </div>
   </div>
-</div>
+  </div>
 
-<script>
-  function categoryPage() {
-    const api = {
-      list: '/admin/api/categories',
-      create: '/admin/categories',
-      update: (id) => `/admin/categories/${id}`,
-      remove: (id) => `/admin/categories/${id}/delete`,
-    };
+  <script>
+    function categoryPage() {
+      const api = {
+        list: '/admin/api/categories',
+        create: '/admin/categories',
+        update: (id) => `/admin/categories/${id}`,
+        remove: (id) => `/admin/categories/${id}/delete`,
+      };
 
-    return {
-      // ===== state =====
-      loading: true,
-      submitting: false,
-      openAdd: false,
-      openEdit: false,
-      openImport: false,
-      importing: false,
-      selectedFile: null,
+      return {
+        // ===== state =====
+        loading: true,
+        submitting: false,
+        openAdd: false,
+        openEdit: false,
+        openImport: false,
+        importing: false,
+        selectedFile: null,
 
-      items: <?= json_encode($items, JSON_UNESCAPED_UNICODE) ?>,
+        items: <?= json_encode($items, JSON_UNESCAPED_UNICODE) ?>,
 
-      // ===== pagination =====
-      currentPage: 1,
-      perPage: 20,
-      perPageOptions: [5, 10, 20, 50, 100],
+        // ===== pagination =====
+        currentPage: 1,
+        perPage: 20,
+        perPageOptions: [5, 10, 20, 50, 100],
 
-      paginated() {
-        if (!Array.isArray(this.items)) return [];
-        const start = (this.currentPage - 1) * this.perPage;
-        return this.filtered().slice(start, start + this.perPage);
-      },
-      totalPages() {
-        const total = this.filtered().length;
-        return total > 0 ? Math.ceil(total / this.perPage) : 1;
-      },
-      goToPage(page) {
-        if (page < 1) page = 1;
-        if (page > this.totalPages()) page = this.totalPages();
-        this.currentPage = page;
-      },
+        confirmDialog: {
+          show: false,
+          title: '',
+          message: '',
+          onConfirm: () => { },
+          onCancel: () => { }
+        },
 
-      // form
-      form: { id: null, name: '', slug: '', parent_id: '', sort_order: 0, is_active: 1 },
+        showConfirm(title, message, onConfirm, onCancel = () => { }) {
+          this.confirmDialog = {
+            show: true,
+            title,
+            message,
+            onConfirm,
+            onCancel
+          };
+        },
 
-      // validate (cho form thêm/sửa)
-      errors: { name: '', slug: '' },
-      touched: { name: false, slug: false },
+        paginated() {
+          if (!Array.isArray(this.items)) return [];
+          const start = (this.currentPage - 1) * this.perPage;
+          return this.filtered().slice(start, start + this.perPage);
+        },
+        totalPages() {
+          const total = this.filtered().length;
+          return total > 0 ? Math.ceil(total / this.perPage) : 1;
+        },
+        goToPage(page) {
+          if (page < 1) page = 1;
+          if (page > this.totalPages()) page = this.totalPages();
+          this.currentPage = page;
+        },
 
-      clearError(field) { this.errors[field] = ''; },
+        // form
+        form: { id: null, name: '', slug: '', parent_id: '', sort_order: 0, is_active: 1 },
 
-      async init() { await this.fetchAll(); },
+        // validate (cho form thêm/sửa)
+        errors: { name: '', slug: '' },
+        touched: { name: false, slug: false },
 
-      // ===== FILTERS =====
-      openFilter: {
-        name: false,
-        slug: false,
-        parent: false,
-        // sort: false, // tạm tắt vì cột bị comment
-        status: false,
-        created_at: false,
-        created_by: false,
-        updated_at: false,
-        updated_by: false
-      },
+        clearError(field) { this.errors[field] = ''; },
 
-      filters: {
-        name: '',
-        slug: '',
-        parent: '',
-        // sort_type: '', sort_value: '', sort_from: '', sort_to: '',
-        status: '',
-        created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
-        created_by: '',
-        updated_at_type: '', updated_at_value: '', updated_at_from: '', updated_at_to: '',
-        updated_by: ''
-      },
+        async init() { await this.fetchAll(); },
 
-      // -------------------------------------------
-      // Hàm lọc tổng quát, hỗ trợ text / number / date
-      // -------------------------------------------
-      applyFilter(val, type, { value, from, to, dataType }) {
-        if (val == null) return false;
+        // ===== FILTERS =====
+        openFilter: {
+          name: false,
+          slug: false,
+          parent: false,
+          // sort: false, // tạm tắt vì cột bị comment
+          status: false,
+          created_at: false,
+          created_by: false,
+          updated_at: false,
+          updated_by: false
+        },
 
-        // ---------------- TEXT ----------------
-        if (dataType === 'text') {
-          const hasAccent = (s) => /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(s);
+        filters: {
+          name: '',
+          slug: '',
+          parent: '',
+          // sort_type: '', sort_value: '', sort_from: '', sort_to: '',
+          status: '',
+          created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
+          created_by: '',
+          updated_at_type: '', updated_at_value: '', updated_at_from: '', updated_at_to: '',
+          updated_by: ''
+        },
 
-          const normalize = (str) => String(str || '')
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '') // xóa dấu
-            .trim();
+        // -------------------------------------------
+        // Hàm lọc tổng quát, hỗ trợ text / number / date
+        // -------------------------------------------
+        applyFilter(val, type, { value, from, to, dataType }) {
+          if (val == null) return false;
 
-          const raw = String(val || '').toLowerCase();
-          const str = normalize(val);
-          const query = String(value || '').toLowerCase();
-          const queryNoAccent = normalize(value);
+          // ---------------- TEXT ----------------
+          if (dataType === 'text') {
+            const hasAccent = (s) => /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(s);
 
-          if (!query) return true;
+            const normalize = (str) => String(str || '')
+              .toLowerCase()
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '') // xóa dấu
+              .trim();
 
-          if (type === 'eq') return hasAccent(query)
-            ? raw === query  // có dấu → so đúng dấu
-            : str === queryNoAccent; // không dấu → so không dấu
+            const raw = String(val || '').toLowerCase();
+            const str = normalize(val);
+            const query = String(value || '').toLowerCase();
+            const queryNoAccent = normalize(value);
 
-          if (type === 'contains' || type === 'like') {
-            if (hasAccent(query)) {
-              // Có dấu → tìm chính xác theo dấu
+            if (!query) return true;
+
+            if (type === 'eq') return hasAccent(query)
+              ? raw === query  // có dấu → so đúng dấu
+              : str === queryNoAccent; // không dấu → so không dấu
+
+            if (type === 'contains' || type === 'like') {
+              if (hasAccent(query)) {
+                // Có dấu → tìm chính xác theo dấu
+                return raw.includes(query);
+              } else {
+                // Không dấu → tìm theo không dấu
+                return str.includes(queryNoAccent);
+              }
+            }
+
+            return true;
+          }
+
+          // ---------------- NUMBER ----------------
+          if (dataType === 'number') {
+            const parseNum = (v) => {
+              if (v === '' || v === null || v === undefined) return null;
+              const s = String(v).replace(/[^\d.-]/g, '');
+              const n = Number(s);
+              return isNaN(n) ? null : n;
+            };
+
+            const num = parseNum(val);
+            const v = parseNum(value);
+            const f = parseNum(from);
+            const t = parseNum(to);
+
+            if (num === null) return false;
+            if (!type) return true;
+
+            if (type === 'eq') return v === null ? true : num === v;
+            if (type === 'lt') return v === null ? true : num < v;
+            if (type === 'gt') return v === null ? true : num > v;
+            if (type === 'lte') return v === null ? true : num <= v;
+            if (type === 'gte') return v === null ? true : num >= v;
+            if (type === 'between') return f === null || t === null ? true : num >= f && num <= t;
+
+            // --- Lọc “mờ” theo chuỗi số ---
+            if (type === 'like') {
+              const raw = String(val).replace(/[^\d]/g, '');
+              const query = String(value || '').replace(/[^\d]/g, '');
               return raw.includes(query);
+            }
+
+            return true;
+          }
+
+          // ---------------- DATE ----------------
+          if (dataType === 'date') {
+            if (!val) return false;
+            const d = new Date(val);
+            const v = value ? new Date(value) : null;
+            const f = from ? new Date(from) : null;
+            const t = to ? new Date(to) : null;
+
+            if (type === 'eq') return v ? d.toDateString() === v.toDateString() : true;
+            if (type === 'lt') return v ? d < v : true;
+            if (type === 'gt') {
+              if (!v) return true;
+              // So sánh chỉ theo ngày, bỏ qua giờ phút giây
+              return d.setHours(0, 0, 0, 0) > v.setHours(0, 0, 0, 0);
+            }
+            if (type === 'lte') {
+              if (!v) return true;
+              const nextDay = new Date(v);
+              nextDay.setDate(v.getDate() + 1);
+              return d < nextDay; // <= nghĩa là nhỏ hơn ngày kế tiếp
+            }
+            if (type === 'gte') return v ? d >= v : true;
+            if (type === 'between') return f && t ? d >= f && d <= t : true;
+
+            return true;
+          }
+
+          return true;
+        },
+
+        filtered() {
+          let data = this.items;
+
+          // --- Lọc theo chuỗi ---
+          ['name', 'slug', 'parent', 'created_by', 'updated_by'].forEach(key => {
+            if (this.filters[key]) {
+              const field =
+                key === 'created_by' ? 'created_by_name' :
+                  key === 'updated_by' ? 'updated_by_name' :
+                    key === 'parent' ? 'parent_name' : key;
+
+              data = data.filter(o =>
+                this.applyFilter(o[field], 'contains', {
+                  value: this.filters[key],
+                  dataType: 'text'
+                })
+              );
+            }
+          });
+
+          // --- Lọc theo select ---
+          if (this.filters.status) {
+            data = data.filter(o =>
+              this.applyFilter(
+                o.is_active ? '1' : '0',
+                'eq',
+                { value: this.filters.status, dataType: 'text' }
+              )
+            );
+          }
+
+          // --- Lọc theo ngày ---
+          ['created_at', 'updated_at'].forEach(key => {
+            if (this.filters[`${key}_type`]) {
+              data = data.filter(o =>
+                this.applyFilter(o[key], this.filters[`${key}_type`], {
+                  value: this.filters[`${key}_value`],
+                  from: this.filters[`${key}_from`],
+                  to: this.filters[`${key}_to`],
+                  dataType: 'date'
+                })
+              );
+            }
+          });
+
+          return data;
+        },
+
+        toggleFilter(key) {
+          for (const k in this.openFilter) this.openFilter[k] = false;
+          this.openFilter[key] = true;
+        },
+        closeFilter(key) { this.openFilter[key] = false; },
+        resetFilter(key) {
+          if (['created_at', 'updated_at'].includes(key)) {
+            this.filters[`${key}_type`] = '';
+            this.filters[`${key}_value`] = '';
+            this.filters[`${key}_from`] = '';
+            this.filters[`${key}_to`] = '';
+          } else {
+            this.filters[key] = '';
+          }
+          this.openFilter[key] = false;
+        },
+
+        // ===== Statistics Functions =====
+        getTotalCategories() {
+          return this.filtered().length;
+        },
+
+        countByStatus(status) {
+          return this.filtered().filter(c => parseInt(c.is_active) === status).length;
+        },
+
+        countParentCategories() {
+          return this.filtered().filter(c => !c.parent_id || c.parent_id === '' || c.parent_id === '0').length;
+        },
+
+        // ===== utilities =====
+        slugify(s) {
+          return (s || '')
+            .toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .slice(0, 190);
+        },
+        onNameInput() {
+          if (!this.form.id) this.form.slug = this.slugify(this.form.name);
+        },
+
+        // ===== validate =====
+        validateField(field) {
+          if (field === 'name') {
+            if (!this.form.name?.trim()) {
+              this.errors.name = 'Tên không được bỏ trống';
+            } else if (this.form.name.length > 255) {
+              this.errors.name = 'Tên không vượt quá 255 ký tự';
             } else {
-              // Không dấu → tìm theo không dấu
-              return str.includes(queryNoAccent);
+              this.errors.name = '';
             }
           }
-
+          if (field === 'slug') {
+            if (!this.form.slug?.trim()) {
+              this.errors.slug = 'Slug không được bỏ trống';
+            } else if (this.form.slug && this.form.slug.length > 255) {
+              this.errors.slug = 'Slug không vượt quá 255 ký tự';
+            } else {
+              this.errors.slug = '';
+            }
+          }
+        },
+        validateForm() {
+          this.validateField('name');
+          this.validateField('slug');
+          if (this.errors.name) {
+            this.showToast(this.errors.name);
+            return false;
+          }
+          if (this.errors.slug) {
+            this.showToast(this.errors.slug);
+            return false;
+          }
+          if (String(this.form.parent_id) === String(this.form.id)) {
+            this.showToast('Loại cha không thể là chính nó');
+            return false;
+          }
+          if (!this.form.slug) this.form.slug = this.slugify(this.form.name);
           return true;
-        }
+        },
 
-        // ---------------- NUMBER ----------------
-        if (dataType === 'number') {
-          const parseNum = (v) => {
-            if (v === '' || v === null || v === undefined) return null;
-            const s = String(v).replace(/[^\d.-]/g, '');
-            const n = Number(s);
-            return isNaN(n) ? null : n;
-          };
+        parentName(pid) {
+          if (!pid) return '—';
+          const p = this.items.find(x => String(x.id) === String(pid));
+          return p ? p.name : '—';
+        },
 
-          const num = parseNum(val);
-          const v = parseNum(value);
-          const f = parseNum(from);
-          const t = parseNum(to);
+        resetForm() {
+          this.form = { id: null, name: '', slug: '', parent_id: '', sort_order: 0, is_active: 1 };
+          this.errors = { name: '', slug: '' };
+          this.touched = { name: false, slug: false };
+        },
 
-          if (num === null) return false;
-          if (!type) return true;
+        // ===== data =====
+        async fetchAll() {
+          this.loading = true;
+          try {
+            const r = await fetch(api.list);
+            if (r.ok) {
+              const data = await r.json();
+              this.items = Array.isArray(data) ? data : (data.items || []);
+            }
+          } finally { this.loading = false; }
+        },
 
-          if (type === 'eq') return v === null ? true : num === v;
-          if (type === 'lt') return v === null ? true : num < v;
-          if (type === 'gt') return v === null ? true : num > v;
-          if (type === 'lte') return v === null ? true : num <= v;
-          if (type === 'gte') return v === null ? true : num >= v;
-          if (type === 'between') return f === null || t === null ? true : num >= f && num <= t;
+        // ===== ui =====
+        openCreate() { this.resetForm(); this.openAdd = true; },
+        openEditModal(c) {
+          this.resetForm();
+          this.form = { ...c, parent_id: c.parent_id || '' };
+          this.openEdit = true;
+        },
 
-          // --- Lọc “mờ” theo chuỗi số ---
-          if (type === 'like') {
-            const raw = String(val).replace(/[^\d]/g, '');
-            const query = String(value || '').replace(/[^\d]/g, '');
-            return raw.includes(query);
-          }
+        // ===== CRUD =====
+        async submitCreate() {
+          this.touched.name = true; this.touched.slug = true;
+          if (!this.validateForm()) return;
+          this.submitting = true;
+          try {
+            const r = await fetch(api.create, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(this.form)
+            });
+            const res = await r.json();
+            if (!r.ok) throw new Error(res.error || 'Lỗi máy chủ');
+            this.items.unshift(res);
+            this.openAdd = false;
+            this.showToast('Thêm loại sản phẩm thành công!', 'success');
+          } catch (e) {
+            this.showToast(e.message || 'Không thể thêm loại');
+          } finally { this.submitting = false; }
+        },
 
-          return true;
-        }
+        async submitUpdate() {
+          this.touched.name = true; this.touched.slug = true;
+          if (!this.form.id || !this.validateForm()) return;
+          this.submitting = true;
+          try {
+            const r = await fetch(api.update(this.form.id), {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(this.form)
+            });
+            const res = await r.json();
+            if (!r.ok) throw new Error(res.error || 'Lỗi máy chủ');
 
-        // ---------------- DATE ----------------
-        if (dataType === 'date') {
-          if (!val) return false;
-          const d = new Date(val);
-          const v = value ? new Date(value) : null;
-          const f = from ? new Date(from) : null;
-          const t = to ? new Date(to) : null;
+            const i = this.items.findIndex(x => x.id == res.id);
+            if (i > -1) this.items[i] = res;
+            else this.items.unshift(res);
 
-          if (type === 'eq') return v ? d.toDateString() === v.toDateString() : true;
-          if (type === 'lt') return v ? d < v : true;
-          if (type === 'gt') {
-            if (!v) return true;
-            // So sánh chỉ theo ngày, bỏ qua giờ phút giây
-            return d.setHours(0, 0, 0, 0) > v.setHours(0, 0, 0, 0);
-          }
-          if (type === 'lte') {
-            if (!v) return true;
-            const nextDay = new Date(v);
-            nextDay.setDate(v.getDate() + 1);
-            return d < nextDay; // <= nghĩa là nhỏ hơn ngày kế tiếp
-          }
-          if (type === 'gte') return v ? d >= v : true;
-          if (type === 'between') return f && t ? d >= f && d <= t : true;
+            this.openEdit = false;
+            this.showToast('Cập nhật loại sản phẩm thành công!', 'success');
+          } catch (e) {
+            this.showToast(e.message || 'Không thể cập nhật loại');
+          } finally { this.submitting = false; }
+        },
 
-          return true;
-        }
+        async remove(id) {
+          const category = this.items.find(c => c.id == id);
+          const name = category ? category.name : 'loại này';
 
-        return true;
-      },
-
-      filtered() {
-        let data = this.items;
-
-        // --- Lọc theo chuỗi ---
-        ['name', 'slug', 'parent', 'created_by', 'updated_by'].forEach(key => {
-          if (this.filters[key]) {
-            const field =
-              key === 'created_by' ? 'created_by_name' :
-                key === 'updated_by' ? 'updated_by_name' :
-                  key === 'parent' ? 'parent_name' : key;
-
-            data = data.filter(o =>
-              this.applyFilter(o[field], 'contains', {
-                value: this.filters[key],
-                dataType: 'text'
-              })
-            );
-          }
-        });
-
-        // --- Lọc theo select ---
-        if (this.filters.status) {
-          data = data.filter(o =>
-            this.applyFilter(
-              o.is_active ? '1' : '0',
-              'eq',
-              { value: this.filters.status, dataType: 'text' }
-            )
+          this.showConfirm(
+            'Xác nhận xóa',
+            `Bạn có chắc chắn muốn xóa loại "${name}"?`,
+            async () => {
+              try {
+                const r = await fetch(`/admin/categories/${id}`, { method: 'DELETE' });
+                const res = await r.json();
+                if (!r.ok) throw new Error(res.error || 'Lỗi máy chủ khi xóa');
+                this.items = this.items.filter(x => x.id != id);
+                this.showToast('Xóa loại sản phẩm thành công!', 'success');
+              } catch (e) {
+                this.showToast(e.message || 'Không thể xóa loại');
+              }
+            }
           );
-        }
+        },
 
-        // --- Lọc theo ngày ---
-        ['created_at', 'updated_at'].forEach(key => {
-          if (this.filters[`${key}_type`]) {
-            data = data.filter(o =>
-              this.applyFilter(o[key], this.filters[`${key}_type`], {
-                value: this.filters[`${key}_value`],
-                from: this.filters[`${key}_from`],
-                to: this.filters[`${key}_to`],
-                dataType: 'date'
-              })
-            );
-          }
-        });
+        // ===== toast =====
+        showToast(msg, type = 'error') {
+          const box = document.getElementById('toast-container');
+          if (!box) return;
+          box.innerHTML = '';
 
-        return data;
-      },
+          const toast = document.createElement('div');
 
-      toggleFilter(key) {
-        for (const k in this.openFilter) this.openFilter[k] = false;
-        this.openFilter[key] = true;
-      },
-      closeFilter(key) { this.openFilter[key] = false; },
-      resetFilter(key) {
-        if (['created_at', 'updated_at'].includes(key)) {
-          this.filters[`${key}_type`] = '';
-          this.filters[`${key}_value`] = '';
-          this.filters[`${key}_from`] = '';
-          this.filters[`${key}_to`] = '';
-        } else {
-          this.filters[key] = '';
-        }
-        this.openFilter[key] = false;
-      },
+          // Xác định màu sắc theo type
+          let colorClasses = '';
+          let iconColor = '';
+          let iconSvg = '';
 
-      // ===== utilities =====
-      slugify(s) {
-        return (s || '')
-          .toLowerCase()
-          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-+|-+$/g, '')
-          .slice(0, 190);
-      },
-      onNameInput() {
-        if (!this.form.id) this.form.slug = this.slugify(this.form.name);
-      },
-
-      // ===== validate =====
-      validateField(field) {
-        if (field === 'name') {
-          if (!this.form.name?.trim()) {
-            this.errors.name = 'Tên không được bỏ trống';
-          } else if (this.form.name.length > 255) {
-            this.errors.name = 'Tên không vượt quá 255 ký tự';
+          if (type === 'success') {
+            colorClasses = 'text-green-700 border-green-400';
+            iconColor = 'text-green-600';
+            iconSvg = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />`;
+          } else if (type === 'warning') {
+            colorClasses = 'text-yellow-700 border-yellow-400';
+            iconColor = 'text-yellow-600';
+            iconSvg = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5 12a7 7 0 1114 0 7 7 0 01-14 0z" />`;
           } else {
-            this.errors.name = '';
+            colorClasses = 'text-red-700 border-red-400';
+            iconColor = 'text-red-600';
+            iconSvg = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`;
           }
-        }
-        if (field === 'slug') {
-          if (!this.form.slug?.trim()) {
-            this.errors.slug = 'Slug không được bỏ trống';
-          } else if (this.form.slug && this.form.slug.length > 255) {
-            this.errors.slug = 'Slug không vượt quá 255 ký tự';
-          } else {
-            this.errors.slug = '';
-          }
-        }
-      },
-      validateForm() {
-        this.validateField('name');
-        this.validateField('slug');
-        if (this.errors.name) {
-          this.showToast(this.errors.name);
-          return false;
-        }
-        if (this.errors.slug) {
-          this.showToast(this.errors.slug);
-          return false;
-        }
-        if (String(this.form.parent_id) === String(this.form.id)) {
-          this.showToast('Loại cha không thể là chính nó');
-          return false;
-        }
-        if (!this.form.slug) this.form.slug = this.slugify(this.form.name);
-        return true;
-      },
 
-      parentName(pid) {
-        if (!pid) return '—';
-        const p = this.items.find(x => String(x.id) === String(pid));
-        return p ? p.name : '—';
-      },
+          toast.className = `fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 mb-4 text-base font-semibold ${colorClasses} bg-white rounded-xl shadow-lg border-2`;
 
-      resetForm() {
-        this.form = { id: null, name: '', slug: '', parent_id: '', sort_order: 0, is_active: 1 };
-        this.errors = { name: '', slug: '' };
-        this.touched = { name: false, slug: false };
-      },
-
-      // ===== data =====
-      async fetchAll() {
-        this.loading = true;
-        try {
-          const r = await fetch(api.list);
-          if (r.ok) {
-            const data = await r.json();
-            this.items = Array.isArray(data) ? data : (data.items || []);
-          }
-        } finally { this.loading = false; }
-      },
-
-      // ===== ui =====
-      openCreate() { this.resetForm(); this.openAdd = true; },
-      openEditModal(c) {
-        this.resetForm();
-        this.form = { ...c, parent_id: c.parent_id || '' };
-        this.openEdit = true;
-      },
-
-      // ===== CRUD =====
-      async submitCreate() {
-        this.touched.name = true; this.touched.slug = true;
-        if (!this.validateForm()) return;
-        this.submitting = true;
-        try {
-          const r = await fetch(api.create, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(this.form)
-          });
-          const res = await r.json();
-          if (!r.ok) throw new Error(res.error || 'Lỗi máy chủ');
-          this.items.unshift(res);
-          this.openAdd = false;
-          this.showToast('Thêm loại sản phẩm thành công!', 'success');
-        } catch (e) {
-          this.showToast(e.message || 'Không thể thêm loại');
-        } finally { this.submitting = false; }
-      },
-
-      async submitUpdate() {
-        this.touched.name = true; this.touched.slug = true;
-        if (!this.form.id || !this.validateForm()) return;
-        this.submitting = true;
-        try {
-          const r = await fetch(api.update(this.form.id), {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(this.form)
-          });
-          const res = await r.json();
-          if (!r.ok) throw new Error(res.error || 'Lỗi máy chủ');
-
-          const i = this.items.findIndex(x => x.id == res.id);
-          if (i > -1) this.items[i] = res;
-          else this.items.unshift(res);
-
-          this.openEdit = false;
-          this.showToast('Cập nhật loại sản phẩm thành công!', 'success');
-        } catch (e) {
-          this.showToast(e.message || 'Không thể cập nhật loại');
-        } finally { this.submitting = false; }
-      },
-
-      async remove(id) {
-        if (!confirm('Xóa loại này?')) return;
-        try {
-          const r = await fetch(`/admin/categories/${id}`, { method: 'DELETE' });
-          const res = await r.json();
-          if (!r.ok) throw new Error(res.error || 'Lỗi máy chủ khi xóa');
-          this.items = this.items.filter(x => x.id != id);
-          this.showToast('Xóa loại sản phẩm thành công!', 'success');
-        } catch (e) {
-          this.showToast(e.message || 'Không thể xóa loại');
-        }
-      },
-
-      // ===== toast =====
-      showToast(msg, type = 'error') {
-        const box = document.getElementById('toast-container');
-        if (!box) return;
-        box.innerHTML = '';
-
-        const toast = document.createElement('div');
-
-        // Xác định màu sắc theo type
-        let colorClasses = '';
-        let iconColor = '';
-        let iconSvg = '';
-
-        if (type === 'success') {
-          colorClasses = 'text-green-700 border-green-400';
-          iconColor = 'text-green-600';
-          iconSvg = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />`;
-        } else if (type === 'warning') {
-          colorClasses = 'text-yellow-700 border-yellow-400';
-          iconColor = 'text-yellow-600';
-          iconSvg = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5 12a7 7 0 1114 0 7 7 0 01-14 0z" />`;
-        } else {
-          colorClasses = 'text-red-700 border-red-400';
-          iconColor = 'text-red-600';
-          iconSvg = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`;
-        }
-
-        toast.className = `fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 mb-4 text-base font-semibold ${colorClasses} bg-white rounded-xl shadow-lg border-2`;
-
-        toast.innerHTML = `
+          toast.innerHTML = `
             <svg class="flex-shrink-0 w-6 h-6 ${iconColor} mr-3" 
                 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               ${iconSvg}
@@ -710,176 +792,176 @@ $items = $items ?? [];
             <div class="flex-1">${msg}</div>
           `;
 
-        box.appendChild(toast);
-        setTimeout(() => toast.remove(), 5000);
-      },
+          box.appendChild(toast);
+          setTimeout(() => toast.remove(), 5000);
+        },
 
-      // ===== Import Excel =====
-      openImportModal() {
-        this.selectedFile = null;
-        this.openImport = true;
-      },
-
-      onFileSelected(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        // 1. Kiểm tra định dạng file
-        const ext = file.name.split('.').pop().toLowerCase();
-        if (!['xls', 'xlsx'].includes(ext)) {
-          this.showToast('Vui lòng chọn file Excel (.xls hoặc .xlsx)');
-          event.target.value = '';
-          return;
-        }
-
-        // 2. Kiểm tra kích thước file (10MB)
-        const maxSize = 10 * 1024 * 1024; // 10MB
-        if (file.size > maxSize) {
-          this.showToast('File vượt quá kích thước cho phép (tối đa 10MB). Kích thước file: ' + (file.size / 1024 / 1024).toFixed(2) + 'MB');
-          event.target.value = '';
-          return;
-        }
-
-        // 3. Kiểm tra độ dài tên file
-        if (file.name.length > 255) {
-          this.showToast('Tên file quá dài (tối đa 255 ký tự). Độ dài hiện tại: ' + file.name.length + ' ký tự');
-          event.target.value = '';
-          return;
-        }
-
-        // 4. Kiểm tra ký tự đặc biệt trong tên file
-        const fileNameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.'));
-        const validFileName = /^[a-zA-Z0-9._\-\s()\[\]]+$/;
-        if (!validFileName.test(fileNameWithoutExt)) {
-          this.showToast('Tên file chứa ký tự đặc biệt không hợp lệ. Vui lòng chỉ sử dụng chữ cái, số, dấu gạch ngang, gạch dưới và khoảng trắng');
-          event.target.value = '';
-          return;
-        }
-
-        this.selectedFile = file;
-      },
-
-      clearFile() {
-        this.selectedFile = null;
-        if (this.$refs.fileInput) {
-          this.$refs.fileInput.value = '';
-        }
-      },
-
-      downloadTemplate() {
-        fetch('/admin/api/categories/template')
-          .then(res => {
-            if (!res.ok) throw new Error('Download failed');
-            return res.blob();
-          })
-          .then(blob => {
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'Mau_loai_san_pham.xlsx';
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(url);
-          })
-          .catch(err => {
-            console.error(err);
-            this.showToast('Không thể tải file mẫu');
-          });
-      },
-
-      async submitImport() {
-        if (!this.selectedFile) {
-          this.showToast('Vui lòng chọn file để nhập');
-          return;
-        }
-
-        this.importing = true;
-        const formData = new FormData();
-        formData.append('file', this.selectedFile);
-
-        try {
-          const res = await fetch('/admin/api/categories/import', {
-            method: 'POST',
-            body: formData
-          });
-
-          const result = await res.json();
-
-          if (!res.ok) {
-            throw new Error(result.error || 'Lỗi khi nhập dữ liệu');
-          }
-
-          // Refresh danh sách
-          await this.fetchAll();
-
-          this.openImport = false;
+        // ===== Import Excel =====
+        openImportModal() {
           this.selectedFile = null;
+          this.openImport = true;
+        },
 
-          // Xác định loại thông báo dựa trên status
-          let toastType = 'success';
-          if (result.status === 'failed') {
-            toastType = 'error';
-          } else if (result.status === 'partial') {
-            toastType = 'warning';
+        onFileSelected(event) {
+          const file = event.target.files[0];
+          if (!file) return;
+
+          // 1. Kiểm tra định dạng file
+          const ext = file.name.split('.').pop().toLowerCase();
+          if (!['xls', 'xlsx'].includes(ext)) {
+            this.showToast('Vui lòng chọn file Excel (.xls hoặc .xlsx)');
+            event.target.value = '';
+            return;
           }
 
-          const msg = result.message || `Nhập thành công ${result.success || 0} bản ghi`;
-          this.showToast(msg, toastType);
+          // 2. Kiểm tra kích thước file (10MB)
+          const maxSize = 10 * 1024 * 1024; // 10MB
+          if (file.size > maxSize) {
+            this.showToast('File vượt quá kích thước cho phép (tối đa 10MB). Kích thước file: ' + (file.size / 1024 / 1024).toFixed(2) + 'MB');
+            event.target.value = '';
+            return;
+          }
 
-        } catch (err) {
-          console.error(err);
-          this.showToast(err.message || 'Không thể nhập dữ liệu từ file');
-        } finally {
-          this.importing = false;
-        }
-      },
+          // 3. Kiểm tra độ dài tên file
+          if (file.name.length > 255) {
+            this.showToast('Tên file quá dài (tối đa 255 ký tự). Độ dài hiện tại: ' + file.name.length + ' ký tự');
+            event.target.value = '';
+            return;
+          }
 
-      exportExcel() {
-        const data = this.filtered().map(c => ({
-          name: c.name || '',
-          slug: c.slug || '',
-          parent: this.parentName(c.parent_id),
-          is_active: c.is_active == 1 ? 'Hoạt động' : 'Không hoạt động',
-          created_at: c.created_at || '',
-          created_by_name: c.created_by_name || '',
-          updated_at: c.updated_at || '',
-          updated_by_name: c.updated_by_name || '',
-        }));
+          // 4. Kiểm tra ký tự đặc biệt trong tên file
+          const fileNameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.'));
+          const validFileName = /^[a-zA-Z0-9._\-\s()\[\]]+$/;
+          if (!validFileName.test(fileNameWithoutExt)) {
+            this.showToast('Tên file chứa ký tự đặc biệt không hợp lệ. Vui lòng chỉ sử dụng chữ cái, số, dấu gạch ngang, gạch dưới và khoảng trắng');
+            event.target.value = '';
+            return;
+          }
 
-        const now = new Date();
-        const dateStr = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
-        const timeStr = `${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
-        const filename = `Loai_san_pham_${dateStr}_${timeStr}.xlsx`;
+          this.selectedFile = file;
+        },
 
-        fetch('/admin/api/categories/export', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items: data })
-        })
-          .then(res => {
-            if (!res.ok) throw new Error('Export failed');
-            return res.blob();
-          })
-          .then(blob => {
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(url);
-            this.showToast('Xuất Excel thành công!', 'success');
-          })
-          .catch(err => {
+        clearFile() {
+          this.selectedFile = null;
+          if (this.$refs.fileInput) {
+            this.$refs.fileInput.value = '';
+          }
+        },
+
+        downloadTemplate() {
+          fetch('/admin/api/categories/template')
+            .then(res => {
+              if (!res.ok) throw new Error('Download failed');
+              return res.blob();
+            })
+            .then(blob => {
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = 'Mau_loai_san_pham.xlsx';
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              window.URL.revokeObjectURL(url);
+            })
+            .catch(err => {
+              console.error(err);
+              this.showToast('Không thể tải file mẫu');
+            });
+        },
+
+        async submitImport() {
+          if (!this.selectedFile) {
+            this.showToast('Vui lòng chọn file để nhập');
+            return;
+          }
+
+          this.importing = true;
+          const formData = new FormData();
+          formData.append('file', this.selectedFile);
+
+          try {
+            const res = await fetch('/admin/api/categories/import', {
+              method: 'POST',
+              body: formData
+            });
+
+            const result = await res.json();
+
+            if (!res.ok) {
+              throw new Error(result.error || 'Lỗi khi nhập dữ liệu');
+            }
+
+            // Refresh danh sách
+            await this.fetchAll();
+
+            this.openImport = false;
+            this.selectedFile = null;
+
+            // Xác định loại thông báo dựa trên status
+            let toastType = 'success';
+            if (result.status === 'failed') {
+              toastType = 'error';
+            } else if (result.status === 'partial') {
+              toastType = 'warning';
+            }
+
+            const msg = result.message || `Nhập thành công ${result.success || 0} bản ghi`;
+            this.showToast(msg, toastType);
+
+          } catch (err) {
             console.error(err);
-            this.showToast('Không thể xuất Excel');
-          });
-      },
+            this.showToast(err.message || 'Không thể nhập dữ liệu từ file');
+          } finally {
+            this.importing = false;
+          }
+        },
 
+        exportExcel() {
+          const data = this.filtered().map(c => ({
+            name: c.name || '',
+            slug: c.slug || '',
+            parent: this.parentName(c.parent_id),
+            is_active: c.is_active == 1 ? 'Hoạt động' : 'Không hoạt động',
+            created_at: c.created_at || '',
+            created_by_name: c.created_by_name || '',
+            updated_at: c.updated_at || '',
+            updated_by_name: c.updated_by_name || '',
+          }));
+
+          const now = new Date();
+          const dateStr = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
+          const timeStr = `${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
+          const filename = `Loai_san_pham_${dateStr}_${timeStr}.xlsx`;
+
+          fetch('/admin/api/categories/export', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: data })
+          })
+            .then(res => {
+              if (!res.ok) throw new Error('Export failed');
+              return res.blob();
+            })
+            .then(blob => {
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = filename;
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              window.URL.revokeObjectURL(url);
+              this.showToast('Xuất Excel thành công!', 'success');
+            })
+            .catch(err => {
+              console.error(err);
+              this.showToast('Không thể xuất Excel');
+            });
+        },
+
+      }
     }
-  }
-</script>
+  </script>
 
-<?php require __DIR__ . '/../partials/layout-end.php'; ?>
+  <?php require __DIR__ . '/../partials/layout-end.php'; ?>

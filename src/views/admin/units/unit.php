@@ -215,6 +215,29 @@ $items = $items ?? [];
         </div>
     </div>
 
+    <!-- Confirm Dialog -->
+    <div x-show="confirmDialog.show"
+        class="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-5 mt-[-200px]" style="display: none;">
+        <div class="bg-white w-full max-w-md rounded-xl shadow-lg" @click.outside="confirmDialog.show = false">
+            <div class="px-5 py-4 border-b">
+                <h3 class="text-xl font-bold text-[#002975]" x-text="confirmDialog.title"></h3>
+            </div>
+            <div class="p-5">
+                <p class="text-gray-600" x-text="confirmDialog.message"></p>
+            </div>
+            <div class="px-5 py-4 border-t flex gap-2 justify-end">
+                <button @click="confirmDialog.show = false; confirmDialog.onCancel()"
+                    class="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-600 hover:text-white">
+                    Hủy
+                </button>
+                <button @click="confirmDialog.show = false; confirmDialog.onConfirm()"
+                    class="px-4 py-2 border border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white">
+                    Xác nhận
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="toast-container" class="z-[60]"></div>
 
     <!-- Pagination -->
@@ -271,6 +294,25 @@ $items = $items ?? [];
             touched: { name: false, slug: false },
 
             clearError(field) { this.errors[field] = ''; },
+
+            // Confirm Dialog
+            confirmDialog: {
+                show: false,
+                title: '',
+                message: '',
+                onConfirm: () => {},
+                onCancel: () => {}
+            },
+
+            showConfirm(title, message, onConfirm, onCancel = () => {}) {
+                this.confirmDialog = {
+                    show: true,
+                    title,
+                    message,
+                    onConfirm,
+                    onCancel
+                };
+            },
 
             // ===== utilities =====
             slugify(s) {
@@ -572,14 +614,22 @@ $items = $items ?? [];
             },
 
             async remove(id) {
-                if (!confirm('Xóa đơn vị này?')) return;
-                try {
-                    const r = await fetch(api.remove(id), { method: 'DELETE' });
-                    const res = await r.json();
-                    if (!r.ok) throw new Error(res.error || 'Lỗi khi xóa');
-                    this.items = this.items.filter(x => x.id != id);
-                    this.showToast('Đã xóa', 'success');
-                } catch (e) { this.showToast(e.message, 'error'); }
+                const unit = this.items.find(u => u.id === id);
+                const unitName = unit ? unit.name : 'đơn vị này';
+                
+                this.showConfirm(
+                    'Xác nhận xóa',
+                    `Bạn có chắc chắn muốn xóa đơn vị "${unitName}"?`,
+                    async () => {
+                        try {
+                            const r = await fetch(api.remove(id), { method: 'DELETE' });
+                            const res = await r.json();
+                            if (!r.ok) throw new Error(res.error || 'Lỗi');
+                            this.items = this.items.filter(x => x.id != id);
+                            this.showToast('Xóa thành công!', 'success');
+                        } catch (e) { this.showToast(e.message, 'error'); }
+                    }
+                );
             },
 
             // ===== Import Excel =====

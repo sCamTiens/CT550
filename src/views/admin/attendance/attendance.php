@@ -291,6 +291,29 @@ $year = $year ?? date('Y');
                 class="px-3 py-1 border rounded disabled:opacity-50">&gt;</button>
         </div>
     </div>
+
+    <!-- Confirm Dialog -->
+    <div x-show="confirmDialog.show" class="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-5 mt-[-200px]"
+        style="display: none;">
+        <div class="bg-white w-full max-w-md rounded-xl shadow-lg" @click.outside="confirmDialog.show = false">
+            <div class="px-5 py-4 border-b">
+                <h3 class="text-xl font-bold text-[#002975]" x-text="confirmDialog.title"></h3>
+            </div>
+            <div class="p-5">
+                <p class="text-gray-600" x-text="confirmDialog.message"></p>
+            </div>
+            <div class="px-5 py-4 border-t flex gap-2 justify-end">
+                <button @click="confirmDialog.show = false; confirmDialog.onCancel()"
+                    class="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-600 hover:text-white">
+                    Hủy
+                </button>
+                <button @click="confirmDialog.show = false; confirmDialog.onConfirm()"
+                    class="px-4 py-2 border border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white">
+                    Xác nhận
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -307,6 +330,24 @@ $year = $year ?? date('Y');
             customEndDate: '',
             currentPage: 1,
             perPage: 20,
+
+            confirmDialog: {
+                show: false,
+                title: '',
+                message: '',
+                onConfirm: () => {},
+                onCancel: () => {}
+            },
+
+            showConfirm(title, message, onConfirm, onCancel = () => {}) {
+                this.confirmDialog = {
+                    show: true,
+                    title,
+                    message,
+                    onConfirm,
+                    onCancel
+                };
+            },
 
             // Dropdown states
             filterModeOpen: false,
@@ -633,17 +674,24 @@ $year = $year ?? date('Y');
             },
 
             async deleteItem(id) {
-                if (!confirm('Xác nhận xóa chấm công này?')) return;
-
-                try {
-                    const res = await fetch(`/admin/api/attendance/${id}`, { method: 'DELETE' });
-                    if (res.ok) {
-                        alert('Xóa thành công');
-                        await this.loadData();
+                const item = this.items.find(i => i.id == id);
+                const staffName = item ? item.full_name : 'chấm công này';
+                
+                this.showConfirm(
+                    'Xác nhận xóa',
+                    `Bạn có chắc chắn muốn xóa chấm công của "${staffName}"?`,
+                    async () => {
+                        try {
+                            const res = await fetch(`/admin/api/attendance/${id}`, { method: 'DELETE' });
+                            if (res.ok) {
+                                alert('Xóa thành công');
+                                await this.loadData();
+                            }
+                        } catch (err) {
+                            alert('Lỗi xóa dữ liệu');
+                        }
                     }
-                } catch (err) {
-                    alert('Lỗi xóa dữ liệu');
-                }
+                );
             },
 
             countByStatus(status) {

@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Hóa đơn #<?= htmlspecialchars($order['code'] ?? '') ?></title>
+    <title>Phiếu nhập kho #<?= htmlspecialchars($po['code'] ?? '') ?></title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -126,6 +126,29 @@
             font-size: 14px;
         }
 
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-not-paid {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-partial {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .status-paid {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
         @media print {
             body {
                 padding: 0;
@@ -142,46 +165,64 @@
                 <div class="company-sub">Siêu thị mini</div>
             </div>
         </div>
-        <div class="invoice-title">HÓA ĐƠN</div>
-        <div class="invoice-code">#<?= htmlspecialchars($order['code'] ?? '') ?></div>
+        <div class="invoice-title">PHIẾU NHẬP KHO</div>
+        <div class="invoice-code">#<?= htmlspecialchars($po['code'] ?? '') ?></div>
     </div>
 
     <div class="info-section">
-        <div class="info-title">Thông tin người tạo</div>
+        <div class="info-title">Thông tin phiếu nhập</div>
         <div class="info-grid">
             <div>
-                <span class="info-label">Mã nhân viên:</span>
-                <strong><?= htmlspecialchars($order['staff_code'] ?? '—') ?></strong>
+                <span class="info-label">Mã phiếu nhập:</span>
+                <strong><?= htmlspecialchars($po['code'] ?? '—') ?></strong>
             </div>
             <div>
-                <span class="info-label">Tên nhân viên:</span>
-                <strong><?= htmlspecialchars($order['created_by_name'] ?? '—') ?></strong>
+                <span class="info-label">Ngày nhập:</span>
+                <strong><?= htmlspecialchars($po['created_at'] ?? '—') ?></strong>
             </div>
             <div>
-                <span class="info-label">Ngày tạo:</span>
-                <strong><?= htmlspecialchars($order['created_at'] ?? '—') ?></strong>
+                <span class="info-label">Ngày hẹn trả:</span>
+                <strong><?= htmlspecialchars($po['due_date'] ?? '—') ?></strong>
             </div>
             <div>
-                <span class="info-label">Ca làm việc:</span>
-                <strong><?= htmlspecialchars($order['shift_name'] ?? '—') ?></strong>
+                <span class="info-label">Trạng thái thanh toán:</span>
+                <strong>
+                    <?php
+                    $paidAmount = floatval($po['paid_amount'] ?? 0);
+                    $totalAmount = floatval($po['total_amount'] ?? 0);
+                    $statusClass = 'status-not-paid';
+                    $statusText = 'Chưa đối soát';
+                    
+                    if ($paidAmount > 0) {
+                        if ($paidAmount >= $totalAmount) {
+                            $statusClass = 'status-paid';
+                            $statusText = 'Đã thanh toán hết';
+                        } else {
+                            $statusClass = 'status-partial';
+                            $statusText = 'Đã thanh toán một phần';
+                        }
+                    }
+                    ?>
+                    <span class="status-badge <?= $statusClass ?>"><?= $statusText ?></span>
+                </strong>
             </div>
         </div>
     </div>
 
     <div class="info-section">
-        <div class="info-title">Thông tin khách hàng</div>
+        <div class="info-title">Thông tin nhà cung cấp</div>
         <div class="info-grid">
             <div>
-                <span class="info-label">Họ tên:</span>
-                <strong><?= htmlspecialchars($order['customer_name'] ?? 'Khách vãng lai') ?></strong>
+                <span class="info-label">Tên nhà cung cấp:</span>
+                <strong><?= htmlspecialchars($po['supplier_name'] ?? '—') ?></strong>
             </div>
             <div>
                 <span class="info-label">Số điện thoại:</span>
-                <strong><?= htmlspecialchars($order['customer_phone'] ?? '—') ?></strong>
+                <strong><?= htmlspecialchars($po['supplier_phone'] ?? '—') ?></strong>
             </div>
             <div style="grid-column: 1 / -1;">
                 <span class="info-label">Địa chỉ:</span>
-                <strong><?= htmlspecialchars($order['shipping_address'] ?? '—') ?></strong>
+                <strong><?= htmlspecialchars($po['supplier_address'] ?? '—') ?></strong>
             </div>
         </div>
     </div>
@@ -190,32 +231,37 @@
         <thead>
             <tr>
                 <th>Sản phẩm</th>
-                <th style="text-align:center;">Đơn vị</th>
-                <th style="text-align:center;">Đơn giá</th>
+                <th style="text-align:center;">Mã lô</th>
                 <th style="text-align:center;">Số lượng</th>
+                <th style="text-align:center;">Đơn giá</th>
+                <th style="text-align:center;">HSD</th>
                 <th style="text-align:right;">Tổng tiền</th>
             </tr>
         </thead>
         <tbody>
             <?php
-            $items = $order['items'] ?? [];
+            $items = $po['items'] ?? [];
             $totalQty = 0;
             $totalItems = count($items);
             $currentIndex = 0;
             foreach ($items as $item):
                 $currentIndex++;
                 $qty = $item['quantity'] ?? 0;
-                $unitPrice = $item['unit_price'] ?? 0;
-                $itemTotal = $qty * $unitPrice;
+                $unitCost = $item['unit_cost'] ?? 0;
+                $itemTotal = $qty * $unitCost;
                 $totalQty += $qty;
                 // Chỉ hiển thị border-b nếu không phải dòng cuối
                 $borderClass = ($currentIndex < $totalItems) ? 'border-b' : '';
                 ?>
                 <tr class="<?= $borderClass ?>">
-                    <td><?= htmlspecialchars($item['product_name'] ?? '') ?></td>
-                    <td style="text-align:center;"><?= htmlspecialchars($item['unit'] ?? '—') ?></td>
-                    <td style="text-align:center;"><?= number_format($unitPrice, 0, ',', '.') ?></td>
+                    <td>
+                        <div style="font-weight: 600;"><?= htmlspecialchars($item['product_name'] ?? '') ?></div>
+                        <div style="font-size: 12px; color: #666;">SKU: <?= htmlspecialchars($item['product_sku'] ?? '—') ?></div>
+                    </td>
+                    <td style="text-align:center;"><?= htmlspecialchars($item['batch_code'] ?? '—') ?></td>
                     <td style="text-align:center;"><?= $qty ?></td>
+                    <td style="text-align:center;"><?= number_format($unitCost, 0, ',', '.') ?></td>
+                    <td style="text-align:center;"><?= htmlspecialchars($item['expiry_date'] ?? '—') ?></td>
                     <td style="text-align:right;"><?= number_format($itemTotal, 0, ',', '.') ?></td>
                 </tr>
             <?php endforeach; ?>
@@ -229,34 +275,41 @@
         </div>
         <div class="summary-row">
             <span class="summary-label">Tổng tiền hàng:</span>
-            <span class="summary-value"><?= number_format($order['subtotal'] ?? 0, 0, ',', '.') ?></span>
+            <span class="summary-value"><?= number_format($po['total_amount'] ?? 0, 0, ',', '.') ?> VNĐ</span>
         </div>
         <div class="summary-row">
-            <span class="summary-label">Số tiền đã giảm:</span>
-            <span class="summary-value"><?= number_format($order['discount_amount'] ?? 0, 0, ',', '.') ?></span>
+            <span class="summary-label">Số tiền đã thanh toán:</span>
+            <span class="summary-value"><?= number_format($po['paid_amount'] ?? 0, 0, ',', '.') ?> VNĐ</span>
         </div>
         <div class="summary-row total-row">
-            <span>Tổng tiền thanh toán:</span>
-            <span><?= number_format($order['total_amount'] ?? 0, 0, ',', '.') ?></span>
+            <span>Số tiền còn nợ:</span>
+            <span><?= number_format(($po['total_amount'] ?? 0) - ($po['paid_amount'] ?? 0), 0, ',', '.') ?> VNĐ</span>
         </div>
     </div>
 
-    <?php if (!empty($order['note'])): ?>
+    <?php if (!empty($po['note'])): ?>
         <div class="note-section">
-            <strong>Ghi chú:</strong> <?= htmlspecialchars($order['note']) ?>
+            <strong>Ghi chú:</strong> <?= htmlspecialchars($po['note']) ?>
         </div>
     <?php endif; ?>
 
     <div style="margin-top: 40px; text-align: center; padding: 20px; border-top: 2px solid #002975;">
-        <div style="font-size: 18px; font-weight: bold; color: #002975; margin-bottom: 10px;">
-            Cảm ơn quý khách đã mua hàng tại MINIGO!
+        <div class="info-grid" style="text-align: left; max-width: 600px; margin: 0 auto;">
+            <div>
+                <div style="font-weight: bold; margin-bottom: 5px;">Người lập phiếu</div>
+                <div style="color: #666;"><?= htmlspecialchars($po['created_by_name'] ?? '—') ?></div>
+                <div style="font-size: 12px; color: #999; margin-top: 40px;">Ký tên</div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-weight: bold; margin-bottom: 5px;">Người giao hàng</div>
+                <div style="color: #666;">&nbsp;</div>
+                <div style="font-size: 12px; color: #999; margin-top: 40px;">Ký tên</div>
+            </div>
         </div>
-        <div style="font-size: 16px; color: #666; margin-bottom: 15px;">
-            Hẹn gặp lại quý khách
-        </div>
-        <div style="font-size: 14px; color: #666;">
-            <strong>Hotline:</strong> 0901 234 567 | <strong>Địa chỉ:</strong> 123 Đường ABC, TP. Cần Thơ
-        </div>
+    </div>
+
+    <div style="margin-top: 20px; text-align: center; font-size: 14px; color: #666;">
+        <div><strong>Hotline:</strong> 0901 234 567 | <strong>Địa chỉ:</strong> 123 Đường ABC, TP. Cần Thơ</div>
     </div>
 </body>
 

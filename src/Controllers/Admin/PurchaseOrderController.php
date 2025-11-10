@@ -203,6 +203,27 @@ class PurchaseOrderController extends BaseAdminController
     }
 
     /**
+     * GET /admin/purchase-orders/{id}/print
+     * In phiếu nhập kho
+     */
+    public function print($id)
+    {
+        $poDetails = $this->repo->getDetailsWithLines($id);
+        if (!$poDetails) {
+            http_response_code(404);
+            echo "Phiếu nhập không tồn tại";
+            exit;
+        }
+
+        // Convert object sang array nếu cần
+        $po = is_object($poDetails) ? json_decode(json_encode($poDetails), true) : $poDetails;
+
+        return $this->view('admin/purchase-orders/invoice-template', [
+            'po' => $po
+        ]);
+    }
+
+    /**
      * GET /admin/api/purchase_orders/unpaid
      * Trả về danh sách phiếu nhập chưa thanh toán hoặc thanh toán một phần
      */

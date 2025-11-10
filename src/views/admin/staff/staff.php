@@ -34,6 +34,22 @@ $items = $items ?? [];
         </div>
     </div>
 
+    <!-- Thống kê tổng quan -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Tổng nhân viên</div>
+            <div class="text-2xl font-bold text-blue-600" x-text="getTotalStaff()"></div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Đang hoạt động</div>
+            <div class="text-2xl font-bold text-green-600" x-text="countByStatus(1)"></div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Ngừng hoạt động</div>
+            <div class="text-2xl font-bold text-red-600" x-text="countByStatus(0)"></div>
+        </div>
+    </section>
+
     <!-- Table -->
     <div class="bg-white rounded-xl shadow pb-4">
         <!-- Loading overlay bên trong bảng -->
@@ -359,6 +375,29 @@ $items = $items ?? [];
         </div>
     </div>
 
+    <!-- Confirm Dialog -->
+    <div x-show="confirmDialog.show"
+        class="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-5 mt-[-200px]" style="display: none;">
+        <div class="bg-white w-full max-w-md rounded-xl shadow-lg" @click.outside="confirmDialog.show = false">
+            <div class="px-5 py-4 border-b">
+                <h3 class="text-xl font-bold text-[#002975]" x-text="confirmDialog.title"></h3>
+            </div>
+            <div class="p-5">
+                <p class="text-gray-600" x-text="confirmDialog.message"></p>
+            </div>
+            <div class="px-5 py-4 border-t flex gap-2 justify-end">
+                <button @click="confirmDialog.show = false; confirmDialog.onCancel()"
+                    class="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-600 hover:text-white">
+                    Hủy
+                </button>
+                <button @click="confirmDialog.show = false; confirmDialog.onConfirm()"
+                    class="px-4 py-2 border border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white">
+                    Xác nhận
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast lỗi nổi -->
     <div id="toast-container" class="z-[60]"></div>
 
@@ -504,6 +543,25 @@ $items = $items ?? [];
 
             showPassword: false,
             showPasswordConfirm: false,
+
+            // Confirm Dialog
+            confirmDialog: {
+                show: false,
+                title: '',
+                message: '',
+                onConfirm: () => {},
+                onCancel: () => {}
+            },
+
+            showConfirm(title, message, onConfirm, onCancel = () => {}) {
+                this.confirmDialog = {
+                    show: true,
+                    title,
+                    message,
+                    onConfirm,
+                    onCancel
+                };
+            },
 
             formatDate(d) {
                 if (!d || d === '0000-00-00') return '';
@@ -748,6 +806,19 @@ $items = $items ?? [];
                 this.openFilter[key] = false;
             },
 
+            // ===== Statistics Functions =====
+            getTotalStaff() {
+                return this.filtered().length;
+            },
+
+            countByStatus(status) {
+                return this.filtered().filter(s => s.is_active == status).length;
+            },
+
+            countByRole(role) {
+                return this.filtered().filter(s => s.staff_role === role).length;
+            },
+
             async init() {
                 this.loading = true;
                 try {
@@ -983,19 +1054,27 @@ $items = $items ?? [];
             },
 
             async remove(id) {
-                if (!confirm('Xóa nhân viên này?')) return;
-                try {
-                    const res = await fetch(`/admin/api/staff/${id}`, { method: 'DELETE' });
-                    if (res.ok) {
-                        this.items = this.items.filter(i => i.user_id !== id);
-                        this.showToast('Xóa nhân viên thành công!', 'success');
-                    } else {
-                        const data = await res.json().catch(() => ({}));
-                        this.showToast((data && data.error) || 'Không thể xóa nhân viên');
+                const staff = this.items.find(s => s.user_id === id);
+                const staffName = staff ? staff.full_name : 'nhân viên này';
+                
+                this.showConfirm(
+                    'Xác nhận xóa',
+                    `Bạn có chắc chắn muốn xóa nhân viên "${staffName}"?`,
+                    async () => {
+                        try {
+                            const res = await fetch(`/admin/api/staff/${id}`, { method: 'DELETE' });
+                            if (res.ok) {
+                                this.items = this.items.filter(i => i.user_id !== id);
+                                this.showToast('Xóa nhân viên thành công!', 'success');
+                            } else {
+                                const data = await res.json().catch(() => ({}));
+                                this.showToast((data && data.error) || 'Không thể xóa nhân viên');
+                            }
+                        } catch (e) {
+                            this.showToast('Không thể xóa nhân viên');
+                        }
                     }
-                } catch (e) {
-                    this.showToast('Không thể xóa nhân viên');
-                }
+                );
             },
 
             // Khởi tạo datepicker cho modal

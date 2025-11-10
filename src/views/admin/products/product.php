@@ -38,6 +38,22 @@ $items = $items ?? [];
     </div>
   </div>
 
+  <!-- Thống kê tổng quan -->
+  <section class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-gray-500 text-sm mb-1">Tổng sản phẩm</div>
+      <div class="text-2xl font-bold text-blue-600" x-text="getTotalProducts()"></div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-gray-500 text-sm mb-1">Đang hoạt động</div>
+      <div class="text-2xl font-bold text-green-600" x-text="countByStatus(1)"></div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+      <div class="text-gray-500 text-sm mb-1">Ngừng hoạt động</div>
+      <div class="text-2xl font-bold text-red-600" x-text="countByStatus(0)"></div>
+    </div>
+  </section>
+
   <!-- Table -->
   <div class="bg-white rounded-xl shadow pb-4">
         <!-- Loading overlay bên trong bảng -->
@@ -255,6 +271,29 @@ $items = $items ?? [];
   </div>
 </div>
 
+<!-- Confirm Dialog -->
+<div x-show="confirmDialog.show"
+    class="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-5 mt-[-200px]" style="display: none;">
+    <div class="bg-white w-full max-w-md rounded-xl shadow-lg" @click.outside="confirmDialog.show = false">
+        <div class="px-5 py-4 border-b">
+            <h3 class="text-xl font-bold text-[#002975]" x-text="confirmDialog.title"></h3>
+        </div>
+        <div class="p-5">
+            <p class="text-gray-600" x-text="confirmDialog.message"></p>
+        </div>
+        <div class="px-5 py-4 border-t flex gap-2 justify-end">
+            <button @click="confirmDialog.show = false; confirmDialog.onCancel()"
+                class="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-600 hover:text-white">
+                Hủy
+            </button>
+            <button @click="confirmDialog.show = false; confirmDialog.onConfirm()"
+                class="px-4 py-2 border border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white">
+                Xác nhận
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Toast lỗi nổi -->
 <div id="toast-container" class="z-[60]"></div>
 </div>
@@ -319,6 +358,14 @@ $items = $items ?? [];
       brands: [],
       categories: [],
       units: [],
+
+      confirmDialog: {
+        show: false,
+        title: '',
+        message: '',
+        onConfirm: () => {},
+        onCancel: () => {}
+      },
 
       // phân trang
       currentPage: 1,
@@ -1109,19 +1156,44 @@ $items = $items ?? [];
       },
 
       async remove(id) {
-        if (!confirm('Xóa sản phẩm này?')) return;
-        try {
-          const r = await fetch(api.remove(id), { method: 'DELETE' });
-          if (!r.ok) {
-            const txt = await r.text();   // đọc thô để debug
-            throw new Error(`Server error: ${txt}`);
+        const product = this.items.find(p => p.id === id);
+        const name = product ? product.name : 'sản phẩm này';
+
+        this.showConfirm(
+          'Xác nhận xóa',
+          `Bạn có chắc chắn muốn xóa sản phẩm "${name}"?`,
+          async () => {
+            try {
+              const r = await fetch(api.remove(id), { method: 'DELETE' });
+              if (!r.ok) {
+                const txt = await r.text();   // đọc thô để debug
+                throw new Error(`Server error: ${txt}`);
+              }
+              const res = await r.json();
+              this.items = this.items.filter(x => x.id != id);
+              this.showToast('Xóa sản phẩm thành công!', 'success');
+            } catch (e) {
+              this.showToast(e.message || 'Không thể xóa sản phẩm');
+            }
           }
-          const res = await r.json();
-          this.items = this.items.filter(x => x.id != id);
-          this.showToast('Xóa sản phẩm thành công!', 'success');
-        } catch (e) {
-          this.showToast(e.message || 'Không thể xóa sản phẩm');
-        }
+        );
+      },
+
+      // ===== Statistics Functions =====
+      getTotalProducts() {
+        return this.filtered().length;
+      },
+
+      countByStatus(status) {
+        return this.filtered().filter(p => p.is_active == status).length;
+      },
+
+      getTotalInventoryValue() {
+        return this.filtered().reduce((sum, p) => {
+          const stock = parseFloat(p.stock_quantity) || 0;
+          const cost = parseFloat(p.cost_price) || 0;
+          return sum + (stock * cost);
+        }, 0);
       },
 
       // ===== EXPORT EXCEL =====
@@ -1252,6 +1324,16 @@ $items = $items ?? [];
         } finally {
           this.importing = false;
         }
+      },
+
+      showConfirm(title, message, onConfirm, onCancel = () => {}) {
+        this.confirmDialog = {
+          show: true,
+          title,
+          message,
+          onConfirm,
+          onCancel
+        };
       },
 
       showToast(msg, type = 'error') {

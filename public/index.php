@@ -165,6 +165,7 @@ $router->group('/admin', function (Router $r): void {
     $r->post('/api/purchase-orders/import', [AdminPurchaseOrder::class, 'importExcel']);
     $r->get('/api/purchase-orders/unpaid', [AdminPurchaseOrder::class, 'unpaid']);
     $r->get('/api/purchase-orders/{id}', [AdminPurchaseOrder::class, 'show']);
+    $r->get('/purchase-orders/{id}/print', [AdminPurchaseOrder::class, 'print']);
     $r->post('/api/purchase-orders', [AdminPurchaseOrder::class, 'store']);
     $r->put('/api/purchase-orders/{id}', [AdminPurchaseOrder::class, 'update']);
     $r->delete('/api/purchase-orders/{id}', [AdminPurchaseOrder::class, 'destroy']);

@@ -25,7 +25,7 @@ $items = $items ?? [];
     </div>
 
     <!-- Thống kê tổng quan -->
-    <section class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div class="bg-white rounded-lg shadow p-4">
             <div class="text-gray-500 text-sm mb-1">Tổng số phiếu thu</div>
             <div class="text-2xl font-bold text-blue-600" x-text="getTotalReceipts()"></div>
@@ -37,10 +37,6 @@ $items = $items ?? [];
         <div class="bg-white rounded-lg shadow p-4">
             <div class="text-gray-500 text-sm mb-1">Thu từ đơn hàng</div>
             <div class="text-2xl font-bold text-purple-600" x-text="countWithOrder()"></div>
-        </div>
-        <div class="bg-white rounded-lg shadow p-4">
-            <div class="text-gray-500 text-sm mb-1">Thu khác</div>
-            <div class="text-2xl font-bold text-orange-600" x-text="countWithoutOrder()"></div>
         </div>
     </section>
 
@@ -333,6 +329,29 @@ $items = $items ?? [];
             </div>
         </div>
 
+        <!-- Confirm Dialog -->
+        <div x-show="confirmDialog.show"
+            class="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-5 mt-[-200px]" style="display: none;">
+            <div class="bg-white w-full max-w-md rounded-xl shadow-lg" @click.outside="confirmDialog.show = false">
+                <div class="px-5 py-4 border-b">
+                    <h3 class="text-xl font-bold text-[#002975]" x-text="confirmDialog.title"></h3>
+                </div>
+                <div class="p-5">
+                    <p class="text-gray-600" x-text="confirmDialog.message"></p>
+                </div>
+                <div class="px-5 py-4 border-t flex gap-2 justify-end">
+                    <button @click="confirmDialog.show = false; confirmDialog.onCancel()"
+                        class="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-600 hover:text-white">
+                        Hủy
+                    </button>
+                    <button @click="confirmDialog.show = false; confirmDialog.onConfirm()"
+                        class="px-4 py-2 border border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white">
+                        Xác nhận
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Toast lỗi nổi -->
         <div id="toast-container" class="z-[60]"></div>
     </div>
@@ -393,6 +412,14 @@ $items = $items ?? [];
             staffs: [],
             order_id: null,
             orders: [],
+
+            confirmDialog: {
+                show: false,
+                title: '',
+                message: '',
+                onConfirm: () => {},
+                onCancel: () => {}
+            },
 
             items: <?= json_encode($items ?? [], JSON_UNESCAPED_UNICODE) ?>,
 
@@ -938,27 +965,29 @@ $items = $items ?? [];
 
             async remove(id) {
                 const item = this.items.find(r => r.id === id);
-                const confirmMsg = item
-                    ? `Bạn có chắc muốn xóa phiếu thu "${item.code}"?\n\n` +
-                    `Khách hàng: ${item.payer_user_name || 'Khách vãng lai'}\n` +
-                    `Số tiền: ${this.formatCurrency(item.amount)}\n\n` +
-                    `Lưu ý: Nếu đơn hàng đã thanh toán hết, bạn không thể xóa phiếu thu này.`
-                    : 'Bạn có chắc muốn xóa phiếu thu này?';
+                const code = item ? item.code : 'phiếu thu này';
+                const details = item
+                    ? `\n\nKhách hàng: ${item.payer_user_name || 'Khách vãng lai'}\nSố tiền: ${this.formatCurrency(item.amount)}\n\nLưu ý: Nếu đơn hàng đã thanh toán hết, bạn không thể xóa phiếu thu này.`
+                    : '';
 
-                if (!confirm(confirmMsg)) return;
-
-                try {
-                    const res = await fetch(api.remove(id), { method: 'DELETE' });
-                    if (res.ok) {
-                        this.items = this.items.filter(r => r.id !== id);
-                        this.showToast('Xóa phiếu thu thành công!', 'success');
-                    } else {
-                        const error = await res.json();
-                        this.showToast(error.error || 'Không thể xóa phiếu thu');
+                this.showConfirm(
+                    'Xác nhận xóa',
+                    `Bạn có chắc chắn muốn xóa phiếu thu "${code}"?${details}`,
+                    async () => {
+                        try {
+                            const res = await fetch(api.remove(id), { method: 'DELETE' });
+                            if (res.ok) {
+                                this.items = this.items.filter(r => r.id !== id);
+                                this.showToast('Xóa phiếu thu thành công!', 'success');
+                            } else {
+                                const error = await res.json();
+                                this.showToast(error.error || 'Không thể xóa phiếu thu');
+                            }
+                        } catch (e) {
+                            this.showToast('Không thể xóa phiếu thu');
+                        }
                     }
-                } catch (e) {
-                    this.showToast('Không thể xóa phiếu thu');
-                }
+                );
             },
 
             exportExcel() {
@@ -1006,6 +1035,16 @@ $items = $items ?? [];
                         console.error(err);
                         this.showToast('Không thể xuất Excel');
                     });
+            },
+
+            showConfirm(title, message, onConfirm, onCancel = () => {}) {
+                this.confirmDialog = {
+                    show: true,
+                    title,
+                    message,
+                    onConfirm,
+                    onCancel
+                };
             },
 
             // ===== TOAST =====

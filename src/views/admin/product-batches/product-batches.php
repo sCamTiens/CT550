@@ -23,6 +23,26 @@ $products = $products ?? [];
             @click="openCreate()">+ Thêm lô</button> -->
     </div>
 
+    <!-- Thống kê tổng quan -->
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Tổng số lô hàng</div>
+            <div class="text-2xl font-bold text-blue-600" x-text="getTotalBatches()"></div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Tổng giá trị tồn kho</div>
+            <div class="text-lg font-bold text-green-600" x-text="formatCurrency(getTotalInventoryValue())"></div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Tổng số lượng tồn</div>
+            <div class="text-2xl font-bold text-purple-600" x-text="getTotalQuantity()"></div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Lô sắp hết hạn/hết hạn</div>
+            <div class="text-2xl font-bold text-orange-600" x-text="countExpiringSoon()"></div>
+        </div>
+    </section>
+
     <!-- Table -->
     <div class="bg-white rounded-xl shadow pb-4">
         <!-- Loading overlay bên trong bảng -->
@@ -40,7 +60,7 @@ $products = $products ?? [];
                         <?= textFilterPopover('product_name', 'Sản phẩm') ?>
                         <?= textFilterPopover('batch_code', 'Mã lô') ?>
                         <?= dateFilterPopover('mfg_date', 'Ngày sản xuất') ?>
-                        <?= dateFilterPopover('exp_date', 'HSD') ?>
+                        <?= dateFilterPopover('exp_date', 'Hạn sử dụng') ?>
                         <?= numberFilterPopover('current_qty', 'Tồn hiện tại') ?>
                         <?= numberFilterPopover('unit_cost', 'Giá nhập') ?>
                         <?= textFilterPopover('note', 'Ghi chú') ?>
@@ -50,7 +70,11 @@ $products = $products ?? [];
                 </thead>
                 <tbody>
                     <template x-for="b in paginated()" :key="b.id">
-                        <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
+                        <tr class="border-t hover:bg-blue-50 transition-colors duration-150"
+                            :class="{
+                                'bg-red-50': isExpiredOrExpiringSoon(b.exp_date),
+                                'hover:bg-red-100': isExpiredOrExpiringSoon(b.exp_date)
+                            }">
                             <!-- <td class="py-2 px-4 text-center">
                                 <button @click="openEdit(b)"
                                     class="p-2 rounded hover:bg-gray-100 text-[#002975]">Sửa</button>
@@ -89,11 +113,17 @@ $products = $products ?? [];
                                 x-text="b.product_name || b.product_sku"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="b.batch_code"></td>
                             <td class="py-2 px-4 break-words whitespace-pre-line"
-                                :class="(b.mfg_date || '—') === '—' ? 'text-center' : 'text-right'"
+                                :class="(b.mfg_date || '—') === '—' ? 'text-center' : 'text-center'"
                                 x-text="b.mfg_date || '—'"></td>
-                            <td class="py-2 px-4 break-words whitespace-pre-line"
-                                :class="(b.exp_date || '—') === '—' ? 'text-center' : 'text-right'"
-                                x-text="b.exp_date || '—'"></td>
+                            <td class="py-2 px-4 break-words"
+                                :class="(b.exp_date || '—') === '—' ? 'text-center' : 'text-center'">
+                                <div x-show="b.exp_date" class="flex flex-col items-center">
+                                    <span x-text="b.exp_date"></span>
+                                    <span x-show="isExpired(b.exp_date)" class="text-red-600 font-bold text-xs mt-1">Đã hết hạn</span>
+                                    <span x-show="!isExpired(b.exp_date) && isExpiringSoon(b.exp_date)" class="text-red-600 font-bold text-xs mt-1">Sắp hết hạn</span>
+                                </div>
+                                <span x-show="!b.exp_date">—</span>
+                            </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="b.current_qty">
                             </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line text-right"
@@ -133,6 +163,29 @@ $products = $products ?? [];
                 </div>
 
                 <?php require __DIR__ . '/form.php'; ?>
+            </div>
+        </div>
+
+        <!-- Confirm Dialog -->
+        <div x-show="confirmDialog.show"
+            class="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-5 mt-[-200px]" style="display: none;">
+            <div class="bg-white w-full max-w-md rounded-xl shadow-lg" @click.outside="confirmDialog.show = false">
+                <div class="px-5 py-4 border-b">
+                    <h3 class="text-xl font-bold text-[#002975]" x-text="confirmDialog.title"></h3>
+                </div>
+                <div class="p-5">
+                    <p class="text-gray-600" x-text="confirmDialog.message"></p>
+                </div>
+                <div class="px-5 py-4 border-t flex gap-2 justify-end">
+                    <button @click="confirmDialog.show = false; confirmDialog.onCancel()"
+                        class="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-600 hover:text-white">
+                        Hủy
+                    </button>
+                    <button @click="confirmDialog.show = false; confirmDialog.onConfirm()"
+                        class="px-4 py-2 border border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white">
+                        Xác nhận
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -183,6 +236,7 @@ $products = $products ?? [];
 
         return {
             // --- state ---
+            loading: true,
             items: [],
             products: [],
             filters: {},
@@ -192,6 +246,14 @@ $products = $products ?? [];
             form: {},
             touched: {},
             errors: {},
+
+            confirmDialog: {
+                show: false,
+                title: '',
+                message: '',
+                onConfirm: () => {},
+                onCancel: () => {}
+            },
 
             // --- pagination ---
             currentPage: 1,
@@ -384,6 +446,23 @@ $products = $products ?? [];
                     }
                 });
 
+                // --- Sắp xếp: Đưa lô hết hạn/sắp hết hạn lên đầu ---
+                data.sort((a, b) => {
+                    const aExpiring = this.isExpiredOrExpiringSoon(a.exp_date);
+                    const bExpiring = this.isExpiredOrExpiringSoon(b.exp_date);
+                    
+                    // Ưu tiên: hết hạn/sắp hết hạn lên đầu
+                    if (aExpiring && !bExpiring) return -1;
+                    if (!aExpiring && bExpiring) return 1;
+                    
+                    // Nếu cả 2 đều sắp hết hạn, sắp xếp theo ngày hết hạn (gần nhất lên đầu)
+                    if (aExpiring && bExpiring && a.exp_date && b.exp_date) {
+                        return new Date(a.exp_date) - new Date(b.exp_date);
+                    }
+                    
+                    return 0;
+                });
+
                 return data;
             },
 
@@ -421,6 +500,67 @@ $products = $products ?? [];
                 this.openFilter[key] = false;
             },
 
+            // ===== THỐNG KÊ =====
+            getTotalBatches() {
+                return this.filtered().length;
+            },
+
+            getTotalInventoryValue() {
+                return this.filtered().reduce((sum, batch) => {
+                    const qty = parseFloat(batch.current_qty) || 0;
+                    const cost = parseFloat(batch.unit_cost) || 0;
+                    return sum + (qty * cost);
+                }, 0);
+            },
+
+            getTotalQuantity() {
+                return this.filtered().reduce((sum, batch) => {
+                    return sum + (parseFloat(batch.current_qty) || 0);
+                }, 0);
+            },
+
+            countExpiringSoon() {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const thirtyDaysLater = new Date();
+                thirtyDaysLater.setDate(today.getDate() + 30);
+                thirtyDaysLater.setHours(0, 0, 0, 0);
+                
+                return this.filtered().filter(batch => {
+                    if (!batch.exp_date) return false;
+                    const expDate = new Date(batch.exp_date);
+                    expDate.setHours(0, 0, 0, 0);
+                    // Đếm cả lô đã hết hạn (< today) và lô sắp hết hạn (<= 30 ngày)
+                    return expDate <= thirtyDaysLater;
+                }).length;
+            },
+
+            // ===== KIỂM TRA HẠN SỬ DỤNG =====
+            isExpired(expDate) {
+                if (!expDate) return false;
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const exp = new Date(expDate);
+                exp.setHours(0, 0, 0, 0);
+                return exp < today;
+            },
+
+            isExpiringSoon(expDate) {
+                if (!expDate) return false;
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const thirtyDaysLater = new Date();
+                thirtyDaysLater.setDate(today.getDate() + 30);
+                thirtyDaysLater.setHours(0, 0, 0, 0);
+                const exp = new Date(expDate);
+                exp.setHours(0, 0, 0, 0);
+                return exp >= today && exp <= thirtyDaysLater;
+            },
+
+            isExpiredOrExpiringSoon(expDate) {
+                return this.isExpired(expDate) || this.isExpiringSoon(expDate);
+            },
+
             // --- lifecycle ---
             async init() {
                 await this.fetchAll();
@@ -429,6 +569,7 @@ $products = $products ?? [];
 
             // --- fetch API ---
             async fetchAll() {
+                this.loading = true;
                 try {
                     const r = await fetch(api.list);
                     if (r.ok) {
@@ -436,6 +577,9 @@ $products = $products ?? [];
                         this.items = data.items || [];
                     }
                 } catch (e) { console.error(e); }
+                finally {
+                    this.loading = false;
+                }
             },
 
             async fetchProducts() {
@@ -559,15 +703,33 @@ $products = $products ?? [];
             },
 
             async remove(id) {
-                if (!confirm('Xóa lô này?')) return;
-                try {
-                    const r = await fetch(api.remove(id), { method: 'DELETE' });
-                    if (!r.ok) throw new Error('Lỗi server');
-                    await this.fetchAll();
-                    this.showToast('Xóa thành công!', 'success');
-                } catch (e) {
-                    this.showToast(e.message || 'Lỗi');
-                }
+                const batch = this.items.find(b => b.id === id);
+                const code = batch ? batch.batch_code : 'lô này';
+
+                this.showConfirm(
+                    'Xác nhận xóa',
+                    `Bạn có chắc chắn muốn xóa lô "${code}"?`,
+                    async () => {
+                        try {
+                            const r = await fetch(api.remove(id), { method: 'DELETE' });
+                            if (!r.ok) throw new Error('Lỗi server');
+                            await this.fetchAll();
+                            this.showToast('Xóa thành công!', 'success');
+                        } catch (e) {
+                            this.showToast(e.message || 'Lỗi');
+                        }
+                    }
+                );
+            },
+
+            showConfirm(title, message, onConfirm, onCancel = () => {}) {
+                this.confirmDialog = {
+                    show: true,
+                    title,
+                    message,
+                    onConfirm,
+                    onCancel
+                };
             },
 
             // --- utils ---

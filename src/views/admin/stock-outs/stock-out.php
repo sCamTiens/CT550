@@ -24,6 +24,18 @@ $items = $items ?? [];
         </div>
     </div>
 
+    <!-- Thống kê tổng quan -->
+    <section class="flex flex-wrap justify-center gap-6 mb-6">
+        <div class="bg-white rounded-lg shadow p-4 text-center w-[500px]">
+            <div class="text-gray-500 text-sm mb-1">Tổng số phiếu xuất</div>
+            <div class="text-2xl font-bold text-blue-600" x-text="getTotalStockOuts()"></div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 text-center w-[500px]">
+            <div class="text-gray-500 text-sm mb-1">Tổng giá trị xuất</div>
+            <div class="text-2xl font-bold text-green-600" x-text="formatCurrency(getTotalValue())"></div>
+        </div>
+    </section>
+
     <!-- Table -->
     <div class="bg-white rounded-xl shadow pb-4">
         <!-- Loading overlay bên trong bảng -->
@@ -34,7 +46,7 @@ $items = $items ?? [];
             </div>
         </template>
         <div style="overflow-x:auto; max-width:100%;" class="pb-40">
-            <table style="width:200%; min-width:1250px; border-collapse:collapse;">
+            <table style="width:180%; min-width:1250px; border-collapse:collapse;">
                 <thead>
                     <tr class="bg-gray-50 text-slate-600">
                         <th class="py-2 px-4 text-center">Thao tác</th>
@@ -51,7 +63,7 @@ $items = $items ?? [];
                         <th class="py-2 px-4 text-center align-top" style="min-width: 500px; width: 500px;">
                             <div class="mb-2 text-base font-bold">Chi tiết xuất kho (theo lô)</div>
 
-                            <div class="grid grid-cols-3 gap-3 border-t pt-2">
+                            <div class="grid grid-cols-[3fr_1fr_1fr] gap-3 border-t pt-2">
                                 <!-- Tên sản phẩm - Mã lô -->
                                 <div class="relative">
                                     <div class="flex items-center justify-center gap-1">
@@ -258,13 +270,14 @@ $items = $items ?? [];
                                     <template x-if="s.items && s.items.length > 0">
                                         <div class="space-y-2">
                                             <template x-for="(item, itemIdx) in s.items" :key="itemIdx">
-                                                <div class="grid grid-cols-[2.5fr_1fr_1fr] gap-3 p-2">
+                                                <div class="grid grid-cols-[3fr_1fr_1fr] gap-3 p-2">
                                                     <!-- Tên sản phẩm - Mã lô -->
                                                     <div>
                                                         <div>
                                                             <span x-text="item.product_name || '—'"></span>
-                                                            <span> - </span>
-                                                            <span x-text="item.batch_code || '—'"></span>
+                                                            <br>
+                                                            <span class="text-gray-500 text-sm"
+                                                                x-text="item.batch_code || '—'"></span>
                                                         </div>
                                                     </div>
 
@@ -274,7 +287,7 @@ $items = $items ?? [];
                                                     </div>
 
                                                     <!-- Đơn giá -->
-                                                    <div class="text-right">
+                                                    <div class="text-center">
                                                         <div x-text="formatCurrency(item.unit_price || 0)"></div>
                                                     </div>
                                                 </div>
@@ -482,6 +495,30 @@ $items = $items ?? [];
             </div>
         </div>
 
+        <!-- Confirm Dialog -->
+        <div x-show="confirmDialog.show"
+            class="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-5 mt-[-200px]"
+            style="display: none;">
+            <div class="bg-white w-full max-w-md rounded-xl shadow-lg" @click.outside="confirmDialog.show = false">
+                <div class="px-5 py-4 border-b">
+                    <h3 class="text-xl font-bold text-[#002975]" x-text="confirmDialog.title"></h3>
+                </div>
+                <div class="p-5">
+                    <p class="text-gray-600" x-text="confirmDialog.message"></p>
+                </div>
+                <div class="px-5 py-4 border-t flex gap-2 justify-end">
+                    <button @click="confirmDialog.show = false; confirmDialog.onCancel()"
+                        class="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-600 hover:text-white">
+                        Hủy
+                    </button>
+                    <button @click="confirmDialog.show = false; confirmDialog.onConfirm()"
+                        class="px-4 py-2 border border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white">
+                        Xác nhận
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Toast -->
         <div id="toast-container" class="z-[60]"></div>
     </div>
@@ -576,6 +613,25 @@ $items = $items ?? [];
 
             errors: {},
             touched: {},
+
+            // Confirm Dialog
+            confirmDialog: {
+                show: false,
+                title: '',
+                message: '',
+                onConfirm: () => { },
+                onCancel: () => { }
+            },
+
+            showConfirm(title, message, onConfirm, onCancel = () => { }) {
+                this.confirmDialog = {
+                    show: true,
+                    title,
+                    message,
+                    onConfirm,
+                    onCancel
+                };
+            },
 
             // ===== INIT =====
             async init() {
@@ -887,6 +943,21 @@ $items = $items ?? [];
                 this.openFilter[key] = false;
             },
 
+            // ===== THỐNG KÊ =====
+            getTotalStockOuts() {
+                return this.filtered().length;
+            },
+
+            getTotalValue() {
+                return this.filtered().reduce((sum, stockOut) => {
+                    return sum + (parseFloat(stockOut.total_amount) || 0);
+                }, 0);
+            },
+
+            countByStatus(status) {
+                return this.filtered().filter(s => s.status === status).length;
+            },
+
             // --- utils ---
             formatCurrency(n) {
                 try {
@@ -1094,48 +1165,72 @@ $items = $items ?? [];
             },
 
             async remove(id) {
-                if (!confirm('Bạn có chắc muốn xóa phiếu xuất kho này?')) return;
-                try {
-                    const res = await fetch(api.remove(id), { method: 'DELETE' });
-                    if (res.ok) {
-                        this.items = this.items.filter(r => r.id !== id);
-                        this.showToast('Xóa phiếu xuất kho thành công!', 'success');
-                    } else {
-                        this.showToast('Không thể xóa phiếu xuất kho');
+                const stockOut = this.items.find(s => s.id === id);
+                const code = stockOut ? stockOut.code : 'phiếu này';
+
+                this.showConfirm(
+                    'Xác nhận xóa',
+                    `Bạn có chắc chắn muốn xóa phiếu xuất kho "${code}"?`,
+                    async () => {
+                        try {
+                            const res = await fetch(api.remove(id), { method: 'DELETE' });
+                            if (res.ok) {
+                                this.items = this.items.filter(r => r.id !== id);
+                                this.showToast('Xóa phiếu xuất kho thành công!', 'success');
+                            } else {
+                                this.showToast('Không thể xóa phiếu xuất kho');
+                            }
+                        } catch (e) {
+                            this.showToast('Không thể xóa phiếu xuất kho');
+                        }
                     }
-                } catch (e) {
-                    this.showToast('Không thể xóa phiếu xuất kho');
-                }
+                );
             },
 
             async approveStockOut(id) {
-                if (!confirm('Bạn có chắc muốn duyệt phiếu xuất kho này?')) return;
-                try {
-                    const res = await fetch(api.approve(id), { method: 'POST' });
-                    if (res.ok) {
-                        await this.fetchAll();
-                        this.showToast('Duyệt phiếu xuất kho thành công!', 'success');
-                    } else {
-                        this.showToast('Không thể duyệt phiếu xuất kho');
+                const stockOut = this.items.find(s => s.id === id);
+                const code = stockOut ? stockOut.code : 'phiếu này';
+
+                this.showConfirm(
+                    'Xác nhận duyệt',
+                    `Bạn có chắc chắn muốn duyệt phiếu xuất kho "${code}"?`,
+                    async () => {
+                        try {
+                            const res = await fetch(api.approve(id), { method: 'POST' });
+                            if (res.ok) {
+                                await this.fetchAll();
+                                this.showToast('Duyệt phiếu xuất kho thành công!', 'success');
+                            } else {
+                                this.showToast('Không thể duyệt phiếu xuất kho');
+                            }
+                        } catch (e) {
+                            this.showToast('Không thể duyệt phiếu xuất kho');
+                        }
                     }
-                } catch (e) {
-                    this.showToast('Không thể duyệt phiếu xuất kho');
-                }
+                );
             },
 
             async completeStockOut(id) {
-                if (!confirm('Bạn có chắc muốn hoàn thành phiếu xuất kho này?')) return;
-                try {
-                    const res = await fetch(api.complete(id), { method: 'POST' });
-                    if (res.ok) {
-                        await this.fetchAll();
-                        this.showToast('Hoàn thành phiếu xuất kho thành công!', 'success');
-                    } else {
-                        this.showToast('Không thể hoàn thành phiếu xuất kho');
+                const stockOut = this.items.find(s => s.id === id);
+                const code = stockOut ? stockOut.code : 'phiếu này';
+
+                this.showConfirm(
+                    'Xác nhận hoàn thành',
+                    `Bạn có chắc chắn muốn hoàn thành phiếu xuất kho "${code}"?`,
+                    async () => {
+                        try {
+                            const res = await fetch(api.complete(id), { method: 'POST' });
+                            if (res.ok) {
+                                await this.fetchAll();
+                                this.showToast('Hoàn thành phiếu xuất kho thành công!', 'success');
+                            } else {
+                                this.showToast('Không thể hoàn thành phiếu xuất kho');
+                            }
+                        } catch (e) {
+                            this.showToast('Không thể hoàn thành phiếu xuất kho');
+                        }
                     }
-                } catch (e) {
-                    this.showToast('Không thể hoàn thành phiếu xuất kho');
-                }
+                );
             },
 
             exportExcel() {
@@ -1169,7 +1264,7 @@ $items = $items ?? [];
                 fetch('/admin/api/stock-outs/export', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
+                    body: JSON.stringify({
                         items: data,
                         from_date: fromDate,
                         to_date: toDate,

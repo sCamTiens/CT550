@@ -1,3 +1,9 @@
+<!-- Flatpickr CSS -->
+<link rel="stylesheet" href="/assets/css/flatpickr.min.css">
+
+<!-- Flatpickr JS -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+
 <?php
 // views/admin/payroll/payroll.php
 $month = $month ?? date('n');
@@ -60,7 +66,7 @@ $year = $year ?? date('Y');
                         class="px-3 py-2 hover:bg-[#002975] hover:text-white cursor-pointer text-sm">
                         Theo năm
                     </li>
-                    <li @click="selectFilterType('custom', 'Tùy chỉnh')"
+                    <li @click="selectFilterType('custom', 'Tùy chọn')"
                         class="px-3 py-2 hover:bg-[#002975] hover:text-white cursor-pointer text-sm">
                         Tùy chọn
                     </li>
@@ -126,11 +132,17 @@ $year = $year ?? date('Y');
 
             <!-- Custom Date Range for custom filter -->
             <div x-show="filterType === 'custom'" class="flex items-center gap-2">
-                <input type="date" x-model="customFromDate" @change="changeFilter()"
-                    class="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#002975]">
+                <div class="relative">
+                    <input type="text" x-model="customFromDate" data-filter-key="custom" data-filter-field="from"
+                        class="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#002975]"
+                        placeholder="Từ ngày" readonly>
+                </div>
                 <span class="text-gray-500">→</span>
-                <input type="date" x-model="customToDate" @change="changeFilter()"
-                    class="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#002975]">
+                <div class="relative">
+                    <input type="text" x-model="customToDate" data-filter-key="custom" data-filter-field="to"
+                        class="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#002975]"
+                        placeholder="Đến ngày" readonly>
+                </div>
             </div>
 
             <!-- Reset Button -->
@@ -148,7 +160,7 @@ $year = $year ?? date('Y');
             </button>
 
             <!-- Nút tính lương -->
-            <button @click="calculateAll()"
+            <button @click="calculateAll()" x-show="!(items.length > 0 && items.length === countByStatus('Đã trả'))"
                 class="px-4 py-2 text-[#002975] border border-[#002975] rounded-lg hover:bg-[#002975] hover:text-white font-semibold">
                 Tính lương tất cả
             </button>
@@ -166,7 +178,7 @@ $year = $year ?? date('Y');
             </button>
 
             <!-- Nút xóa tất cả -->
-            <button @click="deleteAll()" x-show="items.length > 0"
+            <button @click="deleteAll()" x-show="items.length > 0 && !(items.length === countByStatus('Đã trả'))"
                 class="px-4 py-2 text-red-600 border border-red-600 rounded-lg hover:bg-red-600 hover:text-white font-semibold">
                 Xóa tất cả
             </button>
@@ -447,10 +459,100 @@ $year = $year ?? date('Y');
                 const today = new Date();
                 const thirtyDaysAgo = new Date(today);
                 thirtyDaysAgo.setDate(today.getDate() - 30);
-                this.customFromDate = thirtyDaysAgo.toISOString().split('T')[0];
-                this.customToDate = today.toISOString().split('T')[0];
+                
+                // Format dd/mm/yyyy cho Flatpickr
+                const formatDate = (date) => {
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const year = date.getFullYear();
+                    return `${day}/${month}/${year}`;
+                };
+                
+                this.customFromDate = formatDate(thirtyDaysAgo);
+                this.customToDate = formatDate(today);
 
                 await this.loadData();
+                
+                // Khởi tạo Flatpickr sau khi load data
+                this.$nextTick(() => {
+                    this.initCustomDatePickers();
+                });
+            },
+
+            initCustomDatePickers() {
+                if (!window.flatpickr) return;
+
+                const fromInput = document.querySelector('input[data-filter-key="custom"][data-filter-field="from"]');
+                const toInput = document.querySelector('input[data-filter-key="custom"][data-filter-field="to"]');
+
+                if (fromInput && !fromInput._flatpickr) {
+                    flatpickr(fromInput, {
+                        dateFormat: 'd/m/Y',
+                        allowInput: true,
+                        locale: {
+                            firstDayOfWeek: 1,
+                            weekdays: {
+                                shorthand: ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'],
+                                longhand: ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy']
+                            },
+                            months: {
+                                shorthand: ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'],
+                                longhand: ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12']
+                            }
+                        },
+                        maxDate: this.customToDate || 'today',
+                        onChange: (selectedDates, dateStr) => {
+                            this.customFromDate = dateStr;
+                            
+                            // Disable các ngày nhỏ hơn "Từ ngày" trong lịch "Đến ngày"
+                            if (toInput && toInput._flatpickr) {
+                                toInput._flatpickr.set('minDate', dateStr);
+                            }
+                            
+                            this.changeFilter();
+                        }
+                    });
+                }
+
+                if (toInput && !toInput._flatpickr) {
+                    flatpickr(toInput, {
+                        dateFormat: 'd/m/Y',
+                        allowInput: true,
+                        locale: {
+                            firstDayOfWeek: 1,
+                            weekdays: {
+                                shorthand: ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'],
+                                longhand: ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy']
+                            },
+                            months: {
+                                shorthand: ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'],
+                                longhand: ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12']
+                            }
+                        },
+                        maxDate: 'today',
+                        minDate: this.customFromDate || null,
+                        onChange: (selectedDates, dateStr) => {
+                            this.customToDate = dateStr;
+                            
+                            // Disable các ngày lớn hơn "Đến ngày" trong lịch "Từ ngày"
+                            if (fromInput && fromInput._flatpickr) {
+                                fromInput._flatpickr.set('maxDate', dateStr);
+                            }
+                            
+                            this.changeFilter();
+                        }
+                    });
+                }
+            },
+
+            // Hàm parse date từ dd/mm/yyyy
+            parseDate(dateStr) {
+                if (!dateStr) return null;
+                const parts = dateStr.split('/');
+                if (parts.length === 3) {
+                    return new Date(parts[2], parts[1] - 1, parts[0]);
+                }
+                return null;
             },
 
             showToast(msg, type = 'success') {
@@ -559,8 +661,19 @@ $year = $year ?? date('Y');
                         return;
                     } else if (this.filterType === 'custom') {
                         // Filter theo khoảng thời gian tùy chỉnh
-                        const fromDate = new Date(this.customFromDate);
-                        const toDate = new Date(this.customToDate);
+                        // Chuyển đổi dd/mm/yyyy sang yyyy-mm-dd
+                        const convertDate = (dateStr) => {
+                            const parts = dateStr.split('/');
+                            if (parts.length === 3) {
+                                return `${parts[2]}-${parts[1]}-${parts[0]}`;
+                            }
+                            return dateStr;
+                        };
+                        
+                        const fromDateStr = convertDate(this.customFromDate);
+                        const toDateStr = convertDate(this.customToDate);
+                        const fromDate = new Date(fromDateStr);
+                        const toDate = new Date(toDateStr);
 
                         let allItems = [];
                         const currentDate = new Date(fromDate);
@@ -594,6 +707,14 @@ $year = $year ?? date('Y');
                 this.filterType = type;
                 this.filterTypeLabel = label;
                 this.filterTypeOpen = false;
+                
+                // Nếu chuyển sang custom, khởi tạo lại Flatpickr
+                if (type === 'custom') {
+                    this.$nextTick(() => {
+                        this.initCustomDatePickers();
+                    });
+                }
+                
                 this.changeFilter();
             },
 
@@ -643,7 +764,17 @@ $year = $year ?? date('Y');
                 } else if (this.filterType === 'year') {
                     url = `/admin/api/payroll/export?month=1&year=${this.filterYear}&type=year`;
                 } else if (this.filterType === 'custom') {
-                    url = `/admin/api/payroll/export?from=${this.customFromDate}&to=${this.customToDate}&type=custom`;
+                    // Chuyển đổi dd/mm/yyyy sang yyyy-mm-dd
+                    const convertDate = (dateStr) => {
+                        const parts = dateStr.split('/');
+                        if (parts.length === 3) {
+                            return `${parts[2]}-${parts[1]}-${parts[0]}`;
+                        }
+                        return dateStr;
+                    };
+                    const fromDate = convertDate(this.customFromDate);
+                    const toDate = convertDate(this.customToDate);
+                    url = `/admin/api/payroll/export?from=${fromDate}&to=${toDate}&type=custom`;
                 }
 
                 window.open(url, '_blank');

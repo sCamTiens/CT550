@@ -33,7 +33,7 @@ $items = $items ?? [];
         @click="openCreate()">+ Thêm thương hiệu</button>
     </div>
   </div>
-
+  
   <!-- Table -->
   <div class="bg-white rounded-xl shadow pb-4">
     <!-- Loading overlay bên trong bảng -->
@@ -221,6 +221,29 @@ $items = $items ?? [];
     </div>
   </div>
 
+  <!-- Confirm Dialog -->
+  <div x-show="confirmDialog.show"
+    class="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-5 mt-[-200px]" style="display: none;">
+    <div class="bg-white w-full max-w-md rounded-xl shadow-lg" @click.outside="confirmDialog.show = false">
+      <div class="px-5 py-4 border-b">
+        <h3 class="text-xl font-bold text-[#002975]" x-text="confirmDialog.title"></h3>
+      </div>
+      <div class="p-5">
+        <p class="text-gray-600" x-text="confirmDialog.message"></p>
+      </div>
+      <div class="px-5 py-4 border-t flex gap-2 justify-end">
+        <button @click="confirmDialog.show = false; confirmDialog.onCancel()"
+          class="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-600 hover:text-white">
+          Hủy
+        </button>
+        <button @click="confirmDialog.show = false; confirmDialog.onConfirm()"
+          class="px-4 py-2 border border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white">
+          Xác nhận
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast lỗi nổi -->
   <div id="toast-container" class="z-[60]"></div>
 
@@ -278,6 +301,25 @@ $items = $items ?? [];
       form: { id: null, name: '', slug: '' },
       errors: { name: '', slug: '' },
       touched: { name: false, slug: false },
+
+      // Confirm Dialog
+      confirmDialog: {
+        show: false,
+        title: '',
+        message: '',
+        onConfirm: () => { },
+        onCancel: () => { }
+      },
+
+      showConfirm(title, message, onConfirm, onCancel = () => { }) {
+        this.confirmDialog = {
+          show: true,
+          title,
+          message,
+          onConfirm,
+          onCancel
+        };
+      },
 
       // ===== FILTERS =====
       openFilter: {
@@ -422,6 +464,22 @@ $items = $items ?? [];
         this.openFilter[key] = false;
       },
 
+      // ===== Statistics Functions =====
+      getTotalBrands() {
+        return this.filtered().length;
+      },
+
+      getRecentBrands() {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        return this.filtered().filter(b => {
+          if (!b.created_at) return false;
+          const createdDate = new Date(b.created_at);
+          return createdDate >= thirtyDaysAgo;
+        }).length;
+      },
+
       async init() { await this.fetchAll(); },
 
       // ===== pagination =====
@@ -530,16 +588,24 @@ $items = $items ?? [];
       },
 
       async remove(id) {
-        if (!confirm('Xóa thương hiệu này?')) return;
-        try {
-          const r = await fetch(`/admin/brands/${id}`, { method: 'DELETE' });
-          const res = await r.json();
-          if (!r.ok) throw new Error(res.error || 'Lỗi máy chủ khi xóa');
-          this.items = this.items.filter(x => x.id != id);
-          this.showToast('Xóa thương hiệu thành công!', 'success');
-        } catch (e) {
-          this.showToast(e.message || 'Không thể xóa thương hiệu', 'error');
-        }
+        const brand = this.items.find(b => b.id === id);
+        const brandName = brand ? brand.name : 'thương hiệu này';
+
+        this.showConfirm(
+          'Xác nhận xóa',
+          `Bạn có chắc chắn muốn xóa thương hiệu "${brandName}"?`,
+          async () => {
+            try {
+              const r = await fetch(`/admin/brands/${id}`, { method: 'DELETE' });
+              const res = await r.json();
+              if (!r.ok) throw new Error(res.error || 'Lỗi máy chủ khi xóa');
+              this.items = this.items.filter(x => x.id != id);
+              this.showToast('Xóa thương hiệu thành công!', 'success');
+            } catch (e) {
+              this.showToast(e.message || 'Không thể xóa thương hiệu', 'error');
+            }
+          }
+        );
       },
 
       // ===== toast =====

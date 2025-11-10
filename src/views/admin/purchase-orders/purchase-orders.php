@@ -34,6 +34,26 @@ $items = $items ?? [];
         </div>
     </div>
 
+    <!-- Thống kê tổng quan -->
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Tổng phiếu nhập</div>
+            <div class="text-2xl font-bold text-blue-600" x-text="getTotalPurchaseOrders()"></div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Tổng giá trị nhập</div>
+            <div class="text-2xl font-bold text-green-600" x-text="getTotalValue().toLocaleString('vi-VN')"></div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Đã thanh toán hết</div>
+            <div class="text-2xl font-bold text-purple-600" x-text="countByPaymentStatus('Đã thanh toán hết')"></div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Chưa đối soát</div>
+            <div class="text-2xl font-bold text-orange-600" x-text="countByPaymentStatus('Chưa đối soát')"></div>
+        </div>
+    </section>
+
     <!-- Table -->
     <div class="bg-white rounded-xl shadow pb-4">
         <!-- Loading overlay bên trong bảng -->
@@ -443,7 +463,10 @@ $items = $items ?? [];
                                 </template>
                                 <template x-if="viewItem.items && viewItem.items.length > 0">
                                     <template x-for="(item, idx) in viewItem.items" :key="idx">
-                                        <tr class="border-t hover:bg-gray-50">
+                                        <tr class="hover:bg-blue-50 border-b" :class="{ 
+                                                'border-t': idx > 0, 
+                                                'border-b-0': idx === viewItem.items.length - 1 
+                                            }">
                                             <td class="py-2 px-3" x-text="idx + 1"></td>
                                             <td class="py-2 px-3 break-words"
                                                 style="max-width: 200px; word-wrap: break-word; white-space: normal;"
@@ -489,6 +512,11 @@ $items = $items ?? [];
                 </div>
             </div>
             <div class="px-5 pb-5 pt-2 flex justify-end gap-3 border-t bg-white flex-shrink-0">
+                <button @click="printInvoice(viewItem)"
+                    class="px-4 py-2 rounded-md bg-[#002975] text-white hover:opacity-90 flex items-center gap-2">
+                    <i class="fa-solid fa-print"></i>
+                    In phiếu nhập
+                </button>
                 <button type="button" class="px-4 py-2 border rounded text-sm" @click="openView=false">Đóng</button>
             </div>
         </div>
@@ -563,6 +591,30 @@ $items = $items ?? [];
         </div>
     </div>
 
+    <!-- Confirm Dialog -->
+    <div x-show="confirmDialog.show"
+        class="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-5 mt-[-200px]"
+        style="display: none;">
+        <div class="bg-white w-full max-w-md rounded-xl shadow-lg" @click.outside="confirmDialog.show = false">
+            <div class="px-5 py-4 border-b">
+                <h3 class="text-xl font-bold text-[#002975]" x-text="confirmDialog.title"></h3>
+            </div>
+            <div class="p-5">
+                <p class="text-gray-600" x-text="confirmDialog.message"></p>
+            </div>
+            <div class="px-5 py-4 border-t flex gap-2 justify-end">
+                <button @click="confirmDialog.show = false; confirmDialog.onCancel()"
+                    class="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-600 hover:text-white">
+                    Hủy
+                </button>
+                <button @click="confirmDialog.show = false; confirmDialog.onConfirm()"
+                    class="px-4 py-2 border border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white">
+                    Xác nhận
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="toast-container" class="z-[60]"></div>
 
     <!-- Pagination -->
@@ -610,6 +662,14 @@ $items = $items ?? [];
             touched: {},
             errors: {},
             form: {},
+
+            confirmDialog: {
+                show: false,
+                title: '',
+                message: '',
+                onConfirm: () => { },
+                onCancel: () => { }
+            },
             currentPage: 1,
             perPage: 20,
             perPageOptions: [10, 20, 50, 100],
@@ -831,6 +891,21 @@ $items = $items ?? [];
                 } else {
                     return 'Đã thanh toán một phần';
                 }
+            },
+
+            // ===== Statistics Functions =====
+            getTotalPurchaseOrders() {
+                return this.filtered().length;
+            },
+
+            getTotalValue() {
+                return this.filtered().reduce((sum, po) => {
+                    return sum + (parseFloat(po.total_amount) || 0);
+                }, 0);
+            },
+
+            countByPaymentStatus(status) {
+                return this.filtered().filter(po => this.statusLabel(po) === status).length;
             },
 
             // -------------------------------------------
@@ -1184,7 +1259,7 @@ $items = $items ?? [];
                     // Cập nhật items với dữ liệu chi tiết
                     this.viewItem = {
                         ...this.viewItem,
-                        items: data.lines || []
+                        items: data.items || [] // Sửa từ data.lines sang data.items
                     };
                 } catch (e) {
                     console.error(e);
@@ -1325,22 +1400,45 @@ $items = $items ?? [];
                 }
             },
             async remove(id) {
-                if (!confirm('Xóa phiếu nhập này? Hành động này sẽ xóa tất cả dữ liệu liên quan (lô hàng, biến động kho, phiếu chi).')) return;
-                try {
-                    const res = await fetch(`/admin/api/purchase-orders/${id}`, { method: 'DELETE' });
-                    const data = await res.json();
+                const po = this.items.find(p => p.id === id);
+                const code = po ? po.code : 'phiếu nhập này';
 
-                    if (res.ok) {
-                        // Xóa khỏi danh sách
-                        this.items = this.items.filter(i => i.id !== id);
-                        this.showToast('Xóa phiếu nhập thành công!', 'success');
-                    } else {
-                        // Hiển thị lỗi từ server
-                        this.showToast(data.error || 'Không thể xóa phiếu nhập');
+                this.showConfirm(
+                    'Xác nhận xóa',
+                    `Bạn có chắc chắn muốn xóa phiếu nhập "${code}"?\n\nHành động này sẽ xóa tất cả dữ liệu liên quan (lô hàng, biến động kho, phiếu chi).`,
+                    async () => {
+                        try {
+                            const res = await fetch(`/admin/api/purchase-orders/${id}`, { method: 'DELETE' });
+                            const data = await res.json();
+
+                            if (res.ok) {
+                                // Xóa khỏi danh sách
+                                this.items = this.items.filter(i => i.id !== id);
+                                this.showToast('Xóa phiếu nhập thành công!', 'success');
+                            } else {
+                                // Hiển thị lỗi từ server
+                                this.showToast(data.error || 'Không thể xóa phiếu nhập');
+                            }
+                        } catch (e) {
+                            console.error(e);
+                            this.showToast('Không thể xóa phiếu nhập');
+                        }
                     }
-                } catch (e) {
-                    console.error(e);
-                    this.showToast('Không thể xóa phiếu nhập');
+                );
+            },
+
+            printInvoice(po) {
+                this.openView = false;
+
+                const printWindow = window.open(
+                    `/admin/purchase-orders/${po.id}/print`,
+                    '_blank'
+                );
+
+                if (printWindow) {
+                    printWindow.onload = function () {
+                        printWindow.print();
+                    };
                 }
             },
 
@@ -1502,6 +1600,16 @@ $items = $items ?? [];
                 } finally {
                     this.importing = false;
                 }
+            },
+
+            showConfirm(title, message, onConfirm, onCancel = () => { }) {
+                this.confirmDialog = {
+                    show: true,
+                    title,
+                    message,
+                    onConfirm,
+                    onCancel
+                };
             },
 
             showToast(msg, type = 'error') {

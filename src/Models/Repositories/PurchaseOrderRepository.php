@@ -298,7 +298,9 @@ class PurchaseOrderRepository
         $pdo = DB::pdo();
         $sql = "SELECT 
                     po.*, 
-                    s.name AS supplier_name, 
+                    s.name AS supplier_name,
+                    s.phone AS supplier_phone,
+                    s.address AS supplier_address,
                     u.full_name AS created_by_name,
                     u2.full_name AS updated_by_name
                 FROM purchase_orders po
@@ -364,7 +366,7 @@ class PurchaseOrderRepository
             }
         }
 
-        $po['lines'] = $lines;
+        $po['items'] = $lines; // Đổi từ 'lines' sang 'items' để khớp với template
 
         return $po;
     }

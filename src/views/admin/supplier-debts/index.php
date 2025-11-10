@@ -40,66 +40,29 @@ $items = $items ?? [];
     Admin / Quản lý công nợ / <span class="text-slate-800 font-medium">Công nợ nhà cung cấp</span>
 </nav>
 
-<div x-data="supplierDebts()" x-init="init()">
+<ec x-data="supplierDebts()" x-init="init()">
     <div class="flex items-center justify-between mb-4">
         <h1 class="text-3xl font-bold text-[#002975]">Công nợ nhà cung cấp</h1>
     </div>
 
     <!-- Statistics Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <!-- Tổng số NCC có nợ -->
-        <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg shadow-lg p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h3 class="text-sm font-medium opacity-90">Tổng số NCC có nợ</h3>
-                    <div class="text-3xl font-bold mt-2" x-text="items.length"></div>
-                </div>
-                <div class="bg-white bg-opacity-20 p-3 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h13v10H3V7z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M16 13h4l1 2v2h-5v-4z" />
-                        <circle cx="7.5" cy="17.5" r="1.5" />
-                        <circle cx="17.5" cy="17.5" r="1.5" />
-                    </svg>
-                </div>
-            </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Tổng số nhà cung cấp có công nợ</div>
+            <div class="text-2xl font-bold text-blue-600" x-text="items.length"></div>
         </div>
-
         <!-- Tổng công nợ -->
-        <div class="bg-gradient-to-br from-red-500 to-red-600 text-white rounded-lg shadow-lg p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h3 class="text-sm font-medium opacity-90">Tổng công nợ</h3>
-                    <div class="text-3xl font-bold mt-2" x-text="formatMoney(getTotalDebt())"></div>
-                </div>
-                <div class="bg-white bg-opacity-20 p-3 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V4m0 16v-4" />
-                    </svg>
-                </div>
-            </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Tổng công nợ</div>
+            <div class="text-2xl font-bold text-green-600" x-text="formatMoney(getTotalDebt())"></div>
         </div>
-
         <!-- Tổng số phiếu nhập nợ -->
-        <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white rounded-lg shadow-lg p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h3 class="text-sm font-medium opacity-90">Tổng phiếu nhập nợ</h3>
-                    <div class="text-3xl font-bold mt-2" x-text="getTotalDebtOrders()"></div>
-                </div>
-                <div class="bg-white bg-opacity-20 p-3 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                    </svg>
-                </div>
-            </div>
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="text-gray-500 text-sm mb-1">Tổng phiếu nhập nợ</div>
+            <div class="text-2xl font-bold text-purple-600" x-text="getTotalDebtOrders()"></div>
         </div>
-    </div>
+    </section>
 
     <!-- Table -->
     <div x-show="!loading" class="bg-white rounded-xl shadow pb-4">
@@ -454,530 +417,530 @@ $items = $items ?? [];
             </form>
         </div>
     </div>
-</div>
+    </div>
 
-<script>
-    function supplierDebts() {
-        const api = {
-            list: '/admin/api/supplier-debts/suppliers',
-            orders: id => `/admin/api/supplier-debts/orders?id=${id}`
-        };
+    <script>
+        function supplierDebts() {
+            const api = {
+                list: '/admin/api/supplier-debts/suppliers',
+                orders: id => `/admin/api/supplier-debts/orders?id=${id}`
+            };
 
-        return {
-            loading: true,
-            items: <?= json_encode($items, JSON_UNESCAPED_UNICODE) ?>,
-            showModal: false,
-            loadingOrders: false,
-            selectedSupplier: null,
-            debtOrders: [],
+            return {
+                loading: true,
+                items: <?= json_encode($items, JSON_UNESCAPED_UNICODE) ?>,
+                showModal: false,
+                loadingOrders: false,
+                selectedSupplier: null,
+                debtOrders: [],
 
-            // Modal thanh toán
-            showPaymentModal: false,
-            selectedOrder: null,
-            submitting: false,
-            paymentForm: {
-                amount: 0,
-                amountFormatted: '',
-                method: 'Tiền mặt', // Mặc định là tiền mặt
-                date: new Date().toISOString().split('T')[0],
-                note: ''
-            },
-
-            // ===== PHÂN TRANG =====
-            currentPage: 1,
-            perPage: 20,
-            perPageOptions: [5, 10, 20, 50, 100],
-
-            // ===== FILTERS =====
-            openFilter: {
-                name: false,
-                phone: false,
-                email: false,
-                debt_orders_count: false,
-                total_debt: false
-            },
-
-            filters: {
-                name: '',
-                phone: '',
-                email: '',
-                debt_orders_count: '',
-                total_debt: '',
-            },
-
-            // -------------------------------------------
-            // Hàm lọc tổng quát, hỗ trợ text / number / date
-            // -------------------------------------------
-            applyFilter(val, type, { value, from, to, dataType }) {
-                if (val == null) return false;
-
-                // ---------------- TEXT ----------------
-                if (dataType === 'text') {
-                    const hasAccent = (s) => /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(s);
-
-                    const normalize = (str) => String(str || '')
-                        .toLowerCase()
-                        .normalize('NFD')
-                        .replace(/[\u0300-\u036f]/g, '')
-                        .trim();
-
-                    const raw = String(val || '').toLowerCase();
-                    const str = normalize(val);
-                    const query = String(value || '').toLowerCase();
-                    const queryNoAccent = normalize(value);
-
-                    if (!query) return true;
-
-                    if (type === 'eq') return hasAccent(query)
-                        ? raw === query
-                        : str === queryNoAccent;
-
-                    if (type === 'contains' || type === 'like') {
-                        if (hasAccent(query)) {
-                            return raw.includes(query);
-                        } else {
-                            return str.includes(queryNoAccent);
-                        }
-                    }
-
-                    return true;
-                }
-
-                // ---------------- NUMBER ----------------
-                if (dataType === 'number') {
-                    const parseNum = (v) => {
-                        if (v === '' || v === null || v === undefined) return null;
-                        const s = String(v).replace(/[^\d.-]/g, '');
-                        const n = Number(s);
-                        return isNaN(n) ? null : n;
-                    };
-
-                    const num = parseNum(val);
-                    const v = parseNum(value);
-                    const f = parseNum(from);
-                    const t = parseNum(to);
-
-                    if (num === null) return false;
-                    if (!type) return true;
-
-                    if (type === 'eq') return v === null ? true : num === v;
-                    if (type === 'lt') return v === null ? true : num < v;
-                    if (type === 'gt') return v === null ? true : num > v;
-                    if (type === 'lte') return v === null ? true : num <= v;
-                    if (type === 'gte') return v === null ? true : num >= v;
-                    if (type === 'between') return f === null || t === null ? true : num >= f && num <= t;
-
-                    if (type === 'like') {
-                        const raw = String(val).replace(/[^\d]/g, '');
-                        const query = String(value || '').replace(/[^\d]/g, '');
-                        return raw.includes(query);
-                    }
-
-                    return true;
-                }
-
-                return true;
-            },
-
-            // ===== Lọc dữ liệu =====
-            filtered() {
-                let data = this.items || [];
-
-                // --- Lọc theo text ---
-                ['name', 'phone', 'email'].forEach(key => {
-                    if (this.filters[key]) {
-                        data = data.filter(o =>
-                            this.applyFilter(o[key], 'contains', {
-                                value: this.filters[key],
-                                dataType: 'text'
-                            })
-                        );
-                    }
-                });
-
-                // --- Lọc theo số ---
-                ['debt_orders_count', 'total_debt'].forEach(key => {
-                    if (this.filters[`${key}_type`]) {
-                        data = data.filter(o =>
-                            this.applyFilter(o[key], this.filters[`${key}_type`], {
-                                value: this.filters[`${key}_value`],
-                                from: this.filters[`${key}_from`],
-                                to: this.filters[`${key}_to`],
-                                dataType: 'number'
-                            })
-                        );
-                    }
-                });
-
-                return data;
-            },
-
-            // ===== Mở / đóng / reset filter =====
-            toggleFilter(key) {
-                for (const k in this.openFilter) this.openFilter[k] = false;
-                this.openFilter[key] = true;
-            },
-            closeFilter(key) { this.openFilter[key] = false; },
-            resetFilter(key) {
-                if (['debt_orders_count', 'total_debt'].includes(key)) {
-                    this.filters[`${key}_type`] = '';
-                    this.filters[`${key}_value`] = '';
-                    this.filters[`${key}_from`] = '';
-                    this.filters[`${key}_to`] = '';
-                } else {
-                    this.filters[key] = '';
-                }
-                this.openFilter[key] = false;
-            },
-
-            getPaymentStatus(order) {
-                const paid = parseFloat(order.paid_amount || 0);
-                const total = parseFloat(order.total_amount || 0);
-
-                if (paid === 0) return 'Chưa đối soát';
-                if (paid >= total) return 'Đã thanh toán hết';
-                return 'Đã thanh toán một phần';
-            },
-
-            openFilterDetail: {
-                code: false,
-                date: false,
-                total_amount: false,
-                paid_amount: false,
-                remaining_amount: false,
-                created_by_name: false,
-                status: false,
-            },
-
-            filtersDetail: {
-                code: '',
-                date: '',
-                total_amount_type: '', total_amount_value: '', total_amount_from: '', total_amount_to: '',
-                paid_amount_type: '', paid_amount_value: '', paid_amount_from: '', paid_amount_to: '',
-                remaining_amount_type: '', remaining_amount_value: '', remaining_amount_from: '', remaining_amount_to: '',
-                created_by_name: '',
-                status: '',
-            },
-
-            filteredDetail() {
-                let data = this.debtOrders || [];
-
-                // --- Lọc theo text (mã phiếu, ngày) ---
-                ['code'].forEach(key => {
-                    if (this.filtersDetail[key]) {
-                        data = data.filter(o =>
-                            this.applyFilter(o[key], 'contains', {
-                                value: this.filtersDetail[key],
-                                dataType: 'text'
-                            })
-                        );
-                    }
-                });
-
-                // --- Lọc theo trạng thái ---
-                if (this.filtersDetail.status) {
-                    data = data.filter(o =>
-                        this.getPaymentStatus(o) === this.filtersDetail.status
-                    );
-                }
-
-                // --- Lọc theo ngày ---
-                ['date'].forEach(key => {
-                    if (this.filters[`${key}_type`]) {
-                        data = data.filter(s =>
-                            this.applyFilter(s[key], this.filters[`${key}_type`], {
-                                value: this.filters[`${key}_value`],
-                                from: this.filters[`${key}_from`],
-                                to: this.filters[`${key}_to`],
-                                dataType: 'date'
-                            })
-                        );
-                    }
-                });
-
-                // --- Lọc theo số ---
-                ['total_amount', 'paid_amount', 'remaining_amount'].forEach(key => {
-                    if (this.filtersDetail[`${key}_type`]) {
-                        data = data.filter(o =>
-                            this.applyFilter(o[key], this.filtersDetail[`${key}_type`], {
-                                value: this.filtersDetail[`${key}_value`],
-                                from: this.filtersDetail[`${key}_from`],
-                                to: this.filtersDetail[`${key}_to`],
-                                dataType: 'number'
-                            })
-                        );
-                    }
-                });
-
-                return data;
-            },
-
-            toggleFilterDetail(key) {
-                for (const k in this.openFilterDetail) this.openFilterDetail[k] = false;
-                this.openFilterDetail[key] = true;
-            },
-            closeFilterDetail(key) { this.openFilterDetail[key] = false; },
-            resetFilterDetail(key) {
-                if (['total_amount', 'paid_amount', 'remaining_amount'].includes(key)) {
-                    this.filtersDetail[`${key}_type`] = '';
-                    this.filtersDetail[`${key}_value`] = '';
-                    this.filtersDetail[`${key}_from`] = '';
-                    this.filtersDetail[`${key}_to`] = '';
-                } else if (['date'].includes(key)) {
-                    this.filters[`${key}_type`] = '';
-                    this.filters[`${key}_value`] = '';
-                    this.filters[`${key}_from`] = '';
-                    this.filters[`${key}_to`] = '';
-                } else {
-                    this.filtersDetail[key] = '';
-                }
-                this.openFilterDetail[key] = false;
-            },
-
-            paginated() {
-                const start = (this.currentPage - 1) * this.perPage;
-                return this.filtered().slice(start, start + this.perPage);
-            },
-            totalPages() {
-                return Math.max(1, Math.ceil(this.filtered().length / this.perPage));
-            },
-            goToPage(p) {
-                if (p < 1) p = 1;
-                if (p > this.totalPages()) p = this.totalPages();
-                this.currentPage = p;
-            },
-
-            // ===== UTILITIES =====
-            formatCurrency(n) {
-                try {
-                    return new Intl.NumberFormat('en-US').format(n || 0); // dùng dấu phẩy
-                } catch {
-                    return n;
-                }
-            },
-
-            // ===== Xử lý định dạng khi nhập =====
-            formatAmountInput(e) {
-                let raw = e.target.value.replace(/,/g, ''); // bỏ dấu phẩy cũ
-                let num = parseFloat(raw);
-                if (!isNaN(num)) {
-                    this.paymentForm.amount = num;
-                    this.paymentForm.amountFormatted = new Intl.NumberFormat('en-US').format(num);
-                } else {
-                    this.paymentForm.amount = 0;
-                    this.paymentForm.amountFormatted = '';
-                }
-            },
-
-            async init() {
-                await this.loadSuppliers();
-            },
-
-            async loadSuppliers() {
-                this.loading = true;
-                try {
-                    const response = await fetch(api.list);
-                    const data = await response.json();
-
-                    if (data.success) {
-                        this.items = data.data || [];
-                    } else {
-                        this.showToast(data.message || 'Có lỗi xảy ra', 'error');
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    this.showToast('Không thể tải dữ liệu', 'error');
-                } finally {
-                    this.loading = false;
-                }
-            },
-
-            async viewDetail(supplier) {
-                this.selectedSupplier = supplier;
-                this.showModal = true;
-                this.debtOrders = [];
-                this.loadingOrders = true;
-
-                try {
-                    const response = await fetch(api.orders(supplier.id));
-                    const data = await response.json();
-
-                    if (data.success) {
-                        this.debtOrders = data.data || [];
-                    } else {
-                        this.showToast(data.message || 'Không thể tải danh sách phiếu nhập', 'error');
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    this.showToast('Không thể tải danh sách phiếu nhập', 'error');
-                } finally {
-                    this.loadingOrders = false;
-                }
-            },
-
-            // Reload orders without opening modal (dùng sau khi thanh toán)
-            async reloadOrders(supplierId) {
-                this.loadingOrders = true;
-                try {
-                    const response = await fetch(api.orders(supplierId));
-                    const data = await response.json();
-
-                    if (data.success) {
-                        this.debtOrders = data.data || [];
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                } finally {
-                    this.loadingOrders = false;
-                }
-            },
-
-            getTotalDebt() {
-                return this.items.reduce((sum, s) => sum + parseFloat(s.total_debt || 0), 0);
-            },
-
-            getTotalDebtOrders() {
-                return this.items.reduce((sum, s) => sum + parseInt(s.debt_orders_count || 0), 0);
-            },
-
-            openPaymentModal(order) {
-                this.selectedOrder = order;
-                this.paymentForm = {
-                    amount: order.remaining_debt,
-                    amountFormatted: this.formatCurrency(order.remaining_debt),
+                // Modal thanh toán
+                showPaymentModal: false,
+                selectedOrder: null,
+                submitting: false,
+                paymentForm: {
+                    amount: 0,
+                    amountFormatted: '',
                     method: 'Tiền mặt', // Mặc định là tiền mặt
                     date: new Date().toISOString().split('T')[0],
-                    note: `Thanh toán công nợ phiếu nhập ${order.order_code}`
-                };
-                this.showPaymentModal = true;
-            },
+                    note: ''
+                },
 
-            async submitPayment() {
-                if (this.submitting) return;
+                // ===== PHÂN TRANG =====
+                currentPage: 1,
+                perPage: 20,
+                perPageOptions: [5, 10, 20, 50, 100],
 
-                // Validate
-                if (!this.paymentForm.amount || this.paymentForm.amount <= 0) {
-                    this.showToast('Vui lòng nhập số tiền thanh toán', 'error');
-                    return;
-                }
+                // ===== FILTERS =====
+                openFilter: {
+                    name: false,
+                    phone: false,
+                    email: false,
+                    debt_orders_count: false,
+                    total_debt: false
+                },
 
-                if (this.paymentForm.amount > this.selectedOrder.remaining_debt) {
-                    this.showToast('Số tiền thanh toán không được lớn hơn số tiền còn nợ', 'error');
-                    return;
-                }
+                filters: {
+                    name: '',
+                    phone: '',
+                    email: '',
+                    debt_orders_count: '',
+                    total_debt: '',
+                },
 
-                this.submitting = true;
+                // -------------------------------------------
+                // Hàm lọc tổng quát, hỗ trợ text / number / date
+                // -------------------------------------------
+                applyFilter(val, type, { value, from, to, dataType }) {
+                    if (val == null) return false;
 
-                try {
-                    // Bước 1: Lấy mã phiếu chi tự động
-                    const codeResponse = await fetch('/admin/api/expense_vouchers/next-code');
-                    const codeData = await codeResponse.json();
+                    // ---------------- TEXT ----------------
+                    if (dataType === 'text') {
+                        const hasAccent = (s) => /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(s);
 
-                    if (!codeData.success || !codeData.code) {
-                        this.showToast('Không thể tạo mã phiếu chi', 'error');
-                        this.submitting = false;
+                        const normalize = (str) => String(str || '')
+                            .toLowerCase()
+                            .normalize('NFD')
+                            .replace(/[\u0300-\u036f]/g, '')
+                            .trim();
+
+                        const raw = String(val || '').toLowerCase();
+                        const str = normalize(val);
+                        const query = String(value || '').toLowerCase();
+                        const queryNoAccent = normalize(value);
+
+                        if (!query) return true;
+
+                        if (type === 'eq') return hasAccent(query)
+                            ? raw === query
+                            : str === queryNoAccent;
+
+                        if (type === 'contains' || type === 'like') {
+                            if (hasAccent(query)) {
+                                return raw.includes(query);
+                            } else {
+                                return str.includes(queryNoAccent);
+                            }
+                        }
+
+                        return true;
+                    }
+
+                    // ---------------- NUMBER ----------------
+                    if (dataType === 'number') {
+                        const parseNum = (v) => {
+                            if (v === '' || v === null || v === undefined) return null;
+                            const s = String(v).replace(/[^\d.-]/g, '');
+                            const n = Number(s);
+                            return isNaN(n) ? null : n;
+                        };
+
+                        const num = parseNum(val);
+                        const v = parseNum(value);
+                        const f = parseNum(from);
+                        const t = parseNum(to);
+
+                        if (num === null) return false;
+                        if (!type) return true;
+
+                        if (type === 'eq') return v === null ? true : num === v;
+                        if (type === 'lt') return v === null ? true : num < v;
+                        if (type === 'gt') return v === null ? true : num > v;
+                        if (type === 'lte') return v === null ? true : num <= v;
+                        if (type === 'gte') return v === null ? true : num >= v;
+                        if (type === 'between') return f === null || t === null ? true : num >= f && num <= t;
+
+                        if (type === 'like') {
+                            const raw = String(val).replace(/[^\d]/g, '');
+                            const query = String(value || '').replace(/[^\d]/g, '');
+                            return raw.includes(query);
+                        }
+
+                        return true;
+                    }
+
+                    return true;
+                },
+
+                // ===== Lọc dữ liệu =====
+                filtered() {
+                    let data = this.items || [];
+
+                    // --- Lọc theo text ---
+                    ['name', 'phone', 'email'].forEach(key => {
+                        if (this.filters[key]) {
+                            data = data.filter(o =>
+                                this.applyFilter(o[key], 'contains', {
+                                    value: this.filters[key],
+                                    dataType: 'text'
+                                })
+                            );
+                        }
+                    });
+
+                    // --- Lọc theo số ---
+                    ['debt_orders_count', 'total_debt'].forEach(key => {
+                        if (this.filters[`${key}_type`]) {
+                            data = data.filter(o =>
+                                this.applyFilter(o[key], this.filters[`${key}_type`], {
+                                    value: this.filters[`${key}_value`],
+                                    from: this.filters[`${key}_from`],
+                                    to: this.filters[`${key}_to`],
+                                    dataType: 'number'
+                                })
+                            );
+                        }
+                    });
+
+                    return data;
+                },
+
+                // ===== Mở / đóng / reset filter =====
+                toggleFilter(key) {
+                    for (const k in this.openFilter) this.openFilter[k] = false;
+                    this.openFilter[key] = true;
+                },
+                closeFilter(key) { this.openFilter[key] = false; },
+                resetFilter(key) {
+                    if (['debt_orders_count', 'total_debt'].includes(key)) {
+                        this.filters[`${key}_type`] = '';
+                        this.filters[`${key}_value`] = '';
+                        this.filters[`${key}_from`] = '';
+                        this.filters[`${key}_to`] = '';
+                    } else {
+                        this.filters[key] = '';
+                    }
+                    this.openFilter[key] = false;
+                },
+
+                getPaymentStatus(order) {
+                    const paid = parseFloat(order.paid_amount || 0);
+                    const total = parseFloat(order.total_amount || 0);
+
+                    if (paid === 0) return 'Chưa đối soát';
+                    if (paid >= total) return 'Đã thanh toán hết';
+                    return 'Đã thanh toán một phần';
+                },
+
+                openFilterDetail: {
+                    code: false,
+                    date: false,
+                    total_amount: false,
+                    paid_amount: false,
+                    remaining_amount: false,
+                    created_by_name: false,
+                    status: false,
+                },
+
+                filtersDetail: {
+                    code: '',
+                    date: '',
+                    total_amount_type: '', total_amount_value: '', total_amount_from: '', total_amount_to: '',
+                    paid_amount_type: '', paid_amount_value: '', paid_amount_from: '', paid_amount_to: '',
+                    remaining_amount_type: '', remaining_amount_value: '', remaining_amount_from: '', remaining_amount_to: '',
+                    created_by_name: '',
+                    status: '',
+                },
+
+                filteredDetail() {
+                    let data = this.debtOrders || [];
+
+                    // --- Lọc theo text (mã phiếu, ngày) ---
+                    ['code'].forEach(key => {
+                        if (this.filtersDetail[key]) {
+                            data = data.filter(o =>
+                                this.applyFilter(o[key], 'contains', {
+                                    value: this.filtersDetail[key],
+                                    dataType: 'text'
+                                })
+                            );
+                        }
+                    });
+
+                    // --- Lọc theo trạng thái ---
+                    if (this.filtersDetail.status) {
+                        data = data.filter(o =>
+                            this.getPaymentStatus(o) === this.filtersDetail.status
+                        );
+                    }
+
+                    // --- Lọc theo ngày ---
+                    ['date'].forEach(key => {
+                        if (this.filters[`${key}_type`]) {
+                            data = data.filter(s =>
+                                this.applyFilter(s[key], this.filters[`${key}_type`], {
+                                    value: this.filters[`${key}_value`],
+                                    from: this.filters[`${key}_from`],
+                                    to: this.filters[`${key}_to`],
+                                    dataType: 'date'
+                                })
+                            );
+                        }
+                    });
+
+                    // --- Lọc theo số ---
+                    ['total_amount', 'paid_amount', 'remaining_amount'].forEach(key => {
+                        if (this.filtersDetail[`${key}_type`]) {
+                            data = data.filter(o =>
+                                this.applyFilter(o[key], this.filtersDetail[`${key}_type`], {
+                                    value: this.filtersDetail[`${key}_value`],
+                                    from: this.filtersDetail[`${key}_from`],
+                                    to: this.filtersDetail[`${key}_to`],
+                                    dataType: 'number'
+                                })
+                            );
+                        }
+                    });
+
+                    return data;
+                },
+
+                toggleFilterDetail(key) {
+                    for (const k in this.openFilterDetail) this.openFilterDetail[k] = false;
+                    this.openFilterDetail[key] = true;
+                },
+                closeFilterDetail(key) { this.openFilterDetail[key] = false; },
+                resetFilterDetail(key) {
+                    if (['total_amount', 'paid_amount', 'remaining_amount'].includes(key)) {
+                        this.filtersDetail[`${key}_type`] = '';
+                        this.filtersDetail[`${key}_value`] = '';
+                        this.filtersDetail[`${key}_from`] = '';
+                        this.filtersDetail[`${key}_to`] = '';
+                    } else if (['date'].includes(key)) {
+                        this.filters[`${key}_type`] = '';
+                        this.filters[`${key}_value`] = '';
+                        this.filters[`${key}_from`] = '';
+                        this.filters[`${key}_to`] = '';
+                    } else {
+                        this.filtersDetail[key] = '';
+                    }
+                    this.openFilterDetail[key] = false;
+                },
+
+                paginated() {
+                    const start = (this.currentPage - 1) * this.perPage;
+                    return this.filtered().slice(start, start + this.perPage);
+                },
+                totalPages() {
+                    return Math.max(1, Math.ceil(this.filtered().length / this.perPage));
+                },
+                goToPage(p) {
+                    if (p < 1) p = 1;
+                    if (p > this.totalPages()) p = this.totalPages();
+                    this.currentPage = p;
+                },
+
+                // ===== UTILITIES =====
+                formatCurrency(n) {
+                    try {
+                        return new Intl.NumberFormat('en-US').format(n || 0); // dùng dấu phẩy
+                    } catch {
+                        return n;
+                    }
+                },
+
+                // ===== Xử lý định dạng khi nhập =====
+                formatAmountInput(e) {
+                    let raw = e.target.value.replace(/,/g, ''); // bỏ dấu phẩy cũ
+                    let num = parseFloat(raw);
+                    if (!isNaN(num)) {
+                        this.paymentForm.amount = num;
+                        this.paymentForm.amountFormatted = new Intl.NumberFormat('en-US').format(num);
+                    } else {
+                        this.paymentForm.amount = 0;
+                        this.paymentForm.amountFormatted = '';
+                    }
+                },
+
+                async init() {
+                    await this.loadSuppliers();
+                },
+
+                async loadSuppliers() {
+                    this.loading = true;
+                    try {
+                        const response = await fetch(api.list);
+                        const data = await response.json();
+
+                        if (data.success) {
+                            this.items = data.data || [];
+                        } else {
+                            this.showToast(data.message || 'Có lỗi xảy ra', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        this.showToast('Không thể tải dữ liệu', 'error');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async viewDetail(supplier) {
+                    this.selectedSupplier = supplier;
+                    this.showModal = true;
+                    this.debtOrders = [];
+                    this.loadingOrders = true;
+
+                    try {
+                        const response = await fetch(api.orders(supplier.id));
+                        const data = await response.json();
+
+                        if (data.success) {
+                            this.debtOrders = data.data || [];
+                        } else {
+                            this.showToast(data.message || 'Không thể tải danh sách phiếu nhập', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        this.showToast('Không thể tải danh sách phiếu nhập', 'error');
+                    } finally {
+                        this.loadingOrders = false;
+                    }
+                },
+
+                // Reload orders without opening modal (dùng sau khi thanh toán)
+                async reloadOrders(supplierId) {
+                    this.loadingOrders = true;
+                    try {
+                        const response = await fetch(api.orders(supplierId));
+                        const data = await response.json();
+
+                        if (data.success) {
+                            this.debtOrders = data.data || [];
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                    } finally {
+                        this.loadingOrders = false;
+                    }
+                },
+
+                getTotalDebt() {
+                    return this.items.reduce((sum, s) => sum + parseFloat(s.total_debt || 0), 0);
+                },
+
+                getTotalDebtOrders() {
+                    return this.items.reduce((sum, s) => sum + parseInt(s.debt_orders_count || 0), 0);
+                },
+
+                openPaymentModal(order) {
+                    this.selectedOrder = order;
+                    this.paymentForm = {
+                        amount: order.remaining_debt,
+                        amountFormatted: this.formatCurrency(order.remaining_debt),
+                        method: 'Tiền mặt', // Mặc định là tiền mặt
+                        date: new Date().toISOString().split('T')[0],
+                        note: `Thanh toán công nợ phiếu nhập ${order.order_code}`
+                    };
+                    this.showPaymentModal = true;
+                },
+
+                async submitPayment() {
+                    if (this.submitting) return;
+
+                    // Validate
+                    if (!this.paymentForm.amount || this.paymentForm.amount <= 0) {
+                        this.showToast('Vui lòng nhập số tiền thanh toán', 'error');
                         return;
                     }
 
-                    // Bước 2: Tạo phiếu chi
-                    const response = await fetch('/admin/api/expense_vouchers', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            code: codeData.code,
-                            supplier_id: this.selectedSupplier.id,
-                            purchase_order_id: this.selectedOrder.id,
-                            amount: this.paymentForm.amount,
-                            method: this.paymentForm.method,
-                            voucher_date: this.paymentForm.date,
-                            note: this.paymentForm.note,
-                            payment_type: 'supplier_debt'
-                        })
-                    });
+                    if (this.paymentForm.amount > this.selectedOrder.remaining_debt) {
+                        this.showToast('Số tiền thanh toán không được lớn hơn số tiền còn nợ', 'error');
+                        return;
+                    }
 
-                    const data = await response.json();
+                    this.submitting = true;
 
-                    if (data.success) {
-                        this.showToast('Thêm phiếu chi thành công!', 'success');
+                    try {
+                        // Bước 1: Lấy mã phiếu chi tự động
+                        const codeResponse = await fetch('/admin/api/expense_vouchers/next-code');
+                        const codeData = await codeResponse.json();
 
-                        // Lưu lại supplier ID trước khi reload
-                        const currentSupplierId = this.selectedSupplier.id;
-
-                        // Đóng modal thanh toán
-                        this.showPaymentModal = false;
-
-                        // Reload lại danh sách suppliers (cập nhật tổng nợ)
-                        await this.loadSuppliers();
-
-                        // Tìm lại supplier từ danh sách mới và cập nhật selectedSupplier
-                        const updatedSupplier = this.items.find(s => s.id === currentSupplierId);
-                        if (updatedSupplier) {
-                            this.selectedSupplier = updatedSupplier;
+                        if (!codeData.success || !codeData.code) {
+                            this.showToast('Không thể tạo mã phiếu chi', 'error');
+                            this.submitting = false;
+                            return;
                         }
 
-                        // Reload lại danh sách orders trong modal chi tiết
-                        await this.reloadOrders(currentSupplierId);
-                    } else {
-                        this.showToast(data.message || 'Có lỗi xảy ra', 'error');
+                        // Bước 2: Tạo phiếu chi
+                        const response = await fetch('/admin/api/expense_vouchers', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                code: codeData.code,
+                                supplier_id: this.selectedSupplier.id,
+                                purchase_order_id: this.selectedOrder.id,
+                                amount: this.paymentForm.amount,
+                                method: this.paymentForm.method,
+                                voucher_date: this.paymentForm.date,
+                                note: this.paymentForm.note,
+                                payment_type: 'supplier_debt'
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            this.showToast('Thêm phiếu chi thành công!', 'success');
+
+                            // Lưu lại supplier ID trước khi reload
+                            const currentSupplierId = this.selectedSupplier.id;
+
+                            // Đóng modal thanh toán
+                            this.showPaymentModal = false;
+
+                            // Reload lại danh sách suppliers (cập nhật tổng nợ)
+                            await this.loadSuppliers();
+
+                            // Tìm lại supplier từ danh sách mới và cập nhật selectedSupplier
+                            const updatedSupplier = this.items.find(s => s.id === currentSupplierId);
+                            if (updatedSupplier) {
+                                this.selectedSupplier = updatedSupplier;
+                            }
+
+                            // Reload lại danh sách orders trong modal chi tiết
+                            await this.reloadOrders(currentSupplierId);
+                        } else {
+                            this.showToast(data.message || 'Có lỗi xảy ra', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        this.showToast('Không thể thêm phiếu chi', 'error');
+                    } finally {
+                        this.submitting = false;
                     }
-                } catch (error) {
-                    console.error('Error:', error);
-                    this.showToast('Không thể thêm phiếu chi', 'error');
-                } finally {
-                    this.submitting = false;
-                }
-            },
+                },
 
-            formatMoney(amount) {
-                return new Intl.NumberFormat('vi-VN', {
-                    style: 'currency',
-                    currency: 'VND'
-                }).format(amount || 0);
-            },
+                formatMoney(amount) {
+                    return new Intl.NumberFormat('vi-VN', {
+                        style: 'currency',
+                        currency: 'VND'
+                    }).format(amount || 0);
+                },
 
-            formatDate(dateString) {
-                if (!dateString) return '-';
-                const date = new Date(dateString);
-                return date.toLocaleDateString('vi-VN');
-            },
+                formatDate(dateString) {
+                    if (!dateString) return '-';
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString('vi-VN');
+                },
 
-            showToast(msg, type = 'success') {
-                const box = document.getElementById('toast-container');
-                box.innerHTML = '';
+                showToast(msg, type = 'success') {
+                    const box = document.getElementById('toast-container');
+                    box.innerHTML = '';
 
-                const toast = document.createElement('div');
-                toast.className =
-                    `fixed top-5 right-5 z-[9999] flex items-center w-[400px] p-4 mb-4 text-base font-semibold
+                    const toast = document.createElement('div');
+                    toast.className =
+                        `fixed top-5 right-5 z-[9999] flex items-center w-[400px] p-4 mb-4 text-base font-semibold
                     ${type === 'success'
-                        ? 'text-green-700 border-green-400'
-                        : type === 'warning'
-                            ? 'text-yellow-700 border-yellow-400'
-                            : 'text-red-700 border-red-400'}
+                            ? 'text-green-700 border-green-400'
+                            : type === 'warning'
+                                ? 'text-yellow-700 border-yellow-400'
+                                : 'text-red-700 border-red-400'}
                     bg-white rounded-xl shadow-lg border-2`;
 
-                toast.innerHTML = `
+                    toast.innerHTML = `
                     <svg class="flex-shrink-0 w-6 h-6 ${type === 'success' ? 'text-green-600' : type === 'warning' ? 'text-yellow-600' : 'text-red-600'} mr-3" 
                         xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         ${type === 'success'
-                        ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M5 13l4 4L19 7" />`
-                        : type === 'warning'
                             ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M5 13l4 4L19 7" />`
+                            : type === 'warning'
+                                ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />`
-                            : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`}
                     </svg>
                     <div class="flex-1">${msg}</div>
                     `;
 
-                box.appendChild(toast);
+                    box.appendChild(toast);
 
-                setTimeout(() => toast.remove(), 5000);
+                    setTimeout(() => toast.remove(), 5000);
+                }
             }
         }
-    }
-</script>
+    </script>
 
-<?php require __DIR__ . '/../partials/layout-end.php'; ?>
+    <?php require __DIR__ . '/../partials/layout-end.php'; ?>

@@ -236,6 +236,29 @@ $items = $items ?? [];
             </div>
         </div>
 
+        <!-- Confirm Dialog -->
+        <div x-show="confirmDialog.show" class="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-5 mt-[-200px]"
+            style="display: none;">
+            <div class="bg-white w-full max-w-md rounded-xl shadow-lg" @click.outside="confirmDialog.show = false">
+                <div class="px-5 py-4 border-b">
+                    <h3 class="text-xl font-bold text-[#002975]" x-text="confirmDialog.title"></h3>
+                </div>
+                <div class="p-5">
+                    <p class="text-gray-600" x-text="confirmDialog.message"></p>
+                </div>
+                <div class="px-5 py-4 border-t flex gap-2 justify-end">
+                    <button @click="confirmDialog.show = false; confirmDialog.onCancel()"
+                        class="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-600 hover:text-white">
+                        Hủy
+                    </button>
+                    <button @click="confirmDialog.show = false; confirmDialog.onConfirm()"
+                        class="px-4 py-2 border border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white">
+                        Xác nhận
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Toast -->
         <div id="toast-container" class="z-[60]"></div>
     </div>
@@ -302,6 +325,24 @@ $items = $items ?? [];
             currentPage: 1,
             perPage: 20,
             perPageOptions: [5, 10, 20, 50, 100],
+
+            confirmDialog: {
+                show: false,
+                title: '',
+                message: '',
+                onConfirm: () => {},
+                onCancel: () => {}
+            },
+
+            showConfirm(title, message, onConfirm, onCancel = () => {}) {
+                this.confirmDialog = {
+                    show: true,
+                    title,
+                    message,
+                    onConfirm,
+                    onCancel
+                };
+            },
 
             paginated() {
                 const start = (this.currentPage - 1) * this.perPage;
@@ -699,15 +740,24 @@ $items = $items ?? [];
             },
 
             async remove(id) {
-                if (!confirm('Xóa mã giảm giá này?')) return;
-                try {
-                    const r = await fetch(api.remove(id), { method: 'DELETE' });
-                    if (!r.ok) throw new Error('Lỗi server');
-                    await this.fetchAll();
-                    this.showToast('Xóa thành công!', 'success');
-                } catch (e) {
-                    this.showToast(e.message || 'Lỗi', 'error');
-                }
+                const coupon = this.items.find(c => Number(c.id) === Number(id));
+                const code = coupon ? coupon.code : 'mã giảm giá này';
+                
+                this.showConfirm(
+                    'Xác nhận xóa',
+                    `Bạn có chắc chắn muốn xóa mã giảm giá "${code}"?`,
+                    async () => {
+                        try {
+                            const r = await fetch(api.remove(id), { method: 'DELETE' });
+                            if (!r.ok) throw new Error('Xóa thất bại');
+                            await this.fetchAll();
+                            this.showToast('Xóa thành công!', 'success');
+                        } catch (e) {
+                            console.error(e);
+                            this.showToast(e.message || 'Lỗi', 'error');
+                        }
+                    }
+                );
             },
 
             formatCurrency(n) {
