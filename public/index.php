@@ -264,6 +264,7 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/api/orders/{id}/items', [AdminOrder::class, 'getItems']);
     $r->get('/orders/{id}/print', [AdminOrder::class, 'print']);
     $r->post('/orders', [AdminOrder::class, 'store']);
+    $r->put('/orders/{id}', [AdminOrder::class, 'update']);
     $r->post('/api/orders/export', [AdminOrder::class, 'export']);
     $r->delete('/orders/{id}', [AdminOrder::class, 'destroy']);
 
@@ -325,6 +326,12 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/api/reports/order-status', [AdminReports::class, 'apiOrderStatus']);
     $r->get('/api/reports/filter', [AdminReports::class, 'apiFilter']);
     $r->get('/api/reports/export', [AdminReports::class, 'apiExport']);
+    
+    // API danh sách cho dropdown filters
+    $r->get('/api/reports/staff-list', [AdminReports::class, 'apiStaffList']);
+    $r->get('/api/reports/product-list', [AdminReports::class, 'apiProductList']);
+    $r->get('/api/reports/customer-list', [AdminReports::class, 'apiCustomerList']);
+    $r->get('/api/reports/supplier-list', [AdminReports::class, 'apiSupplierList']);
 
     // Import History (Lịch sử nhập file - Tất cả modules)
     $r->get('/import-history', [AdminImportHistory::class, 'index']);
@@ -364,6 +371,8 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/payroll', [AdminPayroll::class, 'index']);
     $r->get('/api/payroll', [AdminPayroll::class, 'apiIndex']);
     $r->get('/api/payroll/export', [AdminPayroll::class, 'export']);
+    $r->get('/api/payroll/salary-history', [AdminPayroll::class, 'getSalaryHistory']);
+    $r->get('/api/payroll/salary-history/export', [AdminPayroll::class, 'exportSalaryHistory']);
     $r->post('/api/payroll/calculate', [AdminPayroll::class, 'calculate']);
     $r->post('/api/payroll/calculate/{userId}', [AdminPayroll::class, 'calculateOne']);
     $r->put('/api/payroll/{id}/bonus-deduction', [AdminPayroll::class, 'updateBonusDeduction']);

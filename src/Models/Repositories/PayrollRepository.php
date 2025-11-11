@@ -363,6 +363,31 @@ class PayrollRepository
     }
 
     /**
+     * Lấy lịch sử thay đổi lương của nhân viên
+     */
+    public function getSalaryHistory(int $userId): array
+    {
+        $sql = "SELECT 
+                    sh.id,
+                    sh.user_id,
+                    sh.salary,
+                    sh.from_date,
+                    sh.to_date,
+                    sh.note,
+                    sh.created_at,
+                    u.full_name,
+                    u.username
+                FROM salary_history sh
+                INNER JOIN users u ON sh.user_id = u.id
+                WHERE sh.user_id = ?
+                ORDER BY sh.from_date DESC";
+        
+        $stmt = DB::pdo()->prepare($sql);
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
      * Lấy tất cả bảng lương
      */
     public function all(): array

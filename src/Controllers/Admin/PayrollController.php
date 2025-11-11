@@ -3,15 +3,19 @@ namespace App\Controllers\Admin;
 
 use App\Models\Repositories\PayrollRepository;
 use App\Models\Repositories\StaffRepository;
+use App\Models\Repositories\AttendanceRepository;
+use App\Services\EmailService;
 
 class PayrollController extends BaseAdminController
 {
     protected $repo;
+    private $emailService;
 
     public function __construct()
     {
         parent::__construct();
         $this->repo = new PayrollRepository();
+        $this->emailService = new EmailService();
     }
 
     /**
@@ -202,6 +206,41 @@ class PayrollController extends BaseAdminController
             
             $expenseId = $expenseRepo->create($expenseData, $currentUser);
             
+            // Gửi email thông báo cho nhân viên
+            try {
+                // Lấy thông tin nhân viên
+                $staffRepo = new StaffRepository();
+                $staff = $staffRepo->find($payroll['user_id']); // find() chấp nhận user_id
+                
+                if ($staff && !empty($staff['email'])) {
+                    // Lấy dữ liệu chấm công của nhân viên trong tháng
+                    $attRepo = new AttendanceRepository();
+                    $attendances = $attRepo->getByUserAndMonth(
+                        $payroll['user_id'], 
+                        (int)$payroll['month'], 
+                        (int)$payroll['year']
+                    );
+                    
+                    // Gửi email kèm PDF
+                    $emailResult = $this->emailService->sendPayrollNotification(
+                        $staff,
+                        $payroll,
+                        $attendances,
+                        $payroll['month'],
+                        $payroll['year']
+                    );
+                    
+                    if (!$emailResult['success']) {
+                        error_log("Failed to send payroll email to {$staff['email']}: {$emailResult['message']}");
+                    }
+                } else {
+                    error_log("Staff user_id {$payroll['user_id']} has no email address");
+                }
+            } catch (\Throwable $emailError) {
+                // Log lỗi nhưng không làm gián đoạn quá trình trả lương
+                error_log("Email error for payroll {$id}: " . $emailError->getMessage());
+            }
+            
             $this->json([
                 'message' => 'Đã tạo phiếu chi và trả lương thành công',
                 'expense_id' => $expenseId
@@ -238,7 +277,10 @@ class PayrollController extends BaseAdminController
             }
             
             $expenseRepo = new \App\Models\Repositories\ExpenseVoucherRepository();
+            $staffRepo = new StaffRepository();
+            $attRepo = new AttendanceRepository();
             $successCount = 0;
+            $emailCount = 0;
             $errors = [];
             
             foreach ($approvedPayrolls as $payroll) {
@@ -259,6 +301,34 @@ class PayrollController extends BaseAdminController
                     
                     $expenseRepo->create($expenseData, $currentUser);
                     $successCount++;
+                    
+                    // Gửi email cho nhân viên
+                    try {
+                        $staff = $staffRepo->find($payroll['user_id']);
+                        
+                        if ($staff && !empty($staff['email'])) {
+                            $attendances = $attRepo->getByUserAndMonth(
+                                $payroll['user_id'], 
+                                (int)$month, 
+                                (int)$year
+                            );
+                            
+                            $emailResult = $this->emailService->sendPayrollNotification(
+                                $staff,
+                                $payroll,
+                                $attendances,
+                                $month,
+                                $year
+                            );
+                            
+                            if ($emailResult['success']) {
+                                $emailCount++;
+                            }
+                        }
+                    } catch (\Throwable $emailError) {
+                        error_log("Email error for payroll {$payroll['id']}: " . $emailError->getMessage());
+                    }
+                    
                 } catch (\Throwable $e) {
                     $errors[] = $payroll['full_name'] . ': ' . $e->getMessage();
                 }
@@ -266,6 +336,9 @@ class PayrollController extends BaseAdminController
             
             $total = count($approvedPayrolls);
             $message = "Đã tạo {$successCount}/{$total} phiếu chi thành công";
+            if ($emailCount > 0) {
+                $message .= " và gửi {$emailCount} email thông báo";
+            }
             if (!empty($errors)) {
                 $message .= '. Lỗi: ' . implode('; ', $errors);
             }
@@ -460,6 +533,148 @@ class PayrollController extends BaseAdminController
             // Download file
             $filenamePart = str_replace(' ', '_', $title);
             $filename = 'BangLuong_' . $filenamePart . '_' . date('dmY_His') . '.xlsx';
+            
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            header('Content-Disposition: attachment;filename="' . $filename . '"');
+            header('Cache-Control: max-age=0');
+            
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            $writer->save('php://output');
+            exit;
+            
+        } catch (\Throwable $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * API: Lấy lịch sử thay đổi lương của nhân viên
+     * GET /admin/api/payroll/salary-history?user_id=X
+     */
+    public function getSalaryHistory()
+    {
+        try {
+            $userId = $_GET['user_id'] ?? null;
+            
+            if (!$userId) {
+                $this->json(['success' => false, 'error' => 'Thiếu user_id'], 400);
+                return;
+            }
+
+            $history = $this->repo->getSalaryHistory((int)$userId);
+            
+            $this->json([
+                'success' => true,
+                'data' => $history
+            ]);
+        } catch (\Throwable $e) {
+            $this->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * API: Xuất Excel lịch sử thay đổi lương
+     * GET /admin/api/payroll/salary-history/export?user_id=X
+     */
+    public function exportSalaryHistory()
+    {
+        try {
+            $userId = $_GET['user_id'] ?? null;
+            
+            if (!$userId) {
+                $this->json(['error' => 'Thiếu user_id'], 400);
+                return;
+            }
+
+            $history = $this->repo->getSalaryHistory((int)$userId);
+            
+            if (empty($history)) {
+                $this->json(['error' => 'Không có dữ liệu'], 404);
+                return;
+            }
+
+            // Lấy thông tin nhân viên
+            $staffInfo = $history[0] ?? [];
+            $staffName = $staffInfo['full_name'] ?? 'Nhân viên';
+            
+            // Tạo file Excel
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            
+            // Header
+            $sheet->setCellValue('A1', 'LỊCH SỬ THAY ĐỔI LƯƠNG');
+            $sheet->mergeCells('A1:F1');
+            $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+            $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            
+            $sheet->setCellValue('A2', 'Nhân viên: ' . $staffName);
+            $sheet->mergeCells('A2:F2');
+            $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(12);
+            
+            $sheet->setCellValue('A3', 'Ngày xuất: ' . date('d/m/Y H:i:s'));
+            $sheet->mergeCells('A3:F3');
+            
+            // Column headers
+            $headers = ['STT', 'Từ ngày', 'Đến ngày', 'Lương cơ bản', 'Ghi chú', 'Ngày tạo'];
+            $col = 'A';
+            foreach ($headers as $header) {
+                $sheet->setCellValue($col . '5', $header);
+                $col++;
+            }
+            
+            // Style headers
+            $sheet->getStyle('A5:F5')->applyFromArray([
+                'font' => ['bold' => true, 'color' => ['argb' => 'FFFFFFFF']],
+                'fill' => [
+                    'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                    'startColor' => ['argb' => 'FF002975']
+                ],
+                'alignment' => [
+                    'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                    'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
+                ]
+            ]);
+            
+            // Set column widths
+            $sheet->getColumnDimension('A')->setWidth(8);
+            $sheet->getColumnDimension('B')->setWidth(15);
+            $sheet->getColumnDimension('C')->setWidth(15);
+            $sheet->getColumnDimension('D')->setWidth(20);
+            $sheet->getColumnDimension('E')->setWidth(40);
+            $sheet->getColumnDimension('F')->setWidth(20);
+            
+            // Data rows
+            $row = 6;
+            $stt = 1;
+            foreach ($history as $item) {
+                $sheet->setCellValue('A' . $row, $stt++);
+                $sheet->setCellValue('B' . $row, $item['from_date'] ?? '-');
+                $sheet->setCellValue('C' . $row, $item['to_date'] ?? 'Hiện tại');
+                $sheet->setCellValue('D' . $row, number_format($item['salary'] ?? 0, 0, ',', '.') . ' đ');
+                $sheet->setCellValue('E' . $row, $item['note'] ?? '-');
+                $sheet->setCellValue('F' . $row, $item['created_at'] ?? '-');
+                
+                // Center align STT
+                $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                // Right align salary
+                $sheet->getStyle('D' . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+                
+                $row++;
+            }
+            
+            // Borders
+            $lastRow = $row - 1;
+            $sheet->getStyle('A5:F' . $lastRow)->applyFromArray([
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                        'color' => ['argb' => 'FF000000'],
+                    ],
+                ],
+            ]);
+            
+            // Download file
+            $filename = 'LichSuLuong_' . str_replace(' ', '_', $staffName) . '_' . date('dmY_His') . '.xlsx';
             
             header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
             header('Content-Disposition: attachment;filename="' . $filename . '"');

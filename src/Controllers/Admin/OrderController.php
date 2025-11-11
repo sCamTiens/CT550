@@ -3,6 +3,7 @@ namespace App\Controllers\Admin;
 
 use App\Models\Repositories\OrderRepository;
 use App\Controllers\Admin\AuthController;
+use App\Services\EmailService;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -12,11 +13,13 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 class OrderController extends BaseAdminController
 {
     private $orderRepo;
+    private $emailService;
 
     public function __construct()
     {
         AuthController::requirePasswordChanged();
         $this->orderRepo = new OrderRepository();
+        $this->emailService = new EmailService();
     }
 
     /** GET /admin/orders (trả về view) */
@@ -63,9 +66,40 @@ class OrderController extends BaseAdminController
             $id = $this->orderRepo->create($data, $currentUser);
             error_log("Order created successfully with ID: " . $id);
 
+            // Lấy thông tin đơn hàng vừa tạo
+            $order = $this->orderRepo->findOne($id);
+            
+            // Gửi email nếu khách hàng có email
+            if (!empty($data['customer_id'])) {
+                try {
+                    // Lấy thông tin khách hàng
+                    $customer = $this->orderRepo->getCustomerInfo($data['customer_id']);
+                    
+                    if (!empty($customer['email'])) {
+                        // Lấy danh sách sản phẩm trong đơn hàng
+                        $items = $this->orderRepo->getOrderItems($id);
+                        
+                        // Convert Order object to array for email
+                        $orderArray = json_decode(json_encode($order), true);
+                        
+                        // Gửi email
+                        $emailResult = $this->emailService->sendOrderInvoice($orderArray, $customer, $items);
+                        error_log("Email send result: " . json_encode($emailResult));
+                    } else {
+                        error_log("Customer has no email address");
+                    }
+                } catch (\Exception $e) {
+                    // Log lỗi nhưng không làm fail request
+                    error_log("Failed to send email: " . $e->getMessage());
+                    error_log("Stack trace: " . $e->getTraceAsString());
+                }
+            }
+
             http_response_code(200);
             header('Content-Type: application/json; charset=utf-8');
-            echo json_encode($this->orderRepo->findOne($id), JSON_UNESCAPED_UNICODE);
+            // Convert Order object to array before JSON encode
+            $orderArray = $order ? json_decode(json_encode($order), true) : ['id' => $id];
+            echo json_encode($orderArray, JSON_UNESCAPED_UNICODE);
             exit;
         } catch (\PDOException $e) {
             error_log("=== PDO EXCEPTION ===");
@@ -107,8 +141,11 @@ class OrderController extends BaseAdminController
 
         try {
             $this->orderRepo->update($id, $data, $currentUser);
+            $order = $this->orderRepo->findOne($id);
+            // Convert Order object to array before JSON encode
+            $orderArray = $order ? json_decode(json_encode($order), true) : ['id' => $id];
             header('Content-Type: application/json; charset=utf-8');
-            echo json_encode($this->orderRepo->findOne($id), JSON_UNESCAPED_UNICODE);
+            echo json_encode($orderArray, JSON_UNESCAPED_UNICODE);
             exit;
         } catch (\PDOException $e) {
             http_response_code(500);

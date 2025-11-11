@@ -56,107 +56,108 @@ $items = $items ?? [];
 
   <!-- Table -->
   <div class="bg-white rounded-xl shadow pb-4">
-        <!-- Loading overlay bên trong bảng -->
-        <template x-if="loading">
-            <div class="absolute inset-0 flex flex-col items-center justify-center bg-white bg-opacity-70 z-10">
-                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                <p class="mt-2 text-gray-600">Đang tải dữ liệu...</p>
-            </div>
-        </template>
+    <!-- Loading overlay bên trong bảng -->
+    <template x-if="loading">
+      <div class="absolute inset-0 flex flex-col items-center justify-center bg-white bg-opacity-70 z-10">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <p class="mt-2 text-gray-600">Đang tải dữ liệu...</p>
+      </div>
+    </template>
     <div style="overflow-x:auto; max-width:100%;" class="pb-40">
       <table style="width:200%; min-width:1200px; border-collapse:collapse;">
-        <thead> <tr class="bg-gray-50 text-slate-600">
-          <th class="py-2 px-4 whitespace-nowrap text-center">Thao tác</th>
-          <th class="py-2 px-4 whitespace-nowrap text-center">Ảnh</th>
-          <?= textFilterPopover('sku', 'SKU') ?>
-          <?= textFilterPopover('barcode', 'Mã vạch') ?>
-          <?= textFilterPopover('name', 'Tên') ?>
-          <?= textFilterPopover('slug', 'Slug') ?>
-          <?= textFilterPopover('brand', 'Thương hiệu') ?>
+        <thead>
+          <tr class="bg-gray-50 text-slate-600">
+            <th class="py-2 px-4 whitespace-nowrap text-center">Thao tác</th>
+            <th class="py-2 px-4 whitespace-nowrap text-center">Ảnh</th>
+            <?= textFilterPopover('sku', 'SKU') ?>
+            <?= textFilterPopover('barcode', 'Mã vạch') ?>
+            <?= textFilterPopover('name', 'Tên') ?>
+            <?= textFilterPopover('slug', 'Slug') ?>
+            <?= textFilterPopover('brand', 'Thương hiệu') ?>
             <?= textFilterPopover('category', 'Loại') ?>
             <?= numberFilterPopover('sale_price', 'Giá bán') ?>
             <?= numberFilterPopover('cost_price', 'Giá nhập') ?>
             <?= textFilterPopover('unit', 'Đơn vị tính') ?>
-          <?= selectFilterPopover('status', 'Trạng thái', [
-            '' => '-- Tất cả --',
-            '1' => 'Bán',
-            '0' => 'Ẩn'
-          ]) ?>
-          <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
-          <?= textFilterPopover('created_by', 'Người tạo') ?>
-          <?= dateFilterPopover('updated_at', 'Thời gian cập nhật') ?>
-          <?= textFilterPopover('updated_by', 'Người cập nhật') ?>
+            <?= selectFilterPopover('status', 'Trạng thái', [
+              '' => '-- Tất cả --',
+              '1' => 'Bán',
+              '0' => 'Ẩn'
+            ]) ?>
+            <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
+            <?= textFilterPopover('created_by', 'Người tạo') ?>
+            <?= dateFilterPopover('updated_at', 'Thời gian cập nhật') ?>
+            <?= textFilterPopover('updated_by', 'Người cập nhật') ?>
           </tr>
-          </thead>
+        </thead>
 
-          <tbody>
-            <template x-for="p in paginated()" :key="p.id">
-              <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
-                <td class="py-2 px-4 space-x-2 text-center">
-                  <button @click="openEditModal(p)" class="p-2 rounded hover:bg-gray-100 text-[#002975]" title="Sửa">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
-                      stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                    </svg>
-                  </button>
-                  <button @click="remove(p.id)" class="p-2 rounded hover:bg-gray-100 text-[#002975]" title="Xóa">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
-                      stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </td>
-                <td class="py-2 px-4 text-center">
-                  <img :src="p.image_url" class="w-12 h-12 object-cover rounded-full border mx-auto" :alt="p.name">
-                </td>
-                <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.sku"></td>
-                <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.barcode"></td>
-                <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.name"></td>
-                <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.slug"></td>
-                <td class="py-2 px-4 break-words whitespace-pre-line"
-                  :class="(p.brand_name || '—') === '—' ? 'text-center' : 'text-left'" x-text="p.brand_name || '—'">
-                </td>
-                <td class="py-2 px-4 break-words whitespace-pre-line"
-                  :class="(p.category_name || '—') === '—' ? 'text-center' : 'text-right'"
-                  x-text="p.category_name || '—'"></td>
-                <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="formatCurrency(p.sale_price)">
-                </td>
-                <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="formatCurrency(p.cost_price)">
-                </td>
-                <td class="py-2 px-4 break-words whitespace-pre-line"
-                  :class="(p.unit_name || '—') === '—' ? 'text-center' : 'text-left'" x-text="p.unit_name || '—'"></td>
-                <td class="py-2 px-4 break-words whitespace-pre-line text-center">
-                  <span class="px-2 py-0.5 rounded text-xs"
-                    :class="p.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
-                    x-text="p.is_active ? 'Bán' : 'Ẩn'"></span>
-                </td>
-                <td class="py-2 px-4 break-words whitespace-pre-line text-right"
-                  :class="(p.created_at || '—') === '—' ? 'text-center' : 'text-right'" x-text="p.created_at || '—'">
-                </td>
-                <td class="py-2 px-4 break-words whitespace-pre-line"
-                  :class="(p.created_by_name || '—') === '—' ? 'text-center' : 'text-left'"
-                  x-text="p.created_by_name || '—'"></td>
-                <td class="py-2 px-4 break-words whitespace-pre-line text-right"
-                  :class="(p.updated_at || '—') === '—' ? 'text-center' : 'text-right'" x-text="p.updated_at || '—'">
-                </td>
-                <td class="py-2 px-4 break-words whitespace-pre-line"
-                  :class="(p.updated_by_name || '—') === '—' ? 'text-center' : 'text-left'"
-                  x-text="p.updated_by_name || '—'"></td>
-              </tr>
-            </template>
-
-            <tr x-show="!loading && filtered().length===0">
-              <td colspan="10" class="py-12 text-center text-slate-500">
-                <div class="flex flex-col items-center justify-center">
-                  <img src="/assets/images/Null.png" alt="Trống" class="w-40 h-24 mb-3 opacity-80">
-                  <div class="text-lg text-slate-300">Trống</div>
-                </div>
+        <tbody>
+          <template x-for="p in paginated()" :key="p.id">
+            <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
+              <td class="py-2 px-4 space-x-2 text-center">
+                <button @click="openEditModal(p)" class="p-2 rounded hover:bg-gray-100 text-[#002975]" title="Sửa">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+                <button @click="remove(p.id)" class="p-2 rounded hover:bg-gray-100 text-[#002975]" title="Xóa">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
               </td>
+              <td class="py-2 px-4 text-center">
+                <img :src="p.image_url + '?t=' + (p.updated_at ? new Date(p.updated_at).getTime() : Date.now())"
+                  class="w-12 h-12 object-cover rounded-full border mx-auto bg-white" :alt="p.name">
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.sku"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.barcode"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.name"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.slug"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line"
+                :class="(p.brand_name || '—') === '—' ? 'text-center' : 'text-left'" x-text="p.brand_name || '—'">
+              </td>
+              <td class="py-2 px-4 break-words whitespace-pre-line"
+                :class="(p.category_name || '—') === '—' ? 'text-center' : 'text-right'"
+                x-text="p.category_name || '—'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="formatCurrency(p.sale_price)">
+              </td>
+              <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="formatCurrency(p.cost_price)">
+              </td>
+              <td class="py-2 px-4 break-words whitespace-pre-line"
+                :class="(p.unit_name || '—') === '—' ? 'text-center' : 'text-left'" x-text="p.unit_name || '—'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line text-center">
+                <span class="px-2 py-0.5 rounded text-xs"
+                  :class="p.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+                  x-text="p.is_active ? 'Bán' : 'Ẩn'"></span>
+              </td>
+              <td class="py-2 px-4 break-words whitespace-pre-line text-right"
+                :class="(p.created_at || '—') === '—' ? 'text-center' : 'text-right'" x-text="p.created_at || '—'">
+              </td>
+              <td class="py-2 px-4 break-words whitespace-pre-line"
+                :class="(p.created_by_name || '—') === '—' ? 'text-center' : 'text-left'"
+                x-text="p.created_by_name || '—'"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line text-right"
+                :class="(p.updated_at || '—') === '—' ? 'text-center' : 'text-right'" x-text="p.updated_at || '—'">
+              </td>
+              <td class="py-2 px-4 break-words whitespace-pre-line"
+                :class="(p.updated_by_name || '—') === '—' ? 'text-center' : 'text-left'"
+                x-text="p.updated_by_name || '—'"></td>
             </tr>
-          </tbody>
-          </table>
+          </template>
+
+          <tr x-show="!loading && filtered().length===0">
+            <td colspan="10" class="py-12 text-center text-slate-500">
+              <div class="flex flex-col items-center justify-center">
+                <img src="/assets/images/Null.png" alt="Trống" class="w-40 h-24 mb-3 opacity-80">
+                <div class="text-lg text-slate-300">Trống</div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- MODAL: Create -->
@@ -168,164 +169,165 @@ $items = $items ?? [];
         <div class="px-5 py-3 border-b flex justify-center items-center relative">
           <h3 class="font-semibold text-2xl text-[#002975]">Thêm sản phẩm</h3>
           <button class="text-slate-500 absolute right-5" @click="openAdd=false">✕</button>
-      </div>
-      <form class="p-5 space-y-4" @submit.prevent="submitCreate()">
-        <?php require __DIR__ . '/form.php'; ?>
-        <div class="pt-2 flex justify-end gap-3">
-          <button type="button"
-            class="px-4 py-2 rounded-md text-red-600 border border-red-600 hover:bg-red-600 hover:text-white"
-            @click="openAdd=false">Hủy</button>
-          <button
-            class="px-4 py-2 rounded-md text-[#002975] hover:bg-[#002975] hover:text-white border border-[#002975]"
-            :disabled="submitting" x-text="submitting?'Đang lưu...':'Lưu'"></button>
         </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL: Edit -->
-  <div
-    class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
-    x-show="openEdit" x-transition.opacity style="display:none">
-    <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster"
-      @click.outside="openEdit=false" style="max-height: 90vh; overflow-y: auto;">
-      <div class="px-5 py-3 border-b flex justify-center items-center relative">
-        <h3 class="font-semibold text-2xl text-[#002975]">Sửa sản phẩm</h3>
-        <button class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>
-    </div>
-    <form class="p-5 space-y-4" @submit.prevent="submitUpdate()">
-      <?php require __DIR__ . '/form.php'; ?>
-      <div class="pt-2 flex justify-end gap-3">
-        <button type="button" class="px-4 py-2 rounded-md border" @click="openEdit=false">Đóng</button>
-        <button class="px-4 py-2 rounded-md text-[#002975] hover:bg-[#002975] hover:text-white border border-[#002975]"
-          :disabled="submitting" x-text="submitting?'Đang lưu...':'Cập nhật'"></button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- MODAL: Import Excel -->
-<div
-  class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
-  x-show="openImport" x-transition.opacity style="display:none">
-  <div class="bg-white w-full max-w-2xl rounded-xl shadow animate__animated animate__zoomIn animate__faster"
-    @click.outside="openImport=false">
-    <div class="px-5 py-3 border-b flex justify-center items-center relative">
-      <h3 class="font-semibold text-2xl text-[#002975]">Nhập sản phẩm từ Excel</h3>
-      <button class="text-slate-500 absolute right-5" @click="openImport=false">✕</button>
-    </div>
-
-    <div class="p-6 space-y-6">
-      <!-- Chọn file -->
-      <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-        <input type="file" @change="onFileSelected" accept=".xlsx,.xls" class="hidden" x-ref="fileInput">
-        <div x-show="!selectedFile" @click="$refs.fileInput.click()" class="cursor-pointer">
-          <i class="fa-solid fa-cloud-arrow-up text-4xl text-[#002975] mb-3"></i>
-          <p class="text-slate-600 mb-1">Nhấn để chọn file Excel</p>
-          <p class="text-sm text-slate-400">Hỗ trợ định dạng .xlsx, .xls</p>
-        </div>
-        <div x-show="selectedFile" class="space-y-3">
-          <div class="flex items-center justify-center gap-2 text-[#002975]">
-            <i class="fa-solid fa-file-excel text-2xl"></i>
-            <span class="font-medium" x-text="selectedFile?.name"></span>
+        <form class="p-5 space-y-4" @submit.prevent="submitCreate()">
+          <?php require __DIR__ . '/form.php'; ?>
+          <div class="pt-2 flex justify-end gap-3">
+            <button type="button"
+              class="px-4 py-2 rounded-md text-red-600 border border-red-600 hover:bg-red-600 hover:text-white"
+              @click="openAdd=false">Hủy</button>
+            <button
+              class="px-4 py-2 rounded-md text-[#002975] hover:bg-[#002975] hover:text-white border border-[#002975]"
+              :disabled="submitting" x-text="submitting?'Đang lưu...':'Lưu'"></button>
           </div>
-          <button type="button" @click="clearFile()" class="text-sm text-red-600 hover:underline">
-            <i class="fa-solid fa-times"></i> Xóa file
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL: Edit -->
+    <div
+      class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
+      x-show="openEdit" x-transition.opacity style="display:none">
+      <div class="bg-white w-full max-w-3xl rounded-xl shadow animate__animated animate__zoomIn animate__faster"
+        @click.outside="openEdit=false" style="max-height: 90vh; overflow-y: auto;">
+        <div class="px-5 py-3 border-b flex justify-center items-center relative">
+          <h3 class="font-semibold text-2xl text-[#002975]">Sửa sản phẩm</h3>
+          <button class="text-slate-500 absolute right-5" @click="openEdit=false">✕</button>
+        </div>
+        <form class="p-5 space-y-4" @submit.prevent="submitUpdate()">
+          <?php require __DIR__ . '/form.php'; ?>
+          <div class="pt-2 flex justify-end gap-3">
+            <button type="button" class="px-4 py-2 rounded-md border" @click="openEdit=false">Đóng</button>
+            <button
+              class="px-4 py-2 rounded-md text-[#002975] hover:bg-[#002975] hover:text-white border border-[#002975]"
+              :disabled="submitting" x-text="submitting?'Đang lưu...':'Cập nhật'"></button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL: Import Excel -->
+    <div
+      class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate__animated animate__fadeIn animate__faster"
+      x-show="openImport" x-transition.opacity style="display:none">
+      <div class="bg-white w-full max-w-2xl rounded-xl shadow animate__animated animate__zoomIn animate__faster"
+        @click.outside="openImport=false">
+        <div class="px-5 py-3 border-b flex justify-center items-center relative">
+          <h3 class="font-semibold text-2xl text-[#002975]">Nhập sản phẩm từ Excel</h3>
+          <button class="text-slate-500 absolute right-5" @click="openImport=false">✕</button>
+        </div>
+
+        <div class="p-6 space-y-6">
+          <!-- Chọn file -->
+          <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+            <input type="file" @change="onFileSelected" accept=".xlsx,.xls" class="hidden" x-ref="fileInput">
+            <div x-show="!selectedFile" @click="$refs.fileInput.click()" class="cursor-pointer">
+              <i class="fa-solid fa-cloud-arrow-up text-4xl text-[#002975] mb-3"></i>
+              <p class="text-slate-600 mb-1">Nhấn để chọn file Excel</p>
+              <p class="text-sm text-slate-400">Hỗ trợ định dạng .xlsx, .xls</p>
+            </div>
+            <div x-show="selectedFile" class="space-y-3">
+              <div class="flex items-center justify-center gap-2 text-[#002975]">
+                <i class="fa-solid fa-file-excel text-2xl"></i>
+                <span class="font-medium" x-text="selectedFile?.name"></span>
+              </div>
+              <button type="button" @click="clearFile()" class="text-sm text-red-600 hover:underline">
+                <i class="fa-solid fa-times"></i> Xóa file
+              </button>
+            </div>
+          </div>
+
+          <!-- Tải file mẫu -->
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex items-start gap-3">
+              <i class="fa-solid fa-circle-info text-[#002975] text-xl mt-0.5"></i>
+              <div class="flex-1">
+                <h4 class="font-semibold text-blue-900 mb-2">Hướng dẫn nhập file:</h4>
+                <ul class="text-sm text-blue-800 space-y-1 mb-3">
+                  <li>• Dòng đầu là tiêu đề, dữ liệu bắt đầu từ dòng 2</li>
+                  <li>• Trường có dấu <span class="text-red-600 font-bold">*</span> là bắt buộc</li>
+                  <li>• File phải có định dạng .xls hoặc .xlsx</li>
+                  <li>• File tối đa 10MB, không quá 10,000 dòng</li>
+                </ul>
+                <button type="button" @click="downloadTemplate()"
+                  class="text-sm text-red-400 hover:text-red-600 hover:underline font-semibold flex items-center gap-1">
+                  <i class="fa-solid fa-download"></i> Tải file mẫu
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Nút hành động -->
+          <div class="pt-2 flex justify-end gap-3">
+            <button type="button"
+              class="px-4 py-2 rounded-md text-red-600 border border-red-600 hover:bg-red-600 hover:text-white transition-colors"
+              @click="openImport=false">
+              Hủy
+            </button>
+            <button type="button" @click="submitImport()" :disabled="!selectedFile || importing"
+              class="px-4 py-2 rounded-md text-white bg-[#002975] hover:bg-[#001a56] disabled:opacity-50 disabled:cursor-not-allowed"
+              x-text="importing ? 'Đang nhập...' : 'Nhập dữ liệu'">
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirm Dialog -->
+    <div x-show="confirmDialog.show"
+      class="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-5 mt-[-200px]" style="display: none;">
+      <div class="bg-white w-full max-w-md rounded-xl shadow-lg" @click.outside="confirmDialog.show = false">
+        <div class="px-5 py-4 border-b">
+          <h3 class="text-xl font-bold text-[#002975]" x-text="confirmDialog.title"></h3>
+        </div>
+        <div class="p-5">
+          <p class="text-gray-600" x-text="confirmDialog.message"></p>
+        </div>
+        <div class="px-5 py-4 border-t flex gap-2 justify-end">
+          <button @click="confirmDialog.show = false; confirmDialog.onCancel()"
+            class="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-600 hover:text-white">
+            Hủy
+          </button>
+          <button @click="confirmDialog.show = false; confirmDialog.onConfirm()"
+            class="px-4 py-2 border border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white">
+            Xác nhận
           </button>
         </div>
       </div>
+    </div>
 
-      <!-- Tải file mẫu -->
-      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div class="flex items-start gap-3">
-          <i class="fa-solid fa-circle-info text-[#002975] text-xl mt-0.5"></i>
-          <div class="flex-1">
-            <h4 class="font-semibold text-blue-900 mb-2">Hướng dẫn nhập file:</h4>
-            <ul class="text-sm text-blue-800 space-y-1 mb-3">
-              <li>• Dòng đầu là tiêu đề, dữ liệu bắt đầu từ dòng 2</li>
-              <li>• Trường có dấu <span class="text-red-600 font-bold">*</span> là bắt buộc</li>
-              <li>• File phải có định dạng .xls hoặc .xlsx</li>
-              <li>• File tối đa 10MB, không quá 10,000 dòng</li>
-            </ul>
-            <button type="button" @click="downloadTemplate()"
-              class="text-sm text-red-400 hover:text-red-600 hover:underline font-semibold flex items-center gap-1">
-              <i class="fa-solid fa-download"></i> Tải file mẫu
-            </button>
-          </div>
-        </div>
-      </div>
+    <!-- Toast lỗi nổi -->
+    <div id="toast-container" class="z-[60]"></div>
+  </div>
 
-      <!-- Nút hành động -->
-      <div class="pt-2 flex justify-end gap-3">
-        <button type="button"
-          class="px-4 py-2 rounded-md text-red-600 border border-red-600 hover:bg-red-600 hover:text-white transition-colors"
-          @click="openImport=false">
-          Hủy
+  <!-- Pagination -->
+  <div class="flex items-center justify-center mt-4 px-4 gap-6">
+    <div class="text-sm text-slate-600">
+      Tổng cộng <span x-text="filtered().length"></span> bản ghi
+    </div>
+    <div class="flex items-center gap-2">
+      <button @click="goToPage(currentPage-1)" :disabled="currentPage===1"
+        class="px-2 py-1 border rounded disabled:opacity-50">&lt;</button>
+      <span>Trang <span x-text="currentPage"></span> / <span x-text="totalPages()"></span></span>
+      <button @click="goToPage(currentPage+1)" :disabled="currentPage===totalPages()"
+        class="px-2 py-1 border rounded disabled:opacity-50">&gt;</button>
+      <div x-data="{ open: false }" class="relative">
+        <button @click="open=!open" class="border rounded px-2 py-1 w-28 flex justify-between items-center">
+          <span x-text="perPage + ' / trang'"></span>
+          <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
         </button>
-        <button type="button" @click="submitImport()" :disabled="!selectedFile || importing"
-          class="px-4 py-2 rounded-md text-white bg-[#002975] hover:bg-[#001a56] disabled:opacity-50 disabled:cursor-not-allowed"
-          x-text="importing ? 'Đang nhập...' : 'Nhập dữ liệu'">
-        </button>
+        <div x-show="open" @click.outside="open=false"
+          class="absolute right-0 mt-1 bg-white border rounded shadow w-28 z-50">
+          <template x-for="opt in perPageOptions" :key="opt">
+            <div @click="perPage=opt;open=false" class="px-3 py-2 cursor-pointer hover:bg-[#002975] hover:text-white"
+              x-text="opt + ' / trang'"></div>
+          </template>
+        </div>
       </div>
     </div>
   </div>
-</div>
-
-<!-- Confirm Dialog -->
-<div x-show="confirmDialog.show"
-    class="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-5 mt-[-200px]" style="display: none;">
-    <div class="bg-white w-full max-w-md rounded-xl shadow-lg" @click.outside="confirmDialog.show = false">
-        <div class="px-5 py-4 border-b">
-            <h3 class="text-xl font-bold text-[#002975]" x-text="confirmDialog.title"></h3>
-        </div>
-        <div class="p-5">
-            <p class="text-gray-600" x-text="confirmDialog.message"></p>
-        </div>
-        <div class="px-5 py-4 border-t flex gap-2 justify-end">
-            <button @click="confirmDialog.show = false; confirmDialog.onCancel()"
-                class="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-600 hover:text-white">
-                Hủy
-            </button>
-            <button @click="confirmDialog.show = false; confirmDialog.onConfirm()"
-                class="px-4 py-2 border border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white">
-                Xác nhận
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Toast lỗi nổi -->
-<div id="toast-container" class="z-[60]"></div>
-</div>
-
-<!-- Pagination -->
-<div class="flex items-center justify-center mt-4 px-4 gap-6">
-  <div class="text-sm text-slate-600">
-    Tổng cộng <span x-text="filtered().length"></span> bản ghi
-  </div>
-  <div class="flex items-center gap-2">
-    <button @click="goToPage(currentPage-1)" :disabled="currentPage===1"
-      class="px-2 py-1 border rounded disabled:opacity-50">&lt;</button>
-    <span>Trang <span x-text="currentPage"></span> / <span x-text="totalPages()"></span></span>
-    <button @click="goToPage(currentPage+1)" :disabled="currentPage===totalPages()"
-      class="px-2 py-1 border rounded disabled:opacity-50">&gt;</button>
-    <div x-data="{ open: false }" class="relative">
-      <button @click="open=!open" class="border rounded px-2 py-1 w-28 flex justify-between items-center">
-        <span x-text="perPage + ' / trang'"></span>
-        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      <div x-show="open" @click.outside="open=false"
-        class="absolute right-0 mt-1 bg-white border rounded shadow w-28 z-50">
-        <template x-for="opt in perPageOptions" :key="opt">
-          <div @click="perPage=opt;open=false" class="px-3 py-2 cursor-pointer hover:bg-[#002975] hover:text-white"
-            x-text="opt + ' / trang'"></div>
-        </template>
-      </div>
-    </div>
-  </div>
-</div>
 </div>
 
 <script>
@@ -363,8 +365,8 @@ $items = $items ?? [];
         show: false,
         title: '',
         message: '',
-        onConfirm: () => {},
-        onCancel: () => {}
+        onConfirm: () => { },
+        onCancel: () => { }
       },
 
       // phân trang
@@ -1145,6 +1147,10 @@ $items = $items ?? [];
 
           const i = this.items.findIndex(x => x.id == res.id);
           if (i > -1) this.items[i] = res; else this.items.unshift(res);
+
+          // Sau khi cập nhật thành công, gọi lại fetchAll để reload ảnh mới
+          await this.fetchAll();
+
           this.openEdit = false;
           this.resetForm();
           this.showToast('Cập nhật sản phẩm thành công!', 'success');
@@ -1326,7 +1332,7 @@ $items = $items ?? [];
         }
       },
 
-      showConfirm(title, message, onConfirm, onCancel = () => {}) {
+      showConfirm(title, message, onConfirm, onCancel = () => { }) {
         this.confirmDialog = {
           show: true,
           title,

@@ -77,7 +77,7 @@
 
         <!-- Hiển thị điểm tích lũy -->
         <p x-show="form.customer_id && customerLoyaltyPoints >= 0" class="mt-2 text-xs text-yellow-600">
-            <i class="fa-solid fa-star"></i>  Điểm tích lũy: 
+            <i class="fa-solid fa-star"></i> Điểm tích lũy:
             <span x-text="customerLoyaltyPoints.toLocaleString('en-US') + ' điểm'"></span>
         </p>
     </div>
@@ -141,12 +141,11 @@
                         }
                     }" x-init="reset()" @click.away="open = false">
                         <div class="relative">
-                            <input type="text" x-model="search" 
-                                @focus="open = true; filtered = products"
+                            <input type="text" x-model="search" @focus="open = true; filtered = products"
                                 @input="open = true; filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()))"
                                 :disabled="item.is_gift === true"
                                 class="w-full border rounded px-3 py-2 pr-8 bg-white text-sm cursor-pointer focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
-                                :class="item.is_gift === true ? 'bg-green-50 cursor-not-allowed' : (!item.product_id ? 'text-slate-400' : 'text-slate-900')" 
+                                :class="item.is_gift === true ? 'bg-green-50 cursor-not-allowed' : (!item.product_id ? 'text-slate-400' : 'text-slate-900')"
                                 placeholder="-- Chọn sản phẩm --" />
 
                             <button x-show="item.product_id && !item.is_gift" type="button" @click.stop="clear()"
@@ -155,22 +154,26 @@
                             </button>
 
                             <svg x-show="!item.product_id || item.is_gift"
-                                class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" fill="none"
-                                stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none"
+                                fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                             </svg>
                         </div>
 
-                        <div x-show="open" class="absolute z-20 mt-1 w-full bg-white border rounded shadow max-h-60 overflow-auto">
+                        <div x-show="open"
+                            class="absolute z-20 mt-1 w-full bg-white border rounded shadow max-h-60 overflow-auto">
                             <template x-for="(product, i) in filtered" :key="product.id">
-                                <div @click="choose(product)" @mouseenter="highlight = i" @mouseleave="highlight = -1" :class="[
+                                <div @click="choose(product)" @mouseenter="highlight = i" @mouseleave="highlight = -1"
+                                    :class="[
                                         highlight === i ? 'bg-[#002975] text-white'
                                         : (item.product_id == product.id ? 'bg-[#002975] text-white'
                                         : 'hover:bg-[#002975] hover:text-white text-black'),
                                         'px-3 py-2 cursor-pointer transition-colors text-sm'
                                     ]">
                                     <div x-text="product.name + ' - ' + product.sku"></div>
-                                    <div class="text-xs opacity-75" x-text="'Tồn: ' + product.stock + ' | Giá: ' + (product.sale_price || 0).toLocaleString('en-US') + 'đ'"></div>
+                                    <div class="text-xs opacity-75"
+                                        x-text="'Tồn: ' + product.stock + ' | Giá: ' + (product.sale_price || 0).toLocaleString('en-US') + 'đ'">
+                                    </div>
                                 </div>
                             </template>
                             <div x-show="filtered.length === 0" class="px-3 py-2 text-gray-400 text-sm">
@@ -199,13 +202,13 @@
 
                     <!-- Đơn giá -->
                     <div class="col-span-2">
-                        <input :value="item.unit_price ? item.unit_price.toLocaleString('en-US') : ''" @input="
-                                let val = $event.target.value.replace(/[^\d]/g, '');
-                                item.unit_price = val ? parseInt(val) : 0;
-                                $event.target.value = item.unit_price.toLocaleString('en-US');
-                                calculateTotal();
+                        <input :value="item.unit_price ? Number(item.unit_price).toLocaleString('en-US') : ''" @input="
+                            let val = $event.target.value.replace(/[^\d]/g, '');
+                            item.unit_price = val ? parseInt(val) : 0;
+                            $event.target.value = item.unit_price ? Number(item.unit_price).toLocaleString('en-US') : '';
+                            calculateTotal();
                             " :disabled="item.is_gift === true || item.bundle_applied === true"
-                            class="w-full border rounded px-3 py-2 text-sm"
+                            class="w-full border rounded px-3 py-2 text-sm text-right"
                             :class="(item.is_gift === true || item.bundle_applied === true) ? 'bg-gray-100 cursor-not-allowed' : ''"
                             placeholder="Đơn giá" />
                     </div>
@@ -399,8 +402,8 @@
                                             form.loyalty_points_used = 0;
                                         }
                                         calculateTotal();
-                                    " type="number" min="0" :max="customerLoyaltyPoints" :disabled="customerLoyaltyPoints == 0"
-                                    class="flex-1 border rounded px-3 py-2" 
+                                    " type="number" min="0" :max="customerLoyaltyPoints"
+                                    :disabled="customerLoyaltyPoints == 0" class="flex-1 border rounded px-3 py-2"
                                     :class="form.loyalty_points_used > customerLoyaltyPoints ? 'border-red-500 bg-red-50' : ''"
                                     placeholder="Nhập số điểm">
                                 <div class="text-sm text-gray-600 whitespace-nowrap">
@@ -409,7 +412,8 @@
                                 </div>
                             </div>
                         </div>
-                        <p x-show="form.loyalty_points_used > customerLoyaltyPoints" class="text-red-500 text-xs mt-1 ml-52">
+                        <p x-show="form.loyalty_points_used > customerLoyaltyPoints"
+                            class="text-red-500 text-xs mt-1 ml-52">
                             Số điểm sử dụng không được vượt quá số điểm hiện có!
                         </p>
                     </div>

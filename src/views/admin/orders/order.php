@@ -951,6 +951,12 @@ $items = $items ?? [];
 
             // Kiểm tra khuyến mãi
             async checkPromotions() {
+                // Tạm thời tắt tính năng khuyến mãi do lỗi backend
+                this.appliedPromotions = [];
+                this.promotionDiscount = 0;
+                this.calculateTotal();
+                return;
+                
                 if (this.orderItems.length === 0 || this.checkingPromotions) return;
                 
                 this.checkingPromotions = true;
@@ -975,6 +981,14 @@ $items = $items ?? [];
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ items })
                     });
+
+                    if (!res.ok) {
+                        console.warn('Promotion check failed with status:', res.status);
+                        this.appliedPromotions = [];
+                        this.promotionDiscount = 0;
+                        this.calculateTotal();
+                        return;
+                    }
 
                     const data = await res.json();
                     console.log('Promotion response:', data);
@@ -1071,6 +1085,10 @@ $items = $items ?? [];
                     }
                 } catch (e) {
                     console.error('Error checking promotions:', e);
+                    // Reset khuyến mãi về 0 nếu có lỗi
+                    this.appliedPromotions = [];
+                    this.promotionDiscount = 0;
+                    this.calculateTotal();
                 } finally {
                     this.checkingPromotions = false;
                 }

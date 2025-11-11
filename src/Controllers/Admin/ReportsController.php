@@ -151,9 +151,9 @@ class ReportsController extends BaseAdminController
         $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
         // Add image path for each product
-        foreach ($data as &$item) {
-            $item['image_url'] = $this->getProductImage($item['product_id']);
-        }
+        // foreach ($data as &$item) {
+        //     $item['image_url'] = $this->getProductImage($item['product_id']);
+        // }
 
         $this->jsonResponse(['data' => $data]);
     }
@@ -193,9 +193,9 @@ class ReportsController extends BaseAdminController
         $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
         // Add image path for each product
-        foreach ($data as &$item) {
-            $item['image_url'] = $this->getProductImage($item['product_id']);
-        }
+        // foreach ($data as &$item) {
+        //     $item['image_url'] = $this->getProductImage($item['product_id']);
+        // }
 
         $this->jsonResponse(['data' => $data]);
     }
@@ -368,9 +368,9 @@ class ReportsController extends BaseAdminController
         $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
         // Add image path for each product
-        foreach ($data as &$item) {
-            $item['image_url'] = $this->getProductImage($item['product_id']);
-        }
+        // foreach ($data as &$item) {
+        //     $item['image_url'] = $this->getProductImage($item['product_id']);
+        // }
 
         $this->jsonResponse(['data' => $data]);
     }
@@ -399,9 +399,9 @@ class ReportsController extends BaseAdminController
         $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
         // Add image path for each product
-        foreach ($data as &$item) {
-            $item['image_url'] = $this->getProductImage($item['product_id']);
-        }
+        // foreach ($data as &$item) {
+        //     $item['image_url'] = $this->getProductImage($item['product_id']);
+        // }
 
         $this->jsonResponse(['data' => $data]);
     }
@@ -612,6 +612,13 @@ class ReportsController extends BaseAdminController
         $reportType = $_GET['report_type'] ?? 'staff';
         $criteria = $_GET['criteria'] ?? 'revenue';
         $searchText = $_GET['search'] ?? '';
+        
+        // Các filter mới
+        $staffId = $_GET['staff_id'] ?? null;
+        $productId = $_GET['product_id'] ?? null;
+        $customerId = $_GET['customer_id'] ?? null;
+        $supplierId = $_GET['supplier_id'] ?? null;
+        
         $valueFrom = $_GET['value_from'] ?? null;
         $valueTo = $_GET['value_to'] ?? null;
         $sortOrder = $_GET['sort_order'] ?? 'desc';
@@ -623,22 +630,22 @@ class ReportsController extends BaseAdminController
         try {
             switch ($reportType) {
                 case 'staff':
-                    $data = $this->filterStaff($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate);
+                    $data = $this->filterStaff($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate, $productId, $customerId);
                     break;
                 case 'products':
-                    $data = $this->filterProducts($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate);
+                    $data = $this->filterProducts($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate, $staffId, $customerId, $supplierId);
                     break;
                 case 'customers':
-                    $data = $this->filterCustomers($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate);
+                    $data = $this->filterCustomers($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate, $staffId, $productId);
                     break;
                 case 'suppliers':
-                    $data = $this->filterSuppliers($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate);
+                    $data = $this->filterSuppliers($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate, $productId);
                     break;
                 case 'orders':
-                    $data = $this->filterOrders($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate);
+                    $data = $this->filterOrders($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate, $staffId, $productId, $customerId);
                     break;
                 case 'inventory':
-                    $data = $this->filterInventory($criteria, $searchText, $fromDate, $toDate);
+                    $data = $this->filterInventory($criteria, $searchText, $fromDate, $toDate, $productId);
                     break;
             }
 
@@ -661,6 +668,13 @@ class ReportsController extends BaseAdminController
         $reportType = $_GET['report_type'] ?? 'staff';
         $criteria = $_GET['criteria'] ?? 'revenue';
         $searchText = $_GET['search'] ?? '';
+        
+        // Các filter mới
+        $staffId = $_GET['staff_id'] ?? null;
+        $productId = $_GET['product_id'] ?? null;
+        $customerId = $_GET['customer_id'] ?? null;
+        $supplierId = $_GET['supplier_id'] ?? null;
+        
         $valueFrom = $_GET['value_from'] ?? null;
         $valueTo = $_GET['value_to'] ?? null;
         $sortOrder = $_GET['sort_order'] ?? 'desc';
@@ -672,22 +686,22 @@ class ReportsController extends BaseAdminController
             $data = [];
             switch ($reportType) {
                 case 'staff':
-                    $data = $this->filterStaff($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate);
+                    $data = $this->filterStaff($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate, $productId, $customerId);
                     break;
                 case 'products':
-                    $data = $this->filterProducts($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate);
+                    $data = $this->filterProducts($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate, $staffId, $customerId, $supplierId);
                     break;
                 case 'customers':
-                    $data = $this->filterCustomers($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate);
+                    $data = $this->filterCustomers($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate, $staffId, $productId);
                     break;
                 case 'suppliers':
-                    $data = $this->filterSuppliers($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate);
+                    $data = $this->filterSuppliers($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate, $productId);
                     break;
                 case 'orders':
-                    $data = $this->filterOrders($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate);
+                    $data = $this->filterOrders($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate, $staffId, $productId, $customerId);
                     break;
                 case 'inventory':
-                    $data = $this->filterInventory($criteria, $searchText, $fromDate, $toDate);
+                    $data = $this->filterInventory($criteria, $searchText, $fromDate, $toDate, $productId);
                     break;
             }
 
@@ -705,7 +719,7 @@ class ReportsController extends BaseAdminController
     }
 
     // Filter methods for each report type
-    private function filterStaff($criteria, $search, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate)
+    private function filterStaff($criteria, $search, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate, $productId = null, $customerId = null)
     {
         $db = $this->getDB();
 
@@ -725,6 +739,20 @@ class ReportsController extends BaseAdminController
             $sql .= " AND DATE(o.created_at) >= '$fromDate'";
         if ($toDate)
             $sql .= " AND DATE(o.created_at) <= '$toDate'";
+        
+        // Filter by customer
+        if ($customerId) {
+            $sql .= " AND o.user_id = $customerId";
+        }
+        
+        // Filter by product (thông qua order_items)
+        if ($productId) {
+            $sql .= " AND EXISTS (
+                SELECT 1 FROM order_items oi 
+                WHERE oi.order_id = o.id 
+                AND oi.product_id = $productId
+            )";
+        }
 
         $sql .= " GROUP BY o.created_by";
 
@@ -756,7 +784,7 @@ class ReportsController extends BaseAdminController
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
-    private function filterProducts($criteria, $search, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate)
+    private function filterProducts($criteria, $search, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate, $staffId = null, $customerId = null, $supplierId = null)
     {
         $db = $this->getDB();
 
@@ -778,6 +806,30 @@ class ReportsController extends BaseAdminController
             $sql .= " AND DATE(o.created_at) >= '$fromDate'";
         if ($toDate)
             $sql .= " AND DATE(o.created_at) <= '$toDate'";
+        
+        // Filter by staff (nhân viên tạo đơn)
+        if ($staffId) {
+            $sql .= " AND o.created_by = $staffId";
+        }
+        
+        // Filter by customer (khách hàng mua)
+        if ($customerId) {
+            $sql .= " AND o.user_id = $customerId";
+        }
+        
+        // Filter by supplier (nhà cung cấp - dựa vào lô hàng)
+        if ($supplierId) {
+            $sql .= " AND EXISTS (
+                SELECT 1 
+                FROM stock_outs so
+                JOIN stock_out_items soi ON so.id = soi.stock_out_id
+                JOIN product_batches pb ON soi.batch_id = pb.id
+                JOIN purchase_orders po ON pb.purchase_order_id = po.id
+                WHERE so.order_id = o.id 
+                AND soi.product_id = p.id
+                AND po.supplier_id = $supplierId
+            )";
+        }
 
         $sql .= " GROUP BY p.id";
 
@@ -809,14 +861,14 @@ class ReportsController extends BaseAdminController
         $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
         // Add image path
-        foreach ($data as &$item) {
-            $item['image_url'] = $this->getProductImage($item['product_id']);
-        }
+        // foreach ($data as &$item) {
+        //     $item['image_url'] = $this->getProductImage($item['product_id']);
+        // }
 
         return $data;
     }
 
-    private function filterCustomers($criteria, $search, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate)
+    private function filterCustomers($criteria, $search, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate, $staffId = null, $productId = null)
     {
         $db = $this->getDB();
 
@@ -835,6 +887,20 @@ class ReportsController extends BaseAdminController
             $sql .= " AND DATE(o.created_at) >= '$fromDate'";
         if ($toDate)
             $sql .= " AND DATE(o.created_at) <= '$toDate'";
+        
+        // Filter by staff
+        if ($staffId) {
+            $sql .= " AND o.created_by = $staffId";
+        }
+        
+        // Filter by product
+        if ($productId) {
+            $sql .= " AND EXISTS (
+                SELECT 1 FROM order_items oi 
+                WHERE oi.order_id = o.id 
+                AND oi.product_id = $productId
+            )";
+        }
 
         $sql .= " GROUP BY u.id";
 
@@ -866,7 +932,7 @@ class ReportsController extends BaseAdminController
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
-    private function filterSuppliers($criteria, $search, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate)
+    private function filterSuppliers($criteria, $search, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate, $productId = null)
     {
         $db = $this->getDB();
 
@@ -918,8 +984,14 @@ class ReportsController extends BaseAdminController
                         WHERE o.status = 'Hoàn tất'
                         AND so.type = 'sale'
                         AND so.status IN ('approved', 'completed')"
-            . $orderDateCondition . "
-                        GROUP BY po_inner.supplier_id
+            . $orderDateCondition;
+        
+        // Filter by product trong sales subquery
+        if ($productId) {
+            $sql .= " AND oi.product_id = $productId";
+        }
+        
+        $sql .= " GROUP BY po_inner.supplier_id
                     ) sales ON s.id = sales.supplier_id
                   WHERE 1=1";
 
@@ -953,7 +1025,7 @@ class ReportsController extends BaseAdminController
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
-    private function filterOrders($criteria, $search, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate)
+    private function filterOrders($criteria, $search, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate, $staffId = null, $productId = null, $customerId = null)
     {
         $db = $this->getDB();
 
@@ -972,6 +1044,25 @@ class ReportsController extends BaseAdminController
             $sql .= " AND DATE(o.created_at) >= '$fromDate'";
         if ($toDate)
             $sql .= " AND DATE(o.created_at) <= '$toDate'";
+        
+        // Filter by staff
+        if ($staffId) {
+            $sql .= " AND o.created_by = $staffId";
+        }
+        
+        // Filter by customer
+        if ($customerId) {
+            $sql .= " AND o.user_id = $customerId";
+        }
+        
+        // Filter by product
+        if ($productId) {
+            $sql .= " AND EXISTS (
+                SELECT 1 FROM order_items oi 
+                WHERE oi.order_id = o.id 
+                AND oi.product_id = $productId
+            )";
+        }
 
         // Filter by search text (customer name)
         if (!empty($search)) {
@@ -1002,7 +1093,7 @@ class ReportsController extends BaseAdminController
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
-    private function filterInventory($criteria, $search, $fromDate, $toDate)
+    private function filterInventory($criteria, $search, $fromDate, $toDate, $productId = null)
     {
         $db = $this->getDB();
 
@@ -1017,6 +1108,11 @@ class ReportsController extends BaseAdminController
                 JOIN stocks s ON p.id = s.product_id
                 LEFT JOIN units u ON p.unit_id = u.id
                 WHERE 1=1";
+
+        // Filter by product
+        if ($productId) {
+            $sql .= " AND p.id = $productId";
+        }
 
         // Filter by criteria
         if ($criteria === 'low_stock') {
@@ -1039,9 +1135,9 @@ class ReportsController extends BaseAdminController
         $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
         // Add image path
-        foreach ($data as &$item) {
-            $item['image_url'] = $this->getProductImage($item['product_id']);
-        }
+        // foreach ($data as &$item) {
+        //     $item['image_url'] = $this->getProductImage($item['product_id']);
+        // }
 
         return $data;
     }
@@ -1288,5 +1384,124 @@ class ReportsController extends BaseAdminController
         ];
 
         return 'THỐNG KÊ ' . ($typeLabels[$reportType] ?? '') . ' - ' . ($criteriaLabels[$criteria] ?? '');
+    }
+
+    /** GET /admin/api/reports/staff-list - Danh sách nhân viên */
+    public function apiStaffList()
+    {
+        try {
+            $db = $this->getDB();
+            // Lấy danh sách nhân viên đã tạo đơn hàng (created_by)
+            $sql = "SELECT DISTINCT
+                        u.id as staff_id,
+                        u.full_name,
+                        COALESCE(sp.staff_role, 'Nhân viên') as staff_role
+                    FROM orders o
+                    JOIN users u ON o.created_by = u.id
+                    LEFT JOIN staff_profiles sp ON u.id = sp.user_id
+                    WHERE o.status = 'Hoàn tất'
+                    ORDER BY u.full_name ASC";
+
+            $stmt = $db->query($sql);
+            $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            $this->jsonResponse([
+                'success' => true,
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            $this->jsonResponse([
+                'success' => false,
+                'message' => 'Lỗi: ' . $e->getMessage(),
+                'data' => []
+            ]);
+        }
+    }
+
+    /** GET /admin/api/reports/product-list - Danh sách sản phẩm */
+    public function apiProductList()
+    {
+        try {
+            $db = $this->getDB();
+            $sql = "SELECT 
+                        p.id as product_id,
+                        p.name,
+                        p.sku
+                    FROM products p
+                    WHERE p.is_active = 1
+                    ORDER BY p.name ASC";
+
+            $stmt = $db->query($sql);
+            $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            $this->jsonResponse([
+                'success' => true,
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            $this->jsonResponse([
+                'success' => false,
+                'message' => 'Lỗi: ' . $e->getMessage(),
+                'data' => []
+            ]);
+        }
+    }
+
+    /** GET /admin/api/reports/customer-list - Danh sách khách hàng */
+    public function apiCustomerList()
+    {
+        try {
+            $db = $this->getDB();
+            // Lấy danh sách khách hàng đã mua hàng (user_id trong orders)
+            $sql = "SELECT DISTINCT
+                        u.id as customer_id,
+                        u.full_name,
+                        u.email
+                    FROM orders o
+                    JOIN users u ON o.user_id = u.id
+                    WHERE o.status = 'Hoàn tất'
+                    ORDER BY u.full_name ASC";
+
+            $stmt = $db->query($sql);
+            $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            $this->jsonResponse([
+                'success' => true,
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            $this->jsonResponse([
+                'success' => false,
+                'message' => 'Lỗi: ' . $e->getMessage(),
+                'data' => []
+            ]);
+        }
+    }
+
+    /** GET /admin/api/reports/supplier-list - Danh sách nhà cung cấp */
+    public function apiSupplierList()
+    {
+        try {
+            $db = $this->getDB();
+            $sql = "SELECT 
+                        s.id as supplier_id,
+                        s.name as supplier_name
+                    FROM suppliers s
+                    ORDER BY s.name ASC";
+
+            $stmt = $db->query($sql);
+            $data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            $this->jsonResponse([
+                'success' => true,
+                'data' => $data
+            ]);
+        } catch (\Exception $e) {
+            $this->jsonResponse([
+                'success' => false,
+                'message' => 'Lỗi: ' . $e->getMessage(),
+                'data' => []
+            ]);
+        }
     }
 }

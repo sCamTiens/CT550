@@ -869,6 +869,29 @@ class OrderRepository
     }
 
     /**
+     * Lấy thông tin khách hàng theo ID
+     */
+    public function getCustomerInfo(int $customerId): array
+    {
+        $pdo = DB::pdo();
+        $sql = "
+            SELECT 
+                u.id,
+                u.full_name as name,
+                u.email,
+                u.phone
+            FROM users u
+            WHERE u.id = ?
+            LIMIT 1
+        ";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$customerId]);
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        
+        return $row ?: [];
+    }
+
+    /**
      * Tạo mã phiếu thu tự động
      */
     private function generateReceiptCode($pdo): string

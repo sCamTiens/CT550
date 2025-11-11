@@ -579,8 +579,8 @@ $items = $items ?? [];
                 <div class="pt-2 flex justify-end gap-3">
                     <button type="button"
                         class="px-4 py-2 rounded-md text-red-600 border border-red-600 hover:bg-red-600 hover:text-white transition-colors"
-                        @click="openImport=false">Hủy</button>
-                    <button type="button" :disabled="!selectedFile || importing"
+                        @click="showImportModal=false">Hủy</button>
+                    <button type="button" :disabled="!importFile || importing"
                         class="px-4 py-2 rounded-md bg-[#002975] text-white hover:bg-[#001850] disabled:opacity-50 disabled:cursor-not-allowed"
                         @click="submitImport()">
                         <span x-show="!importing">Nhập dữ liệu</span>

@@ -90,6 +90,25 @@ $year = $year ?? date('Y');
                     </template>
                 </ul>
             </div>
+            
+            <!-- Month Selector for month filter -->
+            <div class="relative" x-show="filterType === 'month'" @click.away="monthOpen=false">
+                <button type="button" @click="monthOpen=!monthOpen"
+                    class="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#002975] flex justify-between items-center min-w-[120px]">
+                    <span x-text="'Tháng ' + selectedMonth"></span>
+                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+                <ul x-show="monthOpen"
+                    class="absolute left-0 mt-1 w-full bg-white border rounded-lg shadow z-10 max-h-60 overflow-y-auto">
+                    <template x-for="m in [1,2,3,4,5,6,7,8,9,10,11,12]" :key="m">
+                        <li @click="selectMonth(m)"
+                            class="px-3 py-2 hover:bg-[#002975] hover:text-white cursor-pointer text-sm"
+                            x-text="'Tháng ' + m"></li>
+                    </template>
+                </ul>
+            </div>
 
             <!-- Year Selector -->
             <div class="relative" x-show="filterType === 'quarter' || filterType === 'year' || filterType === 'month'"
@@ -107,25 +126,6 @@ $year = $year ?? date('Y');
                         <li @click="selectYear(y)"
                             class="px-3 py-2 hover:bg-[#002975] hover:text-white cursor-pointer text-sm" x-text="y">
                         </li>
-                    </template>
-                </ul>
-            </div>
-
-            <!-- Month Selector for month filter -->
-            <div class="relative" x-show="filterType === 'month'" @click.away="monthOpen=false">
-                <button type="button" @click="monthOpen=!monthOpen"
-                    class="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#002975] flex justify-between items-center min-w-[120px]">
-                    <span x-text="'Tháng ' + selectedMonth"></span>
-                    <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                </button>
-                <ul x-show="monthOpen"
-                    class="absolute left-0 mt-1 w-full bg-white border rounded-lg shadow z-10 max-h-60 overflow-y-auto">
-                    <template x-for="m in [1,2,3,4,5,6,7,8,9,10,11,12]" :key="m">
-                        <li @click="selectMonth(m)"
-                            class="px-3 py-2 hover:bg-[#002975] hover:text-white cursor-pointer text-sm"
-                            x-text="'Tháng ' + m"></li>
                     </template>
                 </ul>
             </div>
@@ -189,19 +189,19 @@ $year = $year ?? date('Y');
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div class="bg-white rounded-lg shadow p-4">
             <div class="text-gray-500 text-sm mb-1">Tổng bảng lương</div>
-            <div class="text-2xl font-bold text-blue-600" x-text="items.length"></div>
+            <div class="text-2xl font-bold text-blue-600" x-text="filtered().length"></div>
         </div>
         <div class="bg-white rounded-lg shadow p-4">
             <div class="text-gray-500 text-sm mb-1">Tổng tiền lương</div>
-            <div class="text-lg font-bold text-green-600" x-text="formatMoney(totalSalary())"></div>
+            <div class="text-lg font-bold text-green-600" x-text="formatMoney(filtered().reduce((sum, i) => sum + parseFloat(i.total_salary || 0), 0))"></div>
         </div>
         <div class="bg-white rounded-lg shadow p-4">
             <div class="text-gray-500 text-sm mb-1">Đã duyệt</div>
-            <div class="text-2xl font-bold text-purple-600" x-text="countByStatus('Đã duyệt')"></div>
+            <div class="text-2xl font-bold text-purple-600" x-text="filtered().filter(i => i.status === 'Đã duyệt').length"></div>
         </div>
         <div class="bg-white rounded-lg shadow p-4">
             <div class="text-gray-500 text-sm mb-1">Đã thanh toán</div>
-            <div class="text-2xl font-bold text-orange-600" x-text="countByStatus('Đã trả')"></div>
+            <div class="text-2xl font-bold text-orange-600" x-text="filtered().filter(i => i.status === 'Đã trả').length"></div>
         </div>
     </div>
 
@@ -398,6 +398,7 @@ $year = $year ?? date('Y');
             year: <?= $year ?>,
             showEditModal: false,
             editForm: { id: null, full_name: '', bonus: 0, deduction: 0 },
+            
             toast: {
                 show: false,
                 message: '',
@@ -782,16 +783,41 @@ $year = $year ?? date('Y');
             },
 
             async calculateAll() {
+                // Xác định tháng/năm dựa trên filterType
+                let calcMonth, calcYear;
+                
+                if (this.filterType === 'month') {
+                    calcMonth = this.selectedMonth;
+                    calcYear = this.filterYear;
+                } else if (this.filterType === 'quarter') {
+                    // Tính từ tháng đầu quý
+                    calcMonth = (this.selectedQuarter - 1) * 3 + 1;
+                    calcYear = this.filterYear;
+                } else if (this.filterType === 'year') {
+                    calcMonth = 1;
+                    calcYear = this.filterYear;
+                } else {
+                    // Custom: lấy từ customFromDate
+                    const fromDate = this.parseDate(this.customFromDate);
+                    if (fromDate) {
+                        calcMonth = fromDate.getMonth() + 1;
+                        calcYear = fromDate.getFullYear();
+                    } else {
+                        calcMonth = this.selectedMonth;
+                        calcYear = this.filterYear;
+                    }
+                }
+                
                 this.showConfirm(
                     'Xác nhận tính lương',
-                    `Tính lương cho tất cả nhân viên tháng ${this.month}/${this.year}?`,
+                    `Tính lương cho tất cả nhân viên tháng ${calcMonth}/${calcYear}?`,
                     async () => {
                         this.loading = true;
                         try {
                             const res = await fetch('/admin/api/payroll/calculate', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ month: this.month, year: this.year })
+                                body: JSON.stringify({ month: calcMonth, year: calcYear })
                             });
                             const data = await res.json();
 
@@ -908,11 +934,11 @@ $year = $year ?? date('Y');
                             });
                             if (res.ok) {
                                 const data = await res.json();
-                                this.showToast('Đã tạo phiếu chi và trả lương thành công', 'success');
+                                this.showToast('Trả lương thành công', 'success');
                                 await this.loadData();
                             } else {
                                 const error = await res.json();
-                                this.showToast(error.error || 'Lỗi tạo phiếu chi', 'error');
+                                this.showToast(error.error || 'Lỗi trả lương', 'error');
                             }
                         } catch (err) {
                             this.showToast('Lỗi kết nối', 'error');
@@ -945,9 +971,9 @@ $year = $year ?? date('Y');
                             if (res.ok) {
                                 const data = await res.json();
                                 if (data.success_count === data.total) {
-                                    this.showToast(`Đã tạo ${data.success_count} phiếu chi thành công`, 'success');
+                                    this.showToast(`Trả lương thành công cho ${data.success_count} nhân viên`, 'success');
                                 } else {
-                                    this.showToast(`Đã tạo ${data.success_count}/${data.total} phiếu chi. ${data.errors.length} lỗi`, 'warning');
+                                    this.showToast(`Đã trả ${data.success_count}/${data.total} nhân viên. ${data.errors.length} lỗi`, 'warning');
                                 }
                                 await this.loadData();
                             } else {

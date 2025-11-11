@@ -60,7 +60,7 @@ $items = $items ?? [];
             </div>
         </template>
         <div style="overflow-x:auto; max-width:100%;" class="pb-40">
-            <table style="width:180%; min-width:1200px; border-collapse:collapse;">
+            <table style="width:200%; min-width:1200px; border-collapse:collapse;">
                 <thead>
                     <tr class="bg-gray-50 text-slate-600">
                         <th class="py-2 px-4 text-center">Thao tác</th>
@@ -95,6 +95,17 @@ $items = $items ?? [];
                     <template x-for="s in paginated()" :key="s.user_id">
                         <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
                             <td class="py-2 px-4 text-center space-x-2">
+                                <!-- Nút xem lịch sử lương -->
+                                <button @click="showSalaryHistory(s.user_id, s.full_name)"
+                                    class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                                    title="Xem lịch sử thay đổi lương">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </button>
+                                
                                 <button @click="openEditModal(s)"
                                     class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
                                     title="Sửa">
@@ -375,6 +386,77 @@ $items = $items ?? [];
         </div>
     </div>
 
+    <!-- Modal Lịch sử thay đổi lương -->
+    <div x-show="showHistoryModal" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+        style="display: none;">
+        <div class="bg-white w-full max-w-4xl rounded-xl shadow-lg max-h-[90vh] flex flex-col" @click.outside="showHistoryModal = false">
+            <div class="px-5 py-3 border-b flex justify-between items-center flex-shrink-0">
+                <h3 class="text-xl font-bold text-gray-800">
+                    Lịch sử thay đổi lương: <span class="text-[#002975]" x-text="historyStaffName"></span>
+                </h3>
+                <button @click="exportSalaryHistory()" 
+                    class="px-3 py-2 border border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-file-excel"></i>
+                    Xuất Excel
+                </button>
+            </div>
+            <div class="p-5 overflow-y-auto flex-1">
+                <template x-if="loadingHistory">
+                    <div class="text-center py-8">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                        <p class="mt-2 text-gray-600">Đang tải dữ liệu...</p>
+                    </div>
+                </template>
+
+                <template x-if="!loadingHistory && salaryHistory.length > 0">
+                    <div class="overflow-x-auto">
+                        <table class="w-full border-collapse border">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="px-1 py-3 border text-center">STT</th>
+                                    <th class="px-4 py-3 border text-center">Từ ngày</th>
+                                    <th class="px-4 py-3 border text-center">Đến ngày</th>
+                                    <th class="px-4 py-3 border text-center">Lương cơ bản</th>
+                                    <th class="px-4 py-3 border text-center">Ghi chú</th>
+                                    <th class="px-4 py-3 border text-center">Ngày tạo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="(row, index) in salaryHistory" :key="row.id">
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-1 py-3 border text-center stt-col" style="width:36px; min-width:36px; max-width:40px;" x-text="index + 1"></td>
+                                        <td class="px-4 py-3 border" x-text="row.from_date"></td>
+                                        <td class="px-4 py-3 border" x-text="row.to_date || 'Hiện tại'"></td>
+                                        <td class="px-4 py-3 border text-right font-semibold text-green-600" x-text="formatMoney(row.salary)"></td>
+                                        <td class="px-4 py-3 border" x-text="row.note || '-'"></td>
+                                        <td class="px-4 py-3 border text-center text-sm text-gray-600" x-text="row.created_at"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </template>
+
+                <template x-if="!loadingHistory && salaryHistory.length === 0">
+                    <div class="text-center py-12">
+                        <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <h3 class="text-xl font-semibold text-gray-700 mb-2">Chưa có lịch sử thay đổi lương</h3>
+                        <p class="text-gray-500">Nhân viên này chưa có dữ liệu thay đổi lương</p>
+                    </div>
+                </template>
+            </div>
+            <div class="px-5 py-3 border-t flex justify-end flex-shrink-0">
+                <button @click="showHistoryModal = false"
+                    class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100">
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Confirm Dialog -->
     <div x-show="confirmDialog.show"
         class="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-5 mt-[-200px]" style="display: none;">
@@ -523,6 +605,60 @@ $items = $items ?? [];
                     this.submitting = false;
                 }
             },
+
+            // Salary History Functions
+            async showSalaryHistory(userId, staffName) {
+                this.showHistoryModal = true;
+                this.historyStaffName = staffName;
+                this.historyUserId = userId;
+                this.loadingHistory = true;
+                this.salaryHistory = [];
+
+                try {
+                    const res = await fetch(`/admin/api/payroll/salary-history?user_id=${userId}`);
+                    const data = await res.json();
+                    
+                    if (data.success) {
+                        this.salaryHistory = data.data || [];
+                    } else {
+                        this.showToast(data.error || 'Không thể tải lịch sử lương', 'error');
+                    }
+                } catch (err) {
+                    console.error('Error loading salary history:', err);
+                    this.showToast('Lỗi kết nối khi tải lịch sử lương', 'error');
+                } finally {
+                    this.loadingHistory = false;
+                }
+            },
+
+            async exportSalaryHistory() {
+                if (!this.historyUserId) {
+                    this.showToast('Không tìm thấy thông tin nhân viên', 'error');
+                    return;
+                }
+
+                if (this.salaryHistory.length === 0) {
+                    this.showToast('Không có dữ liệu để xuất', 'warning');
+                    return;
+                }
+
+                try {
+                    const url = `/admin/api/payroll/salary-history/export?user_id=${this.historyUserId}`;
+                    window.open(url, '_blank');
+                    this.showToast('Đang xuất file Excel...', 'success');
+                } catch (err) {
+                    console.error('Export error:', err);
+                    this.showToast('Lỗi khi xuất file', 'error');
+                }
+            },
+
+            formatMoney(amount) {
+                return new Intl.NumberFormat('vi-VN', {
+                    style: 'currency',
+                    currency: 'VND'
+                }).format(amount || 0);
+            },
+
             items: [],
             staffRoles: [
                 { name: 'Kho' },
@@ -543,6 +679,13 @@ $items = $items ?? [];
 
             showPassword: false,
             showPasswordConfirm: false,
+
+            // Salary history modal
+            showHistoryModal: false,
+            loadingHistory: false,
+            salaryHistory: [],
+            historyStaffName: '',
+            historyUserId: null,
 
             // Confirm Dialog
             confirmDialog: {

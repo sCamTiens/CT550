@@ -255,7 +255,7 @@
                             <label class="flex items-center gap-2">
                                 <input type="checkbox" :value="staff.user_id" x-model="bulkForm.staff_ids"
                                     class="rounded">
-                                <span x-text="staff.full_name"></span>
+                                <span x-text="staff.full_name + ' - ' + (staff.staff_role || '')"></span>
                             </label>
                         </template>
                     </div>

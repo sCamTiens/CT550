@@ -243,14 +243,26 @@ class StaffRepository
             $stmtStaff = DB::pdo()->prepare($sqlStaff);
 
             $hiredAt = $this->convertDateToMysql($data['hired_at'] ?? null);
+            $baseSalary = floatval($data['base_salary'] ?? 0);
             
             $stmtStaff->execute([
                 $userId,
                 $data['staff_role'] ?? null,
                 $hiredAt,
                 $data['note'] ?? null,
-                $data['base_salary'] ?? 0
+                $baseSalary
             ]);
+
+            // Lưu lịch sử lương khởi điểm nếu có lương > 0
+            if ($baseSalary > 0) {
+                $this->saveSalaryHistory(
+                    (int)$userId,
+                    $baseSalary,
+                    $hiredAt ?: date('Y-m-d'),
+                    $data['created_by'] ?? null,
+                    true  // isNew = true (đang tạo nhân viên mới)
+                );
+            }
 
             DB::pdo()->commit();
             
@@ -278,12 +290,67 @@ class StaffRepository
         }
     }
 
+    /**
+     * Lưu lịch sử thay đổi lương
+     * @param int $userId ID nhân viên
+     * @param float $newSalary Mức lương mới
+     * @param string|null $fromDate Ngày áp dụng (chỉ dùng khi tạo mới nhân viên)
+     * @param int|null $createdBy ID người thực hiện thay đổi
+     * @param bool $isNew True nếu đang tạo nhân viên mới
+     * @return bool
+     */
+    private function saveSalaryHistory(int $userId, float $newSalary, ?string $fromDate, ?int $createdBy, bool $isNew = false): bool
+    {
+        // Lấy lịch sử lương gần nhất của nhân viên
+        $sqlLatest = "SELECT id, salary, to_date FROM salary_history 
+                      WHERE user_id = ? 
+                      ORDER BY from_date DESC, id DESC 
+                      LIMIT 1";
+        $stmtLatest = DB::pdo()->prepare($sqlLatest);
+        $stmtLatest->execute([$userId]);
+        $latestHistory = $stmtLatest->fetch(PDO::FETCH_ASSOC);
+
+        // Nếu lương mới giống lương hiện tại, không cần lưu
+        if ($latestHistory && floatval($latestHistory['salary']) == floatval($newSalary)) {
+            return false; // Không có thay đổi
+        }
+
+        // Nếu có lịch sử cũ và đang mở (to_date NULL), cập nhật to_date = hôm nay
+        if ($latestHistory && $latestHistory['to_date'] === null) {
+            $sqlUpdate = "UPDATE salary_history 
+                         SET to_date = CURDATE() 
+                         WHERE id = ?";
+            $stmtUpdate = DB::pdo()->prepare($sqlUpdate);
+            $stmtUpdate->execute([$latestHistory['id']]);
+        }
+
+        // Xác định from_date:
+        // - Nếu là nhân viên mới (isNew = true): dùng hired_at
+        // - Nếu là cập nhật lương: dùng ngày hiện tại
+        $effectiveFromDate = $isNew ? ($fromDate ?: date('Y-m-d')) : date('Y-m-d');
+        
+        $sqlInsert = "INSERT INTO salary_history (user_id, salary, from_date, to_date, note, created_by) 
+                      VALUES (?, ?, ?, NULL, ?, ?)";
+        $stmtInsert = DB::pdo()->prepare($sqlInsert);
+        $note = $latestHistory ? 'Điều chỉnh lương' : 'Lương khởi điểm';
+        
+        return $stmtInsert->execute([
+            $userId,
+            $newSalary,
+            $effectiveFromDate,
+            $note,
+            $createdBy
+        ]);
+    }
+
     /** Cập nhật nhân viên */
     public function update(int|string $id, array $data): array|string|false
     {
         // Get before data
         $beforeData = $this->find($id);
         $beforeArray = null;
+        $oldSalary = null;
+        
         if (is_array($beforeData)) {
             $beforeArray = [
                 'username' => $beforeData['username'] ?? null,
@@ -293,6 +360,7 @@ class StaffRepository
                 'staff_role' => $beforeData['staff_role'] ?? null,
                 'is_active' => $beforeData['is_active'] ?? null
             ];
+            $oldSalary = floatval($beforeData['base_salary'] ?? 0);
         }
         
         // Kiểm tra trùng email/phone (loại trừ user hiện tại)
@@ -327,14 +395,26 @@ class StaffRepository
             $stmtStaff = DB::pdo()->prepare($sqlStaff);
             
             $hiredAt = $this->convertDateToMysql($data['hired_at'] ?? null);
+            $newSalary = floatval($data['base_salary'] ?? 0);
             
             $stmtStaff->execute([
                 $data['staff_role'] ?? null,
                 $hiredAt,
                 $data['note'] ?? null,
-                $data['base_salary'] ?? 0,
+                $newSalary,
                 $id
             ]);
+
+            // Lưu lịch sử lương nếu có thay đổi
+            if ($oldSalary !== null && $newSalary != $oldSalary) {
+                $this->saveSalaryHistory(
+                    (int)$id,
+                    $newSalary,
+                    null,  // không cần truyền hired_at khi update
+                    $data['updated_by'] ?? null,
+                    false  // isNew = false (đang cập nhật)
+                );
+            }
 
             DB::pdo()->commit();
             $result = $this->find($id);
