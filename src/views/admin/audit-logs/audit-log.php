@@ -11,7 +11,7 @@ $pageTitle = 'Lịch Sử Thao Tác';
 
         <div class="flex gap-3">
             <button @click="showStats = true"
-                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                class="px-4 py-2 border border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -347,51 +347,59 @@ $pageTitle = 'Lịch Sử Thao Tác';
                 </button>
             </div>
 
-            <div class="p-6 overflow-y-auto">
+                        <div class="p-6 overflow-y-auto">
                 <div class="grid grid-cols-3 gap-6">
                     <!-- Stats by Action -->
                     <div class="bg-blue-50 p-4 rounded-lg">
                         <h4 class="font-bold mb-3">Theo Hành Động</h4>
-                        <template x-if="stats.byAction.length">
+                        <template x-if="stats.byAction && stats.byAction.length">
                             <div class="space-y-2">
                                 <template x-for="item in stats.byAction" :key="item.action">
                                     <div class="flex justify-between">
                                         <span x-text="getActionText(item.action)"></span>
-                                        <span class="font-bold" x-text="item.count"></span>
+                                        <span class="font-semibold" x-text="item.count"></span>
                                     </div>
                                 </template>
                             </div>
+                        </template>
+                        <template x-if="!stats.byAction || stats.byAction.length === 0">
+                            <p class="text-gray-500 text-sm">Không có dữ liệu</p>
                         </template>
                     </div>
 
                     <!-- Stats by Entity -->
                     <div class="bg-green-50 p-4 rounded-lg">
                         <h4 class="font-bold mb-3">Theo Đối Tượng</h4>
-                        <template x-if="stats.byEntity.length">
+                        <template x-if="stats.byEntity && stats.byEntity.length">
                             <div class="space-y-2">
                                 <template x-for="item in stats.byEntity" :key="item.entity_type">
                                     <div class="flex justify-between">
                                         <span x-text="getEntityTypeText(item.entity_type)"></span>
-                                        <span class="font-bold" x-text="item.count"></span>
+                                        <span class="font-semibold" x-text="item.count"></span>
                                     </div>
                                 </template>
                             </div>
+                        </template>
+                        <template x-if="!stats.byEntity || stats.byEntity.length === 0">
+                            <p class="text-gray-500 text-sm">Không có dữ liệu</p>
                         </template>
                     </div>
 
                     <!-- Stats by Staff -->
                     <div class="bg-purple-50 p-4 rounded-lg">
                         <h4 class="font-bold mb-3">Theo Nhân viên</h4>
-                        <template x-if="stats.staff.length">
+                        <template x-if="stats.staff && stats.staff.length">
                             <div class="space-y-2">
-                                <template x-for="item in stats.staff.slice(0, 10)" :key="item.actor_user_id">
+                                <template x-for="(item, index) in stats.staff" :key="'staff-' + index">
                                     <div class="flex justify-between">
-                                        <span class="truncate"
-                                            x-text="item.full_name + (item.staff_role ? ' (' + item.staff_role + ')' : '')"></span>
-                                        <span class="font-bold" x-text="item.total_actions"></span>
+                                        <span x-text="item.actor_name || item.full_name || 'Hệ thống'"></span>
+                                        <span class="font-semibold" x-text="item.total_actions"></span>
                                     </div>
                                 </template>
                             </div>
+                        </template>
+                        <template x-if="!stats.staff || stats.staff.length === 0">
+                            <p class="text-gray-500 text-sm">Không có dữ liệu</p>
                         </template>
                     </div>
                 </div>
@@ -423,8 +431,8 @@ $pageTitle = 'Lịch Sử Thao Tác';
                 byAction: [],
                 byEntity: [],
                 staff: [],
-                customer: [],
             },
+            loading: false,
 
             init() {
                 this.fetchStaffList();
@@ -520,6 +528,7 @@ $pageTitle = 'Lịch Sử Thao Tác';
             },
 
             async fetchLogs() {
+                this.loading = true;
                 try {
                     const params = new URLSearchParams();
 
@@ -543,6 +552,8 @@ $pageTitle = 'Lịch Sử Thao Tác';
                 catch (err) {
                     console.error('Lỗi tải dữ liệu:', err);
                     alert('Lỗi tải dữ liệu: ' + err.message);
+                } finally {
+                    this.loading = false;
                 }
             },
 
@@ -553,17 +564,21 @@ $pageTitle = 'Lịch Sử Thao Tác';
                     if (this.filters.from_date) params.append('from_date', this.filters.from_date);
                     if (this.filters.to_date) params.append('to_date', this.filters.to_date);
 
-                    const [resAction, resEntity, resStaff, resCustomer] = await Promise.all([
+                    const [resAction, resEntity, resStaff] = await Promise.all([
                         fetch(`/admin/api/audit-logs/stats/action?${params}`),
                         fetch(`/admin/api/audit-logs/stats/entity?${params}`),
                         fetch(`/admin/api/audit-logs/stats/staff?${params}`),
-                        fetch(`/admin/api/audit-logs/stats/customer?${params}`),
                     ]);
 
-                    this.stats.byAction = (await resAction.json()).stats || [];
-                    this.stats.byEntity = (await resEntity.json()).stats || [];
-                    this.stats.staff = (await resStaff.json()).stats || [];
-                    this.stats.customer = (await resCustomer.json()).stats || [];
+                    const [dataAction, dataEntity, dataStaff] = await Promise.all([
+                        resAction.json(),
+                        resEntity.json(),
+                        resStaff.json(),
+                    ]);
+
+                    this.stats.byAction = dataAction.stats || [];
+                    this.stats.byEntity = dataEntity.stats || [];
+                    this.stats.staff = dataStaff.stats || [];
 
                     console.log('Stats loaded:', this.stats);
                 } catch (err) {

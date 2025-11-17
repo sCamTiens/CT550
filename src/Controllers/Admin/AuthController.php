@@ -5,6 +5,7 @@ use App\Core\Controller;
 use App\Models\Repositories\UserRepository;
 use App\Services\DailyStockAlertService;
 use App\Services\DailyPaymentDueAlertService;
+use App\Services\DailyExpiryAlertService;
 use App\Support\EnvHelper;
 
 class AuthController extends Controller
@@ -204,6 +205,9 @@ class AuthController extends Controller
                 
                 // Kiểm tra phiếu nhập sắp đến hạn thanh toán
                 DailyPaymentDueAlertService::runDailyCheck();
+                
+                // Kiểm tra hàng hết hạn/sắp hết hạn
+                DailyExpiryAlertService::runDailyCheck();
                 
                 $_SESSION['last_stock_check'] = $today;
             } catch (\Exception $e) {

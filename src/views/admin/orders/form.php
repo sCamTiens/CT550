@@ -220,7 +220,7 @@
                         </div>
 
                         <button type="button" @click="removeItem(idx)" :disabled="item.is_gift === true"
-                            class="text-red-500 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            class="text-red-500 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
                             :title="item.is_gift === true ? 'Không thể xóa quà tặng' : 'Xóa'">
                             <i class="fa-solid fa-trash"></i>
                         </button>

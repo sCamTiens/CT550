@@ -237,18 +237,34 @@ CREATE TABLE product_images (
 -- 3) PROMOTIONS / VOUCHERS
 -- =====================================================================
 
--- Chương trình khuyến mãi
+-- Chương trình khuyến mãi (Hỗ trợ nhiều loại: giảm giá, mua kèm, tặng quà, combo)
 CREATE TABLE promotions (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(250) NOT NULL,
-  description TEXT,
-  discount_type ENUM('percentage','fixed') NOT NULL DEFAULT 'percentage',
-  discount_value DECIMAL(12,2) NOT NULL DEFAULT 0,
-  apply_to ENUM('all','category','product') NOT NULL DEFAULT 'all',
-  priority INT NOT NULL DEFAULT 0,
-  starts_at DATETIME NOT NULL,
-  ends_at DATETIME NOT NULL,
-  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  description TEXT,                             -- Mô tả chi tiết
+
+  promo_type ENUM(
+    'discount',      -- Giảm giá thường (% hoặc cố định)
+    'bundle',        -- Mua kèm: mua N sản phẩm với giá bundle  
+    'gift',          -- Tặng quà: mua X → tặng Y
+    'combo'          -- Combo: mua sản phẩm A + B = giá combo
+  ) NOT NULL DEFAULT 'discount',
+
+  -- Dùng cho promo_type = 'discount'
+  discount_type ENUM('percentage','fixed') NULL,
+  discount_value DECIMAL(12,2) NULL,
+
+  -- Dùng cho promo_type = 'combo'
+  combo_price DECIMAL(12,2) NULL COMMENT 'Giá combo (cho promo_type = combo)',
+  
+  -- Áp dụng cho (chỉ dùng cho promo_type = 'discount')
+  apply_to ENUM('all','category','product') NULL DEFAULT 'all',
+
+  priority INT NOT NULL DEFAULT 0,              -- Độ ưu tiên
+  starts_at DATETIME NOT NULL,                  -- Ngày bắt đầu
+  ends_at DATETIME NOT NULL,                    -- Ngày kết thúc
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,      -- Trạng thái
+
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   created_by BIGINT NULL,
@@ -258,22 +274,101 @@ CREATE TABLE promotions (
   CHECK (ends_at > starts_at)
 ) ENGINE=InnoDB;
 
--- Mối quan hệ khuyến mãi - sản phẩm
-CREATE TABLE promotion_products (
-  promotion_id BIGINT NOT NULL,
-  product_id BIGINT NOT NULL,
+-- Mối quan hệ giữa khuyến mãi và sản phẩm
+CREATE TABLE promotion_products ( 
+  promotion_id BIGINT NOT NULL, -- Mã khuyến mãi
+  product_id BIGINT NOT NULL, -- Mã sản phẩm
   PRIMARY KEY (promotion_id, product_id),
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_ppromo_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_ppromo_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
   CONSTRAINT fk_ppromo_p FOREIGN KEY(promotion_id) REFERENCES promotions(id) ON DELETE CASCADE,
   CONSTRAINT fk_ppromo_prod FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- Mối quan hệ khuyến mãi - danh mục
-CREATE TABLE promotion_categories (
+-- QUY TẮC Mua kèm: mua "required_qty" món => tổng giá = "bundle_price"
+-- Ví dụ:
+--   - Nước giặt: required_qty=2, bundle_price=165000  (1 bịch lẻ 130k)
+--   - Khăn giấy: required_qty=3, bundle_price=29000   (1 bịch lẻ 12k)
+CREATE TABLE promotion_bundle_rules (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
   promotion_id BIGINT NOT NULL,
-  category_id BIGINT NOT NULL,
-  PRIMARY KEY (promotion_id, category_id),
-  CONSTRAINT fk_pcat_promo FOREIGN KEY(promotion_id) REFERENCES promotions(id) ON DELETE CASCADE,
-  CONSTRAINT fk_pcat_cat FOREIGN KEY(category_id) REFERENCES categories(id) ON DELETE CASCADE
+  product_id   BIGINT NOT NULL,
+  required_qty INT NOT NULL CHECK (required_qty > 1),
+  bundle_price DECIMAL(12,2) NOT NULL CHECK (bundle_price >= 0),
+  max_cycles_per_order INT NULL,  -- giới hạn số lần lặp bundle/đơn (NULL = không giới hạn)
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_pbr_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_pbr_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
+  CONSTRAINT fk_pbr_promo  FOREIGN KEY(promotion_id) REFERENCES promotions(id) ON DELETE CASCADE,
+  CONSTRAINT fk_pbr_prod   FOREIGN KEY(product_id)   REFERENCES products(id)   ON DELETE CASCADE,
+  UNIQUE KEY uniq_pbr (promotion_id, product_id, required_qty)
+) ENGINE=InnoDB;
+
+-- QUY TẮC QUÀ TẶNG: mua "required_qty" của trigger_product_id => tặng gift_product_id với số lượng gift_qty
+-- Ví dụ:
+--  - Mua 3 hộp cà phê => tặng 1 ly giữ nhiệt
+--  - Mua 1 thùng sữa Milo => tặng 1 balo
+CREATE TABLE promotion_gift_rules (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  promotion_id BIGINT NOT NULL,
+  trigger_product_id BIGINT NOT NULL,          -- sản phẩm kích hoạt quà
+  required_qty INT NOT NULL CHECK (required_qty > 0),
+  gift_product_id BIGINT NOT NULL,             -- sản phẩm quà (cũng là product để quản lý tồn kho)
+  gift_qty INT NOT NULL CHECK (gift_qty > 0),
+  max_gifts_per_order INT NULL,                -- giới hạn số "bộ quà" trong 1 đơn (NULL = không giới hạn)
+  auto_add BOOLEAN NOT NULL DEFAULT TRUE,      -- tự động thêm quà vào giỏ/đơn khi đủ điều kiện
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_pgr_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_pgr_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
+  CONSTRAINT fk_pgr_promo   FOREIGN KEY(promotion_id)      REFERENCES promotions(id) ON DELETE CASCADE,
+  CONSTRAINT fk_pgr_trigger FOREIGN KEY(trigger_product_id) REFERENCES products(id)   ON DELETE CASCADE,
+  CONSTRAINT fk_pgr_gift    FOREIGN KEY(gift_product_id)   REFERENCES products(id)   ON DELETE CASCADE,
+  UNIQUE KEY uniq_pgr (promotion_id, trigger_product_id, required_qty, gift_product_id)
+) ENGINE=InnoDB;
+
+-- QUY TẮC COMBO: Mua nhiều sản phẩm khác nhau với giá combo
+-- Ví dụ: Mua ổi + muối = 25k (thay vì ổi 20k + muối 8k = 28k)
+CREATE TABLE promotion_combo_rules (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  promotion_id BIGINT NOT NULL,
+  combo_price DECIMAL(12,2) NOT NULL,           -- Giá combo
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_pcr_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_pcr_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
+  CONSTRAINT fk_pcr_promo FOREIGN KEY(promotion_id) REFERENCES promotions(id) ON DELETE CASCADE,
+  CHECK (combo_price >= 0)
+) ENGINE=InnoDB;
+
+-- Chi tiết sản phẩm trong combo
+-- Lưu các sản phẩm tham gia combo và số lượng yêu cầu
+CREATE TABLE promotion_combo_items (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  promotion_id BIGINT NOT NULL,                 -- FK trực tiếp tới promotions
+  product_id BIGINT NOT NULL,
+  required_qty INT NOT NULL DEFAULT 1,          -- Số lượng của sản phẩm này trong combo
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by BIGINT NULL,
+  updated_by BIGINT NULL,
+  CONSTRAINT fk_pci_created_by FOREIGN KEY(created_by) REFERENCES users(id),
+  CONSTRAINT fk_pci_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
+  CONSTRAINT fk_pci_promo FOREIGN KEY(promotion_id) REFERENCES promotions(id) ON DELETE CASCADE,
+  CONSTRAINT fk_pci_prod FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE,
+  UNIQUE KEY uniq_pci (promotion_id, product_id),
+  CHECK (required_qty > 0)
 ) ENGINE=InnoDB;
 
 -- Mã giảm giá

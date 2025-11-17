@@ -177,8 +177,8 @@ $year = $year ?? date('Y');
                 Trả tất cả
             </button>
 
-            <!-- Nút xóa tất cả -->
-            <button @click="deleteAll()" x-show="items.length > 0 && !(items.length === countByStatus('Đã trả'))"
+            <!-- Nút xóa tất cả: CHỈ hiển thị khi có bảng lương "Nháp" -->
+            <button @click="deleteAll()" x-show="countByStatus('Nháp') > 0"
                 class="px-4 py-2 text-red-600 border border-red-600 rounded-lg hover:bg-red-600 hover:text-white font-semibold">
                 Xóa tất cả
             </button>
@@ -263,7 +263,7 @@ $year = $year ?? date('Y');
 
                                         <template x-if="item.status === 'Nháp'">
                                             <button @click="approve(item.id)"
-                                                class="text-[#002975] px-2 py-1 rounded hover:bg-gray-100"
+                                                class="text-green-600 px-2 py-1 rounded hover:bg-green-100"
                                                 title="Duyệt">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
                                                     viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -275,7 +275,7 @@ $year = $year ?? date('Y');
 
                                         <template x-if="item.status === 'Đã duyệt'">
                                             <button @click="pay(item)"
-                                                class="text-[#002975] px-2 py-1 rounded hover:bg-gray-100"
+                                                class="text-purple-600 px-2 py-1 rounded hover:bg-purple-100"
                                                 title="Trả lương (tạo phiếu chi)">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
                                                     viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -285,9 +285,10 @@ $year = $year ?? date('Y');
                                             </button>
                                         </template>
 
-                                        <template x-if="item.status !== 'Đã trả'">
+                                        <!-- Nút xóa: CHỈ hiển thị cho trạng thái "Nháp" -->
+                                        <template x-if="item.status === 'Nháp'">
                                             <button @click="deleteItem(item.id)"
-                                                class="text-[#002975] px-2 py-1 rounded hover:bg-gray-100" title="Xóa">
+                                                class="text-red-600 px-2 py-1 rounded hover:bg-red-100" title="Xóa">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
                                                     viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 
@@ -892,28 +893,52 @@ $year = $year ?? date('Y');
             async approveAll() {
                 const draftItems = this.items.filter(i => i.status === 'Nháp');
 
+                if (draftItems.length === 0) {
+                    this.showToast('Không có bảng lương nào ở trạng thái Nháp', 'warning');
+                    return;
+                }
+
+                // Xác định tháng/năm đang filter
+                let currentMonth, currentYear;
+                if (this.filterType === 'month') {
+                    currentMonth = this.selectedMonth;
+                    currentYear = this.filterYear;
+                } else if (this.filterType === 'quarter') {
+                    currentMonth = (this.selectedQuarter - 1) * 3 + 1;
+                    currentYear = this.filterYear;
+                } else if (this.filterType === 'year') {
+                    currentMonth = 1;
+                    currentYear = this.filterYear;
+                } else {
+                    currentMonth = this.selectedMonth;
+                    currentYear = this.filterYear;
+                }
+
                 this.showConfirm(
                     'Xác nhận duyệt tất cả',
-                    `Xác nhận duyệt TẤT CẢ ${draftItems.length} bảng lương có trạng thái "Nháp" của tháng ${this.month}/${this.year}?`,
+                    `Xác nhận duyệt TẤT CẢ ${draftItems.length} bảng lương có trạng thái "Nháp"?`,
                     async () => {
                         this.loading = true;
                         try {
-                            const approvePromises = draftItems.map(item =>
-                                fetch(`/admin/api/payroll/${item.id}/approve`, { method: 'POST' })
-                            );
+                            const res = await fetch('/admin/api/payroll/approve-all', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    month: currentMonth,
+                                    year: currentYear
+                                })
+                            });
 
-                            const results = await Promise.all(approvePromises);
-                            const successCount = results.filter(res => res.ok).length;
-
-                            if (successCount === draftItems.length) {
-                                this.showToast(`Đã duyệt thành công ${successCount} bảng lương`, 'success');
+                            if (res.ok) {
+                                const data = await res.json();
+                                this.showToast(data.message || 'Duyệt thành công', 'success');
+                                await this.loadData();
                             } else {
-                                this.showToast(`Đã duyệt ${successCount}/${draftItems.length} bảng lương`, 'warning');
+                                const error = await res.json();
+                                this.showToast(error.error || 'Lỗi khi duyệt', 'error');
                             }
-
-                            await this.loadData();
                         } catch (err) {
-                            this.showToast('Lỗi kết nối', 'error');
+                            this.showToast('Lỗi kết nối: ' + err.message, 'error');
                         } finally {
                             this.loading = false;
                         }
@@ -952,6 +977,22 @@ $year = $year ?? date('Y');
 
                 const totalAmount = approvedItems.reduce((sum, i) => sum + parseFloat(i.total_salary || 0), 0);
 
+                // Xác định tháng/năm đang filter
+                let currentMonth, currentYear;
+                if (this.filterType === 'month') {
+                    currentMonth = this.selectedMonth;
+                    currentYear = this.filterYear;
+                } else if (this.filterType === 'quarter') {
+                    currentMonth = (this.selectedQuarter - 1) * 3 + 1;
+                    currentYear = this.filterYear;
+                } else if (this.filterType === 'year') {
+                    currentMonth = 1;
+                    currentYear = this.filterYear;
+                } else {
+                    currentMonth = this.selectedMonth;
+                    currentYear = this.filterYear;
+                }
+
                 this.showConfirm(
                     'Xác nhận trả tất cả',
                     `Tạo ${approvedItems.length} phiếu chi và trả lương cho TẤT CẢ nhân viên đã duyệt?\nTổng số tiền: ${this.formatMoney(totalAmount)}`,
@@ -962,8 +1003,8 @@ $year = $year ?? date('Y');
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
-                                    month: this.month,
-                                    year: this.year,
+                                    month: currentMonth,
+                                    year: currentYear,
                                     method: 'Tiền mặt'
                                 })
                             });
@@ -1010,28 +1051,35 @@ $year = $year ?? date('Y');
             },
 
             async deleteAll() {
+                const draftItems = this.items.filter(i => i.status === 'Nháp');
+                
+                if (draftItems.length === 0) {
+                    this.showToast('Không có bảng lương nào ở trạng thái "Nháp" để xóa', 'warning');
+                    return;
+                }
+                
                 this.showConfirm(
                     'Xác nhận xóa tất cả',
-                    `Xác nhận xóa TẤT CẢ ${this.items.length} bảng lương của tháng ${this.month}/${this.year}? Hành động này không thể hoàn tác.`,
+                    `Xác nhận xóa TẤT CẢ ${draftItems.length} bảng lương ở trạng thái "Nháp" của tháng ${this.month}/${this.year}? Hành động này không thể hoàn tác.`,
                     async () => {
                         this.loading = true;
                         try {
-                            const deletePromises = this.items.map(item =>
+                            const deletePromises = draftItems.map(item =>
                                 fetch(`/admin/api/payroll/${item.id}`, { method: 'DELETE' })
                             );
 
                             const results = await Promise.all(deletePromises);
                             const successCount = results.filter(res => res.ok).length;
 
-                            if (successCount === this.items.length) {
+                            if (successCount === draftItems.length) {
                                 this.showToast(`Đã xóa thành công ${successCount} bảng lương`, 'success');
                             } else {
-                                this.showToast(`Đã xóa ${successCount}/${this.items.length} bảng lương`, 'warning');
+                                this.showToast(`Đã xóa ${successCount}/${draftItems.length} bảng lương`, 'warning');
                             }
 
                             await this.loadData();
                         } catch (err) {
-                            this.showToast('Lỗi kết nối', 'error');
+                            this.showToast('Lỗi kết nối: ' + err.message, 'error');
                         } finally {
                             this.loading = false;
                         }

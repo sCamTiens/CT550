@@ -165,19 +165,22 @@ $year = $year ?? date('Y');
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div class="bg-white rounded-lg shadow p-4">
             <div class="text-gray-500 text-sm mb-1">Tổng lượt chấm công</div>
-            <div class="text-2xl font-bold text-blue-600" x-text="items.length"></div>
+            <div class="text-2xl font-bold text-blue-600" x-text="filtered().length"></div>
         </div>
         <div class="bg-white rounded-lg shadow p-4">
-            <div class="text-gray-500 text-sm mb-1">Đã hoàn thành</div>
-            <div class="text-2xl font-bold text-green-600" x-text="countByStatus('present')"></div>
+            <div class="text-gray-500 text-sm mb-1">Tổng đi muộn</div>
+            <div class="text-2xl font-bold text-red-600"
+                x-text="filtered().filter(i => i.check_in_status === 'Muộn').length"></div>
         </div>
         <div class="bg-white rounded-lg shadow p-4">
-            <div class="text-gray-500 text-sm mb-1">Chưa checkout</div>
-            <div class="text-2xl font-bold text-orange-600" x-text="countPending()"></div>
+            <div class="text-gray-500 text-sm mb-1">Tổng về sớm</div>
+            <div class="text-2xl font-bold text-orange-600"
+                x-text="filtered().filter(i => i.check_out_status === 'Sớm').length"></div>
         </div>
         <div class="bg-white rounded-lg shadow p-4">
             <div class="text-gray-500 text-sm mb-1">Tổng nhân viên</div>
-            <div class="text-2xl font-bold text-purple-600" x-text="uniqueStaff()"></div>
+            <div class="text-2xl font-bold text-purple-600" x-text="(new Set(filtered().map(i => i.user_id))).size">
+            </div>
         </div>
     </div>
 
@@ -242,7 +245,8 @@ $year = $year ?? date('Y');
                                 <td class="px-4 py-3 text-center">
                                     <span class="font-semibold text-blue-600"
                                         x-text="calculateWorkHours(item.check_in_time, item.check_out_time)"></span>
-                                    <span class="text-xs text-gray-400 block" x-text="item.work_minutes ? '('+item.work_minutes+'p)' : ''"></span>
+                                    <span class="text-xs text-gray-400 block"
+                                        x-text="item.work_minutes ? '('+item.work_minutes+'p)' : ''"></span>
                                 </td>
                                 <td class="px-4 py-3">
                                     <span class="px-2 py-1 rounded-full text-xs font-semibold"
@@ -279,21 +283,38 @@ $year = $year ?? date('Y');
     </div>
 
     <!-- Pagination -->
-    <div class="flex items-center justify-center mt-4 gap-6">
+    <div class="flex items-center justify-center mt-4 px-4 gap-6">
         <div class="text-sm text-slate-600">
             Tổng cộng <span x-text="filtered().length"></span> bản ghi
         </div>
         <div class="flex items-center gap-2">
-            <button @click="currentPage--" :disabled="currentPage === 1"
-                class="px-3 py-1 border rounded disabled:opacity-50">&lt;</button>
+            <button @click="goToPage(currentPage-1)" :disabled="currentPage===1"
+                class="px-2 py-1 border rounded disabled:opacity-50">&lt;</button>
             <span>Trang <span x-text="currentPage"></span> / <span x-text="totalPages()"></span></span>
-            <button @click="currentPage++" :disabled="currentPage === totalPages()"
-                class="px-3 py-1 border rounded disabled:opacity-50">&gt;</button>
+            <button @click="goToPage(currentPage+1)" :disabled="currentPage===totalPages()"
+                class="px-2 py-1 border rounded disabled:opacity-50">&gt;</button>
+            <div x-data="{ open: false }" class="relative z-[9999]">
+                <button @click="open=!open" class="border rounded px-2 py-1 w-28 flex justify-between items-center">
+                    <span x-text="perPage + ' / trang'"></span>
+                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+                <div x-show="open" @click.outside="open=false"
+                    class="absolute right-0 mt-1 bg-white border rounded shadow w-28 z-[9999]">
+                    <template x-for="opt in perPageOptions" :key="opt">
+                        <div @click="perPage=opt;open=false"
+                            class="px-3 py-2 cursor-pointer hover:bg-[#002975] hover:text-white"
+                            x-text="opt + ' / trang'"></div>
+                    </template>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Confirm Dialog -->
-    <div x-show="confirmDialog.show" class="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-5 mt-[-200px]"
+    <div x-show="confirmDialog.show"
+        class="fixed inset-0 bg-black/40 z-[70] flex items-center justify-center p-5 mt-[-200px]"
         style="display: none;">
         <div class="bg-white w-full max-w-md rounded-xl shadow-lg" @click.outside="confirmDialog.show = false">
             <div class="px-5 py-4 border-b">
@@ -330,16 +351,17 @@ $year = $year ?? date('Y');
             customEndDate: '',
             currentPage: 1,
             perPage: 20,
+            perPageOptions: [10, 25, 50],
 
             confirmDialog: {
                 show: false,
                 title: '',
                 message: '',
-                onConfirm: () => {},
-                onCancel: () => {}
+                onConfirm: () => { },
+                onCancel: () => { }
             },
 
-            showConfirm(title, message, onConfirm, onCancel = () => {}) {
+            showConfirm(title, message, onConfirm, onCancel = () => { }) {
                 this.confirmDialog = {
                     show: true,
                     title,
@@ -676,7 +698,7 @@ $year = $year ?? date('Y');
             async deleteItem(id) {
                 const item = this.items.find(i => i.id == id);
                 const staffName = item ? item.full_name : 'chấm công này';
-                
+
                 this.showConfirm(
                     'Xác nhận xóa',
                     `Bạn có chắc chắn muốn xóa chấm công của "${staffName}"?`,
@@ -751,6 +773,17 @@ $year = $year ?? date('Y');
             totalPages() {
                 const filteredData = this.filtered();
                 return Math.ceil(filteredData.length / this.perPage) || 1;
+            },
+
+            goToPage(page) {
+                const total = this.totalPages();
+                if (page < 1) {
+                    this.currentPage = 1;
+                } else if (page > total) {
+                    this.currentPage = total;
+                } else {
+                    this.currentPage = page;
+                }
             },
 
             formatDate(dateStr) {
@@ -903,10 +936,10 @@ $year = $year ?? date('Y');
                         if (!v) return true;
                         // So sánh chính xác đến phút
                         return d.getFullYear() === v.getFullYear() &&
-                               d.getMonth() === v.getMonth() &&
-                               d.getDate() === v.getDate() &&
-                               d.getHours() === v.getHours() &&
-                               d.getMinutes() === v.getMinutes();
+                            d.getMonth() === v.getMonth() &&
+                            d.getDate() === v.getDate() &&
+                            d.getHours() === v.getHours() &&
+                            d.getMinutes() === v.getMinutes();
                     }
                     if (type === 'lt') return v ? d < v : true;
                     if (type === 'gt') return v ? d > v : true;
@@ -982,19 +1015,19 @@ $year = $year ?? date('Y');
                     data = data.filter(o => {
                         const val = o.work_minutes ?? this.getWorkMinutes(o.check_in_time, o.check_out_time);
                         if (val == null) return false;
-                        
+
                         const type = this.filters.work_minutes_type;
                         const value = parseFloat(this.filters.work_minutes_value);
                         const from = parseFloat(this.filters.work_minutes_from);
                         const to = parseFloat(this.filters.work_minutes_to);
-                        
+
                         if (type === 'eq') return value ? val === value : true;
                         if (type === 'lt') return value ? val < value : true;
                         if (type === 'gt') return value ? val > value : true;
                         if (type === 'lte') return value ? val <= value : true;
                         if (type === 'gte') return value ? val >= value : true;
                         if (type === 'between') return from && to ? val >= from && val <= to : true;
-                        
+
                         return true;
                     });
                 }

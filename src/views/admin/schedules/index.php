@@ -340,6 +340,7 @@
             staffList: [],
             shifts: [],
             schedules: [],
+            attendances: [], // Dữ liệu chấm công trong tuần
             filterStaff: '',
             filterShift: '',
             filterStatus: '',
@@ -445,6 +446,10 @@
 
                     this.schedules = data.schedules || [];
                     console.log('📅 Loaded schedules:', this.schedules.length, 'records');
+                    
+                    // Tải dữ liệu chấm công trong tuần
+                    await this.loadWeekAttendances();
+                    
                     console.log('🔍 Filter params:', {
                         start_date: this.weekDays[0],
                         end_date: this.weekDays[6],
@@ -457,6 +462,40 @@
                     this.showToast('Lỗi tải lịch: ' + e.message);
                 } finally {
                     this.loading = false;
+                }
+            },
+
+            async loadWeekAttendances() {
+                try {
+                    // Parse start and end date to get month/year for API
+                    const startDate = new Date(this.weekDays[0]);
+                    const endDate = new Date(this.weekDays[6]);
+                    
+                    // If week spans 2 months, we need to fetch both months
+                    const months = new Set();
+                    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                        months.add(`${d.getMonth() + 1}-${d.getFullYear()}`);
+                    }
+                    
+                    let allAttendances = [];
+                    
+                    for (const monthYear of months) {
+                        const [month, year] = monthYear.split('-');
+                        const res = await fetch(`/admin/api/attendance?month=${month}&year=${year}`);
+                        const data = await res.json();
+                        allAttendances = allAttendances.concat(data.items || []);
+                    }
+                    
+                    // Filter to only include dates in current week
+                    this.attendances = allAttendances.filter(att => {
+                        const attDate = att.attendance_date;
+                        return attDate >= this.weekDays[0] && attDate <= this.weekDays[6];
+                    });
+                    
+                    console.log('⏰ Loaded attendances:', this.attendances.length, 'records');
+                } catch (e) {
+                    console.error('❌ Error loading attendances:', e);
+                    this.attendances = [];
                 }
             },
 
@@ -822,6 +861,32 @@
 
                 if (!schedule) return 'bg-gray-100 text-gray-400 border border-dashed';
 
+                // Kiểm tra xem có chấm công không
+                const attendance = this.attendances.find(att =>
+                    att.user_id == staffId && 
+                    att.shift_id == shiftId && 
+                    att.attendance_date === workDate
+                );
+
+                // Kiểm tra ngày có phải trong quá khứ không (so với hôm nay)
+                const today = new Date();
+                today.setHours(0, 0, 0, 0); // Reset giờ về 00:00:00
+                const scheduleDate = new Date(workDate);
+                scheduleDate.setHours(0, 0, 0, 0);
+                const isPastDate = scheduleDate < today;
+
+                // Nếu có chấm công → Đã làm (màu xanh đậm)
+                if (attendance && attendance.check_in_time) {
+                    return 'bg-emerald-200 text-emerald-900 border border-emerald-400 font-semibold';
+                }
+
+                // Nếu có lịch "Làm việc" nhưng không chấm công
+                // CHỈ đổi màu đỏ nếu là ngày ĐÃ QUA
+                if (schedule.status === 'Làm việc' && !attendance && isPastDate) {
+                    return 'bg-red-100 text-red-800 border border-red-300';
+                }
+
+                // Các trạng thái khác
                 const statusColors = {
                     'Làm việc': 'bg-green-100 text-green-800 border border-green-300',
                     'Có phép': 'bg-blue-100 text-blue-800',
@@ -836,7 +901,34 @@
                     s.staff_id == staffId && s.shift_id == shiftId && s.work_date === workDate
                 );
 
-                return schedule ? schedule.status : '—';
+                if (!schedule) return '—';
+
+                // Kiểm tra xem có chấm công không
+                const attendance = this.attendances.find(att =>
+                    att.user_id == staffId && 
+                    att.shift_id == shiftId && 
+                    att.attendance_date === workDate
+                );
+
+                // Kiểm tra ngày có phải trong quá khứ không
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const scheduleDate = new Date(workDate);
+                scheduleDate.setHours(0, 0, 0, 0);
+                const isPastDate = scheduleDate < today;
+
+                // Nếu có chấm công → Hiển thị "Đã làm"
+                if (attendance && attendance.check_in_time) {
+                    return '✓ Đã làm';
+                }
+
+                // Nếu có lịch "Làm việc" nhưng không chấm công
+                // CHỈ hiển thị "Không phép" nếu là ngày ĐÃ QUA
+                if (schedule.status === 'Làm việc' && !attendance && isPastDate) {
+                    return '✗ Không phép';
+                }
+
+                return schedule.status;
             },
 
             getStaffName(staffId) {

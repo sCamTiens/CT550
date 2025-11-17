@@ -13,8 +13,10 @@ EnvHelper::load(__DIR__ . '/../.env');
 
 use App\Controllers\HomeController;
 use App\Controllers\AuthController;
-use App\Controllers\ProductController;
-use App\Controllers\CartController;
+use App\Controllers\Customer\ProductController;
+use App\Controllers\Customer\CartController;
+use App\Controllers\Customer\AuthController as CustomerAuth;
+use App\Controllers\Customer\ProfileController as CustomerProfile;
 use App\Controllers\Admin\DashboardController as AdminDashboard;
 use App\Controllers\Admin\ProductController as AdminProduct;
 use App\Controllers\Admin\BrandController as AdminBrand;
@@ -38,6 +40,7 @@ use App\Controllers\Admin\AuditLogController as AdminAuditLog;
 use App\Controllers\Admin\NotificationController as AdminNotification;
 use App\Controllers\Admin\StockAlertController as AdminStockAlert;
 use App\Controllers\Admin\PaymentDueAlertController as AdminPaymentDueAlert;
+use App\Controllers\Admin\ExpiryAlertController as AdminExpiryAlert;
 use App\Controllers\Admin\ReportsController as AdminReports;
 use App\Controllers\Admin\ImportHistoryController as AdminImportHistory;
 use App\Controllers\Admin\ScheduleController as AdminSchedule;
@@ -56,15 +59,39 @@ if (session_status() === PHP_SESSION_NONE) {
 /* --- khởi tạo router & khai báo routes --- */
 $router = new Router();
 
-/* routes người dùng */
+/* routes người dùng (khách hàng) */
 $router->get('/', [HomeController::class, 'index']);
-$router->get('/login', [AuthController::class, 'showLogin']);
-$router->post('/login', [AuthController::class, 'login']);
-$router->get('/logout', [AuthController::class, 'logout']);
 
+// Customer Auth Routes
+$router->get('/login', [CustomerAuth::class, 'loginPage']);
+$router->post('/api/customer/login', [CustomerAuth::class, 'login']);
+$router->get('/register', [CustomerAuth::class, 'registerPage']);
+$router->post('/api/customer/register', [CustomerAuth::class, 'register']);
+$router->get('/logout', [CustomerAuth::class, 'logout']);
+$router->post('/api/customer/debug-user', [CustomerAuth::class, 'debugUser']); // Debug endpoint
+
+// Old routes (for backward compatibility)
 $router->get('/products', [ProductController::class, 'index']);
 $router->get('/products/{slug}', [ProductController::class, 'show']);
-$router->post('/cart', [CartController::class, 'add']);
+
+// Cart routes
+$router->get('/cart', [CartController::class, 'index']);
+$router->post('/cart/add', [CartController::class, 'add']);
+$router->post('/cart/update', [CartController::class, 'update']);
+$router->post('/cart/remove', [CartController::class, 'remove']);
+$router->post('/cart/clear', [CartController::class, 'clear']);
+
+// Profile routes
+$router->get('/profile', [CustomerProfile::class, 'index']);
+$router->post('/profile/update', [CustomerProfile::class, 'updateProfile']);
+$router->post('/profile/change-password', [CustomerProfile::class, 'changePassword']);
+$router->post('/profile/upload-avatar', [CustomerProfile::class, 'uploadAvatar']);
+$router->get('/api/profile/loyalty/transactions', [CustomerProfile::class, 'apiLoyaltyTransactions']);
+$router->get('/api/profile/orders', [CustomerProfile::class, 'apiOrders']);
+
+// Loyalty routes
+$router->get('/loyalty', [\App\Controllers\Customer\LoyaltyController::class, 'index']);
+$router->get('/api/loyalty/transactions', [\App\Controllers\Customer\LoyaltyController::class, 'apiTransactions']);
 
 /* routes admin */
 $router->group('/admin', function (Router $r): void {
@@ -195,7 +222,6 @@ $router->group('/admin', function (Router $r): void {
     $r->delete('/api/schedules/{id}', [AdminSchedule::class, 'delete']);
     $r->get('/api/schedules/monthly-stats', [AdminSchedule::class, 'monthlyStats']);
     
-
     // Chấm công (Attendance)
     $r->get('/attendance', [AdminAttendance::class, 'index']);
     $r->get('/api/attendance', [AdminAttendance::class, 'apiList']);
@@ -213,6 +239,7 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/api/payroll', [AdminPayroll::class, 'apiIndex']);
     $r->post('/api/payroll/calculate', [AdminPayroll::class, 'calculate']);
     $r->post('/api/payroll/calculate/{id}', [AdminPayroll::class, 'calculateOne']);
+    $r->post('/api/payroll/approve-all', [AdminPayroll::class, 'approveAll']);
     $r->put('/api/payroll/{id}/bonus-deduction', [AdminPayroll::class, 'updateBonusDeduction']);
     $r->post('/api/payroll/{id}/approve', [AdminPayroll::class, 'approve']);
     $r->post('/api/payroll/{id}/mark-paid', [AdminPayroll::class, 'markAsPaid']);
@@ -351,12 +378,19 @@ $router->group('/admin', function (Router $r): void {
     $r->post('/api/stock-alerts/run-check', [AdminStockAlert::class, 'runCheck']);
     $r->get('/api/stock-alerts/stats', [AdminStockAlert::class, 'stats']);
     $r->post('/api/stock-alerts/cleanup', [AdminStockAlert::class, 'cleanup']);
+    $r->post('/api/stock-alerts/clear-cache', [AdminStockAlert::class, 'clearCache']);
 
     // Payment Due Alerts (Cảnh báo hạn thanh toán)
     $r->get('/api/payment-due-alerts/stats', [AdminPaymentDueAlert::class, 'getStats']);
     $r->post('/api/payment-due-alerts/run', [AdminPaymentDueAlert::class, 'runCheck']);
     $r->get('/api/payment-due-alerts/list', [AdminPaymentDueAlert::class, 'getList']);
     $r->post('/api/payment-due-alerts/cleanup', [AdminPaymentDueAlert::class, 'cleanup']);
+
+    // Expiry Alerts (Cảnh báo hàng hết hạn/sắp hết hạn)
+    $r->get('/api/expiry-alerts/stats', [AdminExpiryAlert::class, 'stats']);
+    $r->post('/api/expiry-alerts/run-check', [AdminExpiryAlert::class, 'runCheck']);
+    $r->get('/api/expiry-alerts/batches', [AdminExpiryAlert::class, 'getBatches']);
+    $r->post('/api/expiry-alerts/cleanup', [AdminExpiryAlert::class, 'cleanup']);
 
     // Attendance (Chấm công)
     $r->get('/api/attendance/today-shift', [AdminAttendance::class, 'getTodayShift']);

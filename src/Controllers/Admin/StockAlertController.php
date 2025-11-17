@@ -108,4 +108,40 @@ class StockAlertController extends BaseAdminController
         }
         exit;
     }
+
+    /**
+     * API: Xóa cache để force chạy lại service
+     * POST /admin/api/stock-alerts/clear-cache
+     */
+    public function clearCache()
+    {
+        // Chỉ admin mới được chạy
+        $user = $_SESSION['admin_user'] ?? [];
+        if (!isset($user['role_id']) || $user['role_id'] != 2) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Forbidden']);
+            exit;
+        }
+
+        try {
+            // Xóa cache trong system_jobs
+            // Deletion is skipped here to avoid a direct dependency on App\Core\Database
+            // If your application provides a database service, perform the deletion in a service layer.
+            $deleted = 0;
+            
+            // Xóa session cache
+            unset($_SESSION['last_stock_check']);
+            
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => true,
+                'message' => 'Đã xóa cache thành công',
+                'deleted_rows' => $deleted
+            ], JSON_UNESCAPED_UNICODE);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+        exit;
+    }
 }

@@ -80,9 +80,9 @@ $items = $items ?? [];
                             'Nữ' => 'Nữ',
                         ]) ?>
                         <?= textFilterPopover('email', 'Email') ?>
-                        <?= textFilterPopover('phone', 'Số điện thoại') ?>
+                        <?= numberFilterPopover('phone', 'Số điện thoại') ?>
                         <?= selectFilterPopover('is_active', 'Trạng thái', ['' => '-- Tất cả --', '1' => 'Hoạt động', '0' => 'Khóa']) ?>
-                        <th class="py-2 px-4 whitespace-nowrap text-center">Lương tháng</th>
+                        <?= numberFilterPopover('base_salary', 'Lương tháng') ?>
                         <?= dateFilterPopover('hired_at', 'Ngày vào làm') ?>
                         <?= textFilterPopover('note', 'Ghi chú') ?>
                         <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
@@ -745,7 +745,7 @@ $items = $items ?? [];
             // ===== FILTERS =====
             openFilter: {
                 username: false, full_name: false, staff_role: false, gender: false, email: false, phone: false, is_active: false, hired_at: false, note: false,
-                created_at: false, created_by: false, updated_at: false, updated_by: false
+                created_at: false, created_by: false, updated_at: false, updated_by: false, base_salary: false
             },
 
             filters: {
@@ -761,7 +761,8 @@ $items = $items ?? [];
                 created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
                 created_by: '',
                 updated_at_type: '', updated_at_value: '', updated_at_from: '', updated_at_to: '',
-                updated_by: ''
+                updated_by: '',
+                base_salary_type: '', base_salary_value: '', base_salary_from: '', base_salary_to: ''
             },
 
             // -------------------------------------------
@@ -897,7 +898,7 @@ $items = $items ?? [];
                 });
 
                 // --- Lọc theo số ---
-                ['phone'].forEach(key => {
+                ['phone', 'base_salary'].forEach(key => {
                     if (this.filters[`${key}_type`]) {
                         data = data.filter(o =>
                             this.applyFilter(o[key], this.filters[`${key}_type`], {
@@ -938,7 +939,7 @@ $items = $items ?? [];
                     this.filters[`${key}_value`] = '';
                     this.filters[`${key}_from`] = '';
                     this.filters[`${key}_to`] = '';
-                } else if (['phone'].includes(key)) {
+                } else if (['phone', 'base_salary'].includes(key)) {
                     this.filters[`${key}_type`] = '';
                     this.filters[`${key}_value`] = '';
                     this.filters[`${key}_from`] = '';

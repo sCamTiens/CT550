@@ -219,7 +219,7 @@ $items = $items ?? [];
                                 </div>
                             </div>
                         </th>
-                        <?= numberFilterPopover('total_amount', 'Tổng tiền') ?>
+                        <?= numberFilterPopover('total_amount', label: 'Tổng tiền') ?>
                         <?= numberFilterPopover('paid_amount', 'Số tiền đã thanh toán') ?>
                         <?= dateFilterPopover('due_date', 'Ngày hẹn thanh toán') ?>
                         <?= textFilterPopover('note', 'Ghi chú') ?>

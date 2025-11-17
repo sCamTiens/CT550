@@ -1,5 +1,5 @@
 <?php
-namespace App\Models\Repositories;
+namespace App\Models\Customer\Repositories;
 
 use App\Core\DB;
 use App\Support\Auditable;
@@ -98,8 +98,18 @@ class CustomerRepository
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 1, 0)";
 
             $stmt = $pdo->prepare($sql);
-            $passwordRaw = trim($data['password'] ?? '') ?: '123456';
-            $passwordHash = password_hash($passwordRaw, PASSWORD_BCRYPT);
+            
+            // Nếu password đã được hash từ controller (length = 60), dùng luôn
+            // Nếu chưa hash (password thô), hash nó
+            $passwordInput = trim($data['password'] ?? '');
+            if (empty($passwordInput)) {
+                $passwordInput = '123456'; // Default password
+            }
+            
+            // Check if already hashed (bcrypt hash always 60 chars)
+            $passwordHash = (strlen($passwordInput) === 60 && substr($passwordInput, 0, 4) === '$2y$')
+                ? $passwordInput
+                : password_hash($passwordInput, PASSWORD_BCRYPT);
 
             // Xử lý date_of_birth: nếu là chuỗi rỗng hoặc null thì gán null, không để chuỗi rỗng
             $dateOfBirth = trim($data['date_of_birth'] ?? '');
@@ -566,7 +576,7 @@ class CustomerRepository
     public function findByUsernameOrEmail(string $usernameOrEmail): array|false
     {
         $sql = "SELECT * FROM {$this->userTable} 
-                WHERE (username = ? OR email = ?) AND role = 'customer'";
+                WHERE (username = ? OR email = ?)";
         
         $stmt = DB::pdo()->prepare($sql);
         $stmt->execute([$usernameOrEmail, $usernameOrEmail]);

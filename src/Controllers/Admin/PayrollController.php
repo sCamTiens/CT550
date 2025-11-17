@@ -66,10 +66,31 @@ class PayrollController extends BaseAdminController
             $staffRepo = new StaffRepository();
             $staffs = $staffRepo->all();
             
+            // Lấy danh sách bảng lương hiện tại
+            $existingPayrolls = $this->repo->getByMonth((int)$month, (int)$year);
+            $existingMap = [];
+            foreach ($existingPayrolls as $p) {
+                $existingMap[$p['user_id']] = $p['status'];
+            }
+            
             $results = [];
+            $skippedCount = 0;
+            
             foreach ($staffs as $staff) {
+                $userId = $staff['user_id'];
+                $currentStatus = isset($existingMap[$userId]) ? trim($existingMap[$userId]) : null;
+                
+                // Chỉ tính lương nếu:
+                // 1. Chưa có bảng lương (null)
+                // 2. Đang ở trạng thái "Nháp"
+                // Bỏ qua: "Chờ duyệt", "Đã duyệt", "Đã trả"
+                if ($currentStatus && $currentStatus !== 'Nháp') {
+                    $skippedCount++;
+                    continue;
+                }
+                
                 $payroll = $this->repo->calculatePayroll(
-                    $staff['user_id'], 
+                    $userId, 
                     (int)$month, 
                     (int)$year, 
                     $createdBy
@@ -77,8 +98,13 @@ class PayrollController extends BaseAdminController
                 $results[] = $payroll;
             }
             
+            $message = 'Tính lương thành công cho ' . count($results) . ' nhân viên';
+            if ($skippedCount > 0) {
+                $message .= " ({$skippedCount} người đã bỏ qua do đã duyệt hoặc đã trả)";
+            }
+            
             $this->json([
-                'message' => 'Tính lương thành công cho ' . count($results) . ' nhân viên',
+                'message' => $message,
                 'data' => $results
             ]);
         } catch (\Throwable $e) {
@@ -145,6 +171,64 @@ class PayrollController extends BaseAdminController
             $approvedBy = $this->currentUserId();
             $this->repo->approve($id, $approvedBy);
             $this->json(['message' => 'Phê duyệt thành công']);
+        } catch (\Throwable $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * API: Phê duyệt tất cả bảng lương nháp
+     * POST /admin/api/payroll/approve-all
+     */
+    public function approveAll()
+    {
+        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        
+        $month = $data['month'] ?? date('n');
+        $year = $data['year'] ?? date('Y');
+        
+        try {
+            $approvedBy = $this->currentUserId();
+            
+            // Lấy tất cả bảng lương trong tháng
+            $allPayrolls = $this->repo->getByMonth((int)$month, (int)$year);
+            
+            // Chỉ duyệt những bảng lương có trạng thái "Nháp"
+            $draftPayrolls = array_filter($allPayrolls, function($p) {
+                $status = trim($p['status'] ?? '');
+                return $status === 'Nháp';
+            });
+            
+            if (empty($draftPayrolls)) {
+                $this->json(['error' => 'Không có bảng lương ở trạng thái Nháp trong tháng này'], 400);
+                return;
+            }
+            
+            $successCount = 0;
+            $errors = [];
+            
+            foreach ($draftPayrolls as $payroll) {
+                try {
+                    $this->repo->approve($payroll['id'], $approvedBy);
+                    $successCount++;
+                } catch (\Throwable $e) {
+                    $errors[] = $payroll['full_name'] . ': ' . $e->getMessage();
+                }
+            }
+            
+            $total = count($draftPayrolls);
+            $message = "Đã duyệt thành công {$successCount}/{$total} bảng lương";
+            
+            if (!empty($errors)) {
+                $message .= '. Lỗi: ' . implode('; ', $errors);
+            }
+            
+            $this->json([
+                'message' => $message,
+                'success_count' => $successCount,
+                'total' => $total,
+                'errors' => $errors
+            ]);
         } catch (\Throwable $e) {
             $this->json(['error' => $e->getMessage()], 500);
         }
@@ -361,6 +445,23 @@ class PayrollController extends BaseAdminController
     public function delete($id)
     {
         try {
+            // Kiểm tra trạng thái trước khi xóa
+            $payroll = $this->repo->find($id);
+            
+            if (!$payroll) {
+                $this->json(['error' => 'Không tìm thấy bảng lương'], 404);
+                return;
+            }
+            
+            // Chỉ cho phép xóa bảng lương ở trạng thái "Nháp"
+            if (trim($payroll['status']) !== 'Nháp') {
+                $this->json([
+                    'error' => 'Không thể xóa bảng lương đã duyệt hoặc đã trả. Chỉ có thể xóa bảng lương ở trạng thái "Nháp".',
+                    'current_status' => $payroll['status']
+                ], 400);
+                return;
+            }
+            
             $this->repo->delete($id);
             $this->json(['message' => 'Xóa thành công']);
         } catch (\Throwable $e) {

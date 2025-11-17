@@ -36,7 +36,6 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         <option value="customers">Khách hàng</option>
                         <option value="suppliers">Nhà cung cấp</option>
                         <option value="orders">Đơn hàng</option>
-                        <option value="inventory">Tồn kho</option>
                     </select>
                 </div>
 
@@ -196,16 +195,32 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 <div x-show="showValueRange">
                     <label class="block text-sm font-medium text-gray-700 mb-2"
                         x-text="valueRangeLabel + ' từ:'"></label>
-                    <input type="number" x-model="filters.valueFrom" placeholder="0"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#002975]">
+                    <input
+                        :value="filters.valueFrom !== undefined && filters.valueFrom !== null && filters.valueFrom !== '' ? Number(filters.valueFrom).toLocaleString('en-US') : ''"
+                        @input="
+        let val = $event.target.value.replace(/[^\d]/g, '');
+        filters.valueFrom = val ? Number(val) : '';
+        $event.target.value = filters.valueFrom !== '' ? Number(filters.valueFrom).toLocaleString('en-US') : '';
+    " @blur="
+        $event.target.value = filters.valueFrom !== '' ? Number(filters.valueFrom).toLocaleString('en-US') : '';
+    " @focus="$event.target.select()" inputmode="numeric" placeholder="0"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#002975]" />
                 </div>
 
                 <!-- Giá trị đến -->
                 <div x-show="showValueRange">
                     <label class="block text-sm font-medium text-gray-700 mb-2"
                         x-text="valueRangeLabel + ' đến:'"></label>
-                    <input type="number" x-model="filters.valueTo" placeholder="0"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#002975]">
+                    <input
+                        :value="filters.valueTo !== undefined && filters.valueTo !== null && filters.valueTo !== '' ? Number(filters.valueTo).toLocaleString('en-US') : ''"
+                        @input="
+        let val = $event.target.value.replace(/[^\d]/g, '');
+        filters.valueTo = val ? Number(val) : '';
+        $event.target.value = filters.valueTo !== '' ? Number(filters.valueTo).toLocaleString('en-US') : '';
+    " @blur="
+        $event.target.value = filters.valueTo !== '' ? Number(filters.valueTo).toLocaleString('en-US') : '';
+    " @focus="$event.target.select()" inputmode="numeric" placeholder="0"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#002975]" />
                 </div>
 
                 <!-- Sắp xếp -->
@@ -255,22 +270,36 @@ $pageTitle = 'Thống Kê & Báo Cáo';
         </div>
 
         <!-- Biểu đồ -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <!-- Biểu đồ cột -->
-            <div>
-                <h4 class="font-bold text-base mb-3 text-gray-700">Biểu Đồ Cột</h4>
+        <div class="mb-6">
+            <!-- Biểu đồ cột - Luôn hiển thị -->
+            <div class="mb-6">
+                <h4 class="font-bold text-base mb-3 text-gray-700" x-text="barChartTitle"></h4>
                 <div class="bg-gray-50 rounded-lg p-4">
                     <canvas x-ref="barChartCanvas" style="max-height: 350px;"></canvas>
                 </div>
             </div>
 
-            <!-- Biểu đồ tròn -->
-            <div>
-                <h4 class="font-bold text-base mb-3 text-gray-700">Biểu Đồ Tròn</h4>
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <canvas x-ref="pieChartCanvas" style="max-height: 350px;"></canvas>
-                </div>
+            <!-- Grid các biểu đồ tròn - Hiển thị tất cả các filter "Tất cả" -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <template x-for="(pieChart, index) in pieCharts" :key="index">
+                    <div>
+                        <h4 class="font-bold text-base mb-3 text-gray-700" x-text="pieChart.title"></h4>
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <canvas :id="`pieChartCanvas${index}`" style="max-height: 300px;"></canvas>
+                        </div>
+                    </div>
+                </template>
             </div>
+        </div>
+
+        <!-- Tổng quan -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <template x-for="summary in summaryCards" :key="summary.label">
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+                    <div class="text-sm font-medium text-blue-600 mb-1" x-text="summary.label"></div>
+                    <div class="text-2xl font-bold text-blue-900" x-text="summary.value"></div>
+                </div>
+            </template>
         </div>
 
         <!-- Bảng dữ liệu -->
@@ -299,6 +328,10 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                                     class="absolute z-40 mt-2 w-64 bg-white rounded-lg shadow-lg border p-3 text-left left-0">
                                     <div class="font-semibold mb-2" x-text="'Lọc: ' + col.label"></div>
                                     <input x-model.trim="tableFilters['column' + (index + 1)]"
+                                        @input="$nextTick(() => { 
+                                            clearTimeout(chartRenderTimeout);
+                                            chartRenderTimeout = setTimeout(() => { calculateSummary(); renderCharts(); }, 300);
+                                        })"
                                         class="w-full border rounded px-3 py-2"
                                         :placeholder="'Nhập ' + col.label.toLowerCase()">
                                     <div class="mt-3 flex gap-2 justify-end">
@@ -324,7 +357,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                             </template>
                         </tr>
                     </template>
-                    <tr x-show="!loading && getFilteredTableData().length===0">
+                    <tr x-show="getFilteredTableData().length===0">
                         <td colspan="12" class="py-12 text-center text-slate-500">
                             <div class="flex flex-col items-center justify-center">
                                 <img src="/assets/images/Null.png" alt="Trống" class="w-40 h-24 mb-3 opacity-80">
@@ -367,6 +400,14 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 fromDate: '',
                 toDate: ''
             },
+            // --- utils ---
+            formatInputNumber(n) {
+                try {
+                    return new Intl.NumberFormat('vi-VN').format(n || 0);
+                } catch {
+                    return n;
+                }
+            },
 
             // Dropdown data
             staffList: [],
@@ -382,12 +423,20 @@ $pageTitle = 'Thống Kê & Báo Cáo';
 
             // Charts
             barChart: null,
-            pieChart: null,
+            pieCharts: [], // Array of {title, chart, data}
+            pieChartInstances: [], // Array of Chart.js instances
 
             // Table data
             tableColumns: [],
             tableData: [],
             tableDataFiltered: [], // Dữ liệu sau khi filter
+
+            // Summary cards
+            summaryCards: [],
+
+            // Chart titles
+            barChartTitle: 'Biểu Đồ Cột',
+            pieChartTitle: 'Biểu Đồ Tròn',
 
             // Table filters
             tableFilters: {
@@ -405,6 +454,9 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 column4: false,
                 column5: false
             },
+            
+            // Debounce timer for chart updates
+            chartRenderTimeout: null,
 
             get criteriaOptions() {
                 const options = {
@@ -461,7 +513,9 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 // - Thống kê sản phẩm: có thể chọn sản phẩm cụ thể để xem chi tiết
                 // - Thống kê nhân viên: xem nhân viên nào bán sản phẩm X
                 // - Thống kê khách hàng: xem khách hàng nào mua sản phẩm X
-                return ['products', 'staff', 'customers', 'orders', 'inventory'].includes(this.filters.reportType);
+                // - Nhà cung cấp: xem nhà cung cấp nào cung cấp sản phẩm X
+                // - Tồn kho: lọc theo sản phẩm cụ thể
+                return ['staff', 'customers', 'orders', 'suppliers', 'inventory'].includes(this.filters.reportType);
             },
 
             get showCustomerFilter() {
@@ -471,7 +525,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
 
             get showSupplierFilter() {
                 // Hiển thị dropdown nhà cung cấp khi muốn lọc theo nhà cung cấp
-                return ['products', 'suppliers'].includes(this.filters.reportType);
+                return ['products'].includes(this.filters.reportType);
             },
 
             get showValueRange() {
@@ -700,8 +754,10 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 if (this.filters.productId) params.append('product_id', this.filters.productId);
                 if (this.filters.customerId) params.append('customer_id', this.filters.customerId);
                 if (this.filters.supplierId) params.append('supplier_id', this.filters.supplierId);
-                if (this.filters.valueFrom) params.append('value_from', this.filters.valueFrom);
-                if (this.filters.valueTo) params.append('value_to', this.filters.valueTo);
+                if (this.filters.valueFrom !== '' && this.filters.valueFrom !== undefined && this.filters.valueFrom !== null)
+                    params.append('value_from', this.filters.valueFrom);
+                if (this.filters.valueTo !== '' && this.filters.valueTo !== undefined && this.filters.valueTo !== null)
+                    params.append('value_to', this.filters.valueTo);
 
                 try {
                     const response = await fetch(`/admin/api/reports/filter?${params}`);
@@ -713,6 +769,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         this.totalResults = result.data.length;
                         this.resultTitle = this.getResultTitle();
                         this.setupTableColumns();
+                        this.calculateSummary();
 
                         this.$nextTick(() => {
                             this.renderCharts();
@@ -787,7 +844,45 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     ]
                 };
 
-                this.tableColumns = columnConfigs[this.filters.reportType] || [];
+                let columns = [...(columnConfigs[this.filters.reportType] || [])];
+
+                // Thêm cột sản phẩm nếu có lọc theo sản phẩm cụ thể
+                if (this.filters.productId && this.filters.reportType !== 'products') {
+                    const productCol = { key: 'product_name', label: 'Sản phẩm', type: 'text' };
+                    // Chèn sau cột đầu tiên (tên đối tượng)
+                    columns.splice(1, 0, productCol);
+                }
+
+                // Thêm cột khách hàng nếu có lọc theo khách hàng cụ thể
+                if (this.filters.customerId && this.filters.reportType !== 'customers') {
+                    const customerCol = { key: 'customer_name', label: 'Khách hàng', type: 'text' };
+                    // Chèn sau cột sản phẩm (nếu có) hoặc sau cột đầu tiên
+                    const insertIndex = this.filters.productId ? 2 : 1;
+                    columns.splice(insertIndex, 0, customerCol);
+                }
+
+                // Thêm cột nhân viên nếu có lọc theo nhân viên cụ thể
+                if (this.filters.staffId && this.filters.reportType !== 'staff') {
+                    const staffCol = { key: 'staff_name', label: 'Nhân viên', type: 'text' };
+                    // Chèn sau các cột filter khác
+                    let insertIndex = 1;
+                    if (this.filters.productId) insertIndex++;
+                    if (this.filters.customerId) insertIndex++;
+                    columns.splice(insertIndex, 0, staffCol);
+                }
+
+                // Thêm cột nhà cung cấp nếu có lọc theo nhà cung cấp cụ thể
+                if (this.filters.supplierId && this.filters.reportType !== 'suppliers') {
+                    const supplierCol = { key: 'supplier_name', label: 'Nhà cung cấp', type: 'text' };
+                    // Chèn sau các cột filter khác
+                    let insertIndex = 1;
+                    if (this.filters.productId) insertIndex++;
+                    if (this.filters.customerId) insertIndex++;
+                    if (this.filters.staffId) insertIndex++;
+                    columns.splice(insertIndex, 0, supplierCol);
+                }
+
+                this.tableColumns = columns;
             },
 
             formatCell(row, col) {
@@ -820,11 +915,23 @@ $pageTitle = 'Thống Kê & Báo Cáo';
 
             applyTableFilter(columnIndex) {
                 this.openTableFilter['column' + columnIndex] = false;
+                // Recalculate summary and charts when filter is applied with debounce
+                clearTimeout(this.chartRenderTimeout);
+                this.chartRenderTimeout = setTimeout(() => {
+                    this.calculateSummary();
+                    this.renderCharts();
+                }, 300);
             },
 
             resetTableFilter(columnIndex) {
                 this.tableFilters['column' + columnIndex] = '';
                 this.openTableFilter['column' + columnIndex] = false;
+                // Recalculate summary and charts when filter is reset with debounce
+                clearTimeout(this.chartRenderTimeout);
+                this.chartRenderTimeout = setTimeout(() => {
+                    this.calculateSummary();
+                    this.renderCharts();
+                }, 300);
             },
 
             getFilteredTableData() {
@@ -851,18 +958,458 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 return filtered;
             },
 
+            calculateSummary() {
+                this.summaryCards = [];
+                
+                // Sử dụng filtered data nếu có filter, nếu không thì dùng tableData
+                const dataToUse = this.getFilteredTableData().length > 0 ? this.getFilteredTableData() : this.tableData;
+                if (!dataToUse.length) return;
+
+                const criteriaConfig = {
+                    revenue: { key: 'total_revenue', label: 'Tổng Doanh Thu', isMoney: true },
+                    orders: { key: 'total_orders', label: 'Tổng Số Đơn', isMoney: false },
+                    quantity: { key: 'total_quantity', label: 'Tổng Số Lượng', isMoney: false },
+                    total_spent: { key: 'total_spent', label: 'Tổng Chi Tiêu', isMoney: true },
+                    sales_value: { key: 'total_sales_value', label: 'Tổng Doanh Thu Bán', isMoney: true },
+                    purchase_value: { key: 'total_purchase_value', label: 'Tổng Giá Trị Nhập', isMoney: true },
+                    purchases: { key: 'total_purchases', label: 'Tổng Số Lần Nhập', isMoney: false },
+                    avg_order_value: { key: 'avg_order_value', label: 'Giá Trị TB', isMoney: true },
+                    total: { key: 'total_amount', label: 'Tổng Giá Trị Đơn', isMoney: true },
+                    count: { key: 'order_count', label: 'Tổng Số Đơn', isMoney: false },
+                    low_stock: { key: 'current_stock', label: 'Tổng Tồn Kho', isMoney: false },
+                    high_stock: { key: 'current_stock', label: 'Tổng Tồn Kho', isMoney: false },
+                    out_of_stock: { key: 'current_stock', label: 'Tổng Tồn Kho', isMoney: false }
+                };
+
+                const config = criteriaConfig[this.filters.criteria];
+                if (!config) return;
+
+                // Tính tổng
+                const total = dataToUse.reduce((sum, row) => sum + (parseFloat(row[config.key]) || 0), 0);
+                const count = dataToUse.length;
+
+                this.summaryCards.push({
+                    label: config.label,
+                    value: config.isMoney ? this.formatMoney(total) : new Intl.NumberFormat('vi-VN').format(total)
+                });
+
+                this.summaryCards.push({
+                    label: 'Số Lượng',
+                    value: new Intl.NumberFormat('vi-VN').format(count)
+                });
+
+                // Tính trung bình
+                if (count > 0) {
+                    const avg = total / count;
+                    this.summaryCards.push({
+                        label: 'Trung Bình',
+                        value: config.isMoney ? this.formatMoney(avg) : new Intl.NumberFormat('vi-VN').format(avg)
+                    });
+                }
+
+                // Tìm Max
+                const maxItem = dataToUse.reduce((max, row) => {
+                    const val = parseFloat(row[config.key]) || 0;
+                    return val > (parseFloat(max[config.key]) || 0) ? row : max;
+                }, dataToUse[0]);
+
+                const maxValue = parseFloat(maxItem[config.key]) || 0;
+                this.summaryCards.push({
+                    label: 'Cao Nhất',
+                    value: config.isMoney ? this.formatMoney(maxValue) : new Intl.NumberFormat('vi-VN').format(maxValue)
+                });
+            },
+
             renderCharts() {
                 this.destroyCharts();
 
-                if (!this.tableData.length) return;
+                const dataToUse = this.getFilteredTableData().length > 0 ? this.getFilteredTableData() : this.tableData;
+                if (!dataToUse.length) return;
 
-                const data = this.tableData.slice(0, 10); // Top 10
-                const labels = this.getChartLabels(data);
-                const values = this.getChartValues(data);
-                const colors = this.generateColors(values.length);
+                // Biểu đồ cột: Theo loại thống kê chính (top 10) - sử dụng filtered data
+                const mainData = dataToUse.slice(0, 10);
+                const mainLabels = this.getChartLabels(mainData);
+                const mainValues = this.getChartValues(mainData);
+                const mainColors = this.generateColors(mainValues.length);
 
-                this.renderBarChart(labels, values, colors);
-                this.renderPieChart(labels, values, colors);
+                this.barChartTitle = this.getBarChartTitle();
+                this.renderBarChart(mainLabels, mainValues, mainColors);
+
+                // Biểu đồ tròn: Tạo tất cả các biểu đồ cho các filter "Tất cả" - sử dụng filtered data
+                this.$nextTick(async () => {
+                    await this.renderAllPieCharts();
+                });
+            },
+
+            getBarChartTitle() {
+                const typeLabels = {
+                    staff: 'Nhân Viên',
+                    products: 'Sản Phẩm',
+                    customers: 'Khách Hàng',
+                    suppliers: 'Nhà Cung Cấp',
+                    orders: 'Đơn Hàng',
+                    inventory: 'Tồn Kho'
+                };
+                return `${typeLabels[this.filters.reportType]} - ${this.valueRangeLabel}`;
+            },
+
+            getPieChartTitle() {
+                // Ưu tiên: Sản phẩm > Khách hàng > Nhân viên > Nhà cung cấp
+                if (!this.filters.productId && this.showProductFilter && this.filters.reportType !== 'products') {
+                    return 'Phân Bổ Theo Sản Phẩm (%)';
+                }
+                if (!this.filters.customerId && this.showCustomerFilter && this.filters.reportType !== 'customers') {
+                    return 'Phân Bổ Theo Khách Hàng (%)';
+                }
+                if (!this.filters.staffId && this.showStaffFilter && this.filters.reportType !== 'staff') {
+                    return 'Phân Bổ Theo Nhân Viên (%)';
+                }
+                if (!this.filters.supplierId && this.showSupplierFilter && this.filters.reportType !== 'suppliers') {
+                    return 'Phân Bổ Theo Nhà Cung Cấp (%)';
+                }
+                return 'Phân Bổ (%)';
+            },
+
+            async renderAllPieCharts() {
+                this.pieCharts = [];
+                this.pieChartInstances = [];
+
+                const pieChartsToRender = [];
+                const filteredData = this.getFilteredTableData();
+                const hasTableFilters = filteredData.length > 0 && filteredData.length < this.tableData.length;
+                
+                console.log('renderAllPieCharts called - hasTableFilters:', hasTableFilters, 'tableData length:', this.tableData.length, 'filteredData length:', filteredData.length);
+
+                // Kiểm tra từng loại filter - nếu chọn "Tất cả" thì thêm vào danh sách
+                // KHÔNG hiển thị biểu đồ tròn cho inventory vì nó là snapshot hiện tại
+                if (!this.filters.productId && this.showProductFilter && this.filters.reportType !== 'products' && this.filters.reportType !== 'inventory') {
+                    pieChartsToRender.push({
+                        type: 'product',
+                        title: 'Phân Bổ Theo Sản Phẩm (%)',
+                        key: 'product_name',
+                        actualKey: 'name',  // Actual field name from backend when fetching as 'products' report
+                        reportTypeForAgg: 'products'  // Report type to use for aggregation
+                    });
+                }
+
+                if (!this.filters.customerId && this.showCustomerFilter && this.filters.reportType !== 'customers' && this.filters.reportType !== 'inventory') {
+                    pieChartsToRender.push({
+                        type: 'customer',
+                        title: 'Phân Bổ Theo Khách Hàng (%)',
+                        key: 'customer_name',
+                        actualKey: 'full_name',  // Actual field name from backend when fetching as 'customers' report
+                        reportTypeForAgg: 'customers'  // Report type to use for aggregation
+                    });
+                }
+
+                if (!this.filters.staffId && this.showStaffFilter && this.filters.reportType !== 'staff' && this.filters.reportType !== 'inventory') {
+                    pieChartsToRender.push({
+                        type: 'staff',
+                        title: 'Phân Bổ Theo Nhân Viên (%)',
+                        key: 'staff_name',
+                        actualKey: 'full_name',  // Actual field name from backend when fetching as 'staff' report
+                        reportTypeForAgg: 'staff'  // Report type to use for aggregation
+                    });
+                }
+
+                if (!this.filters.supplierId && this.showSupplierFilter && this.filters.reportType !== 'suppliers' && this.filters.reportType !== 'inventory') {
+                    pieChartsToRender.push({
+                        type: 'supplier',
+                        title: 'Phán Bổ Theo Nhà Cung Cấp (%)',
+                        key: 'supplier_name',
+                        actualKey: 'supplier_name',  // Actual field name from backend
+                        reportTypeForAgg: 'suppliers'  // Report type to use for aggregation
+                    });
+                }
+
+                console.log('pieChartsToRender configs:', pieChartsToRender);
+
+                // Nếu không có filter nào "Tất cả" → Dùng data chính từ tableData hoặc filteredData
+                if (pieChartsToRender.length === 0) {
+                    console.log('No specific filter "all" found - using main data');
+                    const dataToUse = hasTableFilters ? filteredData : this.tableData;
+                    const pieData = dataToUse.slice(0, 10).map(item => ({
+                        label: this.getChartLabels([item])[0],
+                        value: this.getChartValues([item])[0]
+                    }));
+
+                    console.log('Main pie data:', pieData);
+                    this.pieCharts.push({
+                        title: 'Phân Bổ (%)',
+                        data: pieData
+                    });
+                } else {
+                    console.log('Has specific "all" filters - fetching/aggregating for each');
+                    // Nếu có table filters → tạo pie chart từ filtered data mà không cần fetch API
+                    if (hasTableFilters) {
+                        console.log('Using local aggregation from filtered data');
+                        for (let config of pieChartsToRender) {
+                            const data = this.aggregateByKey(filteredData, config.actualKey, config.reportTypeForAgg);
+                            this.pieCharts.push({
+                                title: config.title,
+                                data: data
+                            });
+                        }
+                    } else {
+                        console.log('Fetching from API');
+                        // Fetch data từ API cho từng loại biểu đồ tròn (lần đầu tiên hoặc không có table filters)
+                        for (let config of pieChartsToRender) {
+                            const data = await this.fetchPieChartData(config.type, config.actualKey);
+                            this.pieCharts.push({
+                                title: config.title,
+                                data: data
+                            });
+                        }
+                    }
+                }
+
+                console.log('Final pieCharts before rendering:', this.pieCharts);
+
+                // Render tất cả biểu đồ tròn
+                // Đợi DOM render xong, sau đó mới vẽ charts
+                return new Promise((resolve) => {
+                    this.$nextTick(() => {
+                        requestAnimationFrame(() => {
+                            setTimeout(() => {
+                                this.pieCharts.forEach((pieChart, index) => {
+                                    const canvas = document.getElementById(`pieChartCanvas${index}`);
+                                    if (!canvas) {
+                                        console.warn(`Canvas pieChartCanvas${index} not found`);
+                                        return;
+                                    }
+                                    
+                                    if (!pieChart.data || pieChart.data.length === 0) {
+                                        console.warn(`No data for pie chart ${index}:`, pieChart);
+                                        return;
+                                    }
+
+                                    console.log(`Rendering pie chart ${index}:`, pieChart.data);
+
+                                    const labels = pieChart.data.map(item => item.label);
+                                    const values = pieChart.data.map(item => item.value);
+                                    const colors = this.generateColors(values.length);
+
+                                    const ctx = canvas.getContext('2d');
+                                    const chartInstance = new Chart(ctx, {
+                                        type: 'pie',
+                                        data: {
+                                            labels: labels,
+                                            datasets: [{
+                                                data: values,
+                                                backgroundColor: colors,
+                                                borderWidth: 2,
+                                                borderColor: '#fff'
+                                            }]
+                                        },
+                                        options: {
+                                            responsive: true,
+                                            maintainAspectRatio: true,
+                                            plugins: {
+                                                legend: {
+                                                    position: 'bottom',
+                                                    labels: {
+                                                        padding: 10,
+                                                        font: { size: 10 }
+                                                    }
+                                                },
+                                                tooltip: {
+                                                    callbacks: {
+                                                        label: (context) => {
+                                                            const isMoney = ['revenue', 'total_spent', 'sales_value', 'purchase_value', 'avg_order_value', 'total'].includes(this.filters.criteria);
+                                                            const value = isMoney ? this.formatMoney(context.raw) : new Intl.NumberFormat('vi-VN').format(context.raw);
+                                                            return `${context.label}: ${value}`;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    });
+
+                                    this.pieChartInstances.push(chartInstance);
+                                });
+                                resolve();
+                            }, 50);
+                        });
+                    });
+                });
+            },
+
+            async fetchPieChartData(fetchType, groupByKey) {
+                try {
+                    const params = new URLSearchParams();
+                    
+                    // Khi reportType là 'staff' nhưng lấy pie chart theo sản phẩm/khách hàng
+                    // PHẢI đổi report_type sang 'products'/'customers' để mỗi item có row riêng
+                    let reportTypeForPie = this.filters.reportType;
+                    if (this.filters.reportType === 'staff') {
+                        if (fetchType === 'product') {
+                            reportTypeForPie = 'products';
+                        } else if (fetchType === 'customer') {
+                            reportTypeForPie = 'customers';
+                        }
+                    }
+                    
+                    params.append('report_type', reportTypeForPie);
+                    params.append('criteria', this.filters.criteria);
+                    params.append('from_date', this.filters.fromDate);
+                    params.append('to_date', this.filters.toDate);
+                    params.append('sort_order', this.filters.sortOrder);
+
+                    // Khi reportType là 'staff', GỬI staff_id để lọc theo nhân viên cụ thể
+                    if (this.filters.reportType === 'staff') {
+                        if (this.filters.staffId) {
+                            params.append('staff_id', this.filters.staffId);
+                        }
+                    } else {
+                        // Các report type khác: Chỉ giữ filter KHÔNG PHẢI của loại đang phân bổ
+                        if (fetchType !== 'product' && this.filters.productId) {
+                            params.append('product_id', this.filters.productId);
+                        }
+                        if (fetchType !== 'customer' && this.filters.customerId) {
+                            params.append('customer_id', this.filters.customerId);
+                        }
+                        if (fetchType !== 'staff' && this.filters.staffId) {
+                            params.append('staff_id', this.filters.staffId);
+                        }
+                        if (fetchType !== 'supplier' && this.filters.supplierId) {
+                            params.append('supplier_id', this.filters.supplierId);
+                        }
+                    }
+
+                    // KHÔNG gửi value_from và value_to cho biểu đồ tròn
+                    // Biểu đồ tròn chỉ phân bổ theo entity, không nên bị ảnh hưởng bởi filter số
+
+                    const response = await fetch(`/admin/api/reports/filter?${params}`);
+                    const result = await response.json();
+
+                    console.log(`Raw API response for ${fetchType}:`, result);
+                    
+                    if (result.success && result.data && result.data.length > 0) {
+                        console.log(`Raw data for ${fetchType}:`, result.data);
+                        console.log(`groupByKey: ${groupByKey}, reportTypeForPie: ${reportTypeForPie}`);
+                        const aggregated = this.aggregateByKey(result.data, groupByKey, reportTypeForPie);
+                        console.log(`Aggregated pie chart data for ${fetchType}:`, aggregated);
+                        return aggregated;
+                    } else {
+                        console.warn(`No data for pie chart ${fetchType}`, result);
+                    }
+                } catch (err) {
+                    console.error('Error fetching pie chart data:', err);
+                }
+                return [];
+            },
+
+            async renderPieChartByFilter() {
+                // Method này không dùng nữa, đã thay bằng renderAllPieCharts
+            },
+
+            aggregateByKey(data, key, reportTypeForAgg) {
+                const grouped = {};
+                // Determine the value key based on the report type being aggregated
+                const valueKey = reportTypeForAgg ? this.getValueKeyForReportType(reportTypeForAgg) : this.getValueKeyForCriteria();
+                
+                console.log(`aggregateByKey - key: ${key}, valueKey: ${valueKey}, data length: ${data.length}`);
+                console.log(`aggregateByKey - first row:`, data[0]);
+
+                data.forEach((row, idx) => {
+                    let labels = row[key] || 'Khác';
+                    console.log(`Row ${idx}: labels from row[${key}] = "${labels}", value from row[${valueKey}] = ${row[valueKey]}`);
+
+                    // Nếu là danh sách nhiều item (GROUP_CONCAT), tách ra 
+                    // NHƯ CẢ LẦN TRƯỚC chia đều, nhưng giờ backend đã trả về mỗi item riêng row
+                    // nên không nên còn GROUP_CONCAT nữa
+                    if (typeof labels === 'string' && labels.includes(', ')) {
+                        // Trường hợp này hiếm khi xảy ra vì đã đổi report_type
+                        // Nếu vẫn có GROUP_CONCAT, chia đều cho từng item
+                        const labelList = labels.split(', ');
+                        labelList.forEach(label => {
+                            const trimmedLabel = label.trim();
+                            if (!grouped[trimmedLabel]) {
+                                grouped[trimmedLabel] = 0;
+                            }
+                            grouped[trimmedLabel] += (parseFloat(row[valueKey]) || 0) / labelList.length;
+                        });
+                    } else {
+                        // Single item - cộng dồn bình thường
+                        if (!grouped[labels]) {
+                            grouped[labels] = 0;
+                        }
+                        grouped[labels] += parseFloat(row[valueKey]) || 0;
+                    }
+                });
+
+                console.log(`aggregateByKey - grouped result:`, grouped);
+
+                // Convert to array and sort
+                const result = Object.entries(grouped)
+                    .map(([label, value]) => ({ label, value }))
+                    .sort((a, b) => b.value - a.value)
+                    .slice(0, 10); // Top 10
+                    
+                console.log(`aggregateByKey - final result:`, result);
+                return result;
+            },
+
+            getValueKeyForCriteria() {
+                const valueKeys = {
+                    revenue: 'total_revenue',
+                    orders: 'total_orders',
+                    quantity: 'total_quantity',
+                    total_spent: 'total_spent',
+                    sales_value: 'total_sales_value',
+                    purchase_value: 'total_purchase_value',
+                    purchases: 'total_purchases',
+                    avg_order_value: 'avg_order_value',
+                    total: 'total_amount',
+                    count: 'order_count',
+                    low_stock: 'current_stock',
+                    high_stock: 'current_stock',
+                    out_of_stock: 'current_stock'
+                };
+                return valueKeys[this.filters.criteria] || 'total_revenue';
+            },
+
+            getValueKeyForReportType(reportType) {
+                // Map criteria to value key based on report type
+                if (reportType === 'staff') {
+                    const staffKeys = {
+                        revenue: 'total_revenue',
+                        orders: 'total_orders',
+                        avg_order_value: 'avg_order_value'
+                    };
+                    return staffKeys[this.filters.criteria] || 'total_revenue';
+                } else if (reportType === 'products') {
+                    const productKeys = {
+                        revenue: 'total_revenue',
+                        quantity: 'total_quantity',
+                        orders: 'total_orders'
+                    };
+                    return productKeys[this.filters.criteria] || 'total_revenue';
+                } else if (reportType === 'customers') {
+                    // Customers report always uses total_spent for "revenue" criteria
+                    const customerKeys = {
+                        revenue: 'total_spent',
+                        orders: 'total_orders',
+                        total_spent: 'total_spent',
+                        avg_order_value: 'avg_order_value'
+                    };
+                    return customerKeys[this.filters.criteria] || 'total_spent';
+                } else if (reportType === 'suppliers') {
+                    const supplierKeys = {
+                        revenue: 'total_sales_value',
+                        sales_value: 'total_sales_value',
+                        purchase_value: 'total_purchase_value',
+                        purchases: 'total_purchases'
+                    };
+                    return supplierKeys[this.filters.criteria] || 'total_sales_value';
+                } else if (reportType === 'orders') {
+                    const orderKeys = {
+                        total: 'total_amount',
+                        count: 'order_count'
+                    };
+                    return orderKeys[this.filters.criteria] || 'total_amount';
+                }
+                return 'total_revenue';
             },
 
             getChartLabels(data) {
@@ -891,7 +1438,8 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     total: 'total_amount',
                     count: 'order_count',
                     low_stock: 'current_stock',
-                    high_stock: 'current_stock'
+                    high_stock: 'current_stock',
+                    out_of_stock: 'current_stock'
                 };
                 const key = valueKeys[this.filters.criteria];
                 return data.map(item => parseFloat(item[key]) || 0);
@@ -911,14 +1459,22 @@ $pageTitle = 'Thống Kê & Báo Cáo';
 
                 const ctx = canvas.getContext('2d');
                 this.barChart = new Chart(ctx, {
-                    type: 'bar',
+                    type: 'line',
                     data: {
                         labels: labels,
                         datasets: [{
                             label: this.valueRangeLabel,
                             data: values,
-                            backgroundColor: colors,
-                            borderWidth: 0
+                            borderColor: '#3B82F6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            fill: true,
+                            borderWidth: 2,
+                            pointRadius: 5,
+                            pointHoverRadius: 7,
+                            pointBackgroundColor: '#3B82F6',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            tension: 0.4
                         }]
                     },
                     options: {
@@ -950,56 +1506,18 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 });
             },
 
-            renderPieChart(labels, values, colors) {
-                const canvas = this.$refs.pieChartCanvas;
-                if (!canvas) return;
-
-                const ctx = canvas.getContext('2d');
-                this.pieChart = new Chart(ctx, {
-                    type: 'pie',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            data: values,
-                            backgroundColor: colors,
-                            borderWidth: 2,
-                            borderColor: '#fff'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        plugins: {
-                            legend: {
-                                position: 'right',
-                                labels: {
-                                    padding: 10,
-                                    font: { size: 11 }
-                                }
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: (context) => {
-                                        const isMoney = ['revenue', 'total_spent', 'sales_value', 'purchase_value', 'avg_order_value', 'total'].includes(this.filters.criteria);
-                                        const value = isMoney ? this.formatMoney(context.raw) : new Intl.NumberFormat('vi-VN').format(context.raw);
-                                        return `${context.label}: ${value}`;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            },
-
             destroyCharts() {
                 if (this.barChart) {
                     this.barChart.destroy();
                     this.barChart = null;
                 }
-                if (this.pieChart) {
-                    this.pieChart.destroy();
-                    this.pieChart = null;
-                }
+
+                // Destroy tất cả pie charts
+                this.pieChartInstances.forEach(chart => {
+                    if (chart) chart.destroy();
+                });
+                this.pieChartInstances = [];
+                this.pieCharts = [];
             },
 
             async exportExcel() {
@@ -1132,7 +1650,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     <div class="flex-1">${msg}</div>
                 `;
 
-                                box.appendChild(toast);
+                box.appendChild(toast);
                 setTimeout(() => toast.remove(), 3000);
             }
         };

@@ -134,7 +134,14 @@ class PayrollRepository
             $existing = $this->getByUserAndMonth($userId, $month, $year);
             
             if ($existing) {
-                // Cập nhật
+                // Chỉ cập nhật nếu đang ở trạng thái "Nháp"
+                // Không được thay đổi nếu đã "Đã duyệt" hoặc "Đã trả"
+                if ($existing['status'] !== 'Nháp') {
+                    // Bỏ qua, giữ nguyên bảng lương hiện tại
+                    return $existing;
+                }
+                
+                // Cập nhật (chỉ khi status = Nháp, giữ nguyên trạng thái Nháp để có thể sửa)
                 $sql = "UPDATE {$this->table} SET
                         total_shifts_worked = ?,
                         required_shifts = ?,
@@ -160,7 +167,7 @@ class PayrollRepository
                 
                 $payroll = $this->getByUserAndMonth($userId, $month, $year);
             } else {
-                // Tạo mới
+                // Tạo mới với trạng thái "Nháp"
                 $totalSalary = $actualSalary;
                 
                 $sql = "INSERT INTO {$this->table} 
