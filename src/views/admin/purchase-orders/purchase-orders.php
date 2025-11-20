@@ -1148,7 +1148,6 @@ $items = $items ?? [];
                 this.openFilter[key] = false;
             },
 
-
             paginated() {
                 const arr = this.filtered();
                 const start = (this.currentPage - 1) * this.perPage;

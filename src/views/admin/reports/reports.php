@@ -272,10 +272,26 @@ $pageTitle = 'Thống Kê & Báo Cáo';
         <!-- Biểu đồ -->
         <div class="mb-6">
             <!-- Biểu đồ cột - Luôn hiển thị -->
-            <div class="mb-6">
+            <!-- <div class="mb-6">
                 <h4 class="font-bold text-base mb-3 text-gray-700" x-text="barChartTitle"></h4>
                 <div class="bg-gray-50 rounded-lg p-4">
                     <canvas x-ref="barChartCanvas" style="max-height: 350px;"></canvas>
+                </div>
+            </div> -->
+
+            <!-- Biểu đồ miền (Stacked Area by entity) - hidden when viewing any orders report -->
+            <div class="mb-6" x-show="filters.reportType!=='orders'">
+                <h4 class="font-bold text-base mb-3 text-gray-700" x-text="getAreaChartTitle()"></h4>
+                <div class="bg-gray-50 rounded-lg p-4" style="height: 360px;">
+                    <canvas x-ref="areaChartCanvas" style="width:100%; height:100%; display:block;"></canvas>
+                </div>
+            </div>
+
+            <!-- Stacked bar for Orders by day x status (shown for any orders report) -->
+            <div class="mb-6" x-show="filters.reportType==='orders'">
+                <h4 class="font-bold text-base mb-3 text-gray-700">Biểu Đồ Cột Xếp Chồng - Đơn Hàng theo Ngày</h4>
+                <div class="bg-gray-50 rounded-lg p-4" style="height: 360px;">
+                    <canvas x-ref="ordersStackedBarCanvas" style="width:100%; height:100%; display:block;"></canvas>
                 </div>
             </div>
 
@@ -285,7 +301,17 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     <div>
                         <h4 class="font-bold text-base mb-3 text-gray-700" x-text="pieChart.title"></h4>
                         <div class="bg-gray-50 rounded-lg p-4">
-                            <canvas :id="`pieChartCanvas${index}`" style="max-height: 300px;"></canvas>
+                            <!-- Container cho biểu đồ với chiều cao cố định và căn giữa -->
+                            <div
+                                style="height: 280px; position: relative; display:flex; align-items:center; justify-content:center;">
+                                <div
+                                    style="width:100%; max-width:420px; height:100%; display:flex; align-items:center; justify-content:center;">
+                                    <canvas :id="`pieChartCanvas${index}`"
+                                        style="max-width:100%; max-height:100%; width:100%; height:100%; display:block;"></canvas>
+                                </div>
+                            </div>
+                            <!-- Legend tùy chỉnh bên dưới biểu đồ -->
+                            <div :id="`legend-${index}`" class="mt-4 max-h-48 overflow-y-auto"></div>
                         </div>
                     </div>
                 </template>
@@ -327,12 +353,10 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                                     @click.outside="openTableFilter['column' + (index + 1)] = false"
                                     class="absolute z-40 mt-2 w-64 bg-white rounded-lg shadow-lg border p-3 text-left left-0">
                                     <div class="font-semibold mb-2" x-text="'Lọc: ' + col.label"></div>
-                                    <input x-model.trim="tableFilters['column' + (index + 1)]"
-                                        @input="$nextTick(() => { 
+                                    <input x-model.trim="tableFilters['column' + (index + 1)]" @input="$nextTick(() => { 
                                             clearTimeout(chartRenderTimeout);
                                             chartRenderTimeout = setTimeout(() => { calculateSummary(); renderCharts(); }, 300);
-                                        })"
-                                        class="w-full border rounded px-3 py-2"
+                                        })" class="w-full border rounded px-3 py-2"
                                         :placeholder="'Nhập ' + col.label.toLowerCase()">
                                     <div class="mt-3 flex gap-2 justify-end">
                                         <button @click="applyTableFilter(index + 1)"
@@ -349,15 +373,16 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     </tr>
                 </thead>
                 <tbody>
-                    <template x-for="(row, index) in getFilteredTableData()" :key="index">
+                    <template x-for="(row, index) in paginated()" :key="index">
                         <tr class="border-b border-gray-200 hover:bg-blue-50 transition">
-                            <td class="px-4 py-3 text-sm text-gray-600" x-text="index + 1"></td>
+                            <td class="px-4 py-3 text-sm text-gray-600"
+                                x-text="(currentPage - 1) * perPage + index + 1"></td>
                             <template x-for="col in tableColumns" :key="col.key">
                                 <td class="px-4 py-3 text-sm text-gray-800" x-html="formatCell(row, col)"></td>
                             </template>
                         </tr>
                     </template>
-                    <tr x-show="getFilteredTableData().length===0">
+                    <tr x-show="filtered().length === 0">
                         <td colspan="12" class="py-12 text-center text-slate-500">
                             <div class="flex flex-col items-center justify-center">
                                 <img src="/assets/images/Null.png" alt="Trống" class="w-40 h-24 mb-3 opacity-80">
@@ -366,27 +391,62 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         </td>
                     </tr>
                 </tbody>
-            </table>
+        </div>
+
+        <!-- Thông báo không có dữ liệu -->
+        <div class="bg-white rounded-lg shadow-md p-12 text-center" x-show="!hasData && isSearched">
+            <svg class="w-20 h-20 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <h3 class="text-xl font-semibold text-gray-700 mb-2">Không tìm thấy dữ liệu</h3>
+            <p class="text-gray-500">Vui lòng điều chỉnh tiêu chí lọc và thử lại</p>
+        </div>
+        <!-- Toast lỗi nổi -->
+        <div id="toast-container" class="z-[60]"></div>
+
+        <!-- Pagination -->
+        <div class="flex items-center justify-center mt-4 px-4 gap-6">
+            <div class="text-sm text-slate-600">
+                Tổng cộng <span x-text="filtered().length"></span> bản ghi
+            </div>
+            <div class="flex items-center gap-2">
+                <button @click="goToPage(currentPage-1)" :disabled="currentPage===1"
+                    class="px-2 py-1 border rounded disabled:opacity-50">&lt;</button>
+                <span>Trang <span x-text="currentPage"></span> / <span x-text="totalPages()"></span></span>
+                <button @click="goToPage(currentPage+1)" :disabled="currentPage===totalPages()"
+                    class="px-2 py-1 border rounded disabled:opacity-50">&gt;</button>
+                <div x-data="{ open: false }" class="relative">
+                    <button @click="open=!open" class="border rounded px-2 py-1 w-28 flex justify-between items-center">
+                        <span x-text="perPage + ' / trang'"></span>
+                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" stroke-width="2"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <div x-show="open" @click.outside="open=false"
+                        class="absolute right-0 mt-1 bg-white border rounded shadow w-28 z-50">
+                        <template x-for="opt in perPageOptions" :key="opt">
+                            <div @click="perPage=opt;open=false"
+                                class="px-3 py-2 cursor-pointer hover:bg-[#002975] hover:text-white"
+                                x-text="opt + ' / trang'">
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-
-    <!-- Thông báo không có dữ liệu -->
-    <div class="bg-white rounded-lg shadow-md p-12 text-center" x-show="!hasData && isSearched">
-        <svg class="w-20 h-20 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-        <h3 class="text-xl font-semibold text-gray-700 mb-2">Không tìm thấy dữ liệu</h3>
-        <p class="text-gray-500">Vui lòng điều chỉnh tiêu chí lọc và thử lại</p>
-    </div>
-    <!-- Toast lỗi nổi -->
-    <div id="toast-container" class="z-[60]"></div>
 </div>
 
 <script>
     function reportsPage() {
         return {
-            // Filters
+            currentPage: 1,
+            perPage: 20,
+            perPageOptions: [10, 20, 50, 100],
+
+            // Bộ lọc
             filters: {
                 reportType: 'staff',
                 criteria: 'revenue',
@@ -400,7 +460,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 fromDate: '',
                 toDate: ''
             },
-            // --- utils ---
+            // --- Hàm tiện ích ---
             formatInputNumber(n) {
                 try {
                     return new Intl.NumberFormat('vi-VN').format(n || 0);
@@ -409,36 +469,64 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 }
             },
 
-            // Dropdown data
+            paginated() {
+                const arr = this.filtered();
+                const start = (this.currentPage - 1) * this.perPage;
+                return arr.slice(start, start + this.perPage);
+            },
+            totalPages() {
+                return Math.max(1, Math.ceil(this.filtered().length / this.perPage));
+            },
+            goToPage(p) {
+                if (p < 1) p = 1;
+                if (p > this.totalPages()) p = this.totalPages();
+                this.currentPage = p;
+            },
+
+            // Compatibility alias: some templates use `filtered()`; implement it
+            // as a thin wrapper around `getFilteredTableData()` so code doesn't
+            // break after adding pagination.
+            filtered() {
+                try {
+                    return this.getFilteredTableData ? this.getFilteredTableData() : (this.tableData || []);
+                } catch (e) {
+                    console.warn('filtered() helper failed, falling back to tableData', e);
+                    return this.tableData || [];
+                }
+            },
+
+            // Dữ liệu cho dropdown
             staffList: [],
             productList: [],
             customerList: [],
             supplierList: [],
 
-            // UI state
+            // Trạng thái giao diện (UI)
             hasData: false,
             isSearched: false,
             resultTitle: '',
             totalResults: 0,
 
-            // Charts
+            // Biểu đồ
             barChart: null,
-            pieCharts: [], // Array of {title, chart, data}
-            pieChartInstances: [], // Array of Chart.js instances
+            areaChart: null,
+            ordersStackedBar: null,
+            pieCharts: [], // Mảng đối tượng {title, chart, data}
+            pieChartInstances: [], // Mảng các instance của Chart.js
 
-            // Table data
+            // Dữ liệu bảng
             tableColumns: [],
             tableData: [],
             tableDataFiltered: [], // Dữ liệu sau khi filter
 
-            // Summary cards
+            // Thẻ tổng quan
             summaryCards: [],
 
-            // Chart titles
+            // Tiêu đề biểu đồ
             barChartTitle: 'Biểu Đồ Cột',
             pieChartTitle: 'Biểu Đồ Tròn',
 
-            // Table filters
+            // Bộ lọc trên bảng
             tableFilters: {
                 column0: '', // STT - không filter
                 column1: '',
@@ -454,8 +542,8 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 column4: false,
                 column5: false
             },
-            
-            // Debounce timer for chart updates
+
+            // Bộ đếm debounce để trì hoãn cập nhật biểu đồ
             chartRenderTimeout: null,
 
             get criteriaOptions() {
@@ -492,6 +580,44 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     ]
                 };
                 return options[this.filters.reportType] || [];
+            },
+
+            // Return criteria options for an arbitrary report type (used when fetching
+            // aggregated data for a different entity than the current main reportType).
+            getCriteriaOptionsForType(reportType) {
+                const options = {
+                    staff: [
+                        { value: 'revenue', label: 'Doanh thu' },
+                        { value: 'orders', label: 'Số đơn hàng' },
+                        { value: 'avg_order_value', label: 'Giá trị đơn TB' }
+                    ],
+                    products: [
+                        { value: 'revenue', label: 'Doanh thu' },
+                        { value: 'quantity', label: 'Số lượng bán' },
+                        { value: 'orders', label: 'Số đơn hàng' }
+                    ],
+                    customers: [
+                        { value: 'total_spent', label: 'Tổng chi tiêu' },
+                        { value: 'orders', label: 'Số đơn hàng' },
+                        { value: 'avg_order_value', label: 'Giá trị đơn TB' }
+                    ],
+                    suppliers: [
+                        { value: 'sales_value', label: 'Doanh thu bán' },
+                        { value: 'purchase_value', label: 'Giá trị nhập' },
+                        { value: 'purchases', label: 'Số lần nhập' }
+                    ],
+                    orders: [
+                        { value: 'total', label: 'Tổng giá trị' },
+                        { value: 'count', label: 'Số lượng đơn' },
+                        { value: 'status', label: 'Theo trạng thái' }
+                    ],
+                    inventory: [
+                        { value: 'low_stock', label: 'Sắp hết hàng' },
+                        { value: 'high_stock', label: 'Tồn kho cao' },
+                        { value: 'out_of_stock', label: 'Hết hàng' }
+                    ]
+                };
+                return options[reportType] || [];
             },
 
             get showSearchField() {
@@ -549,6 +675,23 @@ $pageTitle = 'Thống Kê & Báo Cáo';
             },
 
             init() {
+                // Set global defaults for bar hover styling so hovered bars get a
+                // black border for better contrast/visibility.
+                try {
+                    if (typeof Chart !== 'undefined' && Chart.defaults && Chart.defaults.elements) {
+                        // v4 uses 'rectangle' element for bars; set both for compatibility
+                        if (!Chart.defaults.elements.rectangle) Chart.defaults.elements.rectangle = {};
+                        Chart.defaults.elements.rectangle.hoverBorderColor = '#000';
+                        Chart.defaults.elements.rectangle.hoverBorderWidth = 3;
+                        Chart.defaults.elements.rectangle.borderSkipped = false;
+
+                        // Backwards compat: some older code references 'bar'
+                        if (!Chart.defaults.elements.bar) Chart.defaults.elements.bar = {};
+                        Chart.defaults.elements.bar.hoverBorderColor = '#000';
+                        Chart.defaults.elements.bar.hoverBorderWidth = 2;
+                    }
+                } catch (e) { /* ignore */ }
+
                 const checkLibraries = setInterval(() => {
                     if (typeof Chart !== 'undefined' && typeof flatpickr !== 'undefined') {
                         clearInterval(checkLibraries);
@@ -762,11 +905,33 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 try {
                     const response = await fetch(`/admin/api/reports/filter?${params}`);
                     const result = await response.json();
+                    console.log('applyFilters - API result:', result);
 
-                    if (result.success && result.data && result.data.length > 0) {
+                    // Hỗ trợ fallback: API có thể trả dữ liệu dưới các khóa khác (data | rows | items)
+                    // Chú ý: nếu `data` tồn tại nhưng rỗng, có thể API đặt payload trong `rows`.
+                    // Vì vậy chọn mảng đầu tiên không rỗng trong `data`, `rows`, `items`.
+                    let possibleData = [];
+                    try {
+                        if (result && Array.isArray(result.data) && result.data.length > 0) {
+                            possibleData = result.data;
+                        } else if (result && Array.isArray(result.rows) && result.rows.length > 0) {
+                            possibleData = result.rows;
+                        } else if (result && Array.isArray(result.items) && result.items.length > 0) {
+                            possibleData = result.items;
+                        } else if (result && Array.isArray(result.data) && result.data.length === 0) {
+                            // nếu tất cả đều rỗng nhưng `data` là mảng rỗng, sử dụng `data` làm mảng mặc định
+                            possibleData = result.data;
+                        }
+                    } catch (e) {
+                        possibleData = [];
+                    }
+
+                    if (possibleData && possibleData.length > 0) {
+                        this.tableData = possibleData;
+                        // Reset pagination to first page when new dataset is loaded
+                        this.currentPage = 1;
+                        this.totalResults = possibleData.length;
                         this.hasData = true;
-                        this.tableData = result.data;
-                        this.totalResults = result.data.length;
                         this.resultTitle = this.getResultTitle();
                         this.setupTableColumns();
                         this.calculateSummary();
@@ -778,6 +943,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         this.hasData = false;
                         this.tableData = [];
                         this.totalResults = 0;
+                        this.currentPage = 1;
                     }
                 } catch (err) {
                     console.error('Error fetching data:', err);
@@ -918,6 +1084,10 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 // Recalculate summary and charts when filter is applied with debounce
                 clearTimeout(this.chartRenderTimeout);
                 this.chartRenderTimeout = setTimeout(() => {
+                    // When applying table filters, return to first page
+                    this.currentPage = 1;
+                    // diagnostic log to help trace filter -> chart flow
+                    try { console.debug('applyTableFilter -> filtered length:', this.filtered().length, 'currentPage:', this.currentPage); } catch (e) { }
                     this.calculateSummary();
                     this.renderCharts();
                 }, 300);
@@ -929,6 +1099,9 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 // Recalculate summary and charts when filter is reset with debounce
                 clearTimeout(this.chartRenderTimeout);
                 this.chartRenderTimeout = setTimeout(() => {
+                    // Reset to first page after clearing a table filter
+                    this.currentPage = 1;
+                    try { console.debug('resetTableFilter -> filtered length:', this.filtered().length, 'currentPage:', this.currentPage); } catch (e) { }
                     this.calculateSummary();
                     this.renderCharts();
                 }, 300);
@@ -960,7 +1133,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
 
             calculateSummary() {
                 this.summaryCards = [];
-                
+
                 // Sử dụng filtered data nếu có filter, nếu không thì dùng tableData
                 const dataToUse = this.getFilteredTableData().length > 0 ? this.getFilteredTableData() : this.tableData;
                 if (!dataToUse.length) return;
@@ -1021,10 +1194,16 @@ $pageTitle = 'Thống Kê & Báo Cáo';
             },
 
             renderCharts() {
+                // Diagnostic: log invocation and sizes to help debugging filter issues
+                try { console.debug('renderCharts - reportType:', this.filters.reportType, 'filtered:', this.getFilteredTableData().length, 'tableData:', (this.tableData || []).length, 'currentPage:', this.currentPage); } catch (e) { }
+
                 this.destroyCharts();
 
                 const dataToUse = this.getFilteredTableData().length > 0 ? this.getFilteredTableData() : this.tableData;
-                if (!dataToUse.length) return;
+                if (!dataToUse.length) {
+                    try { console.debug('renderCharts aborted: no dataToUse'); } catch (e) { }
+                    return;
+                }
 
                 // Biểu đồ cột: Theo loại thống kê chính (top 10) - sử dụng filtered data
                 const mainData = dataToUse.slice(0, 10);
@@ -1034,6 +1213,15 @@ $pageTitle = 'Thống Kê & Báo Cáo';
 
                 this.barChartTitle = this.getBarChartTitle();
                 this.renderBarChart(mainLabels, mainValues, mainColors);
+
+                // Vẽ biểu đồ miền xếp chồng theo từng đối tượng (mỗi đối tượng = 1 lớp màu)
+                try {
+                    if (this.filters.reportType === 'orders') {
+                        this.renderOrdersStackedBar();
+                    } else {
+                        this.renderAreaChart();
+                    }
+                } catch (e) { console.error('Chart render error', e); }
 
                 // Biểu đồ tròn: Tạo tất cả các biểu đồ cho các filter "Tất cả" - sử dụng filtered data
                 this.$nextTick(async () => {
@@ -1051,6 +1239,19 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     inventory: 'Tồn Kho'
                 };
                 return `${typeLabels[this.filters.reportType]} - ${this.valueRangeLabel}`;
+            },
+
+            getAreaChartTitle() {
+                const typeLabels = {
+                    staff: 'Nhân Viên',
+                    products: 'Sản Phẩm',
+                    customers: 'Khách Hàng',
+                    suppliers: 'Nhà Cung Cấp',
+                    orders: 'Đơn Hàng',
+                    inventory: 'Tồn Kho'
+                };
+                const label = typeLabels[this.filters.reportType] || 'Đối Tượng';
+                return `Biểu Đồ Miền - ${label} (Stacked)`;
             },
 
             getPieChartTitle() {
@@ -1076,9 +1277,45 @@ $pageTitle = 'Thống Kê & Báo Cáo';
 
                 const pieChartsToRender = [];
                 const filteredData = this.getFilteredTableData();
-                const hasTableFilters = filteredData.length > 0 && filteredData.length < this.tableData.length;
-                
-                console.log('renderAllPieCharts called - hasTableFilters:', hasTableFilters, 'tableData length:', this.tableData.length, 'filteredData length:', filteredData.length);
+                // Detect whether any table column filters are applied (regardless of match count)
+                const hasTableFiltersApplied = Object.keys(this.tableFilters).some(k => {
+                    const v = this.tableFilters[k];
+                    return v !== undefined && v !== null && String(v).trim() !== '';
+                });
+                // legacy boolean for debug/log compatibility
+                const hasTableFilters = hasTableFiltersApplied && filteredData.length > 0 && filteredData.length < this.tableData.length;
+                // Các bộ lọc chính là những lựa chọn ở panel lọc (nhân viên/sản phẩm/khách hàng/nhà cung cấp/khoảng giá)
+                const hasMainFilters = Boolean(this.filters.staffId || this.filters.productId || this.filters.customerId || this.filters.supplierId || this.filters.valueFrom !== '' || this.filters.valueTo !== '');
+
+                console.debug('renderAllPieCharts called - hasTableFiltersApplied:', hasTableFiltersApplied, 'hasTableFilters:', hasTableFilters, 'hasMainFilters:', hasMainFilters, 'tableData length:', this.tableData.length, 'filteredData length:', filteredData.length);
+
+                // If user filtered by product, log a concise summary: number of rows
+                // and related suppliers, customers and staff for that product.
+                if (this.filters.productId) {
+                    const productName = this.getSelectedProductName();
+                    const dataSource = filteredData.length ? filteredData : this.tableData;
+                    const productRows = dataSource.filter(r => {
+                        if (!r) return false;
+                        if (r.product_id && String(r.product_id) === String(this.filters.productId)) return true;
+                        const n = (r.product_name || r.name || '').toString().toLowerCase();
+                        return n && n.includes(productName.toString().toLowerCase());
+                    });
+
+                    const suppliers = new Set();
+                    const customers = new Set();
+                    const staff = new Set();
+
+                    productRows.forEach(r => {
+                        if (r.supplier_name) suppliers.add(r.supplier_name);
+                        if (r.supplier) suppliers.add(r.supplier);
+                        if (r.customer_name) customers.add(r.customer_name);
+                        if (r.full_name && r.customer_id) customers.add(r.full_name);
+                        if (r.staff_name) staff.add(r.staff_name);
+                        if (r.full_name && r.staff_id) staff.add(r.full_name);
+                    });
+
+                    console.log(`Filter summary for product '${productName}': rows=${productRows.length}; suppliers=[${Array.from(suppliers).slice(0, 10).join(', ')}]; customers=[${Array.from(customers).slice(0, 10).join(', ')}]; staff=[${Array.from(staff).slice(0, 10).join(', ')}]`);
+                }
 
                 // Kiểm tra từng loại filter - nếu chọn "Tất cả" thì thêm vào danh sách
                 // KHÔNG hiển thị biểu đồ tròn cho inventory vì nó là snapshot hiện tại
@@ -1087,8 +1324,9 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         type: 'product',
                         title: 'Phân Bổ Theo Sản Phẩm (%)',
                         key: 'product_name',
-                        actualKey: 'name',  // Actual field name from backend when fetching as 'products' report
-                        reportTypeForAgg: 'products'  // Report type to use for aggregation
+                        actualKey: 'name',  // Tên trường thực tế trả về từ backend khi fetch báo cáo 'products'
+                        idKey: 'product_id', // Tên trường id mong đợi cho hàng sản phẩm
+                        reportTypeForAgg: 'products'  // Loại báo cáo dùng để tổng hợp
                     });
                 }
 
@@ -1097,8 +1335,9 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         type: 'customer',
                         title: 'Phân Bổ Theo Khách Hàng (%)',
                         key: 'customer_name',
-                        actualKey: 'full_name',  // Actual field name from backend when fetching as 'customers' report
-                        reportTypeForAgg: 'customers'  // Report type to use for aggregation
+                        actualKey: 'customer_name',  // Prefer explicit customer_name on order rows
+                        idKey: 'customer_id', // Tên trường id mong đợi cho hàng khách hàng
+                        reportTypeForAgg: 'customers'  // Loại báo cáo dùng để tổng hợp
                     });
                 }
 
@@ -1107,8 +1346,9 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         type: 'staff',
                         title: 'Phân Bổ Theo Nhân Viên (%)',
                         key: 'staff_name',
-                        actualKey: 'full_name',  // Actual field name from backend when fetching as 'staff' report
-                        reportTypeForAgg: 'staff'  // Report type to use for aggregation
+                        actualKey: 'staff_name',  // Prefer explicit staff_name on order rows
+                        idKey: 'staff_id', // Tên trường id mong đợi cho hàng nhân viên
+                        reportTypeForAgg: 'staff'  // Loại báo cáo dùng để tổng hợp
                     });
                 }
 
@@ -1117,17 +1357,20 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         type: 'supplier',
                         title: 'Phán Bổ Theo Nhà Cung Cấp (%)',
                         key: 'supplier_name',
-                        actualKey: 'supplier_name',  // Actual field name from backend
-                        reportTypeForAgg: 'suppliers'  // Report type to use for aggregation
+                        actualKey: 'supplier_name',  // Tên trường thực tế trả về từ backend
+                        idKey: 'supplier_id', // Tên trường id mong đợi cho hàng nhà cung cấp
+                        reportTypeForAgg: 'suppliers'  // Loại báo cáo dùng để tổng hợp
                     });
                 }
 
-                console.log('pieChartsToRender configs:', pieChartsToRender);
+                console.debug('pieChartsToRender configs:', pieChartsToRender);
 
                 // Nếu không có filter nào "Tất cả" → Dùng data chính từ tableData hoặc filteredData
                 if (pieChartsToRender.length === 0) {
                     console.log('No specific filter "all" found - using main data');
-                    const dataToUse = hasTableFilters ? filteredData : this.tableData;
+                    // If table column filters are applied we must use the filteredData
+                    // even when it is empty so pie charts reflect the filter (show placeholder).
+                    const dataToUse = (hasTableFiltersApplied || hasMainFilters) ? filteredData : this.tableData;
                     const pieData = dataToUse.slice(0, 10).map(item => ({
                         label: this.getChartLabels([item])[0],
                         value: this.getChartValues([item])[0]
@@ -1140,19 +1383,207 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     });
                 } else {
                     console.log('Has specific "all" filters - fetching/aggregating for each');
-                    // Nếu có table filters → tạo pie chart từ filtered data mà không cần fetch API
-                    if (hasTableFilters) {
-                        console.log('Using local aggregation from filtered data');
+                    // Nếu đã có các bộ lọc chính (nhân viên/sản phẩm/khách hàng/nhà cung cấp) hoặc bộ lọc cột bảng,
+                    // ưu tiên tổng hợp (aggregate) cục bộ từ `tableData`/`filteredData` đã fetch để các biểu đồ tròn
+                    // phản ánh chính xác các bộ lọc đang áp dụng (ví dụ: sản phẩm được nhân viên X bán).
+                    if (hasTableFiltersApplied || hasMainFilters) {
+                        console.log('Using local aggregation from filtered/main-applied data');
+                        // Use filteredData as the authoritative source when any table filters are applied.
+                        const dataSource = hasTableFiltersApplied ? filteredData : (filteredData.length ? filteredData : this.tableData);
                         for (let config of pieChartsToRender) {
-                            const data = this.aggregateByKey(filteredData, config.actualKey, config.reportTypeForAgg);
-                            this.pieCharts.push({
-                                title: config.title,
-                                data: data
+                            // Special case: when viewing Orders and the table has client-side
+                            // filters applied, we must derive product breakdowns from the
+                            // order items (order -> items -> product) and staff breakdowns
+                            // from the order creator. This avoids mistakenly aggregating
+                            // by customer_name or other ambiguous fields present on order rows.
+                            try {
+                                if (this.filters.reportType === 'orders' && hasTableFiltersApplied) {
+                                    // PRODUCT pie should be computed from order items
+                                    if (config.type === 'product') {
+                                        const orderIds = dataSource.map(r => this.getOrderIdFromRow(r)).filter(Boolean);
+                                        if (orderIds && orderIds.length) {
+                                            const items = await this.fetchOrderItemsForOrderIds(orderIds);
+                                            if (items && items.length) {
+                                                const valueKey = this.getValueKeyForReportType('products') || this.getValueKeyForCriteria();
+                                                // Aggregate items by product_id/product_name
+                                                const aggMap = {};
+                                                items.forEach(it => {
+                                                    const pid = it.product_id || it.productId || it.pid || null;
+                                                    const pname = it.product_name || it.name || it.title || (`#${pid || 'unknown'}`);
+                                                    const val = parseFloat(it[valueKey]) || parseFloat(it.quantity) || parseFloat(it.total_price) || parseFloat(it.total_amount) || 0;
+                                                    const lbl = pname || `#${pid}`;
+                                                    aggMap[lbl] = (aggMap[lbl] || 0) + val;
+                                                });
+                                                const arr = Object.entries(aggMap).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 10);
+                                                this.pieCharts.push({ title: config.title, data: arr });
+                                                continue; // next config
+                                            } else {
+                                                // No items found for the selected orders — show empty
+                                                this.pieCharts.push({ title: config.title, data: [] });
+                                                continue;
+                                            }
+                                        }
+                                    }
+
+                                    // STAFF pie should be computed from order creators (staff who created orders)
+                                    if (config.type === 'staff') {
+                                        const valueKey = this.getValueKeyForReportType('staff') || this.getValueKeyForCriteria();
+                                        // Ensure staff lookup list is loaded so we can resolve ids -> names
+                                        try { await this.loadStaffList(); } catch (e) { /* ignore */ }
+
+                                        // Detect whether local rows contain staff identifiers/names
+                                        const hasStaffIdOrName = dataSource.some(r => {
+                                            if (!r) return false;
+                                            if (r.staff_id || r.created_by) return true;
+                                            if (r.staff_name || r.created_by_name) return true;
+                                            return false;
+                                        });
+
+                                        if (!hasStaffIdOrName) {
+                                            // Local order rows don't include staff info (common for filterOrders).
+                                            // Fall back to fetching aggregated staff data from the server
+                                            // to honor product/date filters and produce correct staff breakdown.
+                                            try {
+                                                console.debug('staff aggregation: local rows lack staff id/name — fetching aggregated staff data from API');
+                                                const apiData = await this.fetchPieChartData('staff', config.actualKey);
+                                                this.pieCharts.push({ title: config.title, data: apiData });
+                                                continue;
+                                            } catch (e) {
+                                                console.warn('staff aggregation fallback fetch failed', e);
+                                                // fall through to local aggregation (which will produce 'Khác')
+                                            }
+                                        }
+
+                                        const agg = {};
+                                        dataSource.forEach(row => {
+                                            // Prefer explicit staff identifiers (created_by / staff_id)
+                                            const sid = this.getStaffIdFromRow(row) || row.staff_id || row.created_by || null;
+                                            // Prefer explicit staff name fields; avoid using `full_name` when
+                                            // the row represents a customer (i.e. has user_id/customer_id but no staff id).
+                                            let labelFromRow = null;
+                                            if (row.staff_name) labelFromRow = row.staff_name;
+                                            else if (row.created_by_name) labelFromRow = row.created_by_name;
+                                            else if (sid && row.full_name) labelFromRow = row.full_name; // only use full_name when we have a staff id
+
+                                            let resolvedName = null;
+                                            if (sid && this.staffList && this.staffList.length) {
+                                                const s = this.staffList.find(x => String(x.staff_id) === String(sid));
+                                                if (s) resolvedName = s.full_name || s.staff_name || null;
+                                            }
+
+                                            const name = resolvedName || labelFromRow || (sid ? `#${sid}` : 'Khác');
+                                            const val = parseFloat(row[valueKey]) || parseFloat(row.total_amount) || parseFloat(row.total_revenue) || 0;
+                                            // Debug: show per-row resolution when ambiguous
+                                            try { console.debug('staff-agg row:', { sid, name, value: val, sampleRow: row }); } catch (e) { }
+                                            agg[name] = (agg[name] || 0) + val;
+                                        });
+                                        const arr = Object.entries(agg).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 10);
+                                        this.pieCharts.push({ title: config.title, data: arr });
+                                        continue;
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn('Special-case orders -> items/staff aggregation failed', e);
+                                // fallback to existing local logic below
+                            }
+
+                            // existing local aggregation logic continues below
+                            // Nếu các hàng dữ liệu cục bộ không chứa trường nhãn (ví dụ: tên khách hàng)
+                            // thì việc tổng hợp cục bộ sẽ sai lệch. Trong trường hợp đó cần gọi API
+                            // để lấy dữ liệu đã được tổng hợp cho biểu đồ tròn này.
+                            // Yêu cầu: các hàng cục bộ phải thật sự thuộc về thực thể đang tổng hợp
+                            // ví dụ: biểu đồ khách hàng cần có `customer_id` trên hàng; nếu không thì
+                            // không nên dùng `staff.full_name` làm tên khách hàng.
+                            const labelPresent = dataSource.some(row => {
+                                if (!row || typeof row !== 'object') return false;
+                                // Trường hợp lý tưởng: hàng có id của thực thể (product_id/customer_id/staff_id/...)
+                                if (config.idKey && (row[config.idKey] !== undefined && row[config.idKey] !== null && row[config.idKey] !== '')) {
+                                    // đồng thời đảm bảo trường nhãn tồn tại
+                                    if (row[config.actualKey] !== undefined && row[config.actualKey] !== null && row[config.actualKey] !== '') return true;
+                                }
+
+                                // Trường hợp đặc biệt: sản phẩm — đôi khi hàng được fetch có tên sản phẩm
+                                // và các trường số liệu (total_revenue/total_quantity) nhưng thiếu product_id.
+                                // Trong trường hợp đó vẫn có thể tổng hợp cục bộ. Phát hiện bằng cách kiểm tra
+                                // sự tồn tại của `actualKey` và một trường giá trị số dành cho sản phẩm.
+                                if (config.type === 'product') {
+                                    const valueKeyForProducts = this.getValueKeyForReportType('products');
+                                    if ((row[config.actualKey] !== undefined && row[config.actualKey] !== null && row[config.actualKey] !== '')
+                                        && (row[valueKeyForProducts] !== undefined && row[valueKeyForProducts] !== null && row[valueKeyForProducts] !== '')) {
+                                        return true;
+                                    }
+                                }
+
+                                return false;
                             });
+
+                            // Debug: in ra mẫu dữ liệu dùng để quyết định tổng hợp cục bộ hay gọi API
+                            try { console.log(`renderAllPieCharts - sample dataSource for ${config.type}:`, dataSource.slice(0, 8)); } catch (e) { }
+
+                            if (!labelPresent) {
+                                // If table column filters are applied, prefer local aggregation
+                                // from the filtered rows even when the idKey/actualKey isn't
+                                // present on every row. Calling the API here risks returning
+                                // global aggregates that ignore the client's table filters
+                                // (causing the pie charts to show "all entities").
+                                if (hasTableFiltersApplied) {
+                                    console.log(`Label id missing for '${config.type}', but table filters are applied — using local aggregation on filteredData for ${config.type}`);
+                                    // Attempt to resolve labels from id fields using lookup lists
+                                    try {
+                                        await Promise.all([
+                                            this.loadStaffList(),
+                                            this.loadCustomerList(),
+                                            this.loadProductList(),
+                                            this.loadSupplierList()
+                                        ]);
+                                    } catch (e) { /* ignore lookup load errors */ }
+
+                                    const mappedSource = dataSource.map(row => {
+                                        try {
+                                            const newRow = Object.assign({}, row);
+                                            const idVal = newRow[config.idKey];
+                                            const labelVal = newRow[config.actualKey];
+                                            if ((labelVal === undefined || labelVal === null || labelVal === '') && idVal) {
+                                                const idStr = String(idVal).trim();
+                                                let resolved = null;
+                                                if (config.type === 'product' && this.productList && this.productList.length) {
+                                                    const p = this.productList.find(x => String(x.product_id) === idStr);
+                                                    if (p) resolved = p.name || p.product_name;
+                                                } else if (config.type === 'staff' && this.staffList && this.staffList.length) {
+                                                    const s = this.staffList.find(x => String(x.staff_id) === idStr);
+                                                    if (s) resolved = s.full_name || s.staff_name;
+                                                } else if (config.type === 'customer' && this.customerList && this.customerList.length) {
+                                                    const c = this.customerList.find(x => String(x.customer_id) === idStr);
+                                                    if (c) resolved = c.full_name || c.customer_name;
+                                                } else if (config.type === 'supplier' && this.supplierList && this.supplierList.length) {
+                                                    const su = this.supplierList.find(x => String(x.supplier_id) === idStr);
+                                                    if (su) resolved = su.supplier_name;
+                                                }
+                                                // Always populate a label for aggregation: prefer resolved name,
+                                                // otherwise fall back to a stable id-based label so local aggregation
+                                                // remains authoritative and we avoid calling the API which may
+                                                // return global aggregates that ignore table column filters.
+                                                newRow[config.actualKey] = resolved || (`#${idStr}`);
+                                            }
+                                            return newRow;
+                                        } catch (e) { return row; }
+                                    });
+
+                                    const data = this.aggregateByKey(mappedSource, config.actualKey, config.reportTypeForAgg);
+                                    this.pieCharts.push({ title: config.title, data: data });
+                                } else {
+                                    console.log(`Local rows do NOT contain entity id for '${config.type}' (idKey=${config.idKey}) — fetching aggregated data from API for ${config.type}`);
+                                    const apiData = await this.fetchPieChartData(config.type, config.actualKey);
+                                    this.pieCharts.push({ title: config.title, data: apiData });
+                                }
+                            } else {
+                                const data = this.aggregateByKey(dataSource, config.actualKey, config.reportTypeForAgg);
+                                this.pieCharts.push({ title: config.title, data: data });
+                            }
                         }
                     } else {
                         console.log('Fetching from API');
-                        // Fetch data từ API cho từng loại biểu đồ tròn (lần đầu tiên hoặc không có table filters)
+                        // Fetch data từ API cho từng loại biểu đồ tròn (lần đầu tiên hoặc không có filters)
                         for (let config of pieChartsToRender) {
                             const data = await this.fetchPieChartData(config.type, config.actualKey);
                             this.pieCharts.push({
@@ -1177,55 +1608,117 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                                         console.warn(`Canvas pieChartCanvas${index} not found`);
                                         return;
                                     }
-                                    
-                                    if (!pieChart.data || pieChart.data.length === 0) {
-                                        console.warn(`No data for pie chart ${index}:`, pieChart);
-                                        return;
-                                    }
 
-                                    console.log(`Rendering pie chart ${index}:`, pieChart.data);
-
-                                    const labels = pieChart.data.map(item => item.label);
-                                    const values = pieChart.data.map(item => item.value);
-                                    const colors = this.generateColors(values.length);
-
-                                    const ctx = canvas.getContext('2d');
-                                    const chartInstance = new Chart(ctx, {
-                                        type: 'pie',
-                                        data: {
-                                            labels: labels,
-                                            datasets: [{
-                                                data: values,
-                                                backgroundColor: colors,
-                                                borderWidth: 2,
-                                                borderColor: '#fff'
-                                            }]
-                                        },
-                                        options: {
-                                            responsive: true,
-                                            maintainAspectRatio: true,
-                                            plugins: {
-                                                legend: {
-                                                    position: 'bottom',
-                                                    labels: {
-                                                        padding: 10,
-                                                        font: { size: 10 }
-                                                    }
-                                                },
-                                                tooltip: {
-                                                    callbacks: {
-                                                        label: (context) => {
-                                                            const isMoney = ['revenue', 'total_spent', 'sales_value', 'purchase_value', 'avg_order_value', 'total'].includes(this.filters.criteria);
-                                                            const value = isMoney ? this.formatMoney(context.raw) : new Intl.NumberFormat('vi-VN').format(context.raw);
-                                                            return `${context.label}: ${value}`;
-                                                        }
+                                    // Nếu không có dữ liệu, vẽ một pie chart placeholder để không bỏ qua DOM
+                                    let labels = [];
+                                    let values = [];
+                                    let colors = [];
+                                    let chartOptions = {
+                                        responsive: true,
+                                        maintainAspectRatio: true,
+                                        plugins: {
+                                            legend: {
+                                                display: false  // Tắt legend mặc định
+                                            },
+                                            tooltip: {
+                                                callbacks: {
+                                                    label: (context) => {
+                                                        const isMoney = ['revenue', 'total_spent', 'sales_value', 'purchase_value', 'avg_order_value', 'total'].includes(this.filters.criteria);
+                                                        const value = isMoney ? this.formatMoney(context.raw) : new Intl.NumberFormat('vi-VN').format(context.raw);
+                                                        return `${context.label}: ${value}`;
                                                     }
                                                 }
                                             }
                                         }
-                                    });
+                                    };
 
-                                    this.pieChartInstances.push(chartInstance);
+                                    if (!pieChart.data || pieChart.data.length === 0) {
+                                        console.warn(`No data for pie chart ${index}:`, pieChart);
+                                        // Tạo placeholder để hiển thị ô trống/không có dữ liệu
+                                        labels = ['Không có dữ liệu'];
+                                        values = [1];
+                                        colors = ['#E5E7EB']; // xám nhẹ
+                                        // Ẩn legend và tooltip cho placeholder
+                                        chartOptions.plugins.legend.display = false;
+                                        chartOptions.plugins.tooltip.enabled = false;
+                                    } else {
+                                        // Lọc ra các mục có giá trị <= 0 để tránh hiển thị legend/labels không cần thiết
+                                        const nonZero = pieChart.data.filter(it => {
+                                            const v = Number(it && it.value);
+                                            return !isNaN(v) && v > 0;
+                                        });
+
+                                        if (!nonZero || nonZero.length === 0) {
+                                            // Nếu tất cả giá trị là 0, hiển thị placeholder
+                                            console.warn(`All zero values for pie chart ${index}`, pieChart.data);
+                                            labels = ['Không có dữ liệu'];
+                                            values = [1];
+                                            colors = ['#E5E7EB'];
+                                            chartOptions.plugins.legend.display = false;
+                                            chartOptions.plugins.tooltip.enabled = false;
+                                        } else {
+                                            console.log(`Rendering pie chart ${index}:`, nonZero);
+                                            labels = nonZero.map(item => item.label);
+                                            values = nonZero.map(item => item.value);
+                                            colors = this.generateColors(values.length);
+                                        }
+                                    }
+
+                                    try {
+                                        // Destroy any previous instance bound to this index
+                                        if (this.pieChartInstances[index]) {
+                                            try { this.pieChartInstances[index].destroy(); } catch (err) { /* ignore */ }
+                                            this.pieChartInstances[index] = null;
+                                        }
+
+                                        const ctx = (canvas && canvas.getContext) ? canvas.getContext('2d') : null;
+                                        if (!ctx) {
+                                            console.error(`Cannot get 2D context for pieChartCanvas${index}`, { index, canvas });
+                                            return;
+                                        }
+
+                                        const chartInstance = new Chart(ctx, {
+                                            type: 'pie',
+                                            data: {
+                                                labels: labels,
+                                                datasets: [{
+                                                    data: values,
+                                                    backgroundColor: colors,
+                                                    borderWidth: 2,
+                                                    borderColor: '#fff'
+                                                }]
+                                            },
+                                            options: chartOptions
+                                        });
+
+                                        // Tạo legend tùy chỉnh bên dưới biểu đồ
+                                        const legendContainer = document.getElementById(`legend-${index}`);
+                                        if (legendContainer && labels && labels.length > 0 && !(labels.length === 1 && labels[0] === 'Không có dữ liệu')) {
+                                            const isMoney = ['revenue', 'total_spent', 'sales_value', 'purchase_value', 'avg_order_value', 'total'].includes(this.filters.criteria);
+                                            const total = values.reduce((sum, val) => sum + val, 0);
+
+                                            let legendHTML = '<div class="grid grid-cols-1 gap-1 text-xs">';
+                                            labels.forEach((label, i) => {
+                                                const value = values[i];
+                                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                                const displayValue = isMoney ? this.formatMoney(value) : new Intl.NumberFormat('vi-VN').format(value);
+
+                                                legendHTML += `
+                                                        <div class="flex items-center gap-2 p-1 hover:bg-white rounded">
+                                                            <div class="w-3 h-3 rounded-sm flex-shrink-0" style="background-color: ${colors[i]}"></div>
+                                                            <div class="flex-1 truncate" title="${label}">${label}</div>
+                                                            <div class="text-gray-600 font-medium">${displayValue} (${percentage}%)</div>
+                                                        </div>
+                                                    `;
+                                            });
+                                            legendHTML += '</div>';
+                                            legendContainer.innerHTML = legendHTML;
+                                        }
+
+                                        this.pieChartInstances.push(chartInstance);
+                                    } catch (e) {
+                                        console.error('Error creating pie chart instance:', e);
+                                    }
                                 });
                                 resolve();
                             }, 50);
@@ -1237,20 +1730,39 @@ $pageTitle = 'Thống Kê & Báo Cáo';
             async fetchPieChartData(fetchType, groupByKey) {
                 try {
                     const params = new URLSearchParams();
-                    
-                    // Khi reportType là 'staff' nhưng lấy pie chart theo sản phẩm/khách hàng
-                    // PHẢI đổi report_type sang 'products'/'customers' để mỗi item có row riêng
+
+                    // Chúng ta muốn request API trả về các hàng theo nhóm (product/customer/staff/supplier)
+                    // Vì vậy ánh xạ `fetchType` (singular) sang `report_type` phù hợp (plural) trước khi gọi API.
+                    // Trước đây chỉ xử lý trường hợp khi đang ở 'staff' — gây lỗi khi đang ở 'products' nhưng
+                    // cần pie chart theo customer/staff. Bây giờ luôn ánh xạ dựa trên `fetchType`.
                     let reportTypeForPie = this.filters.reportType;
-                    if (this.filters.reportType === 'staff') {
-                        if (fetchType === 'product') {
-                            reportTypeForPie = 'products';
-                        } else if (fetchType === 'customer') {
-                            reportTypeForPie = 'customers';
-                        }
+                    const fetchTypeMap = {
+                        product: 'products',
+                        customer: 'customers',
+                        staff: 'staff',
+                        supplier: 'suppliers'
+                    };
+                    if (fetchTypeMap[fetchType]) {
+                        reportTypeForPie = fetchTypeMap[fetchType];
                     }
-                    
+
                     params.append('report_type', reportTypeForPie);
-                    params.append('criteria', this.filters.criteria);
+                    // Choose a criteria valid for the report type we're requesting.
+                    // The current `this.filters.criteria` may not be valid for the
+                    // aggregated report type (e.g. suppliers expect 'sales_value' or
+                    // 'purchase_value' while the main page may still have 'revenue').
+                    let criteriaToSend = this.filters.criteria;
+                    try {
+                        const allowed = this.getCriteriaOptionsForType(reportTypeForPie).map(o => o.value);
+                        if (!allowed.includes(criteriaToSend)) {
+                            // fall back to the first allowed criteria for that report type
+                            criteriaToSend = allowed[0] || this.filters.criteria || 'revenue';
+                        }
+                    } catch (e) {
+                        // conservative fallback
+                        criteriaToSend = this.filters.criteria;
+                    }
+                    params.append('criteria', criteriaToSend);
                     params.append('from_date', this.filters.fromDate);
                     params.append('to_date', this.filters.toDate);
                     params.append('sort_order', this.filters.sortOrder);
@@ -1276,27 +1788,250 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         }
                     }
 
+                    // When there is a product filter, request debug counts from API so
+                    // we can determine whether backend has any matching orders.
+                    if (this.filters.productId) {
+                        params.append('include_counts', '1');
+                    }
+
                     // KHÔNG gửi value_from và value_to cho biểu đồ tròn
                     // Biểu đồ tròn chỉ phân bổ theo entity, không nên bị ảnh hưởng bởi filter số
+                    // Nếu người dùng đã áp dụng bộ lọc cột trên bảng (`tableFilters`), cố gắng chuyển
+                    // các bộ lọc đó thành tham số API khi có thể để các cuộc gọi API vẽ biểu đồ tròn
+                    // tôn trọng bộ lọc cấp bảng (ví dụ: lọc bảng theo tên nhân viên -> gửi staff_id).
+                    try {
+                        // Đảm bảo các danh sách tra cứu (lookup) đã được load để có thể ánh xạ tên -> id
+                        await Promise.all([
+                            this.loadStaffList(),
+                            this.loadCustomerList(),
+                            this.loadProductList(),
+                            this.loadSupplierList()
+                        ]);
 
-                    const response = await fetch(`/admin/api/reports/filter?${params}`);
-                    const result = await response.json();
+                        const tableFilterParams = [];
+                        Object.keys(this.tableFilters).forEach((tfKey, idx) => {
+                            const val = this.tableFilters[tfKey];
+                            if (!val || val.toString().trim() === '') return;
+                            // Chỉ số cột -> tableColumns (tableColumns tương ứng với các cột hiển thị)
+                            const colIndex = parseInt(tfKey.replace('column', ''), 10) - 1;
+                            const col = this.tableColumns[colIndex];
+                            if (!col) return;
+                            const search = val.toString().trim().toLowerCase();
+                            // Ánh xạ các khóa cột đã biết thành tham số id bằng cách sử dụng các danh sách đã load
+                            if (['full_name', 'staff_name'].includes(col.key) && this.staffList && this.staffList.length) {
+                                const match = this.staffList.find(s => s.full_name && s.full_name.toLowerCase().includes(search));
+                                if (match && match.staff_id) tableFilterParams.push(['staff_id', match.staff_id]);
+                            }
+                            if (['customer_name', 'full_name'].includes(col.key) && this.customerList && this.customerList.length) {
+                                const match = this.customerList.find(c => c.full_name && c.full_name.toLowerCase().includes(search));
+                                if (match && match.customer_id) tableFilterParams.push(['customer_id', match.customer_id]);
+                            }
+                            if (['product_name', 'name'].includes(col.key) && this.productList && this.productList.length) {
+                                const match = this.productList.find(p => p.name && p.name.toLowerCase().includes(search));
+                                if (match && match.product_id) tableFilterParams.push(['product_id', match.product_id]);
+                            }
+                            if (['supplier_name'].includes(col.key) && this.supplierList && this.supplierList.length) {
+                                const match = this.supplierList.find(s => s.supplier_name && s.supplier_name.toLowerCase().includes(search));
+                                if (match && match.supplier_id) tableFilterParams.push(['supplier_id', match.supplier_id]);
+                            }
+                        });
 
-                    console.log(`Raw API response for ${fetchType}:`, result);
-                    
-                    if (result.success && result.data && result.data.length > 0) {
-                        console.log(`Raw data for ${fetchType}:`, result.data);
-                        console.log(`groupByKey: ${groupByKey}, reportTypeForPie: ${reportTypeForPie}`);
-                        const aggregated = this.aggregateByKey(result.data, groupByKey, reportTypeForPie);
+                        if (tableFilterParams.length) {
+                            // Trường hợp đặc biệt: khi đang xem báo cáo theo nhân viên và cần lấy biểu đồ
+                            // sản phẩm, chỉ muốn các sản phẩm do nhân viên đó bán. Trong trường hợp này
+                            // chỉ thêm `staff_id` (từ bộ lọc chung hoặc từ tableFilterParams) để tránh
+                            // lọc quá mức bởi các bộ lọc ánh xạ khác (ví dụ: customer_id)
+                            if (this.filters.reportType === 'staff' && fetchType === 'product') {
+                                // Ưu tiên dùng staffId rõ ràng từ panel bộ lọc chính
+                                if (this.filters.staffId) {
+                                    if (!params.has('staff_id')) params.append('staff_id', this.filters.staffId);
+                                } else {
+                                    // nếu không có, thử tìm staff_id được ánh xạ trong tableFilterParams
+                                    const staffPair = tableFilterParams.find(p => p[0] === 'staff_id');
+                                    if (staffPair && !params.has('staff_id')) params.append('staff_id', staffPair[1]);
+                                }
+                            } else {
+                                // Thêm các tham số duy nhất cho trường hợp tổng quát
+                                tableFilterParams.forEach(([k, v]) => { if (!params.has(k)) params.append(k, v); });
+                            }
+                            console.debug('fetchPieChartData - appended params from tableFilters:', Array.from(params.entries()));
+                        }
+                    } catch (e) {
+                        console.warn('Error mapping tableFilters to API params for pie charts', e);
+                    }
+
+                    // Try multiple criteria options for the target report type if the
+                    // first request returns empty. This helps when backend behaves
+                    // differently for different criteria or when a particular
+                    // criteria produces no grouped rows for the filter combination.
+                    const allowedCriteria = this.getCriteriaOptionsForType(reportTypeForPie).map(o => o.value);
+                    // Ensure chosen criteria is first
+                    const startIdx = Math.max(0, allowedCriteria.indexOf(criteriaToSend));
+                    const tryOrder = [...allowedCriteria.slice(startIdx), ...allowedCriteria.slice(0, startIdx)];
+
+                    let finalResult = null;
+                    let lastRawResult = null; // keep last raw API response for diagnostics
+                    for (let c of tryOrder) {
+                        // update params for this attempt
+                        if (params.has('criteria')) params.set('criteria', c); else params.append('criteria', c);
+                        const url = `/admin/api/reports/filter?${params}`;
+                        console.debug(`fetchPieChartData - request for ${fetchType} (criteria=${c}):`, url, Array.from(params.entries()));
+                        try {
+                            const response = await fetch(url);
+                            const result = await response.json();
+                            console.debug(`Raw API response for ${fetchType} (criteria=${c}):`, result);
+                            // Support multiple possible payload shapes (data | rows | items)
+                            let responseArray = null;
+                            if (result && Array.isArray(result.data) && result.data.length > 0) responseArray = result.data;
+                            else if (result && Array.isArray(result.rows) && result.rows.length > 0) responseArray = result.rows;
+                            else if (result && Array.isArray(result.items) && result.items.length > 0) responseArray = result.items;
+
+                            // remember last raw response even if empty, may contain debug_counts
+                            lastRawResult = result;
+                            if (result && result.success && Array.isArray(responseArray) && responseArray.length > 0) {
+                                // attach the resolved data array so caller can aggregate reliably
+                                finalResult = { result, criteriaUsed: c, dataArray: responseArray };
+                                break;
+                            }
+                        } catch (e) {
+                            console.warn('fetchPieChartData - fetch error for', c, e);
+                        }
+                    }
+
+                    // If no grouped rows were returned, check server-provided debug counts
+                    // If the server explicitly reports there are NO matching order_items
+                    // for this product + filters (items_count == 0), we should NOT retry
+                    // without the product filter because that would misleadingly show
+                    // "all customers/staff" instead of an empty result for the selected product.
+                    if (!finalResult && this.filters.productId && lastRawResult && lastRawResult.debug_counts && typeof lastRawResult.debug_counts.items_count !== 'undefined') {
+                        const itemsCount = Number(lastRawResult.debug_counts.items_count) || 0;
+                        if (itemsCount === 0) {
+                            console.debug(`fetchPieChartData - server debug_counts.items_count=0 for product_id=${this.filters.productId}; not retrying without product for ${fetchType}`);
+                            return [];
+                        }
+                    }
+
+                    if (finalResult) {
+                        const { result, criteriaUsed, dataArray } = finalResult;
+                        const dataForAgg = dataArray || result.data || result.rows || result.items || [];
+                        console.log(`Raw data for ${fetchType} (first 8):`, dataForAgg.slice(0, 8));
+                        console.log(`groupByKey: ${groupByKey}, reportTypeForPie: ${reportTypeForPie}, criteriaUsed: ${criteriaUsed}`);
+                        const aggregated = this.aggregateByKey(dataForAgg, groupByKey, reportTypeForPie);
                         console.log(`Aggregated pie chart data for ${fetchType}:`, aggregated);
                         return aggregated;
                     } else {
-                        console.warn(`No data for pie chart ${fetchType}`, result);
+                        console.warn(`No data for pie chart ${fetchType} after trying criteria:`, tryOrder);
+                        // If the request included a product filter and produced no grouped rows,
+                        // only retry without the product filter when the server explicitly
+                        // reported that there ARE matching order_items for the product via
+                        // debug_counts.items_count > 0. If debug_counts is absent or zero,
+                        // skip the retry to avoid showing a misleading "all entities" pie.
+                        if (this.filters.productId) {
+                            const hasDebug = lastRawResult && lastRawResult.debug_counts && typeof lastRawResult.debug_counts.items_count !== 'undefined';
+                            const itemsCount = hasDebug ? Number(lastRawResult.debug_counts.items_count) : null;
+                            if (!hasDebug) {
+                                console.debug('fetchPieChartData - no debug_counts available; skipping retry without product to avoid showing global results');
+                                return [];
+                            }
+                            if (itemsCount === 0) {
+                                console.debug(`fetchPieChartData - server debug_counts.items_count=0 for product_id=${this.filters.productId}; skipping retry`);
+                                return [];
+                            }
+
+                            try {
+                                console.debug(`fetchPieChartData - server reported items_count=${itemsCount}; retrying without product filter`);
+                                // Build params without product_id
+                                const paramsNoProduct = new URLSearchParams(Array.from(params.entries()).filter(([k]) => k !== 'product_id'));
+                                let finalResultNoProduct = null;
+                                for (let c of tryOrder) {
+                                    if (paramsNoProduct.has('criteria')) paramsNoProduct.set('criteria', c); else paramsNoProduct.append('criteria', c);
+                                    const urlNoProduct = `/admin/api/reports/filter?${paramsNoProduct}`;
+                                    console.debug(`fetchPieChartData - retry request without product (criteria=${c}):`, urlNoProduct);
+                                    try {
+                                        const response2 = await fetch(urlNoProduct);
+                                        const res2 = await response2.json();
+                                        console.debug(`Raw API response (no product) for ${fetchType} (criteria=${c}):`, res2);
+                                        let responseArray2 = null;
+                                        if (res2 && Array.isArray(res2.data) && res2.data.length > 0) responseArray2 = res2.data;
+                                        else if (res2 && Array.isArray(res2.rows) && res2.rows.length > 0) responseArray2 = res2.rows;
+                                        else if (res2 && Array.isArray(res2.items) && res2.items.length > 0) responseArray2 = res2.items;
+
+                                        if (res2 && res2.success && Array.isArray(responseArray2) && responseArray2.length > 0) {
+                                            finalResultNoProduct = { result: res2, criteriaUsed: c, dataArray: responseArray2 };
+                                            break;
+                                        }
+                                    } catch (e) {
+                                        console.warn('fetchPieChartData - retry fetch error (no product) for', c, e);
+                                    }
+                                }
+
+                                if (finalResultNoProduct) {
+                                    const { result: resOk, criteriaUsed: cUsed, dataArray: dataArray2 } = finalResultNoProduct;
+                                    const dataForAgg2 = dataArray2 || resOk.data || resOk.rows || resOk.items || [];
+                                    console.log(`fetchPieChartData - using fallback results without product filter (criteria=${cUsed})`);
+                                    const aggregated2 = this.aggregateByKey(dataForAgg2, groupByKey, reportTypeForPie);
+                                    return aggregated2;
+                                } else {
+                                    console.debug('fetchPieChartData - retry without product produced no data either');
+                                }
+                            } catch (e) {
+                                console.warn('fetchPieChartData - unexpected error during product fallback retry', e);
+                            }
+                        }
                     }
                 } catch (err) {
                     console.error('Error fetching pie chart data:', err);
                 }
                 return [];
+            },
+
+            // Helper: try to find the order id in a table row using common key names
+            getOrderIdFromRow(row) {
+                if (!row || typeof row !== 'object') return null;
+                const candidates = ['order_id', 'id', 'order_number', 'invoice_no', 'ma_don', 'orderId', 'orderId'];
+                for (const k of candidates) {
+                    if (row[k] !== undefined && row[k] !== null && String(row[k]).toString().trim() !== '') return String(row[k]);
+                }
+                if (row.order && (row.order.id || row.order.order_id)) return String(row.order.id || row.order.order_id);
+                return null;
+            },
+
+            // Helper: try to find staff id (creator) on an order row
+            getStaffIdFromRow(row) {
+                if (!row || typeof row !== 'object') return null;
+                const candidates = ['staff_id', 'created_by', 'created_by_id', 'user_id', 'creator_id', 'staffId'];
+                for (const k of candidates) {
+                    if (row[k] !== undefined && row[k] !== null && String(row[k]).toString().trim() !== '') return String(row[k]);
+                }
+                if (row.created_by && typeof row.created_by === 'object' && (row.created_by.id || row.created_by.user_id)) return String(row.created_by.id || row.created_by.user_id);
+                return null;
+            },
+
+            // Fetch order items for a list of order IDs. Expects backend route
+            // `/admin/api/orders/items` to accept JSON { order_ids: [...] } and
+            // return array under `items`|`data`|`rows`.
+            async fetchOrderItemsForOrderIds(orderIds) {
+                // The backend exposes GET /admin/api/orders/{id}/items for each order.
+                // Call that endpoint for each order id in parallel and merge results.
+                if (!orderIds || !orderIds.length) return [];
+                try {
+                    const calls = orderIds.map(id => fetch(`/admin/api/orders/${encodeURIComponent(id)}/items`)
+                        .then(r => (r.ok ? r.json().catch(() => null) : null))
+                        .catch(() => null)
+                    );
+                    const results = await Promise.all(calls);
+                    const items = [];
+                    for (const res of results) {
+                        if (!res) continue;
+                        if (Array.isArray(res.items) && res.items.length) items.push(...res.items);
+                        else if (Array.isArray(res.data) && res.data.length) items.push(...res.data);
+                        else if (Array.isArray(res.rows) && res.rows.length) items.push(...res.rows);
+                    }
+                    return items;
+                } catch (e) {
+                    console.warn('fetchOrderItemsForOrderIds error', e);
+                    return [];
+                }
             },
 
             async renderPieChartByFilter() {
@@ -1306,14 +2041,88 @@ $pageTitle = 'Thống Kê & Báo Cáo';
             aggregateByKey(data, key, reportTypeForAgg) {
                 const grouped = {};
                 // Determine the value key based on the report type being aggregated
-                const valueKey = reportTypeForAgg ? this.getValueKeyForReportType(reportTypeForAgg) : this.getValueKeyForCriteria();
-                
-                console.log(`aggregateByKey - key: ${key}, valueKey: ${valueKey}, data length: ${data.length}`);
-                console.log(`aggregateByKey - first row:`, data[0]);
+                let valueKey = reportTypeForAgg ? this.getValueKeyForReportType(reportTypeForAgg) : this.getValueKeyForCriteria();
+
+                // Nếu các hàng không chứa `valueKey` mong muốn (thường gặp khi tổng hợp cục bộ
+                // từ `tableData` được fetch cho một loại báo cáo khác), thì quay về dùng khóa
+                // giá trị của báo cáo hiện tại để cộng các số thực sự tồn tại trong hàng.
+                const sampleRow = data && data.length ? data[0] : null;
+                if (sampleRow && !(valueKey in sampleRow)) {
+                    // Use the reportTypeForAgg as the first fallback because we aggregated
+                    // data for that report type. If that key also doesn't exist, then
+                    // fall back to the current page reportType's key or a generic criteria.
+                    const fallbackKey = this.getValueKeyForReportType(reportTypeForAgg) || this.getValueKeyForReportType(this.filters.reportType) || this.getValueKeyForCriteria();
+                    console.log(`aggregateByKey - valueKey '${valueKey}' not found in rows, falling back to '${fallbackKey}'`);
+                    valueKey = fallbackKey;
+                }
+
+                console.debug(`aggregateByKey - key: ${key}, valueKey: ${valueKey}, data length: ${data.length}`);
+                console.debug(`aggregateByKey - first row:`, sampleRow);
+
+                // If the chosen valueKey is missing or produces only zeros, try a set
+                // of candidate keys commonly returned by different report types.
+                const candidateKeys = [
+                    valueKey,
+                    'total_sales_value',
+                    'total_purchase_value',
+                    'total_revenue',
+                    'total_spent',
+                    'total_amount',
+                    'total_revenue_value',
+                    'total' // fallback
+                ];
+
+                // Filter unique and existing keys on sampleRow
+                const keysToTest = [...new Set(candidateKeys)];
+                let chosenKey = valueKey;
+                if (sampleRow) {
+                    // Prefer first key that exists on sampleRow
+                    for (let k of keysToTest) {
+                        if (sampleRow.hasOwnProperty(k)) { chosenKey = k; break; }
+                    }
+                }
+
+                // If chosenKey exists but sums to zero across data, try to find a non-zero key
+                const sumForKey = (k) => data.reduce((s, r) => s + (parseFloat(r[k]) || 0), 0);
+                if (sampleRow && (sampleRow[chosenKey] === undefined || sumForKey(chosenKey) === 0)) {
+                    for (let k of keysToTest) {
+                        const s = sumForKey(k);
+                        if (!isNaN(s) && s > 0) { chosenKey = k; break; }
+                    }
+                }
+
+                console.debug(`aggregateByKey - chosen value key: ${chosenKey}`);
 
                 data.forEach((row, idx) => {
-                    let labels = row[key] || 'Khác';
-                    console.log(`Row ${idx}: labels from row[${key}] = "${labels}", value from row[${valueKey}] = ${row[valueKey]}`);
+                    // Giải quyết tên nhãn với phương án dự phòng: backend có thể trả tên trường khác nhau
+                    // tùy theo `report_type`.
+                    let labels = row[key];
+                    if (labels === undefined || labels === null || labels === '') {
+                        // Thử các khóa thay thế thông dụng — nhưng ưu tiên các khóa liên quan
+                        // đến loại thực thể đang được tổng hợp (`reportTypeForAgg`) để tránh
+                        // nhầm lẫn (ví dụ: khi tổng hợp 'staff' nhưng hàng chỉ có `customer_name`).
+                        let fallbackKeys = [];
+                        if (reportTypeForAgg === 'staff' || reportTypeForAgg === 'staffs') {
+                            fallbackKeys = ['staff_name', 'full_name', 'name', 'product_name', 'customer_name', 'supplier_name', 'title'];
+                        } else if (reportTypeForAgg === 'customers' || reportTypeForAgg === 'customer') {
+                            fallbackKeys = ['customer_name', 'full_name', 'name', 'staff_name', 'product_name', 'supplier_name', 'title'];
+                        } else if (reportTypeForAgg === 'products' || reportTypeForAgg === 'product') {
+                            fallbackKeys = ['product_name', 'name', 'full_name', 'staff_name', 'customer_name', 'supplier_name', 'title'];
+                        } else if (reportTypeForAgg === 'suppliers' || reportTypeForAgg === 'supplier') {
+                            fallbackKeys = ['supplier_name', 'name', 'product_name', 'full_name', 'customer_name', 'staff_name', 'title'];
+                        } else {
+                            fallbackKeys = ['product_name', 'name', 'full_name', 'customer_name', 'staff_name', 'supplier_name', 'title'];
+                        }
+
+                        for (let fk of fallbackKeys) {
+                            if (row[fk] !== undefined && row[fk] !== null && row[fk] !== '') {
+                                labels = row[fk];
+                                break;
+                            }
+                        }
+                    }
+                    labels = labels || 'Khác';
+                    console.debug(`Row ${idx}: labels from row[${key}] resolved = "${labels}", value from row[${chosenKey}] = ${row[chosenKey]}`);
 
                     // Nếu là danh sách nhiều item (GROUP_CONCAT), tách ra 
                     // NHƯ CẢ LẦN TRƯỚC chia đều, nhưng giờ backend đã trả về mỗi item riêng row
@@ -1327,26 +2136,29 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                             if (!grouped[trimmedLabel]) {
                                 grouped[trimmedLabel] = 0;
                             }
-                            grouped[trimmedLabel] += (parseFloat(row[valueKey]) || 0) / labelList.length;
+                            // Use the chosen numeric key (chosenKey) rather than the original
+                            // valueKey so we respect fallbacks when the preferred key
+                            // isn't present on the rows.
+                            grouped[trimmedLabel] += (parseFloat(row[chosenKey]) || 0) / labelList.length;
                         });
                     } else {
                         // Single item - cộng dồn bình thường
                         if (!grouped[labels]) {
                             grouped[labels] = 0;
                         }
-                        grouped[labels] += parseFloat(row[valueKey]) || 0;
+                        grouped[labels] += parseFloat(row[chosenKey]) || 0;
                     }
                 });
 
-                console.log(`aggregateByKey - grouped result:`, grouped);
+                console.debug(`aggregateByKey - grouped result:`, grouped);
 
                 // Convert to array and sort
                 const result = Object.entries(grouped)
                     .map(([label, value]) => ({ label, value }))
                     .sort((a, b) => b.value - a.value)
                     .slice(0, 10); // Top 10
-                    
-                console.log(`aggregateByKey - final result:`, result);
+
+                console.debug(`aggregateByKey - final result:`, result);
                 return result;
             },
 
@@ -1453,6 +2265,408 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 return baseColors.slice(0, count);
             },
 
+            // Generate visually distinct color using HSL (softer / paler palette)
+            generateDistinctColor(index, total) {
+                const h = Math.round((index / Math.max(1, total)) * 320); // spread hues
+                // slightly lower saturation and higher lightness for paler, softer tones
+                return `hsl(${h} 65% 68%)`;
+            },
+
+            // Convert hex or hsl to rgba with given alpha
+            hexToRgba(hexOrHsl, alpha = 0.28) {
+                if (!hexOrHsl) return `rgba(0,0,0,${alpha})`;
+                if (hexOrHsl.startsWith('hsl')) {
+                    // Chart.js accepts hsla as background when CSS color string with slash notation
+                    try { return hexOrHsl.replace('hsl(', 'hsla(').replace(')', ` / ${alpha})`); } catch { return `rgba(0,0,0,${alpha})`; }
+                }
+                const hex = hexOrHsl.replace('#', '');
+                if (hex.length === 3) {
+                    const r = parseInt(hex[0] + hex[0], 16);
+                    const g = parseInt(hex[1] + hex[1], 16);
+                    const b = parseInt(hex[2] + hex[2], 16);
+                    return `rgba(${r},${g},${b},${alpha})`;
+                }
+                const bigint = parseInt(hex, 16);
+                const r = (bigint >> 16) & 255;
+                const g = (bigint >> 8) & 255;
+                const b = bigint & 255;
+                return `rgba(${r},${g},${b},${alpha})`;
+            },
+
+            // Normalize arbitrary CSS color string (hex, hsl, rgb, named color, etc.)
+            // to an `rgba(r,g,b,a)` string using an offscreen canvas, so we can
+            // reliably set the alpha for hover fill regardless of original format.
+            normalizeColorToRgba(color, alpha = 0.7) {
+                try {
+                    const cvs = document.createElement('canvas');
+                    cvs.width = cvs.height = 1;
+                    const c = cvs.getContext('2d');
+                    c.clearRect(0, 0, 1, 1);
+                    c.fillStyle = color;
+                    const computed = c.fillStyle; // normalized to rgb(...) or rgba(...)
+                    const m = computed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([0-9.]+))?\)/);
+                    if (m) {
+                        return `rgba(${m[1]},${m[2]},${m[3]},${alpha})`;
+                    }
+                } catch (e) {
+                    // Tiếp tục sang phần xử lý dự phòng bên dưới
+                }
+                // Phương án dự phòng: thử dùng hàm hexToRgba hiện có
+                try { return this.hexToRgba(color, alpha); } catch (e) { return `rgba(0,0,0,${alpha})`; }
+            },
+
+            renderAreaChart() {
+                // Hủy (destroy) bất kỳ instance biểu đồ cũ đang tồn tại
+                if (this.areaChart) {
+                    try { this.areaChart.destroy(); } catch (e) { /* ignore */ }
+                    this.areaChart = null;
+                }
+
+                const dataToUse = this.getFilteredTableData().length > 0 ? this.getFilteredTableData() : this.tableData;
+                console.log('renderAreaChart - rows:', dataToUse ? dataToUse.length : 0);
+                if (!dataToUse || dataToUse.length === 0) return;
+
+                // Xác định loại thực thể để gom nhóm (làm chung/generic)
+                const entityType = this.filters.reportType || 'staff';
+                const labelCandidatesMap = {
+                    staff: ['staff_name', 'full_name', 'name', 'staff'],
+                    products: ['product_name', 'name', 'product'],
+                    customers: ['customer_name', 'full_name', 'name', 'customer'],
+                    suppliers: ['supplier_name', 'supplier', 'name'],
+                    // Orders: prefer status (to show stacked area by order status),
+                    // then customer_name, then order_id as last resort
+                    orders: ['status', 'customer_name', 'order_id']
+                };
+                const candidates = labelCandidatesMap[entityType] || ['name', 'full_name'];
+                let labelKey = candidates.find(k => dataToUse.some(r => r && (r[k] !== undefined && r[k] !== null && r[k] !== '')));
+                if (!labelKey) { console.log('renderAreaChart skipped: missing label key for', entityType, 'available keys example:', Object.keys(dataToUse[0] || {})); return; }
+
+                // If viewing orders, prefer using the unique order identifier so
+                // each order becomes its own series (each order = one color)
+                if (entityType === 'orders') {
+                    const orderIdCandidates = ['order_id', 'id', 'order_number', 'invoice_no'];
+                    const found = orderIdCandidates.find(k => dataToUse.some(r => r && (r[k] !== undefined && r[k] !== null && r[k] !== '')));
+                    if (found) {
+                        labelKey = found;
+                    }
+                }
+
+                console.debug('renderAreaChart - detected labelKey:', labelKey);
+
+                const valueKey = this.getValueKeyForReportType(entityType) || this.getValueKeyForCriteria();
+
+                // Hàm hỗ trợ phân tích / chuyển chuỗi ngày thành đối tượng Date
+                // Sử dụng các mẫu rõ ràng (ISO yyyy-mm-dd, dd/mm/yyyy, ISO timestamp) để tránh
+                // nhận diện nhầm các trường id (số) như 'product_id' hoặc 'staff_id' là ngày.
+                const parseDate = raw => {
+                    if (!raw && raw !== 0) return null;
+                    // Date object already
+                    if (raw instanceof Date && !isNaN(raw)) return raw;
+
+                    // Numbers: treat as timestamp only if it's large (ms) and yields reasonable year
+                    if (typeof raw === 'number') {
+                        const d = new Date(raw);
+                        if (!isNaN(d) && d.getFullYear() > 1970) return d;
+                        return null;
+                    }
+
+                    if (typeof raw === 'string') {
+                        const s = raw.trim();
+                        if (!s) return null;
+
+                        // Common date patterns
+                        const isoPattern = /^\d{4}-\d{2}-\d{2}/; // 2023-11-18
+                        const dmyPattern = /^\d{1,2}\/\d{1,2}\/\d{4}$/; // 18/11/2025
+
+                        if (isoPattern.test(s)) {
+                            const d = new Date(s);
+                            if (!isNaN(d)) return d;
+                        }
+
+                        if (dmyPattern.test(s)) {
+                            const [dd, mm, yyyy] = s.split('/');
+                            const d = new Date(parseInt(yyyy, 10), parseInt(mm, 10) - 1, parseInt(dd, 10));
+                            if (!isNaN(d)) return d;
+                        }
+
+                        // Fallback: try Date parsing only when string contains separators or time marker
+                        if (s.includes('/') || s.includes('-') || s.includes('T') || s.includes(':')) {
+                            const d = new Date(s);
+                            if (!isNaN(d) && d.getFullYear() > 1970) return d;
+                        }
+                    }
+
+                    return null;
+                };
+
+                const dateCandidates = ['created_at', 'date', 'order_date', 'report_date', 'day', 'date_created', 'createdAt'];
+                let dateKey = dateCandidates.find(k => dataToUse.some(r => r && (r[k] !== undefined && r[k] !== null && r[k] !== '')));
+                if (!dateKey) {
+                    const sample = dataToUse.find(r => r && typeof r === 'object');
+                    if (sample) {
+                        for (const k of Object.keys(sample)) {
+                            if (parseDate(sample[k])) { dateKey = k; console.log('renderAreaChart auto-detected dateKey:', dateKey); break; }
+                        }
+                    }
+                }
+
+                // Tổng hợp các giá trị theo đối tượng
+                const agg = {};
+                const entityTotals = {};
+                const dateSet = new Set();
+
+                dataToUse.forEach(row => {
+                    const label = row[labelKey] || 'Khác';
+                    const val = parseFloat(row[valueKey]) || 0;
+                    entityTotals[label] = (entityTotals[label] || 0) + val;
+                    if (dateKey) {
+                        const d = parseDate(row[dateKey]);
+                        if (d) {
+                            const day = d.toISOString().slice(0, 10);
+                            dateSet.add(day);
+                            if (!agg[label]) agg[label] = {};
+                            agg[label][day] = (agg[label][day] || 0) + val;
+                        }
+                    }
+                });
+
+                const dates = Array.from(dateSet).sort();
+                const hasMultipleDates = dates.length > 1;
+
+                // Chọn N đối tượng hàng đầu để giữ biểu đồ dễ đọc
+                const TOP_N = 8;
+                const entitiesSorted = Object.keys(entityTotals).sort((a, b) => entityTotals[b] - entityTotals[a]);
+                const topEntities = entitiesSorted.slice(0, TOP_N);
+                const otherEntities = entitiesSorted.slice(TOP_N);
+                const finalEntities = [...topEntities]; if (otherEntities.length) finalEntities.push('Khác');
+
+                let labels = [];
+                let datasets = [];
+                // Render grouped (side-by-side) bars for all entity types to
+                // show each entity as its own column instead of stacking.
+                const isGrouped = true;
+
+                if (!hasMultipleDates) {
+                    // Single-label fallback: render a single category (no empty padding bars)
+                    const singleLabel = this.valueRangeLabel || 'Giá trị';
+                    labels = [singleLabel];
+                    // For a single-label result, each dataset provides one value
+                    datasets = finalEntities.map((e, idx) => {
+                        const color = this.generateDistinctColor(idx, finalEntities.length);
+                        const val = e === 'Khác' ? otherEntities.reduce((sum, o) => sum + (entityTotals[o] || 0), 0) : (entityTotals[e] || 0);
+                        return {
+                            label: e,
+                            data: [val],
+                            backgroundColor: this.hexToRgba(color, 0.85),
+                            borderColor: color,
+                            borderWidth: 0,
+                            // Grouped rendering (no stacking)
+                            stack: undefined,
+                            borderSkipped: 'bottom',
+                            // Control bar width so many bars fit
+                            barPercentage: 0.6,
+                            categoryPercentage: 0.8
+                        };
+                    });
+                } else {
+                    labels = dates.map(d => { const [y, m, day] = d.split('-'); return `${day}/${m}`; });
+                    // Create stacked bar datasets: one dataset per entity, values per date
+                    datasets = finalEntities.map((e, idx) => {
+                        const color = this.generateDistinctColor(idx, finalEntities.length);
+                        const points = dates.map(day => e === 'Khác' ? otherEntities.reduce((sum, o) => sum + ((agg[o] && agg[o][day]) || 0), 0) : ((agg[e] && agg[e][day]) || 0));
+                        return {
+                            label: e,
+                            data: points,
+                            backgroundColor: this.hexToRgba(color, 0.85),
+                            borderColor: color,
+                            borderWidth: 0,
+                            stack: isGrouped ? undefined : 'stack1',
+                            borderSkipped: isGrouped ? 'bottom' : false,
+                            barPercentage: isGrouped ? 0.6 : undefined,
+                            categoryPercentage: isGrouped ? 0.8 : undefined
+                        };
+                    });
+                }
+
+                const canvas = this.$refs.areaChartCanvas;
+                if (!canvas) return;
+                const ctx = canvas.getContext && canvas.getContext('2d');
+                if (!ctx) return;
+
+
+
+                // Plugin: draw a black outline only around the hovered bar element
+                // This implementation avoids mutating dataset border arrays which
+                // can cause shared-style issues; instead it draws directly on the
+                // canvas in `afterDraw` for the active element(s).
+                const createAreaChartHighlightPlugin = () => {
+                    let activeDataIdx = null;
+                    let activeDatasetIdx = null;
+                    let legendHighlightDataset = null; // dataset index when hovering legend
+
+                    function clearActive() { activeDataIdx = null; activeDatasetIdx = null; }
+
+                    return {
+                        id: 'areaChartHighlight',
+
+                        // Called by legend hover to request highlighting entire dataset
+                        applyHighlightDataset(chart, datasetIdx) {
+                            legendHighlightDataset = datasetIdx;
+                            // trigger a redraw to show outlines for whole dataset
+                            try { chart.draw(); } catch (e) { /* ignore */ }
+                        },
+                        restoreHighlights(chart) {
+                            legendHighlightDataset = null;
+                            clearActive();
+                            try { chart.draw(); } catch (e) { /* ignore */ }
+                        },
+
+                        afterEvent(chart, args) {
+                            const evt = args.event;
+                            const nativeEvt = evt && evt.native ? evt.native : evt;
+                            // if pointer is outside chart area, clear
+                            try {
+                                const ca = chart.chartArea || {};
+                                const ex = nativeEvt && (nativeEvt.x !== undefined ? nativeEvt.x : nativeEvt.offsetX);
+                                const ey = nativeEvt && (nativeEvt.y !== undefined ? nativeEvt.y : nativeEvt.offsetY);
+                                if (ex === undefined || ey === undefined || ca.left === undefined) {
+                                    // keep as-is
+                                } else if (ex < ca.left || ex > ca.right || ey < ca.top || ey > ca.bottom) {
+                                    if (activeDataIdx !== null || activeDatasetIdx !== null) {
+                                        clearActive();
+                                        try { chart.draw(); } catch (e) { /* ignore */ }
+                                    }
+                                    return;
+                                }
+                            } catch (e) { /* ignore */ }
+
+                            // Use nearest+intersect to pick the exact element under cursor
+                            const elems = chart.getElementsAtEventForMode(nativeEvt, 'nearest', { intersect: true }, false);
+                            const elem = (elems && elems.length) ? elems[0] : null;
+                            const newDataIdx = elem ? elem.index : null;
+                            const newDatasetIdx = elem ? elem.datasetIndex : null;
+
+                            if (newDataIdx === activeDataIdx && newDatasetIdx === activeDatasetIdx) return;
+                            activeDataIdx = newDataIdx;
+                            activeDatasetIdx = newDatasetIdx;
+                            // redraw so afterDraw will render the outline
+                            try { chart.draw(); } catch (e) { /* ignore */ }
+                        },
+
+                        // Draw outlines for active element or for legend-highlighted dataset
+                        afterDraw(chart) {
+                            const ctx = chart.ctx;
+                            if (!ctx) return;
+
+                            const drawOutlineForElement = (el) => {
+                                if (!el) return;
+                                const vm = el;
+                                const x = vm.x !== undefined ? vm.x : 0;
+                                const w = vm.width !== undefined ? vm.width : (vm._model && vm._model.width) || 0;
+                                const y = vm.y !== undefined ? vm.y : 0;
+                                const base = vm.base !== undefined ? vm.base : (vm._model && vm._model.base) || 0;
+                                const left = x - (w / 2);
+                                const top = Math.min(y, base);
+                                const height = Math.abs(base - y);
+
+                                ctx.save();
+                                ctx.beginPath();
+                                ctx.lineWidth = 0.5;
+                                ctx.strokeStyle = '#000000';
+                                const pad = 1.5;
+                                ctx.rect(Math.round(left - pad) + 0.5, Math.round(top - pad) + 0.5, Math.round(w + pad * 2), Math.round(height + pad * 2));
+                                ctx.stroke();
+                                ctx.restore();
+                            };
+
+                            // Legend-requested: outline entire dataset
+                            if (legendHighlightDataset !== null && legendHighlightDataset !== undefined) {
+                                const meta = chart.getDatasetMeta(legendHighlightDataset);
+                                if (meta && meta.data) meta.data.forEach(el => drawOutlineForElement(el));
+                                return;
+                            }
+
+                            // Prefer Chart.js tooltip active elements (reliable when tooltip mode is nearest+intersect)
+                            try {
+                                const active = (chart.tooltip && typeof chart.tooltip.getActiveElements === 'function') ? chart.tooltip.getActiveElements() : (chart.getActiveElements ? chart.getActiveElements() : []);
+                                if (active && active.length) {
+                                    // draw only the first active element (should be exactly the hovered bar)
+                                    const elInfo = active[0];
+                                    // elInfo may be {datasetIndex, index, element}
+                                    if (elInfo.element) {
+                                        drawOutlineForElement(elInfo.element);
+                                    } else if (elInfo.datasetIndex !== undefined && elInfo.index !== undefined) {
+                                        const meta = chart.getDatasetMeta(elInfo.datasetIndex);
+                                        if (meta && meta.data && meta.data[elInfo.index]) drawOutlineForElement(meta.data[elInfo.index]);
+                                    }
+                                }
+                            } catch (e) {
+                                // fallback: do nothing
+                            }
+                        }
+                    };
+                };
+
+                const highlightPlugin = createAreaChartHighlightPlugin();
+                const LEGEND_THRESHOLD = 8;
+
+                this.areaChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: { labels, datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        // Force non-stacked scales so datasets render as grouped (side-by-side) bars
+                        scales: { x: { stacked: false }, y: { stacked: false, beginAtZero: true } },
+                        // Use nearest+intersect so interactions target the single hovered bar
+                        interaction: { mode: 'nearest', intersect: true },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                display: datasets.length <= LEGEND_THRESHOLD,
+                                labels: { boxWidth: 12, font: { size: 11 } },
+                                onHover: function (event, legendItem, legend) {
+                                    try {
+                                        const chart = legend.chart;
+                                        const idx = legendItem.datasetIndex;
+                                        if (highlightPlugin && typeof highlightPlugin.applyHighlightDataset === 'function') {
+                                            highlightPlugin.applyHighlightDataset(chart, idx);
+                                        }
+                                    } catch (e) { /* ignore */ }
+                                },
+                                onLeave: function (event, legendItem, legend) {
+                                    try {
+                                        if (highlightPlugin && typeof highlightPlugin.restoreHighlights === 'function') {
+                                            const chart = legend && legend.chart ? legend.chart : null;
+                                            if (chart) highlightPlugin.restoreHighlights(chart);
+                                        }
+                                    } catch (e) { /* ignore */ }
+                                }
+                            },
+                            tooltip: {
+                                enabled: true,
+                                mode: 'nearest',
+                                intersect: true
+                            }
+                        }
+                    },
+                    plugins: [highlightPlugin]
+                });
+
+                // If legend is hidden due to many datasets, toggle it when user hovers chart container
+                try {
+                    const wrapper = canvas && canvas.parentElement;
+                    if (wrapper && datasets.length > LEGEND_THRESHOLD) {
+                        wrapper.addEventListener('mouseenter', () => {
+                            try { this.areaChart.options.plugins.legend.display = true; this.areaChart.update(); } catch (e) { }
+                        });
+                        wrapper.addEventListener('mouseleave', () => {
+                            try { this.areaChart.options.plugins.legend.display = false; this.areaChart.update(); } catch (e) { }
+                        });
+                    }
+                } catch (e) { /* ignore */ }
+            },
+
             renderBarChart(labels, values, colors) {
                 const canvas = this.$refs.barChartCanvas;
                 if (!canvas) return;
@@ -1506,10 +2720,185 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 });
             },
 
+            renderOrdersStackedBar() {
+                // destroy existing
+                if (this.ordersStackedBar) {
+                    try { this.ordersStackedBar.destroy(); } catch (e) { /* ignore */ }
+                    this.ordersStackedBar = null;
+                }
+
+                const filteredLen = this.getFilteredTableData().length;
+                const totalLen = (this.tableData || []).length;
+                try { console.debug('renderOrdersStackedBar - filteredLen:', filteredLen, 'totalLen:', totalLen); } catch (e) { }
+
+                const dataToUse = filteredLen > 0 ? this.getFilteredTableData() : this.tableData;
+                if (!dataToUse || dataToUse.length === 0) {
+                    try { console.debug('renderOrdersStackedBar aborted: no dataToUse'); } catch (e) { }
+                    return;
+                }
+
+                // We'll render each ORDER as its own stacked segment per day (one color per order).
+                // Detect keys: date, order id, and value
+                const dateCandidates = ['created_at', 'date', 'order_date', 'report_date', 'day', 'date_created', 'createdAt'];
+                const orderIdCandidates = ['order_id', 'id', 'order_number', 'invoice_no', 'ma_don'];
+                const valueCandidates = ['total_amount', 'total', 'total_revenue', 'total_sales_value', 'total_spent', 'order_count'];
+
+                const sample = dataToUse.find(r => r && typeof r === 'object');
+                let dateKey = dateCandidates.find(k => sample && Object.prototype.hasOwnProperty.call(sample, k));
+                if (!dateKey) {
+                    for (const k of Object.keys(sample || {})) {
+                        const v = sample[k];
+                        if (typeof v === 'string' && /\d{4}-\d{2}-\d{2}/.test(v)) { dateKey = k; break; }
+                        if (typeof v === 'string' && /\d{1,2}\/\d{1,2}\/\d{4}/.test(v)) { dateKey = k; break; }
+                    }
+                }
+
+                let orderKey = orderIdCandidates.find(k => sample && Object.prototype.hasOwnProperty.call(sample, k));
+                if (!orderKey) {
+                    orderKey = Object.keys(sample || {}).find(k => k.toLowerCase().includes('order') && k.toLowerCase().includes('id')) || null;
+                }
+
+                let valueKey = valueCandidates.find(k => sample && Object.prototype.hasOwnProperty.call(sample, k)) || this.getValueKeyForReportType('orders') || 'total_amount';
+
+                // Parse date helper
+                const parseDate = raw => {
+                    if (!raw && raw !== 0) return null;
+                    if (raw instanceof Date && !isNaN(raw)) return raw;
+                    if (typeof raw === 'number') { const d = new Date(raw); if (!isNaN(d) && d.getFullYear() > 1970) return d; return null; }
+                    if (typeof raw === 'string') {
+                        const s = raw.trim();
+                        const iso = /^\d{4}-\d{2}-\d{2}/;
+                        const dmy = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
+                        if (iso.test(s)) return new Date(s);
+                        if (dmy.test(s)) { const [dd, mm, yy] = s.split('/'); return new Date(Number(yy), Number(mm) - 1, Number(dd)); }
+                        const tryD = new Date(s); if (!isNaN(tryD) && tryD.getFullYear() > 1970) return tryD;
+                    }
+                    return null;
+                };
+
+                // Aggregate per day per order
+                const perDay = {}; // { day: { orderId: value } }
+                const dateSet = new Set();
+                const ordersSet = new Set();
+
+                dataToUse.forEach(row => {
+                    const d = parseDate(dateKey ? row[dateKey] : row.created_at || row.date);
+                    const day = d ? d.toISOString().slice(0, 10) : 'unknown';
+                    dateSet.add(day);
+                    const oid = orderKey ? (row[orderKey] !== undefined ? String(row[orderKey]) : null) : (row.order_id ? String(row.order_id) : null);
+                    const orderLabel = oid || (row.order_number || row.invoice_no || 'Đơn ' + Math.random().toString(36).slice(2, 6));
+                    ordersSet.add(orderLabel);
+                    const val = parseFloat(row[valueKey]) || 0;
+                    if (!perDay[day]) perDay[day] = {};
+                    perDay[day][orderLabel] = (perDay[day][orderLabel] || 0) + val;
+                });
+
+                const dates = Array.from(dateSet).sort();
+                const orders = Array.from(ordersSet);
+
+                // Cap number of distinct order series to avoid performance issues
+                const MAX_ORDERS = 60;
+                let primaryOrders = orders;
+                let hasOthers = false;
+                if (orders.length > MAX_ORDERS) {
+                    primaryOrders = orders.slice(0, MAX_ORDERS);
+                    hasOthers = true;
+                }
+
+                // Build datasets: one dataset per order (or aggregated 'Khác')
+                const datasets = [];
+                primaryOrders.forEach((ord, idx) => {
+                    const color = this.generateDistinctColor(idx, Math.max(primaryOrders.length, 8));
+                    const data = dates.map(d => (perDay[d] && perDay[d][ord]) ? perDay[d][ord] : 0);
+                    datasets.push({
+                        label: ord,
+                        data,
+                        backgroundColor: this.hexToRgba(color, 0.7),
+                        borderColor: color,
+                        borderWidth: 1,
+                        hoverBorderColor: '#000',
+                        hoverBorderWidth: 2,
+                        borderSkipped: false,
+                        borderAlign: 'center'
+                    });
+                });
+
+                if (hasOthers) {
+                    // aggregate remaining orders into 'Khác (Đơn hàng)'
+                    const otherOrders = orders.slice(MAX_ORDERS);
+                    const otherData = dates.map(d => otherOrders.reduce((s, o) => s + ((perDay[d] && perDay[d][o]) || 0), 0));
+                    const color = this.generateDistinctColor(primaryOrders.length, Math.max(primaryOrders.length + 1, 8));
+                    datasets.push({
+                        label: 'Khác (Đơn hàng)',
+                        data: otherData,
+                        backgroundColor: this.hexToRgba(color, 0.6),
+                        borderColor: color,
+                        borderWidth: 1,
+                        hoverBorderColor: '#000',
+                        hoverBorderWidth: 2,
+                        borderSkipped: false,
+                        borderAlign: 'center'
+                    });
+                }
+
+                const labels = dates.map(d => { const [y, m, day] = d.split('-'); return `${day}/${m}`; });
+
+                const canvas = this.$refs.ordersStackedBarCanvas;
+                if (!canvas) return;
+                const ctx = canvas.getContext && canvas.getContext('2d');
+                if (!ctx) return;
+
+                const LEGEND_THRESHOLD = 5;
+
+                this.ordersStackedBar = new Chart(ctx, {
+                    type: 'bar',
+                    data: { labels, datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { stacked: true },
+                            y: { stacked: true, beginAtZero: true, ticks: { callback: (v) => this.formatMoney(v) } }
+                        },
+                        plugins: {
+                            legend: { position: 'top', display: datasets.length <= LEGEND_THRESHOLD, labels: { boxWidth: 12, font: { size: 11 } } },
+                            tooltip: {
+                                callbacks: {
+                                    label: (ctx) => `${ctx.dataset.label}: ${this.formatMoney(ctx.raw)}`
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Toggle legend on hover when too many items
+                try {
+                    const wrapper = canvas && canvas.parentElement;
+                    if (wrapper && datasets.length > LEGEND_THRESHOLD) {
+                        wrapper.addEventListener('mouseenter', () => {
+                            try { this.ordersStackedBar.options.plugins.legend.display = true; this.ordersStackedBar.update(); } catch (e) { }
+                        });
+                        wrapper.addEventListener('mouseleave', () => {
+                            try { this.ordersStackedBar.options.plugins.legend.display = false; this.ordersStackedBar.update(); } catch (e) { }
+                        });
+                    }
+                } catch (e) { /* ignore */ }
+            },
+
             destroyCharts() {
                 if (this.barChart) {
                     this.barChart.destroy();
                     this.barChart = null;
+                }
+
+                if (this.areaChart) {
+                    try { this.areaChart.destroy(); } catch (e) { /* ignore */ }
+                    this.areaChart = null;
+                }
+
+                if (this.ordersStackedBar) {
+                    try { this.ordersStackedBar.destroy(); } catch (e) { /* ignore */ }
+                    this.ordersStackedBar = null;
                 }
 
                 // Destroy tất cả pie charts

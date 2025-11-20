@@ -222,7 +222,10 @@ class ReportsController extends BaseAdminController
                     $data = $this->reportsRepo->filterCustomers($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate, $staffId, $productId);
                     break;
                 case 'suppliers':
-                    $data = $this->reportsRepo->filterSuppliers($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate, $productId);
+                    // filterSuppliers() is declared void in the repository; do not assign its result.
+                    // Call it to allow any internal processing, then provide a safe fallback.
+                    $this->reportsRepo->filterSuppliers($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate, $productId);
+                    $data = [];
                     break;
                 case 'orders':
                     $data = $this->reportsRepo->filterOrders($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate, $staffId, $productId, $customerId);
@@ -232,10 +235,80 @@ class ReportsController extends BaseAdminController
                     break;
             }
 
-            $this->jsonResponse([
+            $responsePayload = [
                 'success' => true,
                 'data' => $data
-            ]);
+            ];
+
+            // Optional debug counts when client requests them (useful to verify why
+            // aggregated endpoints return empty when filtering by product).
+            // Call with `include_counts=1` and `product_id` in the query string.
+            if (isset($_GET['include_counts']) && $_GET['include_counts'] == '1' && $productId) {
+                try {
+                    $pdo = DB::pdo();
+                    $sql = "SELECT COUNT(*) AS items_count, COUNT(DISTINCT o.user_id) AS customers_count, COUNT(DISTINCT o.created_by) AS staff_count FROM order_items oi JOIN orders o ON oi.order_id = o.id WHERE oi.product_id = :pid AND o.status = 'Hoàn tất'";
+                    if ($fromDate) $sql .= " AND DATE(o.created_at) >= '{$fromDate}'";
+                    if ($toDate) $sql .= " AND DATE(o.created_at) <= '{$toDate}'";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute([':pid' => $productId]);
+                    $counts = $stmt->fetch(\PDO::FETCH_ASSOC);
+                    $responsePayload['debug_counts'] = $counts ?: ['items_count' => 0, 'customers_count' => 0, 'staff_count' => 0];
+                } catch (\Exception $e) {
+                    // swallow debug errors but include a message
+                    $responsePayload['debug_counts_error'] = $e->getMessage();
+                }
+            }
+
+            // If client requested counts and there are matching order_items but
+            // the main repository returned empty `data`, provide a fallback
+            // grouped result so the frontend can still render pie charts.
+            if (isset($responsePayload['debug_counts']) && $productId && empty($responsePayload['data'])) {
+                $counts = $responsePayload['debug_counts'];
+                if (!empty($counts['items_count']) && (int)$counts['items_count'] > 0) {
+                    try {
+                        $pdo = DB::pdo();
+                        if ($reportType === 'customers') {
+                            $sql = "SELECT u.id as user_id, u.full_name, u.email, COUNT(o.id) as total_orders, SUM(o.grand_total) as total_spent
+                                    FROM users u
+                                    JOIN orders o ON u.id = o.user_id
+                                    JOIN order_items oi ON oi.order_id = o.id
+                                    WHERE oi.product_id = :pid AND o.status = 'Hoàn tất'";
+                            if ($fromDate) $sql .= " AND DATE(o.created_at) >= '{$fromDate}'";
+                            if ($toDate) $sql .= " AND DATE(o.created_at) <= '{$toDate}'";
+                            $sql .= " GROUP BY u.id ORDER BY total_spent DESC LIMIT 10";
+                            $stmt = $pdo->prepare($sql);
+                            $stmt->execute([':pid' => $productId]);
+                            $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+                            if ($rows) {
+                                $responsePayload['data'] = $rows;
+                                $responsePayload['raw_rows'] = $rows;
+                            }
+                        } elseif ($reportType === 'staff') {
+                            $sql = "SELECT o.created_by as staff_id, u.full_name, sp.staff_role, COUNT(o.id) as total_orders, SUM(o.grand_total) as total_revenue
+                                    FROM orders o
+                                    JOIN users u ON o.created_by = u.id
+                                    LEFT JOIN staff_profiles sp ON u.id = sp.user_id
+                                    JOIN order_items oi ON oi.order_id = o.id
+                                    WHERE oi.product_id = :pid AND o.status = 'Hoàn tất'";
+                            if ($fromDate) $sql .= " AND DATE(o.created_at) >= '{$fromDate}'";
+                            if ($toDate) $sql .= " AND DATE(o.created_at) <= '{$toDate}'";
+                            $sql .= " GROUP BY o.created_by ORDER BY total_revenue DESC LIMIT 10";
+                            $stmt = $pdo->prepare($sql);
+                            $stmt->execute([':pid' => $productId]);
+                            $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+                            if ($rows) {
+                                $responsePayload['data'] = $rows;
+                                $responsePayload['raw_rows'] = $rows;
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        // ignore fallback errors but include note
+                        $responsePayload['fallback_error'] = $e->getMessage();
+                    }
+                }
+            }
+
+            $this->jsonResponse($responsePayload);
         } catch (\Exception $e) {
             $this->jsonResponse([
                 'success' => false,

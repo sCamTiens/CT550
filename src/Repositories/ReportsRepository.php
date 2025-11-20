@@ -676,12 +676,9 @@ class ReportsRepository
                     o.status,
                     o.created_at,
                     u.full_name as customer_name,
-                    u.email as customer_email";
-
-        // Thêm tên nhân viên nếu filter theo nhân viên cụ thể
-        if ($staffId) {
-            $sql .= ", (SELECT u2.full_name FROM users u2 WHERE u2.id = $staffId LIMIT 1) as staff_name";
-        }
+                    u.email as customer_email,
+                    o.created_by as staff_id,
+                    u_staff.full_name as staff_name";
 
         // Thêm tên sản phẩm nếu filter theo sản phẩm cụ thể
         if ($productId) {
@@ -689,8 +686,9 @@ class ReportsRepository
         }
 
         $sql .= " FROM orders o
-                JOIN users u ON o.user_id = u.id
-                WHERE 1=1";
+            JOIN users u ON o.user_id = u.id
+            LEFT JOIN users u_staff ON o.created_by = u_staff.id
+            WHERE 1=1";
 
         if ($fromDate) $sql .= " AND DATE(o.created_at) >= '$fromDate'";
         if ($toDate) $sql .= " AND DATE(o.created_at) <= '$toDate'";

@@ -849,10 +849,13 @@ class OrderRepository
                 oi.line_total as total,
                 p.name as product_name, 
                 p.sku as product_sku,
-                u.name as unit
+                u.name as unit,
+                us.full_name as created_by_name
             FROM order_items oi
             LEFT JOIN products p ON p.id = oi.product_id
             LEFT JOIN units u ON u.id = p.unit_id
+            LEFT JOIN orders o ON o.id = oi.order_id
+            LEFT JOIN users us ON us.id = o.created_by
             WHERE oi.order_id = ?
             ORDER BY oi.id
         ";
