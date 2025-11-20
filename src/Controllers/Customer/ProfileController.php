@@ -303,4 +303,72 @@ class ProfileController extends Controller
         
         exit;
     }
+
+    /**
+     * GET /api/profile/orders/{id} - API lấy chi tiết đơn hàng
+     */
+    public function apiOrderDetail($id): mixed
+    {
+        // Clear any previous output
+        if (ob_get_length()) ob_clean();
+        
+        header('Content-Type: application/json; charset=utf-8');
+        
+        if (!isset($_SESSION['customer']['id'])) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ]);
+            exit;
+        }
+        
+        $customerId = $_SESSION['customer']['id'];
+        
+        try {
+            // Validate id
+            if (!is_numeric($id) || $id <= 0) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'ID đơn hàng không hợp lệ'
+                ]);
+                exit;
+            }
+            
+            $order = $this->orderRepo->getOrderDetail((int)$id, $customerId);
+            
+            if (!$order) {
+                // Log for debugging
+                error_log("Order not found - ID: $id, Customer ID: $customerId");
+                
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Không tìm thấy đơn hàng',
+                    'debug' => [
+                        'order_id' => $id,
+                        'customer_id' => $customerId
+                    ]
+                ]);
+                exit;
+            }
+            
+            echo json_encode([
+                'success' => true,
+                'data' => $order
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        } catch (\PDOException $e) {
+            error_log('Database error in apiOrderDetail: ' . $e->getMessage());
+            echo json_encode([
+                'success' => false,
+                'message' => 'Lỗi cơ sở dữ liệu'
+            ]);
+        } catch (\Exception $e) {
+            error_log('Order detail error: ' . $e->getMessage());
+            echo json_encode([
+                'success' => false,
+                'message' => 'Lỗi hệ thống'
+            ]);
+        }
+        
+        exit;
+    }
 }

@@ -5,6 +5,7 @@ use App\Core\Controller;
 use App\Core\Request;
 use App\Models\Customer\Repositories\ProductRepository;
 use App\Models\Customer\Repositories\CategoryRepository;
+use App\Models\Customer\Repositories\PromotionRepository;
 
 class HomeController extends Controller
 {
@@ -12,9 +13,18 @@ class HomeController extends Controller
     {
         $categoryRepo = new CategoryRepository();
         $productRepo = new ProductRepository();
+        $promotionRepo = new PromotionRepository();
         
         // Lấy cấu trúc danh mục cha-con
         $categories = $categoryRepo->getCategoriesTree();
+        
+        // Lấy khuyến mãi đang active
+        $promotions = $promotionRepo->getActivePromotions(6);
+        
+        // Lấy hình ảnh cho từng khuyến mãi
+        foreach ($promotions as &$promo) {
+            $promo['images'] = $promotionRepo->getPromotionImages($promo['id'], $promo['promo_type']);
+        }
         
         // Lấy filter từ query string
         $categorySlug = $req->input('category');

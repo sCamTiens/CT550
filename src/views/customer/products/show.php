@@ -85,7 +85,7 @@
                                 </button>
                             </div>
                             <button onclick="addToCart()" 
-                                    class="flex-1 bg-[#002975] text-white px-8 py-3 rounded-lg hover:bg-[#001a54] transition-colors font-semibold text-lg">
+                                    class="flex-1 border border-[#002975] text-[#002975] px-8 py-3 rounded-lg hover:bg-[#002975] hover:text-white transition-colors font-semibold text-lg">
                                 <i class="fa-solid fa-cart-plus mr-2"></i>
                                 Thêm vào giỏ hàng
                             </button>

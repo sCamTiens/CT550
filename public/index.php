@@ -15,6 +15,7 @@ use App\Controllers\HomeController;
 use App\Controllers\AuthController;
 use App\Controllers\Customer\ProductController;
 use App\Controllers\Customer\CartController;
+use App\Controllers\Customer\PromotionController;
 use App\Controllers\Customer\AuthController as CustomerAuth;
 use App\Controllers\Customer\ProfileController as CustomerProfile;
 use App\Controllers\Admin\DashboardController as AdminDashboard;
@@ -88,10 +89,16 @@ $router->post('/profile/change-password', [CustomerProfile::class, 'changePasswo
 $router->post('/profile/upload-avatar', [CustomerProfile::class, 'uploadAvatar']);
 $router->get('/api/profile/loyalty/transactions', [CustomerProfile::class, 'apiLoyaltyTransactions']);
 $router->get('/api/profile/orders', [CustomerProfile::class, 'apiOrders']);
+$router->get('/api/profile/orders/{id}', [CustomerProfile::class, 'apiOrderDetail']);
 
 // Loyalty routes
 $router->get('/loyalty', [\App\Controllers\Customer\LoyaltyController::class, 'index']);
 $router->get('/api/loyalty/transactions', [\App\Controllers\Customer\LoyaltyController::class, 'apiTransactions']);
+
+// Promotion API routes
+$router->get('/api/promotions/{id}', [\App\Controllers\Customer\PromotionController::class, 'getDetail']);
+$router->post('/api/cart/add-combo', [CartController::class, 'addCombo']);
+$router->post('/api/cart/add-bundle', [CartController::class, 'addBundle']);
 
 /* routes admin */
 $router->group('/admin', function (Router $r): void {
