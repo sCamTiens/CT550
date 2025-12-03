@@ -20,3 +20,6 @@ PAYROLL_EMAIL_NOTIFICATION.md
 motadetai.md
 CUSTOMER_AUTH_README.md
 AUTO_ALERTS_COMPLETE_README.md
+JWT_AUTHENTICATION_README.md
+public/assets/images/avatar/*
+!public/assets/images/avatar/.gitkeep
