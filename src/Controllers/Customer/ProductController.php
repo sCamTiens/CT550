@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controllers\Customer;
 
 use App\Core\Controller;
@@ -86,6 +87,16 @@ class ProductController extends Controller
             $images = [];
         }
 
-        return $this->view('customer/products/show', compact('product', 'images'));
+        // Lấy sản phẩm tương tự (cùng category)
+        $relatedProducts = [];
+        if (!empty($product['category_id'])) {
+            $relatedProducts = $repo->getRelated(
+                (int) $product['id'],
+                (int) $product['category_id'],
+                8  // Lấy 8 sản phẩm tương tự
+            );
+        }
+
+        return $this->view('customer/products/show', compact('product', 'images', 'relatedProducts'));
     }
 }

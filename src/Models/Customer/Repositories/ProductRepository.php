@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models\Customer\Repositories;
 
 use App\Core\DB;
@@ -166,12 +167,15 @@ class ProductRepository
             SELECT id, slug, name, sale_price AS price, updated_at
             FROM products 
             WHERE is_active = 1 
-                AND category_id = ? 
-                AND id != ?
+                AND category_id = :category_id 
+                AND id != :product_id
             ORDER BY RAND()
-            LIMIT ?
+            LIMIT :limit
         ");
-        $stmt->execute([$categoryId, $productId, $limit]);
+        $stmt->bindValue(':category_id', $categoryId, \PDO::PARAM_INT);
+        $stmt->bindValue(':product_id', $productId, \PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+        $stmt->execute();
         $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
         // Add image path for each product
@@ -286,20 +290,22 @@ class ProductRepository
 
         // Get products
         $stmt = $pdo->prepare("
-            SELECT id, slug, name, sale_price AS price, updated_at
-            FROM products 
-            WHERE is_active = 1 AND category_id IN ($placeholderStr)
-            ORDER BY created_at DESC
+            SELECT p.id, p.slug, p.name, p.sale_price AS price, p.updated_at,
+                   COALESCE(s.qty, 0) AS stock_qty
+            FROM products p
+            LEFT JOIN stocks s ON p.id = s.product_id
+            WHERE p.is_active = 1 AND p.category_id IN ($placeholderStr)
+            ORDER BY p.created_at DESC
             LIMIT :limit OFFSET :offset
         ");
-        
+
         // Bind all parameters
         foreach ($params as $key => $val) {
             $stmt->bindValue($key, $val, \PDO::PARAM_INT);
         }
         $stmt->bindValue(':limit', $perPage, \PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
-        
+
         $stmt->execute();
         $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
@@ -331,9 +337,11 @@ class ProductRepository
 
         // Get random products
         $stmt = $pdo->prepare("
-            SELECT id, slug, name, sale_price AS price, updated_at
-            FROM products 
-            WHERE is_active = 1
+            SELECT p.id, p.slug, p.name, p.sale_price AS price, p.updated_at,
+                   COALESCE(s.qty, 0) AS stock_qty
+            FROM products p
+            LEFT JOIN stocks s ON p.id = s.product_id
+            WHERE p.is_active = 1
             ORDER BY RAND()
             LIMIT ? OFFSET ?
         ");
@@ -354,5 +362,124 @@ class ProductRepository
             'page' => $page
         ];
     }
-}
 
+    /**
+     * Lấy sản phẩm với filters và sorting
+     */
+    public function getProductsWithFilters(array $filters, int $page = 1, int $perPage = 20): array
+    {
+        $offset = ($page - 1) * $perPage;
+        $pdo = DB::pdo();
+
+        // Build WHERE conditions
+        $where = ['p.is_active = 1'];
+        $params = [];
+
+        // Category filter
+        if (!empty($filters['category_ids'])) {
+            $placeholders = [];
+            foreach ($filters['category_ids'] as $i => $id) {
+                $key = ":cat_id_$i";
+                $placeholders[] = $key;
+                $params[$key] = $id;
+            }
+            $where[] = 'p.category_id IN (' . implode(',', $placeholders) . ')';
+        }
+
+        // Brand filter
+        if (!empty($filters['brand_ids'])) {
+            $placeholders = [];
+            foreach ($filters['brand_ids'] as $i => $id) {
+                $key = ":brand_id_$i";
+                $placeholders[] = $key;
+                $params[$key] = $id;
+            }
+            $where[] = 'p.brand_id IN (' . implode(',', $placeholders) . ')';
+        }
+
+        // Price range filter
+        if (isset($filters['min_price']) && $filters['min_price'] !== null) {
+            $where[] = 'p.sale_price >= :min_price';
+            $params[':min_price'] = $filters['min_price'];
+        }
+        if (isset($filters['max_price']) && $filters['max_price'] !== null) {
+            $where[] = 'p.sale_price <= :max_price';
+            $params[':max_price'] = $filters['max_price'];
+        }
+
+        $whereClause = implode(' AND ', $where);
+
+        // Determine ORDER BY clause
+        $orderBy = 'p.created_at DESC'; // default: newest
+        switch ($filters['sort'] ?? 'newest') {
+            case 'price_asc':
+                $orderBy = 'p.sale_price ASC';
+                break;
+            case 'price_desc':
+                $orderBy = 'p.sale_price DESC';
+                break;
+            case 'best_selling':
+                // Join with order_items to get best selling
+                $orderBy = 'total_sold DESC, p.created_at DESC';
+                break;
+            case 'newest':
+            default:
+                $orderBy = 'p.created_at DESC';
+                break;
+        }
+
+        // Count total
+        $countSql = "SELECT COUNT(*) FROM products p WHERE $whereClause";
+        $countStmt = $pdo->prepare($countSql);
+        $countStmt->execute($params);
+        $total = (int) $countStmt->fetchColumn();
+
+        // Get products
+        if (($filters['sort'] ?? 'newest') === 'best_selling') {
+            // For best selling, join with order_items
+            $sql = "
+                SELECT p.id, p.slug, p.name, p.sale_price AS price, p.updated_at,
+                       COALESCE(s.qty, 0) AS stock_qty,
+                       COALESCE(SUM(oi.quantity), 0) AS total_sold
+                FROM products p
+                LEFT JOIN stocks s ON p.id = s.product_id
+                LEFT JOIN order_items oi ON p.id = oi.product_id
+                WHERE $whereClause
+                GROUP BY p.id
+                ORDER BY $orderBy
+                LIMIT :limit OFFSET :offset
+            ";
+        } else {
+            $sql = "
+                SELECT p.id, p.slug, p.name, p.sale_price AS price, p.updated_at,
+                       COALESCE(s.qty, 0) AS stock_qty
+                FROM products p
+                LEFT JOIN stocks s ON p.id = s.product_id
+                WHERE $whereClause
+                ORDER BY $orderBy
+                LIMIT :limit OFFSET :offset
+            ";
+        }
+
+        $stmt = $pdo->prepare($sql);
+        foreach ($params as $key => $val) {
+            $stmt->bindValue($key, $val, is_int($val) ? \PDO::PARAM_INT : \PDO::PARAM_STR);
+        }
+        $stmt->bindValue(':limit', $perPage, \PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        // Add image path
+        foreach ($rows as &$row) {
+            $row['image_url'] = $this->getProductImage($row['id']);
+        }
+
+        return [
+            'data' => $rows,
+            'total' => $total,
+            'pages' => max(1, (int) ceil($total / $perPage)),
+            'page' => $page
+        ];
+    }
+}

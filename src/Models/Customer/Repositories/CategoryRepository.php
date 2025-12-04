@@ -14,7 +14,7 @@ class CategoryRepository
         $stmt = DB::pdo()->prepare("
             SELECT id, name, slug, sort_order
             FROM categories
-            WHERE parent_id IS NULL AND is_active = 1
+            WHERE parent_id IS NULL AND is_active = 1 AND slug != 'qua-tang'
             ORDER BY sort_order ASC, name ASC
         ");
         $stmt->execute();
@@ -29,7 +29,7 @@ class CategoryRepository
         $stmt = DB::pdo()->prepare("
             SELECT id, name, slug, sort_order
             FROM categories
-            WHERE parent_id = :parent_id AND is_active = 1
+            WHERE parent_id = :parent_id AND is_active = 1 AND slug != 'qua-tang'
             ORDER BY sort_order ASC, name ASC
         ");
         $stmt->execute([':parent_id' => $parentId]);
@@ -42,11 +42,11 @@ class CategoryRepository
     public function getCategoriesTree(): array
     {
         $parents = $this->getParentCategories();
-        
+
         foreach ($parents as &$parent) {
             $parent['children'] = $this->getChildCategories($parent['id']);
         }
-        
+
         return $parents;
     }
 
@@ -63,7 +63,7 @@ class CategoryRepository
         ");
         $stmt->execute([':slug' => $slug]);
         $result = $stmt->fetch(\PDO::FETCH_ASSOC);
-        
+
         return $result ?: null;
     }
 
@@ -80,7 +80,7 @@ class CategoryRepository
         ");
         $stmt->execute([':id' => $id]);
         $result = $stmt->fetch(\PDO::FETCH_ASSOC);
-        
+
         return $result ?: null;
     }
 
@@ -91,11 +91,11 @@ class CategoryRepository
     {
         $ids = [$parentId];
         $children = $this->getChildCategories($parentId);
-        
+
         foreach ($children as $child) {
             $ids = array_merge($ids, $this->getAllChildIds($child['id']));
         }
-        
+
         return $ids;
     }
 }
