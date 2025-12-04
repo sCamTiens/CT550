@@ -7,6 +7,7 @@ use App\Services\DailyStockAlertService;
 use App\Services\DailyPaymentDueAlertService;
 use App\Services\DailyExpiryAlertService;
 use App\Support\EnvHelper;
+use App\Support\JWTHelper;
 
 class AuthController extends Controller
 {
@@ -235,9 +236,28 @@ class AuthController extends Controller
         // Lưu thông báo đăng nhập thành công
         $_SESSION['login_success'] = 'Đăng nhập thành công!';
 
+        // Generate JWT tokens for admin
+        $tokenPayload = [
+            'id' => (int) $user->id,
+            'username' => $user->username,
+            'email' => $user->email ?? null,
+            'role' => 'admin',
+            'role_id' => (int) $user->role_id,
+            'staff_role' => $staffRole
+        ];
+        
+        $accessToken = JWTHelper::generateToken($tokenPayload);
+        $refreshToken = JWTHelper::generateRefreshToken($tokenPayload);
+
         if ($isJsonReq) {
             header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['ok' => true]);
+            echo json_encode([
+                'ok' => true,
+                'access_token' => $accessToken,
+                'refresh_token' => $refreshToken,
+                'token_type' => 'Bearer',
+                'expires_in' => (int)(getenv('JWT_EXPIRY') ?: 3600)
+            ]);
             return;
         }
         header('Location: /admin');
@@ -411,5 +431,43 @@ class AuthController extends Controller
         UserRepository::updatePassword($currentUserId, $newHash);
         header('Location: /admin/profile?tab=password&success=1');
         exit;
+    }
+
+    /**
+     * Refresh JWT token for admin
+     */
+    public function refreshToken()
+    {
+        $data = json_decode(file_get_contents('php://input'), true);
+        $refreshToken = $data['refresh_token'] ?? '';
+
+        if (empty($refreshToken)) {
+            http_response_code(400);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Refresh token required']);
+            return;
+        }
+
+        // Validate refresh token
+        $decoded = JWTHelper::validateToken($refreshToken);
+        
+        if (!$decoded || ($decoded->type ?? '') !== 'refresh') {
+            http_response_code(401);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Invalid refresh token']);
+            return;
+        }
+
+        // Generate new access token
+        $userData = (array)$decoded->data;
+        $newAccessToken = JWTHelper::generateToken($userData);
+
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => true,
+            'access_token' => $newAccessToken,
+            'token_type' => 'Bearer',
+            'expires_in' => (int)(getenv('JWT_EXPIRY') ?: 3600)
+        ]);
     }
 }

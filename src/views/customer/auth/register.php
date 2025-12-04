@@ -373,6 +373,7 @@
                 
                 const response = await fetch('/api/customer/register', {
                     method: 'POST',
+                    credentials: 'include',
                     headers: {
                         'Content-Type': 'application/json'
                     },
@@ -392,7 +393,6 @@
                     submitBtn.innerHTML = '<i class="fa-solid fa-user-plus mr-2"></i>Đăng ký';
                 }
             } catch (error) {
-                console.error('Error:', error);
                 showToast('Có lỗi xảy ra, vui lòng thử lại', 'error');
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fa-solid fa-user-plus mr-2"></i>Đăng ký';

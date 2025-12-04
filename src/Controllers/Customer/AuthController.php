@@ -1,8 +1,10 @@
 <?php
+
 namespace App\Controllers\Customer;
 
 use App\Core\Controller;
 use App\Models\Customer\Repositories\CustomerRepository;
+use App\Support\JWTHelper;
 
 class AuthController extends Controller
 {
@@ -35,7 +37,7 @@ class AuthController extends Controller
     public function login()
     {
         $data = json_decode(file_get_contents('php://input'), true);
-        
+
         $username = trim($data['username'] ?? '');
         $password = trim($data['password'] ?? '');
 
@@ -52,6 +54,16 @@ class AuthController extends Controller
             return;
         }
 
+        // DEBUG: Log role info
+        error_log("Login attempt - Username: {$username}, Role: " . ($customer['role_name'] ?? 'NULL'));
+
+        // Kiểm tra role - nếu không phải khách hàng thì từ chối (không lộ thông tin)
+        if (isset($customer['role_name']) && $customer['role_name'] !== 'Khách hàng') {
+            error_log("Blocked admin login attempt: {$username}");
+            $this->json(['success' => false, 'message' => 'Tài khoản hoặc mật khẩu không chính xác'], 401);
+            return;
+        }
+
         // Kiểm tra mật khẩu
         if (!password_verify($password, $customer['password_hash'])) {
             $this->json(['success' => false, 'message' => 'Tài khoản hoặc mật khẩu không chính xác'], 401);
@@ -64,7 +76,18 @@ class AuthController extends Controller
             return;
         }
 
-        // Lưu thông tin vào session
+        // Generate JWT tokens TRƯỚC KHI lưu vào session
+        $tokenPayload = [
+            'id' => $customer['id'],
+            'username' => $customer['username'],
+            'email' => $customer['email'],
+            'role' => 'customer'
+        ];
+
+        $accessToken = JWTHelper::generateToken($tokenPayload);
+        $refreshToken = JWTHelper::generateRefreshToken($tokenPayload);
+
+        // Lưu thông tin vào session (bao gồm cả tokens)
         $_SESSION['customer'] = [
             'id' => $customer['id'],
             'username' => $customer['username'],
@@ -72,12 +95,14 @@ class AuthController extends Controller
             'full_name' => $customer['full_name'],
             'phone' => $customer['phone'],
             'avatar_url' => $customer['avatar_url'] ?? null,
+            'access_token' => $accessToken,
+            'refresh_token' => $refreshToken,
         ];
 
         // Load giỏ hàng từ database
         $cartRepo = new \App\Models\Customer\Repositories\CartRepository();
         $cartFromDB = $cartRepo->loadCartFromDB($customer['id']);
-        
+
         // Merge với giỏ hàng session (nếu có)
         if (!empty($_SESSION['cart'])) {
             // Nếu có giỏ hàng trong session, merge với DB
@@ -93,15 +118,17 @@ class AuthController extends Controller
             // Lưu lại vào DB
             $cartRepo->saveCartToDB($customer['id'], $cartFromDB);
         }
-        
+
         // Set cart vào session
         $_SESSION['cart'] = $cartFromDB;
 
         // Cập nhật last_login (bỏ qua nếu cột không tồn tại)
         // $this->customerRepo->updateLastLogin($customer['id']);
 
+        // Tokens đã được generate và lưu vào session ở trên
+
         $this->json([
-            'success' => true, 
+            'success' => true,
             'message' => 'Đăng nhập thành công',
             'redirect' => '/'
         ]);
@@ -126,7 +153,7 @@ class AuthController extends Controller
     public function register()
     {
         $data = json_decode(file_get_contents('php://input'), true);
-        
+
         $username = trim($data['username'] ?? '');
         $email = trim($data['email'] ?? '');
         $password = trim($data['password'] ?? '');
@@ -209,7 +236,18 @@ class AuthController extends Controller
 
             // Nếu trả về array là thành công
             if (is_array($result)) {
-                // Tự động đăng nhập sau khi đăng ký
+                // Generate JWT tokens TRƯỚC KHI lưu vào session
+                $tokenPayload = [
+                    'id' => $result['id'],
+                    'username' => $result['username'],
+                    'email' => $result['email'],
+                    'role' => 'customer'
+                ];
+
+                $accessToken = JWTHelper::generateToken($tokenPayload);
+                $refreshToken = JWTHelper::generateRefreshToken($tokenPayload);
+
+                // Tự động đăng nhập sau khi đăng ký (bao gồm tokens)
                 $_SESSION['customer'] = [
                     'id' => $result['id'],
                     'username' => $result['username'],
@@ -217,10 +255,12 @@ class AuthController extends Controller
                     'full_name' => $result['full_name'],
                     'phone' => $result['phone'],
                     'avatar_url' => $result['avatar_url'] ?? null,
+                    'access_token' => $accessToken,
+                    'refresh_token' => $refreshToken,
                 ];
 
                 $this->json([
-                    'success' => true, 
+                    'success' => true,
                     'message' => 'Đăng ký thành công',
                     'redirect' => '/'
                 ]);
@@ -245,20 +285,66 @@ class AuthController extends Controller
     }
 
     /**
+     * Refresh JWT token
+     */
+    public function refreshToken()
+    {
+        // Try to get refresh token from session first
+        $refreshToken = $_SESSION['customer']['refresh_token'] ?? null;
+        
+        // Fall back to request body (for API clients)
+        if (!$refreshToken) {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $refreshToken = $data['refresh_token'] ?? '';
+        }
+
+        if (empty($refreshToken)) {
+            $this->json(['success' => false, 'message' => 'Refresh token required'], 400);
+            return;
+        }
+
+        // Validate refresh token
+        $decoded = JWTHelper::validateToken($refreshToken);
+
+        if (!$decoded || ($decoded->type ?? '') !== 'refresh') {
+            // Clear invalid session
+            unset($_SESSION['customer']);
+            $this->json(['success' => false, 'message' => 'Invalid refresh token'], 401);
+            return;
+        }
+
+        // Generate new access token
+        $userData = (array)$decoded->data;
+        $newAccessToken = JWTHelper::generateToken($userData);
+
+        // Update session with new access token
+        if (!empty($_SESSION['customer'])) {
+            $_SESSION['customer']['access_token'] = $newAccessToken;
+        }
+
+        $this->json([
+            'success' => true,
+            'access_token' => $newAccessToken,
+            'token_type' => 'Bearer',
+            'expires_in' => (int)(getenv('JWT_EXPIRY') ?: 3600)
+        ]);
+    }
+
+    /**
      * Debug: Kiểm tra user trong database
      */
     public function debugUser()
     {
         $data = json_decode(file_get_contents('php://input'), true);
         $username = trim($data['username'] ?? '');
-        
+
         if (empty($username)) {
             $this->json(['error' => 'Username required']);
             return;
         }
 
         $customer = $this->customerRepo->findByUsernameOrEmail($username);
-        
+
         if (!$customer) {
             $this->json(['found' => false, 'message' => 'User not found']);
             return;
@@ -267,7 +353,7 @@ class AuthController extends Controller
         // Return user data (hide password hash)
         $debugData = $customer;
         $debugData['password_hash'] = '***HIDDEN*** (length: ' . strlen($customer['password_hash'] ?? '') . ')';
-        
+
         $this->json([
             'found' => true,
             'data' => $debugData,
