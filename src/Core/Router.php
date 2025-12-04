@@ -1,11 +1,18 @@
 <?php
 namespace App\Core;
 
+use App\Middlewares\JWTMiddleware;
+
 final class Router
 {
     private array $routes = [];
     private array $groupStack = [];
     private ?array $lastGroupRange = null; // [start, end] của routes thêm trong group gần nhất
+
+    // Đăng ký các middleware
+    private array $middlewareMap = [
+        'jwt' => JWTMiddleware::class,
+    ];
 
     public function get(string $uri, callable|array $action): self
     {
@@ -78,6 +85,21 @@ final class Router
 
             if ($methodMatch && preg_match($pattern, $path, $m)) {
                 $params = array_filter($m, 'is_string', ARRAY_FILTER_USE_KEY);
+
+                // Execute middlewares
+                if (!empty($r['mw'])) {
+                    foreach ($r['mw'] as $mwName) {
+                        if (isset($this->middlewareMap[$mwName])) {
+                            $mwClass = $this->middlewareMap[$mwName];
+                            $result = $mwClass::handle($req);
+                            
+                            // If middleware returns false, stop execution
+                            if ($result === false) {
+                                return;
+                            }
+                        }
+                    }
+                }
 
                 $h = $r['action'];
                 $out = null;

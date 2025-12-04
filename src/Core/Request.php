@@ -5,6 +5,12 @@ final class Request
 {
     private string $method;
     private string $path;
+    
+    /**
+     * User data injected by JWT middleware
+     * @var array|null
+     */
+    public ?array $user = null;
 
     private function __construct()
     {
