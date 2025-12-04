@@ -52,48 +52,20 @@ VALUES (
     'thicamtien2003@gmail.com',
     '0909000000',
     '$2b$10$b0.RGLmD391S.468j6b5FuoaBSv7OZKVT9/hqDR75Qlf2OzR/egxC',
-    'Administrator',
+    'Quản trị viên',
     TRUE,
     TRUE
 );
 
--- Danh mục TỈNH
-CREATE TABLE provinces (
-  code VARCHAR(10) PRIMARY KEY,
-  name VARCHAR(120) NOT NULL,
-  is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  created_by BIGINT NULL,
-  updated_by BIGINT NULL,
-  CONSTRAINT fk_provinces_created_by FOREIGN KEY(created_by) REFERENCES users(id),
-  CONSTRAINT fk_provinces_updated_by FOREIGN KEY(updated_by) REFERENCES users(id)
-) ENGINE=InnoDB;
-
--- Danh mục XÃ
-CREATE TABLE communes (
-  code VARCHAR(15) PRIMARY KEY,
-  province_code VARCHAR(10) NOT NULL,
-  name VARCHAR(120) NOT NULL,
-  is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  created_by BIGINT NULL,
-  updated_by BIGINT NULL,
-  CONSTRAINT fk_communes_created_by FOREIGN KEY(created_by) REFERENCES users(id),
-  CONSTRAINT fk_communes_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
-  CONSTRAINT fk_commune_prov FOREIGN KEY (province_code) REFERENCES provinces(code)
-) ENGINE=InnoDB;
-
--- Địa chỉ người nhận
+-- Địa chỉ người nhận (sử dụng bảng provinces và wards từ file migrations riêng)
 CREATE TABLE user_addresses (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   user_id BIGINT NOT NULL,
   receiver_name VARCHAR(250),
   receiver_phone VARCHAR(32),
   line1 VARCHAR(255),
-  commune_code VARCHAR(15) NULL,
-  province_code VARCHAR(10) NULL,
+  commune_code VARCHAR(15) NULL COMMENT 'Mã phường/xã (ward_code từ bảng wards)',
+  province_code VARCHAR(2) NULL COMMENT 'Mã tỉnh/thành phố (province_code từ bảng provinces)',
   is_default BOOLEAN NOT NULL DEFAULT FALSE,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -102,11 +74,9 @@ CREATE TABLE user_addresses (
   CONSTRAINT fk_addr_created_by FOREIGN KEY(created_by) REFERENCES users(id),
   CONSTRAINT fk_addr_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
   CONSTRAINT fk_addr_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-  CONSTRAINT fk_addr_commune FOREIGN KEY(commune_code) REFERENCES communes(code),
-  CONSTRAINT fk_addr_province FOREIGN KEY(province_code) REFERENCES provinces(code),
   INDEX idx_addr_commune (commune_code),
   INDEX idx_addr_province (province_code)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB COMMENT='Bảng provinces và wards được import từ file provinces.sql và wards.sql';
 
 -- Phân loại nhân viên
 CREATE TABLE staff_profiles (
@@ -441,7 +411,7 @@ CREATE TABLE payments (
   amount DECIMAL(12,2) NOT NULL CHECK (amount >= 0),
   method ENUM(
     'Tiền mặt','Chuyển khoản','Quẹt thẻ',
-    'PayPal','Thanh toán khi nhận hàng (COD)'
+    'VNPay','ZaloPay','Thanh toán khi nhận hàng (COD)'
   ) NOT NULL,
   txn_ref VARCHAR(250),
   paid_at DATETIME NULL,
@@ -467,8 +437,12 @@ CREATE TABLE orders (
   loyalty_discount DECIMAL(15,2) NOT NULL DEFAULT 0 COMMENT 'Số tiền giảm bằng điểm',
   loyalty_points_earned INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Số điểm tích được từ đơn này',
   payment_method ENUM(
-    'Tiền mặt','Chuyển khoản','Quẹt thẻ',
-    'PayPal','Thanh toán khi nhận hàng (COD)'
+    'Tiền mặt',
+    'Chuyển khoản',
+    'Quẹt thẻ',
+    'Thanh toán khi nhận hàng (COD)',
+    'VNPay',
+    'ZaloPay'
   ) NOT NULL,
   payment_status ENUM('Chưa thanh toán','Đã thanh toán','Hoàn tiền') NOT NULL DEFAULT 'Chưa thanh toán',
   payment_id BIGINT NULL,
@@ -486,7 +460,7 @@ CREATE TABLE orders (
   CONSTRAINT chk_order_payment_method_by_type CHECK (
     (order_type = 'Offline' AND payment_method IN ('Tiền mặt','Chuyển khoản','Quẹt thẻ'))
     OR
-    (order_type = 'Online' AND payment_method IN ('PayPal','Thanh toán khi nhận hàng (COD)'))
+    (order_type = 'Online' AND payment_method IN ('Thanh toán khi nhận hàng (COD)','VNPay','ZaloPay'))
   ),
   INDEX idx_orders_user (user_id),
   INDEX idx_orders_status (status),
@@ -1472,3 +1446,26 @@ COMMIT;
 SELECT 'Database migration completed successfully!' AS status;
 SELECT COUNT(*) AS total_tables FROM information_schema.tables 
 WHERE table_schema = 'mini_market' AND table_type = 'BASE TABLE';
+
+-- Add google_id column to users table
+ALTER TABLE users 
+ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) NULL UNIQUE AFTER email,
+ADD INDEX idx_google_id (google_id);
+
+
+-- Bảng lưu trữ tạm thời thông tin đơn hàng chờ thanh toán VNPay
+CREATE TABLE IF NOT EXISTS `pending_orders` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `txn_ref` VARCHAR(100) NOT NULL COMMENT 'VNPay transaction reference',
+  `customer_id` INT(11) NOT NULL,
+  `order_data` TEXT NOT NULL COMMENT 'JSON data của đơn hàng',
+  `created_at` DATETIME NOT NULL,
+  `expires_at` DATETIME GENERATED ALWAYS AS (DATE_ADD(created_at, INTERVAL 30 MINUTE)) STORED,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `txn_ref` (`txn_ref`),
+  KEY `customer_id` (`customer_id`),
+  KEY `created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Xóa các pending orders cũ hơn 30 phút (có thể chạy định kỳ)
+-- DELETE FROM pending_orders WHERE created_at < DATE_SUB(NOW(), INTERVAL 30 MINUTE);
