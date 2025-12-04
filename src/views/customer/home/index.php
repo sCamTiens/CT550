@@ -3,6 +3,7 @@
 
 <head>
     <?php require __DIR__ . '/../partials/head.php'; ?>
+    <link rel="stylesheet" href="/assets/css/responsive.css">
     <style>
         .category-item {
             transition: all 0.2s;
@@ -75,7 +76,7 @@
     </style>
 </head>
 
-<body class="bg-gray-50">
+<body class="bg-gray-50" x-data="{ showFilterModal: false, ...filterModal() }">
     <?php require __DIR__ . '/../partials/header.php'; ?>
 
     <main class="container mx-auto px-4 py-6">
@@ -139,9 +140,21 @@
 
             <!-- Nội dung chính -->
             <div class="flex-1">
-                <!-- Khuyến mãi (hiển thị ở trang chủ) -->
-                <?php if (empty($selectedCategory) && !empty($promotions)): ?>
+                <!-- Khuyến mãi (hiển thị khi có promotions) -->
+                <?php if (!empty($promotions)): ?>
                     <section class="mb-6" x-data="promotionsSlider()">
+                        <?php if (isset($_GET['debug'])): ?>
+                            <pre style='background: #ffff99; padding: 10px; margin: 10px;'>
+                                === IN VIEW (before loop) ===
+                                Total promotions: <?= count($promotions) ?>
+
+                                <?php foreach ($promotions as $idx => $p): ?>
+                                            [<?= $idx ?>] ID: <?= $p['id'] ?>, Type: <?= $p['promo_type'] ?>, Name: <?= $p['name'] ?>
+
+                                <?php endforeach; ?>
+                            </pre>
+                        <?php endif; ?>
+
                         <div class="relative bg-white rounded-xl shadow-lg overflow-hidden">
                             <!-- Slider Container -->
                             <div class="relative h-80">
@@ -170,6 +183,16 @@
                                                     ?>
                                                 </div>
                                                 <h2 class="text-4xl font-bold mb-3"><?= htmlspecialchars($promo['name']) ?></h2>
+
+                                                <!-- DEBUG: Hiển thị index -->
+                                                <?php if (isset($_GET['debug'])): ?>
+                                                    <div
+                                                        class="bg-yellow-400 text-black px-3 py-1 rounded inline-block text-sm font-bold mb-2">
+                                                        DEBUG: Index <?= $index ?> - ID: <?= $promo['id'] ?> - Type:
+                                                        <?= $promo['promo_type'] ?> - Name: <?= substr($promo['name'], 0, 20) ?>
+                                                    </div>
+                                                <?php endif; ?>
+
                                                 <p class="text-lg mb-4 line-clamp-2">
                                                     <?= htmlspecialchars($promo['description'] ?? '') ?>
                                                 </p>
@@ -466,25 +489,41 @@
                     </section>
                 <?php endif; ?>
 
-                <!-- Tiêu đề danh mục -->
-                <div class="mb-6">
-                    <?php if ($selectedCategory): ?>
-                        <h2 class="text-2xl font-bold text-gray-800 mb-2">
-                            <i class="fa-solid fa-tag text-[#002975] mr-2"></i>
-                            <?= htmlspecialchars($selectedCategory['name']) ?>
-                        </h2>
-                        <p class="text-gray-600">
-                            Tìm thấy <?= $products['total'] ?? 0 ?> sản phẩm
-                        </p>
-                    <?php else: ?>
-                        <h2 class="text-2xl font-bold text-gray-800 mb-2">
-                            <i class="fa-solid fa-sparkles text-[#002975] mr-2"></i>
-                            Tất cả sản phẩm
-                        </h2>
-                        <p class="text-gray-600">
-                            Khám phá <?= $products['total'] ?? 0 ?> sản phẩm của chúng tôi
-                        </p>
-                    <?php endif; ?>
+                <!-- Tiêu đề danh mục + Nút Filter -->
+                <div class="mb-6 flex items-center justify-between">
+                    <div>
+                        <?php if (isset($query) && !empty($query)): ?>
+                            <h2 class="text-2xl font-bold text-gray-800 mb-2">
+                                <i class="fa-solid fa-search text-[#002975] mr-2"></i>
+                                Kết quả tìm kiếm: "<?= htmlspecialchars($query) ?>"
+                            </h2>
+                            <p class="text-gray-600">
+                                Tìm thấy <?= $products['total'] ?? 0 ?> sản phẩm
+                            </p>
+                        <?php elseif ($selectedCategory): ?>
+                            <h2 class="text-2xl font-bold text-gray-800 mb-2">
+                                <i class="fa-solid fa-tag text-[#002975] mr-2"></i>
+                                <?= htmlspecialchars($selectedCategory['name']) ?>
+                            </h2>
+                            <p class="text-gray-600">
+                                Tìm thấy <?= $products['total'] ?? 0 ?> sản phẩm
+                            </p>
+                        <?php else: ?>
+                            <h2 class="text-2xl font-bold text-gray-800 mb-2">
+                                <i class="fa-solid fa-sparkles text-[#002975] mr-2"></i>
+                                Tất cả sản phẩm
+                            </h2>
+                            <p class="text-gray-600">
+                                Khám phá <?= $products['total'] ?? 0 ?> sản phẩm của chúng tôi
+                            </p>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Nút Filter -->
+                    <button @click="showFilterModal = true" title="Lọc sản phẩm"
+                        class="flex items-center gap-2 px-6 py-3 bg-white border-2 border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white transition-all font-semibold shadow-md">
+                        <i class="fa-solid fa-filter"></i>
+                    </button>
                 </div>
 
                 <!-- Danh sách sản phẩm -->
@@ -496,32 +535,65 @@
                 <?php else: ?>
                     <div class="grid grid-cols-5 gap-4 mb-6">
                         <?php foreach ($products['data'] as $p): ?>
-                            <div
-                                class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                            <div x-data="{ qty: 1 }"
+                                class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-300">
+                                <!-- Ảnh - Link đến chi tiết -->
                                 <a href="/products/<?= htmlspecialchars($p['slug'] ?? '') ?>">
-                                    <div class="h-100 bg-gray-100 flex items-center justify-center overflow-hidden">
+                                    <div class="h-64 bg-gray-100 flex items-center justify-center overflow-hidden p-2">
                                         <?php if (!empty($p['image_url'])): ?>
                                             <img src="<?= htmlspecialchars($p['image_url']) ?>?t=<?= !empty($p['updated_at']) ? strtotime($p['updated_at']) : time() ?>"
                                                 alt="<?= htmlspecialchars($p['name']) ?>"
-                                                class="w-full h-full object-cover hover:scale-110 transition-transform duration-300">
+                                                class="w-full h-full object-contain hover:scale-105 transition-transform duration-300">
                                         <?php else: ?>
                                             <i class="fa-solid fa-image text-5xl text-gray-300"></i>
                                         <?php endif; ?>
                                     </div>
-                                    <div class="p-3">
-                                        <h3 class="font-medium text-gray-800 mb-2 line-clamp-2 text-sm h-10">
+                                </a>
+
+                                <div class="p-3">
+                                    <!-- Tên sản phẩm - Link đến chi tiết -->
+                                    <a href="/products/<?= htmlspecialchars($p['slug'] ?? '') ?>">
+                                        <h3
+                                            class="font-medium text-gray-800 mb-2 line-clamp-2 text-sm h-10 hover:text-[#002975] transition-colors">
                                             <?= htmlspecialchars($p['name'] ?? 'No name') ?>
                                         </h3>
-                                        <p class="text-xl font-bold text-red-600 mb-2">
-                                            <?= number_format((float) ($p['price'] ?? 0), 0, ',', '.') ?>₫
-                                        </p>
-                                        <button
-                                            class="w-full px-3 py-2 border border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white transition-all text-sm font-semibold">
-                                            <i class="fa-solid fa-cart-plus mr-1"></i>
-                                            Thêm vào giỏ
+                                    </a>
+
+                                    <!-- Giá -->
+                                    <p class="text-xl font-bold text-red-600 mb-3">
+                                        <?= number_format((float) ($p['price'] ?? 0), 0, ',', '.') ?>₫
+                                    </p>
+
+                                    <!-- Số lượng -->
+                                    <div class="flex items-center justify-center gap-2 mb-2">
+                                        <button @click="qty = Math.max(0, Number(qty) - 1)" type="button"
+                                            class="w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100 transition-colors">
+                                            <i class="fa-solid fa-minus text-xs"></i>
+                                        </button>
+                                        <input type="number" x-model.number="qty"
+                                            @blur="qty = Math.max(0, Math.min(9999, Number(qty) || 0))" min="0" max="9999"
+                                            class="w-16 text-center border border-gray-300 rounded py-1 font-semibold text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
+                                        <button @click="qty = Math.min(9999, Number(qty) + 1)" type="button"
+                                            class="w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100 transition-colors">
+                                            <i class="fa-solid fa-plus text-xs"></i>
                                         </button>
                                     </div>
-                                </a>
+
+                                    <!-- Nút Thêm vào giỏ -->
+                                    <button
+                                        @click="addProductToCart(<?= (int) $p['id'] ?>, qty, <?= (int) ($p['stock_qty'] ?? 0) ?>)"
+                                        class="w-full px-3 py-2 border border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white transition-all text-sm font-semibold mb-2">
+                                        <i class="fa-solid fa-cart-plus mr-1"></i>
+                                        Thêm vào giỏ
+                                    </button>
+
+                                    <!-- Nút Mua ngay -->
+                                    <button @click="buyProductNow(<?= (int) $p['id'] ?>, <?= (int) ($p['stock_qty'] ?? 0) ?>)"
+                                        class="w-full px-3 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all text-sm font-semibold">
+                                        <i class="fa-solid fa-shopping-bag mr-1"></i>
+                                        Mua ngay
+                                    </button>
+                                </div>
                             </div>
                         <?php endforeach; ?>
                     </div>
@@ -583,6 +655,9 @@
                 <?php endif; ?>
             </div>
         </div>
+
+        <!-- Filter Modal -->
+        <?php require __DIR__ . '/../partials/filter_modal.php'; ?>
     </main>
 
     <!-- Footer -->
@@ -640,21 +715,96 @@
                     combo_price: 0,
                     products: []
                 },
+                // Drag/Swipe variables
+                isDragging: false,
+                startX: 0,
+                currentX: 0,
+                dragThreshold: 50,
 
                 init() {
-                    // Auto slide mỗi 5 giây
+                    // Auto slide every 5 seconds
                     setInterval(() => {
                         this.nextSlide();
                     }, 5000);
+
+                    // Setup drag/swipe listeners
+                    this.$nextTick(() => {
+                        const slider = this.$el.querySelector('.relative.h-80');
+                        if (slider) {
+                            // Mouse events
+                            slider.addEventListener('mousedown', this.handleDragStart.bind(this));
+                            slider.addEventListener('mousemove', this.handleDragMove.bind(this));
+                            slider.addEventListener('mouseup', this.handleDragEnd.bind(this));
+                            slider.addEventListener('mouseleave', this.handleDragEnd.bind(this));
+
+                            // Touch events
+                            slider.addEventListener('touchstart', this.handleDragStart.bind(this));
+                            slider.addEventListener('touchmove', this.handleDragMove.bind(this));
+                            slider.addEventListener('touchend', this.handleDragEnd.bind(this));
+
+                            // Prevent default drag behavior
+                            slider.style.cursor = 'grab';
+                        }
+                    });
+                },
+
+                handleDragStart(e) {
+                    this.isDragging = true;
+                    this.startX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+                    this.currentX = this.startX;
+
+                    const slider = e.currentTarget;
+                    slider.style.cursor = 'grabbing';
+                },
+
+                handleDragMove(e) {
+                    if (!this.isDragging) return;
+
+                    e.preventDefault();
+                    this.currentX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+                },
+
+                handleDragEnd(e) {
+                    if (!this.isDragging) return;
+
+                    this.isDragging = false;
+                    const slider = e.currentTarget;
+                    if (slider) {
+                        slider.style.cursor = 'grab';
+                    }
+
+                    const diff = this.startX - this.currentX;
+
+                    console.log('Drag diff:', diff, 'Threshold:', this.dragThreshold);
+
+                    // If dragged more than threshold
+                    if (Math.abs(diff) > this.dragThreshold) {
+                        if (diff > 0) {
+                            // Dragged left (startX > currentX) - next slide
+                            console.log('Next slide');
+                            this.nextSlide();
+                        } else {
+                            // Dragged right (startX < currentX) - previous slide
+                            console.log('Previous slide');
+                            this.prevSlide();
+                        }
+                    } else {
+                        console.log('Drag too short, no slide change');
+                    }
+
+                    this.startX = 0;
+                    this.currentX = 0;
                 },
 
                 nextSlide() {
                     const total = <?= count($promotions) ?>;
+                    const oldSlide = this.currentSlide;
                     this.currentSlide = (this.currentSlide + 1) % total;
                 },
 
                 prevSlide() {
                     const total = <?= count($promotions) ?>;
+                    const oldSlide = this.currentSlide;
                     this.currentSlide = (this.currentSlide - 1 + total) % total;
                 },
 
@@ -687,10 +837,17 @@
 
                 async addToCart(productId, quantity = 1) {
                     try {
-                        const response = await fetch('/api/cart/add', {
+                        // Check if user is logged in (using session)
+                        if (!window.isUserLoggedIn) {
+                            showToast('Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng', 'error');
+                            window.location.href = '/login';
+                            return;
+                        }
+
+                        const response = await window.fetchWithAuth('/api/cart/add', {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json',
+                                'Content-Type': 'application/json'
                             },
                             body: JSON.stringify({
                                 product_id: productId,
@@ -700,29 +857,47 @@
                         });
 
                         const data = await response.json();
+
+                        if (response.status === 401) {
+                            showToast('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại', 'error');
+                            window.location.href = '/login';
+                            return;
+                        }
+
                         if (data.success) {
-                            alert('Đã thêm vào giỏ hàng!');
-                            window.dispatchEvent(new CustomEvent('cart-updated'));
+                            showToast('Đã thêm vào giỏ hàng!', 'success');
+                            window.dispatchEvent(new CustomEvent('cart-updated', {
+                                detail: {
+                                    cart_count: data.cart_count
+                                }
+                            }));
                         } else {
-                            alert(data.message || 'Không thể thêm vào giỏ hàng');
+                            showToast(data.message || 'Không thể thêm vào giỏ hàng', 'error');
                         }
                     } catch (error) {
                         console.error('Error adding to cart:', error);
-                        alert('Có lỗi xảy ra');
+                        showToast('Có lỗi xảy ra', 'error');
                     }
                 },
 
                 async addComboToCart() {
                     try {
+                        // Check if user is logged in (using session)
+                        if (!window.isUserLoggedIn) {
+                            showToast('Bạn cần đăng nhập để thêm combo vào giỏ hàng', 'error');
+                            window.location.href = '/login';
+                            return;
+                        }
+
                         const items = this.modalData.products.map(p => ({
                             product_id: p.product_id,
                             quantity: p.required_qty
                         }));
 
-                        const response = await fetch('/api/cart/add-combo', {
+                        const response = await window.fetchWithAuth('/api/cart/add-combo', {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json',
+                                'Content-Type': 'application/json'
                             },
                             body: JSON.stringify({
                                 promotion_id: this.modalData.id,
@@ -731,25 +906,43 @@
                         });
 
                         const data = await response.json();
+
+                        if (response.status === 401) {
+                            showToast('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại', 'error');
+                            window.location.href = '/login';
+                            return;
+                        }
+
                         if (data.success) {
-                            alert('Đã thêm combo vào giỏ hàng!');
+                            showToast('Đã thêm combo vào giỏ hàng!', 'success');
                             this.showModal = false;
-                            window.dispatchEvent(new CustomEvent('cart-updated'));
+                            window.dispatchEvent(new CustomEvent('cart-updated', {
+                                detail: {
+                                    cart_count: data.cart_count
+                                }
+                            }));
                         } else {
-                            alert(data.message || 'Không thể thêm combo');
+                            showToast(data.message || 'Không thể thêm combo', 'error');
                         }
                     } catch (error) {
                         console.error('Error adding combo:', error);
-                        alert('Có lỗi xảy ra');
+                        showToast('Có lỗi xảy ra', 'error');
                     }
                 },
 
                 async addBundleToCart(item) {
                     try {
+                        // Check if user is logged in (using session)
+                        if (!window.isUserLoggedIn) {
+                            showToast('Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng', 'error');
+                            window.location.href = '/login';
+                            return;
+                        }
+
                         const response = await fetch('/api/cart/add-bundle', {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json',
+                                'Content-Type': 'application/json'
                             },
                             body: JSON.stringify({
                                 promotion_id: this.modalData.id,
@@ -760,18 +953,183 @@
                         });
 
                         const data = await response.json();
+
+                        if (response.status === 401) {
+                            showToast('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại', 'error');
+                            window.location.href = '/login';
+                            return;
+                        }
+
                         if (data.success) {
-                            alert('Đã thêm vào giỏ hàng!');
-                            window.dispatchEvent(new CustomEvent('cart-updated'));
+                            showToast('Đã thêm vào giỏ hàng!', 'success');
+                            window.dispatchEvent(new CustomEvent('cart-updated', {
+                                detail: {
+                                    cart_count: data.cart_count
+                                }
+                            }));
                         } else {
-                            alert(data.message || 'Không thể thêm vào giỏ hàng');
+                            showToast(data.message || 'Không thể thêm vào giỏ hàng', 'error');
                         }
                     } catch (error) {
                         console.error('Error adding bundle:', error);
-                        alert('Có lỗi xảy ra');
+                        showToast('Có lỗi xảy ra', 'error');
                     }
                 }
             }
+        }
+
+        // Global functions for product cards in home page
+        async function addProductToCart(productId, quantity, stockQty) {
+            // Validate quantity
+            if (!quantity || quantity <= 0) {
+                showToast('Vui lòng nhập số lượng hợp lệ', 'error');
+                return;
+            }
+
+            // Check stock
+            if (quantity > stockQty) {
+                showToast('Số lượng tồn kho không đủ', 'error');
+                return;
+            }
+
+            // Check if user is logged in (using session)
+            if (!window.isUserLoggedIn) {
+                showToast('Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng', 'error');
+                window.location.href = '/login';
+                return;
+            }
+
+            try {
+                const response = await window.fetchWithAuth('/api/cart/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        product_id: productId,
+                        quantity: quantity
+                    })
+                });
+
+                if (response.status === 401) {
+                    showToast('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại', 'error');
+                    window.location.href = '/login';
+                    return;
+                }
+
+                const data = await response.json();
+                if (data.success) {
+                    showToast(`Đã thêm ${quantity} sản phẩm vào giỏ hàng!`, 'success');
+                    window.dispatchEvent(new CustomEvent('cart-updated', {
+                        detail: {
+                            cart_count: data.cart_count
+                        }
+                    }));
+                } else {
+                    showToast(data.message || 'Không thể thêm vào giỏ hàng', 'error');
+                }
+            } catch (error) {
+                console.error('Error adding to cart:', error);
+                showToast('Có lỗi xảy ra', 'error');
+            }
+        }
+
+        async function buyProductNow(productId, stockQty) {
+            // Check stock (always buy 1 item)
+            if (stockQty < 1) {
+                showToast('Số lượng tồn kho không đủ', 'error');
+                return;
+            }
+
+            // Check if user is logged in (using session)
+            if (!window.isUserLoggedIn) {
+                showToast('Bạn cần đăng nhập để mua hàng', 'error');
+                window.location.href = '/login';
+                return;
+            }
+
+            try {
+                // Add 1 product to cart first
+                const response = await window.fetchWithAuth('/api/cart/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        product_id: productId,
+                        quantity: 1
+                    })
+                });
+
+                if (response.status === 401) {
+                    showToast('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại', 'error');
+                    window.location.href = '/login';
+                    return;
+                }
+
+                const data = await response.json();
+                if (data.success) {
+                    // Redirect to checkout with only this product
+                    window.location.href = `/checkout?product_id=${productId}`;
+                } else {
+                    showToast(data.message || 'Không thể mua hàng', 'error');
+                }
+            } catch (error) {
+                console.error('Error buying product:', error);
+                showToast('Có lỗi xảy ra', 'error');
+            }
+        }
+
+        // Filter Modal Component
+        function filterModal() {
+            // Get current URL params
+            const urlParams = new URLSearchParams(window.location.search);
+
+            return {
+                filters: {
+                    min_price: urlParams.get('min_price') || '',
+                    max_price: urlParams.get('max_price') || '',
+                    brands: urlParams.get('brands') ? urlParams.get('brands').split(',').map(Number) : [],
+                    sort: urlParams.get('sort') || 'newest'
+                },
+
+                toggleBrand(brandId) {
+                    const index = this.filters.brands.indexOf(brandId);
+                    if (index > -1) {
+                        this.filters.brands.splice(index, 1);
+                    } else {
+                        this.filters.brands.push(brandId);
+                    }
+                },
+
+                resetFilters() {
+                    this.filters = {
+                        min_price: '',
+                        max_price: '',
+                        brands: [],
+                        sort: 'newest'
+                    };
+                },
+
+                applyFilters() {
+                    const params = new URLSearchParams(window.location.search);
+
+                    // Keep category if exists
+                    const category = params.get('category');
+
+                    // Build new URL
+                    const newParams = new URLSearchParams();
+                    if (category) newParams.set('category', category);
+
+                    if (this.filters.min_price) newParams.set('min_price', this.filters.min_price);
+                    if (this.filters.max_price) newParams.set('max_price', this.filters.max_price);
+                    if (this.filters.brands.length > 0) newParams.set('brands', this.filters.brands.join(','));
+                    if (this.filters.sort && this.filters.sort !== 'newest') newParams.set('sort', this.filters.sort);
+
+                    // Redirect
+                    window.location.href = '/?' + newParams.toString();
+                }
+            };
         }
     </script>
 </body>

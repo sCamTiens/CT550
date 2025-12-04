@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 require __DIR__ . '/../vendor/autoload.php';
@@ -18,6 +19,12 @@ use App\Controllers\Customer\CartController;
 use App\Controllers\Customer\PromotionController;
 use App\Controllers\Customer\AuthController as CustomerAuth;
 use App\Controllers\Customer\ProfileController as CustomerProfile;
+use App\Controllers\Customer\AddressController as CustomerAddress;
+use App\Controllers\Customer\CheckoutController as CustomerCheckout;
+use App\Controllers\Customer\GoogleAuthController as CustomerGoogleAuth;
+use App\Controllers\Customer\PaymentController as CustomerPayment;
+use App\Controllers\Customer\VNPayController as CustomerVNPay;
+use App\Controllers\Customer\ZaloPayController as CustomerZaloPay;
 use App\Controllers\Admin\DashboardController as AdminDashboard;
 use App\Controllers\Admin\ProductController as AdminProduct;
 use App\Controllers\Admin\BrandController as AdminBrand;
@@ -50,6 +57,7 @@ use App\Controllers\Admin\PayrollController as AdminPayroll;
 
 
 /* --- load biến môi trường từ .env (đặt ở thư mục gốc dự án) --- */
+
 Dotenv::createImmutable(dirname(__DIR__))->safeLoad();
 
 /* --- (tuỳ chọn) bật session sớm cho các flow đăng nhập --- */
@@ -63,42 +71,97 @@ $router = new Router();
 /* routes người dùng (khách hàng) */
 $router->get('/', [HomeController::class, 'index']);
 
+// Search route
+$router->get('/search', [\App\Controllers\Customer\SearchController::class, 'index']);
+
 // Customer Auth Routes
 $router->get('/login', [CustomerAuth::class, 'loginPage']);
 $router->post('/api/customer/login', [CustomerAuth::class, 'login']);
+$router->post('/api/customer/refresh-token', [CustomerAuth::class, 'refreshToken']);
 $router->get('/register', [CustomerAuth::class, 'registerPage']);
 $router->post('/api/customer/register', [CustomerAuth::class, 'register']);
 $router->get('/logout', [CustomerAuth::class, 'logout']);
 $router->post('/api/customer/debug-user', [CustomerAuth::class, 'debugUser']); // Debug endpoint
+$router->get('/api/debug-session', function () {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    header('Content-Type: application/json');
+    echo json_encode([
+        'session_id' => session_id(),
+        'session_data' => $_SESSION ?? [],
+        'has_customer' => isset($_SESSION['customer']),
+        'has_token' => isset($_SESSION['customer']['access_token']) ?? false,
+        'cookie' => $_COOKIE
+    ]);
+    exit;
+});
+$router->post('/api/customer/google-login', [CustomerGoogleAuth::class, 'googleLogin']); // Google OAuth (ID token)
+$router->post('/api/customer/google-login-oauth', [CustomerGoogleAuth::class, 'googleLoginOAuth']); // Google OAuth2 (access token)
 
 // Old routes (for backward compatibility)
 $router->get('/products', [ProductController::class, 'index']);
 $router->get('/products/{slug}', [ProductController::class, 'show']);
 
 // Cart routes
-$router->get('/cart', [CartController::class, 'index']);
-$router->post('/cart/add', [CartController::class, 'add']);
-$router->post('/cart/update', [CartController::class, 'update']);
-$router->post('/cart/remove', [CartController::class, 'remove']);
-$router->post('/cart/clear', [CartController::class, 'clear']);
+$router->get('/cart', [CartController::class, 'index']); // No middleware - controller handles auth
+$router->post('/cart/add', [CartController::class, 'add'])->middleware('jwt');
+$router->post('/cart/update', [CartController::class, 'update'])->middleware('jwt');
+$router->post('/cart/remove', [CartController::class, 'remove'])->middleware('jwt');
+$router->post('/cart/clear', [CartController::class, 'clear'])->middleware('jwt');
 
-// Profile routes
-$router->get('/profile', [CustomerProfile::class, 'index']);
-$router->post('/profile/update', [CustomerProfile::class, 'updateProfile']);
-$router->post('/profile/change-password', [CustomerProfile::class, 'changePassword']);
-$router->post('/profile/upload-avatar', [CustomerProfile::class, 'uploadAvatar']);
-$router->get('/api/profile/loyalty/transactions', [CustomerProfile::class, 'apiLoyaltyTransactions']);
-$router->get('/api/profile/orders', [CustomerProfile::class, 'apiOrders']);
-$router->get('/api/profile/orders/{id}', [CustomerProfile::class, 'apiOrderDetail']);
+// Cart API routes (JWT required - must be logged in to add to cart)
+$router->post('/api/cart/add', [CartController::class, 'add'])->middleware('jwt');
+$router->post('/api/cart/store-selected', [CartController::class, 'storeSelected'])->middleware('jwt');
+$router->post('/api/cart/add-combo', [CartController::class, 'addCombo'])->middleware('jwt');
+$router->post('/api/cart/add-bundle', [CartController::class, 'addBundle'])->middleware('jwt');
 
-// Loyalty routes
-$router->get('/loyalty', [\App\Controllers\Customer\LoyaltyController::class, 'index']);
-$router->get('/api/loyalty/transactions', [\App\Controllers\Customer\LoyaltyController::class, 'apiTransactions']);
+// Profile routes (Page: no middleware, controller handles auth | API/Actions: JWT required)
+$router->get('/profile', [CustomerProfile::class, 'index']); // Page load - controller handles auth
+$router->post('/profile/update', [CustomerProfile::class, 'updateProfile'])->middleware('jwt');
+$router->post('/profile/change-password', [CustomerProfile::class, 'changePassword'])->middleware('jwt');
+$router->post('/profile/upload-avatar', [CustomerProfile::class, 'uploadAvatar'])->middleware('jwt');
+$router->get('/api/profile/loyalty/transactions', [CustomerProfile::class, 'apiLoyaltyTransactions'])->middleware('jwt');
+$router->get('/api/profile/orders', [CustomerProfile::class, 'apiOrders'])->middleware('jwt');
+$router->get('/api/profile/orders/{id}', [CustomerProfile::class, 'apiOrderDetail'])->middleware('jwt');
+
+// Loyalty routes (Page: no middleware, controller handles auth | API: JWT required)
+$router->get('/loyalty', [\App\Controllers\Customer\LoyaltyController::class, 'index']); // Page load - controller handles auth
+$router->get('/api/loyalty/transactions', [\App\Controllers\Customer\LoyaltyController::class, 'apiTransactions'])->middleware('jwt');
+
+// Payment routes
+$router->get('/payment/cod/success', [CustomerPayment::class, 'codSuccess']);
+$router->get('/payment/vnpay/callback', [CustomerVNPay::class, 'callback']);
+$router->post('/payment/zalopay/create', [CustomerZaloPay::class, 'createPayment'])->middleware('jwt');
+$router->post('/payment/zalopay/callback', [CustomerZaloPay::class, 'callback']);
+
+// Order routes
+$router->post('/api/orders/{id}/cancel', [CustomerProfile::class, 'cancelOrder'])->middleware('jwt');
 
 // Promotion API routes
 $router->get('/api/promotions/{id}', [\App\Controllers\Customer\PromotionController::class, 'getDetail']);
-$router->post('/api/cart/add-combo', [CartController::class, 'addCombo']);
-$router->post('/api/cart/add-bundle', [CartController::class, 'addBundle']);
+
+// Address routes (Page: no middleware, controller handles auth | API/Actions: JWT required)
+$router->get('/addresses', [CustomerAddress::class, 'index']); // Page load - controller handles auth
+$router->get('/api/addresses', [CustomerAddress::class, 'getAddresses'])->middleware('jwt');
+$router->get('/api/addresses/{id}', [CustomerAddress::class, 'getAddresses'])->middleware('jwt');
+$router->post('/addresses', [CustomerAddress::class, 'store'])->middleware('jwt');
+$router->put('/addresses/{id}', [CustomerAddress::class, 'update'])->middleware('jwt');
+$router->delete('/addresses/{id}', [CustomerAddress::class, 'delete'])->middleware('jwt');
+$router->post('/addresses/{id}/set-default', [CustomerAddress::class, 'setDefault'])->middleware('jwt');
+
+// Location API routes
+$router->get('/api/provinces', [\App\Controllers\LocationController::class, 'getProvinces']);
+$router->get('/api/wards', [\App\Controllers\LocationController::class, 'getWards']);
+
+// Checkout routes (Page: no middleware, controller handles auth | API/Actions: JWT required)
+$router->get('/checkout', [CustomerCheckout::class, 'index']); // Page load - controller handles auth
+$router->post('/checkout/validate-coupon', [CustomerCheckout::class, 'validateCoupon'])->middleware('jwt');
+$router->post('/checkout/process', [CustomerCheckout::class, 'process'])->middleware('jwt');
+
+// VNPay payment routes
+$router->post('/api/payment/vnpay/create', [\App\Controllers\Customer\VNPayController::class, 'createPayment'])->middleware('jwt');
+$router->get('/payment/vnpay/callback', [\App\Controllers\Customer\VNPayController::class, 'callback']);
 
 /* routes admin */
 $router->group('/admin', function (Router $r): void {
@@ -110,6 +173,7 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/api/dashboard/revenue-expense', [AdminDashboard::class, 'apiRevenueExpense']);
     $r->get('/login', [AdminController::class, 'showLogin']);
     $r->post('/login', [AdminController::class, 'login']);
+    $r->post('/api/refresh-token', [AdminController::class, 'refreshToken']);
     $r->get('/logout', [AdminController::class, 'logout']);
 
 
@@ -228,14 +292,14 @@ $router->group('/admin', function (Router $r): void {
     $r->put('/api/schedules/{id}', [AdminSchedule::class, 'update']);
     $r->delete('/api/schedules/{id}', [AdminSchedule::class, 'delete']);
     $r->get('/api/schedules/monthly-stats', [AdminSchedule::class, 'monthlyStats']);
-    
+
     // Chấm công (Attendance)
     $r->get('/attendance', [AdminAttendance::class, 'index']);
     $r->get('/api/attendance', [AdminAttendance::class, 'apiList']);
     $r->post('/api/attendance', [AdminAttendance::class, 'store']);
     $r->put('/api/attendance/{id}', [AdminAttendance::class, 'update']);
     $r->delete('/api/attendance/{id}', [AdminAttendance::class, 'delete']);
-    
+
     // Attendance Check-in/Check-out API
     $r->get('/api/attendance/today-shift', [AdminAttendance::class, 'getTodayShift']);
     $r->post('/api/attendance/check-in', [AdminAttendance::class, 'checkIn']);
@@ -360,7 +424,7 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/api/reports/order-status', [AdminReports::class, 'apiOrderStatus']);
     $r->get('/api/reports/filter', [AdminReports::class, 'apiFilter']);
     $r->get('/api/reports/export', [AdminReports::class, 'apiExport']);
-    
+
     // API danh sách cho dropdown filters
     $r->get('/api/reports/staff-list', [AdminReports::class, 'apiStaffList']);
     $r->get('/api/reports/product-list', [AdminReports::class, 'apiProductList']);

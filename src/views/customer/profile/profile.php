@@ -272,18 +272,30 @@
                                                         'Thất bại' => 'Thất bại',
                                                         'Đã hoàn lại tiền' => 'Đã hoàn lại tiền',
                                                     ]) ?>
-                                                    <?= numberFilterPopover('total_items', 'Sản phẩm')?>
-                                                    <?= numberFilterPopover('grand_total', 'Tổng tiền')?>
+                                                    <?= numberFilterPopover('total_items', 'Sản phẩm') ?>
+                                                    <?= numberFilterPopover('grand_total', 'Tổng tiền') ?>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <template x-for="order in paginated()" :key="order.id">
                                                     <tr class="border-t hover:bg-blue-50">
                                                         <td class="py-3 px-4 text-center">
-                                                            <button @click="viewDetail(order.id)"
-                                                                class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]">
-                                                                <i class="fa-solid fa-eye"></i>
-                                                            </button>
+                                                            <div class="flex items-center justify-center gap-2">
+                                                                <button @click="viewDetail(order.id)"
+                                                                    class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                                                                    title="Xem chi tiết">
+                                                                    <i class="fa-solid fa-eye"></i>
+                                                                </button>
+
+                                                                <!-- Nút hủy đơn - chỉ hiển thị khi status = 'Chờ xử lý' và payment_status = 'Chưa thanh toán' -->
+                                                                <button
+                                                                    x-show="order.status === 'Chờ xử lý' && order.payment_status === 'Chưa thanh toán'"
+                                                                    @click="cancelOrder(order.id, order.code)"
+                                                                    class="inline-flex items-center justify-center p-2 rounded hover:bg-red-100 text-red-600"
+                                                                    title="Hủy đơn hàng">
+                                                                    <i class="fa-solid fa-trash-alt"></i>
+                                                                </button>
+                                                            </div>
                                                         </td>
                                                         <td class="py-3 px-4">
                                                             <span class="font-mono font-semibold text-[#002975]"
@@ -502,6 +514,106 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Modal hủy đơn hàng -->
+                            <div x-show="cancelOrderModal" x-cloak
+                                class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+                                @click.self="cancelOrderModal = false">
+                                <div class="bg-white rounded-xl shadow-2xl max-w-md w-full" @click.stop>
+                                    <!-- Header -->
+                                    <div
+                                        class="bg-gradient-to-r from-red-500 to-red-600 text-white p-6 rounded-t-xl flex items-center justify-between">
+                                        <h3 class="text-xl font-bold flex items-center gap-2">
+                                            <i class="fa-solid fa-triangle-exclamation"></i>
+                                            Hủy đơn hàng
+                                        </h3>
+                                        <button @click="cancelOrderModal = false"
+                                            class="text-white hover:text-gray-200 text-2xl">
+                                            <i class="fa-solid fa-times"></i>
+                                        </button>
+                                    </div>
+
+                                    <!-- Body -->
+                                    <div class="p-6 space-y-4">
+                                        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+                                            <p class="text-sm text-yellow-800">
+                                                <i class="fa-solid fa-info-circle mr-2"></i>
+                                                Bạn đang hủy đơn hàng <strong x-text="cancelOrderCode"></strong>
+                                            </p>
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-semibold mb-3 text-gray-700">
+                                                Vui lòng chọn lý do hủy đơn:
+                                            </label>
+                                            <div class="space-y-2">
+                                                <label
+                                                    class="flex items-start gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                                                    :class="cancelReason === 'Thay đổi địa chỉ giao hàng' ? 'border-[#002975] bg-blue-50' : 'border-gray-200'">
+                                                    <input type="radio" name="cancel_reason"
+                                                        value="Thay đổi địa chỉ giao hàng" x-model="cancelReason"
+                                                        class="mt-1 w-4 h-4 text-[#002975]">
+                                                    <span class="text-sm">Thay đổi địa chỉ giao hàng</span>
+                                                </label>
+
+                                                <label
+                                                    class="flex items-start gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                                                    :class="cancelReason === 'Thay đổi sản phẩm trong đơn hàng' ? 'border-[#002975] bg-blue-50' : 'border-gray-200'">
+                                                    <input type="radio" name="cancel_reason"
+                                                        value="Thay đổi sản phẩm trong đơn hàng" x-model="cancelReason"
+                                                        class="mt-1 w-4 h-4 text-[#002975]">
+                                                    <span class="text-sm">Thay đổi sản phẩm trong đơn hàng</span>
+                                                </label>
+
+                                                <label
+                                                    class="flex items-start gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                                                    :class="cancelReason === 'Tìm được giá rẻ hơn' ? 'border-[#002975] bg-blue-50' : 'border-gray-200'">
+                                                    <input type="radio" name="cancel_reason" value="Tìm được giá rẻ hơn"
+                                                        x-model="cancelReason" class="mt-1 w-4 h-4 text-[#002975]">
+                                                    <span class="text-sm">Tìm được giá rẻ hơn</span>
+                                                </label>
+
+                                                <label
+                                                    class="flex items-start gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                                                    :class="cancelReason === 'Đổi ý, không muốn mua nữa' ? 'border-[#002975] bg-blue-50' : 'border-gray-200'">
+                                                    <input type="radio" name="cancel_reason"
+                                                        value="Đổi ý, không muốn mua nữa" x-model="cancelReason"
+                                                        class="mt-1 w-4 h-4 text-[#002975]">
+                                                    <span class="text-sm">Thay đổi phương thức thanh toán</span>
+                                                </label>
+
+                                                <label
+                                                    class="flex items-start gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                                                    :class="cancelReason === 'other' ? 'border-[#002975] bg-blue-50' : 'border-gray-200'">
+                                                    <input type="radio" name="cancel_reason" value="other"
+                                                        x-model="cancelReason" class="mt-1 w-4 h-4 text-[#002975]">
+                                                    <span class="text-sm font-semibold">Lý do khác</span>
+                                                </label>
+
+                                                <!-- Custom reason input -->
+                                                <div x-show="cancelReason === 'other'" x-transition class="pl-7">
+                                                    <textarea x-model="cancelReasonCustom"
+                                                        placeholder="Nhập lý do hủy đơn của bạn..."
+                                                        class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-[#002975] focus:ring-2 focus:ring-[#002975] focus:ring-opacity-50 resize-none"
+                                                        rows="3"></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Footer -->
+                                    <div class="border-t px-6 py-4 flex gap-3 justify-end">
+                                        <button @click="cancelOrderModal = false"
+                                            class="px-6 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors">
+                                            Đóng
+                                        </button>
+                                        <button @click="confirmCancelOrder()"
+                                            class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold">
+                                            Xác nhận hủy
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <!-- End ordersTab -->
 
@@ -619,6 +731,12 @@
                                                 class="px-3 py-1 border-2 rounded-lg disabled:opacity-50 hover:bg-gray-100">
                                                 &gt;
                                             </button>
+                                            <select x-model="perPage" class="border-2 rounded-lg px-3 py-1">
+                                                <option value="5">5 / trang</option>
+                                                <option value="10">10 / trang</option>
+                                                <option value="20">20 / trang</option>
+                                                <option value="50">50 / trang</option>
+                                            </select>
                                         </div>
                                     </div>
                                 </div>
@@ -758,7 +876,9 @@
                     ?>
                 },
                 errors: {},
-                clearError(f) { this.errors[f] = '' },
+                clearError(f) {
+                    this.errors[f] = ''
+                },
                 validateField(f) {
                     if (f === 'fullname' && !this.form.fullname.trim()) {
                         this.errors.fullname = 'Họ và tên không được bỏ trống';
@@ -813,10 +933,20 @@
         // Change password form
         function changePasswordForm() {
             return {
-                form: { old_password: '', new_password: '', confirm_password: '' },
+                form: {
+                    old_password: '',
+                    new_password: '',
+                    confirm_password: ''
+                },
                 errors: {},
-                show: { old_password: false, new_password: false, confirm_password: false },
-                clearError(f) { this.errors[f] = '' },
+                show: {
+                    old_password: false,
+                    new_password: false,
+                    confirm_password: false
+                },
+                clearError(f) {
+                    this.errors[f] = ''
+                },
                 validateField(f) {
                     if (f === 'old_password' && !this.form.old_password.trim()) {
                         this.errors.old_password = 'Vui lòng nhập mật khẩu hiện tại';
@@ -846,7 +976,11 @@
                     e.target.submit();
                 },
                 resetForm() {
-                    this.form = { old_password: '', new_password: '', confirm_password: '' };
+                    this.form = {
+                        old_password: '',
+                        new_password: '',
+                        confirm_password: ''
+                    };
                     this.errors = {};
                 }
             }
@@ -877,10 +1011,19 @@
 
                 filters: {
                     order_code: '',
-                    points_change_type: '', points_change_value: '', points_change_from: '', points_change_to: '',
-                    total_amount_type: '', total_amount_value: '', total_amount_from: '', total_amount_to: '',
+                    points_change_type: '',
+                    points_change_value: '',
+                    points_change_from: '',
+                    points_change_to: '',
+                    total_amount_type: '',
+                    total_amount_value: '',
+                    total_amount_from: '',
+                    total_amount_to: '',
                     description: '',
-                    created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: ''
+                    created_at_type: '',
+                    created_at_value: '',
+                    created_at_from: '',
+                    created_at_to: ''
                 },
 
                 async init() {
@@ -890,7 +1033,16 @@
                 async fetchData() {
                     this.loading = true;
                     try {
-                        const res = await fetch('/api/profile/loyalty/transactions');
+                        const res = await fetch('/api/profile/loyalty/transactions', {
+                            credentials: 'include'
+                        });
+
+                        if (res.status === 401) {
+                            showToast('Phiên đăng nhập đã hết hạn', 'error');
+                            setTimeout(() => window.location.href = '/login', 1500);
+                            return;
+                        }
+
                         const data = await res.json();
 
                         if (data.success) {
@@ -902,6 +1054,8 @@
                                     orderCount: data.stats.orderCount
                                 };
                             }
+                        } else {
+                            showToast(data.message || 'Không thể tải dữ liệu', 'error');
                         }
                     } catch (err) {
                         console.error('Fetch error:', err);
@@ -911,7 +1065,12 @@
                     }
                 },
 
-                applyFilter(val, type, { value, from, to, dataType }) {
+                applyFilter(val, type, {
+                    value,
+                    from,
+                    to,
+                    dataType
+                }) {
                     if (val == null) return false;
 
                     // TEXT
@@ -1072,6 +1231,13 @@
                 viewOrderModal: false,
                 viewOrder: {},
 
+                // Cancel order modal
+                cancelOrderModal: false,
+                cancelOrderId: null,
+                cancelOrderCode: '',
+                cancelReason: '',
+                cancelReasonCustom: '',
+
                 // Filter states
                 openFilter: {
                     code: false,
@@ -1084,11 +1250,20 @@
 
                 filters: {
                     code: '',
-                    created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
+                    created_at_type: '',
+                    created_at_value: '',
+                    created_at_from: '',
+                    created_at_to: '',
                     status: '',
                     payment_status: '',
-                    total_items_type: '', total_items_value: '', total_items_from: '', total_items_to: '',
-                    grand_total_type: '', grand_total_value: '', grand_total_from: '', grand_total_to: ''
+                    total_items_type: '',
+                    total_items_value: '',
+                    total_items_from: '',
+                    total_items_to: '',
+                    grand_total_type: '',
+                    grand_total_value: '',
+                    grand_total_from: '',
+                    grand_total_to: ''
                 },
 
                 async init() {
@@ -1098,12 +1273,23 @@
                 async fetchData() {
                     this.loading = true;
                     try {
-                        const res = await fetch('/api/profile/orders');
+                        const res = await fetch('/api/profile/orders', {
+                            credentials: 'include'
+                        });
+
+                        if (res.status === 401) {
+                            showToast('Phiên đăng nhập đã hết hạn', 'error');
+                            setTimeout(() => window.location.href = '/login', 1500);
+                            return;
+                        }
+
                         const data = await res.json();
 
                         if (data.success) {
                             this.orders = data.data;
                             this.totalOrders = data.total;
+                        } else {
+                            showToast(data.message || 'Không thể tải dữ liệu', 'error');
                         }
                     } catch (err) {
                         console.error('Fetch error:', err);
@@ -1121,7 +1307,12 @@
                     return this.orders.filter(o => ['pending', 'confirmed', 'shipping'].includes(o.status)).length;
                 },
 
-                applyFilter(val, type, { value, from, to, dataType }) {
+                applyFilter(val, type, {
+                    value,
+                    from,
+                    to,
+                    dataType
+                }) {
                     if (val == null) return false;
 
                     // TEXT
@@ -1259,7 +1450,16 @@
 
                 async viewDetail(orderId) {
                     try {
-                        const res = await fetch(`/api/profile/orders/${orderId}`);
+                        const res = await fetch(`/api/profile/orders/${orderId}`, {
+                            credentials: 'include'
+                        });
+
+                        if (res.status === 401) {
+                            showToast('Phiên đăng nhập đã hết hạn', 'error');
+                            setTimeout(() => window.location.href = '/login', 1500);
+                            return;
+                        }
+
                         const data = await res.json();
 
                         if (data.success) {
@@ -1291,21 +1491,21 @@
 
                 getStatusClass(status) {
                     const classes = {
-                        'Chờ xử lý': 'bg-yellow-100 text-yellow-700',
-                        'Đang xử lý': 'bg-blue-100 text-blue-700',
-                        'Đang giao': 'bg-purple-100 text-purple-700',
-                        'Hoàn tất': 'bg-indigo-100 text-indigo-700',
-                        'Đã hủy': 'bg-green-100 text-green-700'
+                        'Chờ xử lý': 'bg-yellow-100 text-yellow-700',     // Pending
+                        'Đang xử lý': 'bg-blue-100 text-blue-700',        // Processing
+                        'Đang giao': 'bg-purple-100 text-purple-700',     // Shipping
+                        'Hoàn tất': 'bg-green-100 text-green-700',        // Completed
+                        'Đã hủy': 'bg-red-100 text-red-700'               // Cancelled
                     };
                     return classes[status] || 'bg-gray-100 text-gray-700';
                 },
 
                 getPaymentStatusClass(status) {
                     const classes = {
-                        'Đã thanh toán': 'bg-orange-100 text-orange-700',
-                        'Chưa thanh toán': 'bg-green-100 text-green-700',
-                        'Thất bại': 'bg-red-100 text-red-700',
-                        'Đã hoàn lại tiền': 'bg-gray-100 text-gray-700'
+                        'Đã thanh toán': 'bg-green-100 text-green-700',       // Success
+                        'Chưa thanh toán': 'bg-yellow-100 text-yellow-700',   // Pending
+                        'Thất bại': 'bg-red-100 text-red-700',                // Failed
+                        'Đã hoàn lại tiền': 'bg-gray-100 text-gray-700'       // Refunded
                     };
                     return classes[status] || 'bg-gray-100 text-gray-700';
                 },
@@ -1329,6 +1529,68 @@
                         this.filters[key] = '';
                     }
                     this.openFilter[key] = false;
+                },
+
+                async cancelOrder(orderId, orderCode) {
+                    // Mở modal thay vì dùng prompt
+                    this.cancelOrderId = orderId;
+                    this.cancelOrderCode = orderCode;
+                    this.cancelReason = '';
+                    this.cancelReasonCustom = '';
+                    this.cancelOrderModal = true;
+                },
+
+                async confirmCancelOrder() {
+                    // Validate reason
+                    let finalReason = '';
+
+                    if (!this.cancelReason) {
+                        showToast('Vui lòng chọn lý do hủy đơn', 'error');
+                        return;
+                    }
+
+                    if (this.cancelReason === 'other') {
+                        if (!this.cancelReasonCustom || !this.cancelReasonCustom.trim()) {
+                            showToast('Vui lòng nhập lý do hủy đơn', 'error');
+                            return;
+                        }
+                        finalReason = this.cancelReasonCustom.trim();
+                    } else {
+                        finalReason = this.cancelReason;
+                    }
+
+                    try {
+                        const res = await fetch(`/api/orders/${this.cancelOrderId}/cancel`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            credentials: 'include',
+                            body: JSON.stringify({
+                                reason: finalReason
+                            })
+                        });
+
+                        if (res.status === 401) {
+                            showToast('Phiên đăng nhập đã hết hạn', 'error');
+                            setTimeout(() => window.location.href = '/login', 1500);
+                            return;
+                        }
+
+                        const data = await res.json();
+
+                        if (data.success) {
+                            showToast('Đã hủy đơn hàng thành công', 'success');
+                            this.cancelOrderModal = false;
+                            // Reload orders list
+                            await this.fetchData();
+                        } else {
+                            showToast(data.message || 'Không thể hủy đơn hàng', 'error');
+                        }
+                    } catch (err) {
+                        console.error('Cancel order error:', err);
+                        showToast('Không thể hủy đơn hàng', 'error');
+                    }
                 }
             }
         }
@@ -1343,7 +1605,7 @@
         });
 
         // Flatpickr init cho filter popover
-        window.__initFlatpickr = function(el) {
+        window.__initFlatpickr = function (el) {
             const inputs = el.querySelectorAll('input.flatpickr');
             inputs.forEach(input => {
                 if (input._flatpickr) return; // Đã init rồi
@@ -1354,7 +1616,7 @@
                 flatpickr(input, {
                     dateFormat: 'Y-m-d',
                     locale: 'vn',
-                    onChange: function(selectedDates, dateStr) {
+                    onChange: function (selectedDates, dateStr) {
                         // Cập nhật filter value vào Alpine.js component
                         const component = Alpine.$data(el.closest('[x-data]'));
                         if (component && component.filters) {
@@ -1366,7 +1628,7 @@
         };
 
         // Helper: mở flatpickr khi click icon calendar
-        window.openFlatpickr = function(iconEl) {
+        window.openFlatpickr = function (iconEl) {
             const input = iconEl.closest('.relative').querySelector('input.flatpickr');
             if (input && input._flatpickr) {
                 input._flatpickr.open();
@@ -1408,7 +1670,6 @@
                 img.src = newAvatar;
             });
         <?php endif; ?>
-
     </script>
 
     <?php require __DIR__ . '/../partials/footer.php'; ?>
