@@ -756,15 +756,26 @@ $year = $year ?? date('Y');
             },
 
             exportExcel() {
+                // Lấy dữ liệu sau khi filter
+                const filteredData = this.filtered();
+                
+                if (filteredData.length === 0) {
+                    this.showToast('Không có dữ liệu để xuất', 'warning');
+                    return;
+                }
+
+                // Lấy danh sách ID của các bản ghi đang hiển thị
+                const ids = filteredData.map(item => item.id).join(',');
+
                 let url = '';
 
                 if (this.filterType === 'month') {
-                    url = `/admin/api/payroll/export?month=${this.selectedMonth}&year=${this.filterYear}`;
+                    url = `/admin/api/payroll/export?month=${this.selectedMonth}&year=${this.filterYear}&ids=${ids}`;
                 } else if (this.filterType === 'quarter') {
                     const startMonth = (this.selectedQuarter - 1) * 3 + 1;
-                    url = `/admin/api/payroll/export?month=${startMonth}&year=${this.filterYear}&type=quarter&quarter=${this.selectedQuarter}`;
+                    url = `/admin/api/payroll/export?month=${startMonth}&year=${this.filterYear}&type=quarter&quarter=${this.selectedQuarter}&ids=${ids}`;
                 } else if (this.filterType === 'year') {
-                    url = `/admin/api/payroll/export?month=1&year=${this.filterYear}&type=year`;
+                    url = `/admin/api/payroll/export?month=1&year=${this.filterYear}&type=year&ids=${ids}`;
                 } else if (this.filterType === 'custom') {
                     // Chuyển đổi dd/mm/yyyy sang yyyy-mm-dd
                     const convertDate = (dateStr) => {
@@ -776,11 +787,11 @@ $year = $year ?? date('Y');
                     };
                     const fromDate = convertDate(this.customFromDate);
                     const toDate = convertDate(this.customToDate);
-                    url = `/admin/api/payroll/export?from=${fromDate}&to=${toDate}&type=custom`;
+                    url = `/admin/api/payroll/export?from=${fromDate}&to=${toDate}&type=custom&ids=${ids}`;
                 }
 
                 window.open(url, '_blank');
-                this.showToast('Đang xuất file Excel...', 'success');
+                this.showToast(`Đang xuất ${filteredData.length} bản ghi...`, 'success');
             },
 
             async calculateAll() {

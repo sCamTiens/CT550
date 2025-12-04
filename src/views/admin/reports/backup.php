@@ -375,7 +375,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 <tbody>
                     <template x-for="(row, index) in paginated()" :key="index">
                         <tr class="border-b border-gray-200 hover:bg-blue-50 transition">
-                            <td class="px-4 py-3 text-sm text-gray-600 break-words whitespace-pre-line"
+                            <td class="px-4 py-3 text-sm text-gray-600"
                                 x-text="(currentPage - 1) * perPage + index + 1"></td>
                             <template x-for="col in tableColumns" :key="col.key">
                                 <td class="px-4 py-3 text-sm text-gray-800" x-html="formatCell(row, col)"></td>
@@ -902,21 +902,9 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 if (this.filters.valueTo !== '' && this.filters.valueTo !== undefined && this.filters.valueTo !== null)
                     params.append('value_to', this.filters.valueTo);
 
-                const url = `/admin/api/reports/filter?${params}`;
-                console.log('=== FETCHING REPORT DATA ===');
-                console.log('URL:', url);
-                console.log('Filters:', this.filters);
-
                 try {
-                    const response = await fetch(url);
-                    console.log('Response status:', response.status, response.statusText);
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    
+                    const response = await fetch(`/admin/api/reports/filter?${params}`);
                     const result = await response.json();
-                    console.log('API Response:', result);
 
                     // Hỗ trợ fallback: API có thể trả dữ liệu dưới các khóa khác (data | rows | items)
                     // Chú ý: nếu `data` tồn tại nhưng rỗng, có thể API đặt payload trong `rows`.
@@ -937,11 +925,6 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         possibleData = [];
                     }
 
-                    console.log('Processed data length:', possibleData.length);
-                    if (possibleData.length > 0) {
-                        console.log('Sample row:', possibleData[0]);
-                    }
-
                     if (possibleData && possibleData.length > 0) {
                         this.tableData = possibleData;
                         // Reset pagination to first page when new dataset is loaded
@@ -949,45 +932,17 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         this.totalResults = possibleData.length;
                         this.hasData = true;
                         this.resultTitle = this.getResultTitle();
-                        
-                        console.log('Setting up table and charts...');
                         this.setupTableColumns();
                         this.calculateSummary();
 
                         this.$nextTick(() => {
-                            console.log('Rendering charts...');
                             this.renderCharts();
                         });
                     } else {
-                        console.warn('No data returned from API');
-                        
-                        // Vẫn hiển thị khu vực kết quả nhưng với dữ liệu trống
+                        this.hasData = false;
                         this.tableData = [];
-                        this.currentPage = 1;
                         this.totalResults = 0;
-                        this.hasData = true; // Vẫn set true để hiển thị UI
-                        this.resultTitle = this.getResultTitle();
-                        
-                        // Setup columns nhưng không có data
-                        this.setupTableColumns();
-                        
-                        // Clear summary cards
-                        this.summaryCards = [];
-                        
-                        // Destroy any existing charts
-                        this.destroyCharts();
-                        
-                        // Show user-friendly message
-                        const typeLabels = {
-                            staff: 'nhân viên',
-                            products: 'sản phẩm', 
-                            customers: 'khách hàng',
-                            suppliers: 'nhà cung cấp',
-                            orders: 'đơn hàng',
-                            inventory: 'tồn kho'
-                        };
-                        const entityName = typeLabels[this.filters.reportType] || 'dữ liệu';
-                        this.showToast(`Không có dữ liệu ${entityName} trong khoảng thời gian từ ${this.filters.fromDate} đến ${this.filters.toDate}`, 'error');
+                        this.currentPage = 1;
                     }
                 } catch (err) {
                     console.error('Error fetching data:', err);
@@ -1295,7 +1250,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     inventory: 'Tồn Kho'
                 };
                 const label = typeLabels[this.filters.reportType] || 'Đối Tượng';
-                return `Biểu Đồ Miền - ${label}`;
+                return `Biểu Đồ Miền - ${label} (Stacked)`;
             },
 
             getPieChartTitle() {
@@ -2310,43 +2265,27 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     orders: 'order_id',
                     inventory: 'name'
                 };
-                let key = labelKeys[this.filters.reportType];
-                
-                // Fallback: nếu key không tồn tại trong data, tự động tìm trường phù hợp
-                if (data && data.length > 0) {
-                    const sample = data[0];
-                    if (!sample[key]) {
-                        // Thử các trường thường gặp
-                        const candidates = ['supplier_name', 'name', 'full_name', 'product_name', 'customer_name', 'staff_name'];
-                        key = candidates.find(k => sample[k] !== undefined && sample[k] !== null) || key;
-                    }
-                }
-                
+                const key = labelKeys[this.filters.reportType];
                 return data.map(item => item[key] || 'N/A');
             },
 
             getChartValues(data) {
-                // Sử dụng hàm getValueKeyForReportType để lấy key phù hợp với report type
-                let key = this.getValueKeyForReportType(this.filters.reportType);
-                
-                // Fallback: nếu key không có trong data, thử tìm key phù hợp
-                if (data && data.length > 0) {
-                    const sample = data[0];
-                    if (sample && (sample[key] === undefined || sample[key] === null)) {
-                        // Thử các trường giá trị thường gặp
-                        const candidates = [
-                            'total_revenue', 'total_sales_value', 'total_purchase_value',
-                            'total_spent', 'total_orders', 'total_purchases', 'total_quantity',
-                            'avg_order_value', 'total_amount', 'order_count', 'current_stock'
-                        ];
-                        const foundKey = candidates.find(k => sample[k] !== undefined && sample[k] !== null);
-                        if (foundKey) {
-                            key = foundKey;
-                            console.debug('getChartValues - auto-detected value key:', key);
-                        }
-                    }
-                }
-                
+                const valueKeys = {
+                    revenue: 'total_revenue',
+                    orders: 'total_orders',
+                    quantity: 'total_quantity',
+                    total_spent: 'total_spent',
+                    sales_value: 'total_sales_value',
+                    purchase_value: 'total_purchase_value',
+                    purchases: 'total_purchases',
+                    avg_order_value: 'avg_order_value',
+                    total: 'total_amount',
+                    count: 'order_count',
+                    low_stock: 'current_stock',
+                    high_stock: 'current_stock',
+                    out_of_stock: 'current_stock'
+                };
+                const key = valueKeys[this.filters.criteria];
                 return data.map(item => parseFloat(item[key]) || 0);
             },
 
@@ -2416,12 +2355,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 }
 
                 const dataToUse = this.getFilteredTableData().length > 0 ? this.getFilteredTableData() : this.tableData;
-                console.debug('renderAreaChart - reportType:', this.filters.reportType, 'dataToUse length:', dataToUse ? dataToUse.length : 0);
-                
-                if (!dataToUse || dataToUse.length === 0) {
-                    console.warn('renderAreaChart aborted: no data');
-                    return;
-                }
+                if (!dataToUse || dataToUse.length === 0) return;
 
                 // Xác định loại thực thể để gom nhóm (làm chung/generic)
                 const entityType = this.filters.reportType || 'staff';
@@ -2429,27 +2363,13 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     staff: ['staff_name', 'full_name', 'name', 'staff'],
                     products: ['product_name', 'name', 'product'],
                     customers: ['customer_name', 'full_name', 'name', 'customer'],
-                    suppliers: ['supplier_name', 'name', 'supplier'],
+                    suppliers: ['supplier_name', 'supplier', 'name'],
                     // Orders: prefer status (to show stacked area by order status),
                     // then customer_name, then order_id as last resort
                     orders: ['status', 'customer_name', 'order_id']
                 };
                 const candidates = labelCandidatesMap[entityType] || ['name', 'full_name'];
                 let labelKey = candidates.find(k => dataToUse.some(r => r && (r[k] !== undefined && r[k] !== null && r[k] !== '')));
-                
-                // Fallback: nếu không tìm thấy labelKey, dùng khóa đầu tiên có giá trị
-                if (!labelKey) {
-                    const sample = dataToUse.find(r => r && typeof r === 'object');
-                    if (sample) {
-                        console.warn('renderAreaChart - labelKey not found, sample row keys:', Object.keys(sample));
-                        labelKey = Object.keys(sample).find(k => {
-                            const v = sample[k];
-                            return v !== undefined && v !== null && v !== '' && typeof v !== 'number';
-                        }) || 'id';
-                    }
-                }
-                
-                console.debug('renderAreaChart - entityType:', entityType, 'labelKey:', labelKey, 'valueKey will be:', this.getValueKeyForReportType(entityType));
 
                 // If viewing orders, prefer using the unique order identifier so
                 // each order becomes its own series (each order = one color)
@@ -2517,8 +2437,6 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         }
                     }
                 }
-                
-                console.debug('renderAreaChart - dateKey:', dateKey, 'will render', dateKey ? 'multi-date' : 'single-label', 'chart');
 
                 // Tổng hợp các giá trị theo đối tượng
                 const agg = {};
@@ -2599,17 +2517,9 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 }
 
                 const canvas = this.$refs.areaChartCanvas;
-                if (!canvas) {
-                    console.error('renderAreaChart aborted: canvas ref not found');
-                    return;
-                }
+                if (!canvas) return;
                 const ctx = canvas.getContext && canvas.getContext('2d');
-                if (!ctx) {
-                    console.error('renderAreaChart aborted: cannot get 2d context');
-                    return;
-                }
-                
-                console.debug('renderAreaChart - creating chart with', datasets.length, 'datasets,', labels.length, 'labels');
+                if (!ctx) return;
 
 
 
@@ -2855,18 +2765,13 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     return;
                 }
 
-                // Render EACH ORDER as separate dataset with white borders
+                // We'll render each ORDER as its own stacked segment per day (one color per order).
+                // Detect keys: date, order id, and value
                 const dateCandidates = ['created_at', 'date', 'order_date', 'report_date', 'day', 'date_created', 'createdAt'];
-                const statusCandidates = ['status', 'order_status', 'state'];
-                const valueCandidates = ['total_amount', 'total', 'total_revenue', 'grand_total', 'total_sales_value', 'total_spent'];
                 const orderIdCandidates = ['order_id', 'id', 'order_number', 'invoice_no', 'ma_don'];
+                const valueCandidates = ['total_amount', 'total', 'total_revenue', 'total_sales_value', 'total_spent', 'order_count'];
 
                 const sample = dataToUse.find(r => r && typeof r === 'object');
-                if (!sample) {
-                    console.error('renderOrdersStackedBar: no valid sample data found');
-                    return;
-                }
-                
                 let dateKey = dateCandidates.find(k => sample && Object.prototype.hasOwnProperty.call(sample, k));
                 if (!dateKey) {
                     for (const k of Object.keys(sample || {})) {
@@ -2875,29 +2780,13 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         if (typeof v === 'string' && /\d{1,2}\/\d{1,2}\/\d{4}/.test(v)) { dateKey = k; break; }
                     }
                 }
-                
-                if (!dateKey) {
-                    dateKey = Object.keys(sample).find(k => k.toLowerCase().includes('date') || k.toLowerCase().includes('time'));
-                }
-                
-                if (!dateKey) {
-                    console.warn('renderOrdersStackedBar: no date field found, using fallback');
-                    dateKey = 'created_at';
-                }
 
-                let statusKey = statusCandidates.find(k => sample && Object.prototype.hasOwnProperty.call(sample, k));
-                if (!statusKey) {
-                    statusKey = Object.keys(sample).find(k => k.toLowerCase().includes('status')) || 'status';
-                }
-
-                let orderIdKey = orderIdCandidates.find(k => sample && Object.prototype.hasOwnProperty.call(sample, k));
-                if (!orderIdKey) {
-                    orderIdKey = Object.keys(sample).find(k => k.toLowerCase().includes('order') && k.toLowerCase().includes('id')) || 'order_id';
+                let orderKey = orderIdCandidates.find(k => sample && Object.prototype.hasOwnProperty.call(sample, k));
+                if (!orderKey) {
+                    orderKey = Object.keys(sample || {}).find(k => k.toLowerCase().includes('order') && k.toLowerCase().includes('id')) || null;
                 }
 
                 let valueKey = valueCandidates.find(k => sample && Object.prototype.hasOwnProperty.call(sample, k)) || this.getValueKeyForReportType('orders') || 'total_amount';
-                
-                console.debug('renderOrdersStackedBar keys detected:', { dateKey, statusKey, orderIdKey, valueKey });
 
                 // Parse date helper
                 const parseDate = raw => {
@@ -2915,84 +2804,68 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     return null;
                 };
 
-                // Collect all orders with their details
-                const ordersMap = new Map(); // orderId -> {status, dates: {date: value}}
+                // Aggregate per day per order
+                const perDay = {}; // { day: { orderId: value } }
                 const dateSet = new Set();
+                const ordersSet = new Set();
 
-                dataToUse.forEach((row, idx) => {
-                    try {
-                        const d = parseDate(dateKey ? row[dateKey] : row.created_at || row.date || row.order_date);
-                        const day = d ? d.toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
-                        dateSet.add(day);
-                        
-                        const status = (statusKey && row[statusKey]) ? String(row[statusKey]) : 'Không rõ';
-                        const orderId = (orderIdKey && row[orderIdKey]) ? String(row[orderIdKey]) : `#${idx + 1}`;
-                        const val = parseFloat(row[valueKey]) || 0;
-                        
-                        if (!ordersMap.has(orderId)) {
-                            ordersMap.set(orderId, { status, dates: {} });
-                        }
-                        ordersMap.get(orderId).dates[day] = val;
-                    } catch (e) {
-                        console.warn('Error processing row:', e);
-                    }
+                dataToUse.forEach(row => {
+                    const d = parseDate(dateKey ? row[dateKey] : row.created_at || row.date);
+                    const day = d ? d.toISOString().slice(0, 10) : 'unknown';
+                    dateSet.add(day);
+                    const oid = orderKey ? (row[orderKey] !== undefined ? String(row[orderKey]) : null) : (row.order_id ? String(row.order_id) : null);
+                    const orderLabel = oid || (row.order_number || row.invoice_no || 'Đơn ' + Math.random().toString(36).slice(2, 6));
+                    ordersSet.add(orderLabel);
+                    const val = parseFloat(row[valueKey]) || 0;
+                    if (!perDay[day]) perDay[day] = {};
+                    perDay[day][orderLabel] = (perDay[day][orderLabel] || 0) + val;
                 });
 
                 const dates = Array.from(dateSet).sort();
-                
-                // Status colors
-                const statusColors = {
-                    'Chờ xử lý': '#FFA500',
-                    'Đang xử lý': '#3B82F6',
-                    'Đang giao': '#8B5CF6',
-                    'Hoàn tất': '#10B981',
-                    'Đã hủy': '#EF4444',
-                    'Không rõ': '#94A3B8'
-                };
+                const orders = Array.from(ordersSet);
 
-                // Limit orders to prevent performance issues
-                const MAX_ORDERS = 50;
-                const ordersArray = Array.from(ordersMap.entries());
-                const limitedOrders = ordersArray.slice(0, MAX_ORDERS);
-                const hasMore = ordersArray.length > MAX_ORDERS;
+                // Cap number of distinct order series to avoid performance issues
+                const MAX_ORDERS = 60;
+                let primaryOrders = orders;
+                let hasOthers = false;
+                if (orders.length > MAX_ORDERS) {
+                    primaryOrders = orders.slice(0, MAX_ORDERS);
+                    hasOthers = true;
+                }
 
-                // Build datasets: one per order
+                // Build datasets: one dataset per order (or aggregated 'Khác')
                 const datasets = [];
-                limitedOrders.forEach(([orderId, orderInfo], idx) => {
-                    const color = statusColors[orderInfo.status] || this.generateDistinctColor(idx, limitedOrders.length);
-                    const data = dates.map(d => orderInfo.dates[d] || 0);
-                    
+                primaryOrders.forEach((ord, idx) => {
+                    const color = this.generateDistinctColor(idx, Math.max(primaryOrders.length, 8));
+                    const data = dates.map(d => (perDay[d] && perDay[d][ord]) ? perDay[d][ord] : 0);
                     datasets.push({
-                        label: `Đơn ${orderId}`,
+                        label: ord,
                         data,
-                        backgroundColor: this.hexToRgba(color, 0.8),
-                        borderColor: '#FFFFFF',
-                        borderWidth: 2,
-                        hoverBackgroundColor: this.hexToRgba(color, 0.95),
-                        hoverBorderColor: '#000000',
-                        hoverBorderWidth: 3,
-                        stack: 'orders',
-                        orderStatus: orderInfo.status,
-                        orderId: orderId
+                        backgroundColor: this.hexToRgba(color, 0.7),
+                        borderColor: color,
+                        borderWidth: 1,
+                        hoverBorderColor: '#000',
+                        hoverBorderWidth: 2,
+                        borderSkipped: false,
+                        borderAlign: 'center'
                     });
                 });
 
-                // Add "Khác" dataset if needed
-                if (hasMore) {
-                    const remainingOrders = ordersArray.slice(MAX_ORDERS);
-                    const otherData = dates.map(d => {
-                        return remainingOrders.reduce((sum, [, info]) => sum + (info.dates[d] || 0), 0);
-                    });
+                if (hasOthers) {
+                    // aggregate remaining orders into 'Khác (Đơn hàng)'
+                    const otherOrders = orders.slice(MAX_ORDERS);
+                    const otherData = dates.map(d => otherOrders.reduce((s, o) => s + ((perDay[d] && perDay[d][o]) || 0), 0));
+                    const color = this.generateDistinctColor(primaryOrders.length, Math.max(primaryOrders.length + 1, 8));
                     datasets.push({
-                        label: `Khác (${remainingOrders.length} đơn)`,
+                        label: 'Khác (Đơn hàng)',
                         data: otherData,
-                        backgroundColor: this.hexToRgba('#94A3B8', 0.6),
-                        borderColor: '#FFFFFF',
-                        borderWidth: 2,
-                        hoverBackgroundColor: this.hexToRgba('#94A3B8', 0.85),
-                        hoverBorderColor: '#000000',
-                        hoverBorderWidth: 3,
-                        stack: 'orders'
+                        backgroundColor: this.hexToRgba(color, 0.6),
+                        borderColor: color,
+                        borderWidth: 1,
+                        hoverBorderColor: '#000',
+                        hoverBorderWidth: 2,
+                        borderSkipped: false,
+                        borderAlign: 'center'
                     });
                 }
 
@@ -3003,101 +2876,41 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 const ctx = canvas.getContext && canvas.getContext('2d');
                 if (!ctx) return;
 
+                const LEGEND_THRESHOLD = 5;
+
                 this.ordersStackedBar = new Chart(ctx, {
                     type: 'bar',
                     data: { labels, datasets },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        interaction: { 
-                            mode: 'nearest',
-                            intersect: true
-                        },
                         scales: {
-                            x: { 
-                                stacked: true,
-                                grid: { display: false },
-                                ticks: { font: { size: 11 } }
-                            },
-                            y: { 
-                                stacked: true, 
-                                beginAtZero: true, 
-                                ticks: { 
-                                    callback: (v) => this.formatMoney(v),
-                                    font: { size: 11 }
-                                }
-                            }
+                            x: { stacked: true },
+                            y: { stacked: true, beginAtZero: true, ticks: { callback: (v) => this.formatMoney(v) } }
                         },
                         plugins: {
-                            legend: { 
-                                position: 'top',
-                                display: false, // Ẩn legend vì có quá nhiều đơn
-                                labels: { 
-                                    boxWidth: 12, 
-                                    padding: 8,
-                                    font: { size: 10 }
-                                } 
-                            },
+                            legend: { position: 'top', display: datasets.length <= LEGEND_THRESHOLD, labels: { boxWidth: 12, font: { size: 11 } } },
                             tooltip: {
-                                enabled: true,
-                                mode: 'nearest',
-                                intersect: true,
                                 callbacks: {
-                                    title: (items) => {
-                                        if (items && items[0]) {
-                                            const dataset = items[0].dataset;
-                                            const date = items[0].label;
-                                            return `${dataset.label}\nNgày: ${date}`;
-                                        }
-                                        return '';
-                                    },
-                                    label: (ctx) => {
-                                        try {
-                                            const value = this.formatMoney(ctx.parsed.y);
-                                            const status = ctx.dataset.orderStatus || 'N/A';
-                                            return [
-                                                `Trạng thái: ${status}`,
-                                                `Giá trị: ${value}`
-                                            ];
-                                        } catch (e) {
-                                            return this.formatMoney(ctx.parsed.y);
-                                        }
-                                    },
-                                    afterLabel: (ctx) => {
-                                        // Calculate total for this day
-                                        try {
-                                            const dateIndex = ctx.dataIndex;
-                                            const totalForDay = datasets.reduce((sum, ds) => {
-                                                return sum + (ds.data[dateIndex] || 0);
-                                            }, 0);
-                                            return `\nTổng ngày: ${this.formatMoney(totalForDay)}`;
-                                        } catch (e) {
-                                            return '';
-                                        }
-                                    }
-                                },
-                                backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                                titleColor: '#FFFFFF',
-                                titleFont: { size: 13, weight: 'bold' },
-                                bodyColor: '#FFFFFF',
-                                bodyFont: { size: 12 },
-                                borderColor: '#FFFFFF',
-                                borderWidth: 1,
-                                padding: 12,
-                                displayColors: true,
-                                boxWidth: 10,
-                                boxHeight: 10
-                            }
-                        },
-                        onHover: (event, activeElements) => {
-                            try {
-                                if (event && event.native && event.native.target) {
-                                    event.native.target.style.cursor = activeElements && activeElements.length > 0 ? 'pointer' : 'default';
+                                    label: (ctx) => `${ctx.dataset.label}: ${this.formatMoney(ctx.raw)}`
                                 }
-                            } catch (e) { /* ignore */ }
+                            }
                         }
                     }
                 });
+
+                // Toggle legend on hover when too many items
+                try {
+                    const wrapper = canvas && canvas.parentElement;
+                    if (wrapper && datasets.length > LEGEND_THRESHOLD) {
+                        wrapper.addEventListener('mouseenter', () => {
+                            try { this.ordersStackedBar.options.plugins.legend.display = true; this.ordersStackedBar.update(); } catch (e) { }
+                        });
+                        wrapper.addEventListener('mouseleave', () => {
+                            try { this.ordersStackedBar.options.plugins.legend.display = false; this.ordersStackedBar.update(); } catch (e) { }
+                        });
+                    }
+                } catch (e) { /* ignore */ }
             },
 
             destroyCharts() {

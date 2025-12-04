@@ -3,7 +3,7 @@
 namespace App\Controllers\Admin;
 
 use App\Core\DB;
-use App\Repositories\ReportsRepository;
+use App\Models\Repositories\ReportsRepository;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -222,10 +222,7 @@ class ReportsController extends BaseAdminController
                     $data = $this->reportsRepo->filterCustomers($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate, $staffId, $productId);
                     break;
                 case 'suppliers':
-                    // filterSuppliers() is declared void in the repository; do not assign its result.
-                    // Call it to allow any internal processing, then provide a safe fallback.
-                    $this->reportsRepo->filterSuppliers($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate, $productId);
-                    $data = [];
+                    $data = $this->reportsRepo->filterSuppliers($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate, $productId);
                     break;
                 case 'orders':
                     $data = $this->reportsRepo->filterOrders($criteria, $searchText, $valueFrom, $valueTo, $sortOrder, $fromDate, $toDate, $staffId, $productId, $customerId);

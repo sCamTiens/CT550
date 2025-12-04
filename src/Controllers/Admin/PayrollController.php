@@ -477,6 +477,7 @@ class PayrollController extends BaseAdminController
     {
         try {
             $type = $_GET['type'] ?? 'month';
+            $ids = $_GET['ids'] ?? null; // Danh sách ID cần xuất (sau khi filter)
             $items = [];
             $title = '';
             
@@ -528,6 +529,14 @@ class PayrollController extends BaseAdminController
                 $year = $_GET['year'] ?? date('Y');
                 $items = $this->repo->getByMonth((int)$month, (int)$year);
                 $title = "Tháng $month năm $year";
+            }
+            
+            // Lọc theo danh sách ID nếu có (khi frontend filter)
+            if ($ids) {
+                $idArray = array_map('intval', explode(',', $ids));
+                $items = array_filter($items, function($item) use ($idArray) {
+                    return in_array((int)($item['id'] ?? 0), $idArray);
+                });
             }
             
             // Tạo file Excel
