@@ -361,16 +361,11 @@ class CartRepository
     }
 
     /**
-     * Đếm tổng số lượng sản phẩm trong giỏ
+     * Đếm số sản phẩm khác nhau trong giỏ (không phải tổng số lượng)
      */
     public function countItems(array $cart): int
     {
-        $count = 0;
-        foreach ($cart as $item) {
-            $qty = is_array($item) ? ($item['qty'] ?? 0) : $item;
-            $count += (int)$qty;
-        }
-        return $count;
+        return count($cart);
     }
 
     /**
