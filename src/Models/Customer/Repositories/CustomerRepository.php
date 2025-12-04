@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models\Customer\Repositories;
 
 use App\Core\DB;
@@ -83,10 +84,10 @@ class CustomerRepository
         try {
             $pdo = DB::pdo();
             $pdo->beginTransaction();
-            
+
             $email = ($data['email'] ?? '') !== '' ? $data['email'] : null;
             $phone = ($data['phone'] ?? '') !== '' ? $data['phone'] : null;
-            
+
             // Kiểm tra trùng email/phone trước khi insert
             if ($err = $this->checkDuplicateContact($email, $phone)) {
                 $pdo->rollBack();
@@ -98,14 +99,14 @@ class CustomerRepository
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 1, 0)";
 
             $stmt = $pdo->prepare($sql);
-            
+
             // Nếu password đã được hash từ controller (length = 60), dùng luôn
             // Nếu chưa hash (password thô), hash nó
             $passwordInput = trim($data['password'] ?? '');
             if (empty($passwordInput)) {
                 $passwordInput = '123456'; // Default password
             }
-            
+
             // Check if already hashed (bcrypt hash always 60 chars)
             $passwordHash = (strlen($passwordInput) === 60 && substr($passwordInput, 0, 4) === '$2y$')
                 ? $passwordInput
@@ -132,7 +133,7 @@ class CustomerRepository
             $pdo->commit();
 
             $created = $this->find($id);
-            
+
             // Log audit
             if (is_array($created)) {
                 $this->logCreate('customers', $id, [
@@ -163,9 +164,8 @@ class CustomerRepository
 
             throw $e; // nếu không phải lỗi username/email/phone thì ném tiếp
         }
-
     }
-    
+
     /** Kiểm tra email hoặc phone đã tồn tại chưa (trừ user hiện tại) */
     private function checkDuplicateContact(string|null $email, string|null $phone, int|string|null $excludeUserId = null): string|false
     {
@@ -183,7 +183,7 @@ class CustomerRepository
                 return 'Email đã tồn tại trong hệ thống';
             }
         }
-        
+
         // Kiểm tra phone
         if (!empty($phone)) {
             $sql = "SELECT id FROM {$this->userTable} WHERE phone = ? AND is_deleted = 0";
@@ -198,7 +198,7 @@ class CustomerRepository
                 return 'Số điện thoại đã tồn tại trong hệ thống';
             }
         }
-        
+
         return false;
     }
 
@@ -222,14 +222,14 @@ class CustomerRepository
                 'is_active' => $beforeData['is_active'] ?? null
             ];
         }
-        
+
         // Kiểm tra trùng email/phone (loại trừ user hiện tại)
         $email = ($data['email'] ?? '') !== '' ? $data['email'] : null;
         $phone = ($data['phone'] ?? '') !== '' ? $data['phone'] : null;
         if ($err = $this->checkDuplicateContact($email, $phone, $id)) {
             return $err;
         }
-        
+
         try {
             $sql = "UPDATE {$this->userTable}
                 SET full_name = ?,
@@ -243,11 +243,11 @@ class CustomerRepository
                 WHERE id = ? AND role_id = 1 AND is_deleted = 0";
 
             $stmt = DB::pdo()->prepare($sql);
-            
+
             // Xử lý date_of_birth: nếu là chuỗi rỗng hoặc null thì gán null, không để chuỗi rỗng
             $dateOfBirth = trim($data['date_of_birth'] ?? '');
             $dateOfBirth = $dateOfBirth !== '' ? $dateOfBirth : null;
-            
+
             $stmt->execute([
                 trim($data['full_name'] ?? ''),
                 ($data['email'] ?? '') !== '' ? $data['email'] : null,
@@ -260,7 +260,7 @@ class CustomerRepository
             ]);
 
             $result = $this->find($id);
-            
+
             // Log audit
             if (is_array($result) && $beforeArray) {
                 $afterArray = [
@@ -273,7 +273,7 @@ class CustomerRepository
                 ];
                 $this->logUpdate('customers', (int)$id, $beforeArray, $afterArray);
             }
-            
+
             return is_array($result) ? $result : false;
         } catch (PDOException $e) {
             $msg = strtolower($e->getMessage());
@@ -303,15 +303,15 @@ class CustomerRepository
                 'phone' => $beforeData['phone'] ?? null
             ];
         }
-        
+
         $stmt = DB::pdo()->prepare("UPDATE {$this->userTable} SET is_deleted = 1 WHERE id = ? AND role_id = 1");
         $result = $stmt->execute([$id]);
-        
+
         // Log audit (soft delete)
         if ($result && $beforeArray) {
             $this->logDelete('customers', (int)$id, $beforeArray);
         }
-        
+
         return $result;
     }
 
@@ -575,12 +575,14 @@ class CustomerRepository
      */
     public function findByUsernameOrEmail(string $usernameOrEmail): array|false
     {
-        $sql = "SELECT * FROM {$this->userTable} 
-                WHERE (username = ? OR email = ?)";
-        
+        $sql = "SELECT u.*, r.name as role_name 
+            FROM {$this->userTable} u
+            LEFT JOIN roles r ON u.role_id = r.id
+            WHERE (u.username = ? OR u.email = ?)";
+
         $stmt = DB::pdo()->prepare($sql);
         $stmt->execute([$usernameOrEmail, $usernameOrEmail]);
-        
+
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
@@ -592,7 +594,7 @@ class CustomerRepository
         $sql = "SELECT COUNT(*) FROM {$this->userTable} WHERE username = ?";
         $stmt = DB::pdo()->prepare($sql);
         $stmt->execute([$username]);
-        
+
         return $stmt->fetchColumn() > 0;
     }
 
@@ -604,7 +606,7 @@ class CustomerRepository
         $sql = "SELECT COUNT(*) FROM {$this->userTable} WHERE email = ?";
         $stmt = DB::pdo()->prepare($sql);
         $stmt->execute([$email]);
-        
+
         return $stmt->fetchColumn() > 0;
     }
 
@@ -616,7 +618,7 @@ class CustomerRepository
         $sql = "SELECT COUNT(*) FROM {$this->userTable} WHERE phone = ?";
         $stmt = DB::pdo()->prepare($sql);
         $stmt->execute([$phone]);
-        
+
         return $stmt->fetchColumn() > 0;
     }
 
@@ -627,7 +629,7 @@ class CustomerRepository
     {
         $sql = "UPDATE {$this->userTable} SET last_login = NOW() WHERE id = ?";
         $stmt = DB::pdo()->prepare($sql);
-        
+
         return $stmt->execute([$userId]);
     }
 }

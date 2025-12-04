@@ -142,8 +142,10 @@ $items = $items ?? [];
               </td>
               <td class="py-2 px-4 text-center">
                 <template x-if="c.avatar_url">
-                  <img x-show="c.avatar_url" :src="'/assets/images/avatar/' + c.avatar_url" :alt="c.full_name"
+                  <div class="flex items-center justify-center mx-auto">
+                    <img x-show="c.avatar_url" :src="'/assets/images/avatar/' + c.avatar_url" :alt="c.full_name"
                     class="w-12 h-12 rounded-full object-cover border-2 border-gray-200">
+                  </div>
                 </template>
                 <template x-if="!c.avatar_url">
                   <div
