@@ -68,14 +68,16 @@ class RoleMiddleware
         'Hỗ trợ trực tuyến' => [
             '/admin/customers',
             '/admin/orders', // Chỉ xem
+            '/admin/chat-support', // Chat support dashboard
             // API endpoints
             '/admin/api/customers',
             '/admin/api/orders',
+            '/admin/api/chat-support', // All chat support APIs
             '/admin/api/attendance/today-shift'
         ],
     ];
 
-        /**
+    /**
      * Kiểm tra quyền truy cập
      * 
      * @param string $requestPath Đường dẫn đang yêu cầu
@@ -111,13 +113,12 @@ class RoleMiddleware
             if ($requestPath === $allowedPath) {
                 return true;
             }
-            
+
             // Prefix match: đường dẫn bắt đầu bằng allowedPath + '/'
             // Ví dụ: /admin/products cho phép /admin/products/123 nhưng KHÔNG cho phép /admin/productsx
             if (strpos($requestPath, $allowedPath . '/') === 0) {
                 return true;
             }
-            
         }
 
         return false;
@@ -130,35 +131,35 @@ class RoleMiddleware
      */
     public static function authorize(string $requestPath): void
     {
-        
+
         if (!self::checkAccess($requestPath)) {
-            
+
             // Lưu thông báo lỗi vào session
             $_SESSION['flash_error'] = 'Bạn không có quyền truy cập trang này.';
-            
+
             // Dừng tất cả output buffer
             while (ob_get_level()) {
                 ob_end_clean();
             }
-            
+
             // Redirect về trang trước hoặc dashboard
             $referer = $_SERVER['HTTP_REFERER'] ?? null;
             $redirectTo = '/admin';
-            
+
             // Nếu có referer và không phải trang hiện tại
             if ($referer) {
                 $refererPath = parse_url($referer, PHP_URL_PATH);
                 $currentPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-                
+
                 // Nếu referer khác trang hiện tại và là admin path
                 if ($refererPath !== $currentPath && strpos($refererPath, '/admin') === 0) {
                     $redirectTo = $refererPath;
                 }
             }
-                     
+
             // Send redirect header
             header("Location: $redirectTo", true, 302);
-            
+
             // Force stop execution
             die();
         }

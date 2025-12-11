@@ -60,8 +60,17 @@
                                 </div>
                                 <div class="flex items-start justify-between gap-4">
                                     <div class="flex-1 pr-4 min-w-0">
+                                        <?php
+                                        $parts = [
+                                            $addr['address_line'] ?? null,
+                                            !empty($addr['ward']) ? $addr['ward'] : null,
+                                            !empty($addr['province']) ? $addr['province'] : null,
+                                        ];
+
+                                        $parts = array_filter($parts); // xóa phần null / rỗng
+                                        ?>
                                         <p class="text-gray-700 break-words">
-                                            <?= htmlspecialchars($addr['address_line']) ?>
+                                            <?= htmlspecialchars(implode(', ', $parts)) ?>
                                         </p>
                                     </div>
                                     <div class="flex-shrink-0 flex items-center gap-3">
@@ -140,12 +149,17 @@
                         this.search = province.name;
                         this.selected = true;
                         this.open = false;
-                        // Load wards
-                        loadWards(province.province_code);
-                        // Reset ward
+                        // Load districts
+                        loadDistricts(province.province_code);
+                        // Reset district and ward
+                        document.getElementById('district_id').value = '';
+                        document.getElementById('district_name').value = '';
                         document.getElementById('ward_code').value = '';
                         document.getElementById('ward_name').value = '';
-                        document.getElementById('ward-search').value = '';
+                        const districtSearch = document.getElementById('district-search');
+                        if (districtSearch) districtSearch.value = '';
+                        const wardSearch = document.getElementById('ward-search');
+                        if (wardSearch) wardSearch.value = '';
                     },
                     clear() {
                         document.getElementById('province_code').value = '';
@@ -161,7 +175,7 @@
                     }
                 }" @click.away="open = false">
                     <label class="block text-gray-700 font-semibold mb-2">
-                        Tễnh/Thành phố <span class="text-red-600">*</span>
+                        Tỉnh/Thành phố <span class="text-red-600">*</span>
                     </label>
                     <input type="hidden" id="province_code">
                     <input type="hidden" id="province_name">
@@ -200,6 +214,82 @@
                         </template>
                         <div x-show="filtered.length === 0" class="px-3 py-2 text-gray-400 text-sm">
                             Không tìm thấy tỉnh/thành phố
+                        </div>
+                    </div>
+                </div>
+
+                <!-- District Dropdown (GHN) -->
+                <div class="relative" x-data="{
+                    open: false,
+                    search: '',
+                    filtered: [],
+                    highlight: -1,
+                    selected: false,
+                    choose(district) {
+                        document.getElementById('district_id').value = district.district_id;
+                        document.getElementById('district_name').value = district.name;
+                        this.search = district.name;
+                        this.selected = true;
+                        this.open = false;
+                        loadWards(district.district_id);
+                        document.getElementById('ward_code').value = '';
+                        document.getElementById('ward_name').value = '';
+                        const wardSearch = document.getElementById('ward-search');
+                        if (wardSearch) wardSearch.value = '';
+                    },
+                    clear() {
+                        document.getElementById('district_id').value = '';
+                        document.getElementById('district_name').value = '';
+                        this.search = '';
+                        this.selected = false;
+                        this.filtered = districts;
+                        this.open = false;
+                        document.getElementById('ward_code').value = '';
+                        document.getElementById('ward_name').value = '';
+                        const wardSearch = document.getElementById('ward-search');
+                        if (wardSearch) wardSearch.value = '';
+                    }
+                }" @click.away="open = false">
+                    <label class="block text-gray-700 font-semibold mb-2">
+                        Quận/Huyện <span class="text-red-600">*</span>
+                    </label>
+                    <input type="hidden" id="district_id">
+                    <input type="hidden" id="district_name">
+
+                    <div class="relative">
+                        <input type="text" x-model="search" id="district-search" @focus="open = true; filtered = districts"
+                            @input="open = true; filtered = districts.filter(d => d.name.toLowerCase().includes(search.toLowerCase()))"
+                            class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 pr-8 bg-white focus:border-[#002975] focus:ring-2 focus:ring-[#002975] focus:ring-opacity-50"
+                            :class="selected ? 'text-slate-900' : 'text-slate-400'"
+                            placeholder="-- Chọn Quận/Huyện --" />
+
+                        <button x-show="selected" type="button" @click.stop="clear()"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 focus:outline-none">
+                            ✕
+                        </button>
+
+                        <svg x-show="!selected"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none"
+                            fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+
+                    <div x-show="open"
+                        class="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow-lg max-h-60 overflow-auto">
+                        <template x-for="(district, i) in filtered" :key="district.district_id">
+                            <div @click="choose(district)" @mouseenter="highlight = i" @mouseleave="highlight = -1"
+                                :class="[
+                                    highlight === i ? 'bg-[#002975] text-white'
+                                    : (document.getElementById('district_id')?.value == district.district_id ? 'bg-[#002975] text-white'
+                                    : 'hover:bg-[#002975] hover:text-white text-black'),
+                                    'px-3 py-2 cursor-pointer transition-colors text-sm'
+                                ]">
+                                <div x-text="district.name"></div>
+                            </div>
+                        </template>
+                        <div x-show="filtered.length === 0" class="px-3 py-2 text-gray-400 text-sm">
+                            Chọn tỉnh/thành phố trước
                         </div>
                     </div>
                 </div>
@@ -303,20 +393,24 @@
 
     <script>
         let provinces = [];
+        let districts = [];
         let wards = [];
 
         // Load provinces on page load
-        document.addEventListener('DOMContentLoaded', async function () {
+        document.addEventListener('DOMContentLoaded', async function() {
             await loadProvinces();
         });
 
         async function loadProvinces() {
             try {
-                const response = await fetch('/api/provinces');
+                const response = await fetch('/api/shipping/provinces');
                 const result = await response.json();
 
-                if (result.success && result.data) {
-                    provinces = result.data;
+                if (result.data) {
+                    provinces = result.data.map(p => ({
+                        province_code: p.ProvinceID,
+                        name: p.ProvinceName
+                    }));
                 }
             } catch (error) {
                 console.error('Error loading provinces:', error);
@@ -324,13 +418,33 @@
             }
         }
 
-        async function loadWards(provinceCode) {
+        async function loadDistricts(provinceId) {
             try {
-                const response = await fetch(`/api/wards?province_code=${provinceCode}`);
+                const response = await fetch(`/api/shipping/districts?province_id=${provinceId}`);
                 const result = await response.json();
 
-                if (result.success && result.data) {
-                    wards = result.data;
+                if (result.data) {
+                    districts = result.data.map(d => ({
+                        district_id: d.DistrictID,
+                        name: d.DistrictName
+                    }));
+                }
+            } catch (error) {
+                console.error('Error loading districts:', error);
+                showToast('Không thể tải danh sách quận/huyện', 'error');
+            }
+        }
+
+        async function loadWards(districtId) {
+            try {
+                const response = await fetch(`/api/shipping/wards?district_id=${districtId}`);
+                const result = await response.json();
+
+                if (result.data) {
+                    wards = result.data.map(w => ({
+                        ward_code: w.WardCode,
+                        name: w.WardName
+                    }));
                 }
             } catch (error) {
                 console.error('Error loading wards:', error);
@@ -374,46 +488,144 @@
                 document.getElementById('recipient_name').value = addressData.recipient_name;
                 document.getElementById('phone_number').value = addressData.phone_number;
 
-                // Load and set province
-                if (addressData.province_code) {
-                    document.getElementById('province_code').value = addressData.province_code;
-                    document.getElementById('province_name').value = addressData.province || '';
+                // Load and set province (use province name to find GHN province)
+                if (addressData.province) {
+                    // Find matching province in GHN data by name
+                    const matchingProvince = provinces.find(p =>
+                        p.name.toLowerCase() === addressData.province.toLowerCase()
+                    );
 
-                    await loadWards(addressData.province_code);
+                    if (matchingProvince) {
+                        document.getElementById('province_code').value = matchingProvince.province_code;
+                        document.getElementById('province_name').value = matchingProvince.name;
 
-                    if (addressData.commune_code) {
-                        document.getElementById('ward_code').value = addressData.commune_code;
-                        document.getElementById('ward_name').value = addressData.ward || '';
+                        // Load districts for this province
+                        await loadDistricts(matchingProvince.province_code);
+
+                        // If we have district_id, try to set it and load wards
+                        if (addressData.district_id && districts.length > 0) {
+                            // Verify district exists in loaded districts
+                            const districtExists = districts.find(d => d.district_id == addressData.district_id);
+
+                            if (districtExists) {
+                                document.getElementById('district_id').value = addressData.district_id;
+
+                                try {
+                                    await loadWards(addressData.district_id);
+
+                                    // Set ward if available
+                                    if (addressData.commune_code) {
+                                        document.getElementById('ward_code').value = addressData.commune_code;
+                                        document.getElementById('ward_name').value = addressData.ward || '';
+                                    }
+                                } catch (error) {
+                                    console.warn('Could not load wards for old district_id:', error);
+                                    // Reset ward if can't load
+                                    document.getElementById('ward_code').value = '';
+                                    document.getElementById('ward_name').value = '';
+                                }
+                            } else {
+                                console.warn('District ID not found in GHN data, user needs to reselect');
+                            }
+                        }
                     }
                 }
 
                 document.getElementById('address_line').value = addressData.address_line;
                 document.getElementById('is_default').checked = addressData.is_default == 1;
 
-                // Wait for modal to be visible then update Alpine state
-                setTimeout(() => {
-                    const provinceSearchInputs = document.querySelectorAll('input[x-model="search"]');
-                    if (provinceSearchInputs[0] && addressData.province) {
-                        provinceSearchInputs[0].value = addressData.province;
-                        provinceSearchInputs[0].dispatchEvent(new Event('input', { bubbles: true }));
-                        // Set Alpine selected state
-                        const provinceDiv = provinceSearchInputs[0].closest('[x-data]');
+                // Wait for modal to be visible and data to load, then update Alpine state
+                const populateDropdowns = () => {
+                    const searchInputs = document.querySelectorAll('input[x-model="search"]');
+                    console.log('Populating dropdowns:', {
+                        province: addressData.province,
+                        district_id: addressData.district_id,
+                        ward: addressData.ward,
+                        searchInputs: searchInputs.length,
+                        provincesLoaded: provinces.length,
+                        districtsLoaded: districts.length,
+                        wardsLoaded: wards.length
+                    });
+
+                    // Province (index 0)
+                    if (searchInputs[0] && addressData.province && provinces.length > 0) {
+                        searchInputs[0].value = addressData.province;
+                        searchInputs[0].classList.remove('text-slate-400');
+                        searchInputs[0].classList.add('text-slate-900');
+                        searchInputs[0].dispatchEvent(new Event('input', {
+                            bubbles: true
+                        }));
+
+                        const provinceDiv = searchInputs[0].closest('[x-data]');
                         if (provinceDiv && provinceDiv.__x) {
                             provinceDiv.__x.$data.selected = true;
                             provinceDiv.__x.$data.search = addressData.province;
+                            provinceDiv.__x.$data.filtered = provinces;
                         }
+                    } else {
+                        console.warn('Province not set - provinces not loaded or no data');
                     }
-                    if (provinceSearchInputs[1] && addressData.ward) {
-                        provinceSearchInputs[1].value = addressData.ward;
-                        provinceSearchInputs[1].dispatchEvent(new Event('input', { bubbles: true }));
-                        // Set Alpine selected state
-                        const wardDiv = provinceSearchInputs[1].closest('[x-data]');
+
+                    // District (index 1) - Find district name from GHN
+                    if (searchInputs[1] && addressData.district_id && districts.length > 0) {
+                        const district = districts.find(d => d.district_id == addressData.district_id);
+                        if (district) {
+                            searchInputs[1].value = district.name;
+                            searchInputs[1].classList.remove('text-slate-400');
+                            searchInputs[1].classList.add('text-slate-900');
+                            searchInputs[1].dispatchEvent(new Event('input', {
+                                bubbles: true
+                            }));
+                            document.getElementById('district_name').value = district.name;
+
+                            const districtDiv = searchInputs[1].closest('[x-data]');
+                            if (districtDiv && districtDiv.__x) {
+                                districtDiv.__x.$data.selected = true;
+                                districtDiv.__x.$data.search = district.name;
+                                districtDiv.__x.$data.filtered = districts;
+                            }
+                        } else {
+                            console.warn('District not found in GHN data');
+                        }
+                    } else {
+                        console.warn('District not set - not loaded yet');
+                    }
+
+                    // Ward (index 2)
+                    if (searchInputs[2] && addressData.ward && wards.length > 0) {
+                        searchInputs[2].value = addressData.ward;
+                        searchInputs[2].classList.remove('text-slate-400');
+                        searchInputs[2].classList.add('text-slate-900');
+                        searchInputs[2].dispatchEvent(new Event('input', {
+                            bubbles: true
+                        }));
+
+                        const wardDiv = searchInputs[2].closest('[x-data]');
                         if (wardDiv && wardDiv.__x) {
                             wardDiv.__x.$data.selected = true;
                             wardDiv.__x.$data.search = addressData.ward;
+                            wardDiv.__x.$data.filtered = wards;
                         }
+                    } else {
+                        console.warn('Ward not set - wards not loaded or no data');
                     }
-                }, 100);
+                };
+
+                // Wait and populate - retry if provinces not loaded yet
+                let retryCount = 0;
+                const tryPopulate = () => {
+                    if (provinces.length > 0) {
+                        populateDropdowns();
+                    } else if (retryCount < 5) {
+                        retryCount++;
+                        console.log(`Provinces not loaded yet, retry ${retryCount}/5...`);
+                        setTimeout(tryPopulate, 200);
+                    } else {
+                        console.error('Failed to load provinces after 5 retries');
+                    }
+                };
+
+                setTimeout(tryPopulate, 300);
             } else {
                 title.textContent = 'Thêm địa chỉ mới';
                 form.reset();
@@ -444,7 +656,7 @@
             document.getElementById('address-modal').classList.add('hidden');
         }
 
-        document.getElementById('address-form').addEventListener('submit', function (e) {
+        document.getElementById('address-form').addEventListener('submit', function(e) {
             e.preventDefault();
 
             const addressId = document.getElementById('address-id').value;
@@ -467,12 +679,16 @@
                 showToast('Vui lòng chọn Phường/Xã', 'error');
                 return;
             }
+            const districtId = document.getElementById('district_id')?.value;
+            const districtName = document.getElementById('district_name')?.value;
 
             const data = {
                 recipient_name: document.getElementById('recipient_name').value,
                 phone_number: document.getElementById('phone_number').value,
                 province_code: provinceCode,
                 province_name: provinceName,
+                district_id: districtId,
+                district_name: districtName,
                 ward_code: wardCode,
                 ward_name: wardName,
                 address_line: document.getElementById('address_line').value,
@@ -482,13 +698,13 @@
             console.log('Submitting data:', data); // Debug
 
             fetch(url, {
-                method: method,
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            })
+                    method: method,
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                })
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
@@ -506,8 +722,8 @@
 
         function editAddress(id) {
             fetch(`/api/addresses/${id}`, {
-                credentials: 'include'
-            })
+                    credentials: 'include'
+                })
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
@@ -529,12 +745,12 @@
             if (!confirm('Bạn có chắc muốn xóa địa chỉ này?')) return;
 
             fetch(`/addresses/${id}`, {
-                method: 'DELETE',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            })
+                    method: 'DELETE',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
@@ -552,12 +768,12 @@
 
         function setDefaultAddress(id) {
             fetch(`/addresses/${id}/set-default`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            })
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {

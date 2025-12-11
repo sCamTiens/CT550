@@ -54,6 +54,8 @@ use App\Controllers\Admin\ImportHistoryController as AdminImportHistory;
 use App\Controllers\Admin\ScheduleController as AdminSchedule;
 use App\Controllers\Admin\AttendanceController as AdminAttendance;
 use App\Controllers\Admin\PayrollController as AdminPayroll;
+use App\Controllers\Admin\ChatSupportController as AdminChatSupport;
+use App\Controllers\Api\ChatController as ApiChat;
 
 
 /* --- load biến môi trường từ .env (đặt ở thư mục gốc dự án) --- */
@@ -99,6 +101,10 @@ $router->get('/api/debug-session', function () {
 $router->post('/api/customer/google-login', [CustomerGoogleAuth::class, 'googleLogin']); // Google OAuth (ID token)
 $router->post('/api/customer/google-login-oauth', [CustomerGoogleAuth::class, 'googleLoginOAuth']); // Google OAuth2 (access token)
 
+// Notification API
+$router->get('/api/customer/notifications', [\App\Controllers\Customer\NotificationController::class, 'apiIndex']);
+$router->post('/api/customer/notifications/read', [\App\Controllers\Customer\NotificationController::class, 'markRead']);
+
 // Old routes (for backward compatibility)
 $router->get('/products', [ProductController::class, 'index']);
 $router->get('/products/{slug}', [ProductController::class, 'show']);
@@ -120,7 +126,7 @@ $router->post('/api/cart/add-bundle', [CartController::class, 'addBundle'])->mid
 $router->get('/profile', [CustomerProfile::class, 'index']); // Page load - controller handles auth
 $router->post('/profile/update', [CustomerProfile::class, 'updateProfile'])->middleware('jwt');
 $router->post('/profile/change-password', [CustomerProfile::class, 'changePassword'])->middleware('jwt');
-$router->post('/profile/upload-avatar', [CustomerProfile::class, 'uploadAvatar'])->middleware('jwt');
+$router->post('/profile/upload-avatar', [CustomerProfile::class, 'uploadAvatar']); // No JWT - uses session
 $router->get('/api/profile/loyalty/transactions', [CustomerProfile::class, 'apiLoyaltyTransactions'])->middleware('jwt');
 $router->get('/api/profile/orders', [CustomerProfile::class, 'apiOrders'])->middleware('jwt');
 $router->get('/api/profile/orders/{id}', [CustomerProfile::class, 'apiOrderDetail'])->middleware('jwt');
@@ -140,6 +146,16 @@ $router->post('/api/orders/{id}/cancel', [CustomerProfile::class, 'cancelOrder']
 
 // Promotion API routes
 $router->get('/api/promotions/{id}', [\App\Controllers\Customer\PromotionController::class, 'getDetail']);
+
+// GHN Shipping API routes
+$router->get('/api/shipping/provinces', [\App\Controllers\Api\ShippingController::class, 'getProvinces']);
+$router->get('/api/shipping/districts', [\App\Controllers\Api\ShippingController::class, 'getDistricts']);
+$router->get('/api/shipping/wards', [\App\Controllers\Api\ShippingController::class, 'getWards']);
+$router->post('/api/shipping/calculate-fee', [\App\Controllers\Api\ShippingController::class, 'calculateFee']);
+$router->post('/api/shipping/create-order', [\App\Controllers\Api\ShippingController::class, 'createOrder'])->middleware('jwt');
+$router->get('/api/shipping/track/{order_code}', [\App\Controllers\Api\ShippingController::class, 'trackOrder']);
+$router->post('/api/shipping/cancel/{order_code}', [\App\Controllers\Api\ShippingController::class, 'cancelOrder'])->middleware('jwt');
+
 
 // Address routes (Page: no middleware, controller handles auth | API/Actions: JWT required)
 $router->get('/addresses', [CustomerAddress::class, 'index']); // Page load - controller handles auth
@@ -162,6 +178,16 @@ $router->post('/checkout/process', [CustomerCheckout::class, 'process'])->middle
 // VNPay payment routes
 $router->post('/api/payment/vnpay/create', [\App\Controllers\Customer\VNPayController::class, 'createPayment'])->middleware('jwt');
 $router->get('/payment/vnpay/callback', [\App\Controllers\Customer\VNPayController::class, 'callback']);
+
+// ZaloPay payment routes
+$router->post('/api/payment/zalopay/create', [\App\Controllers\Customer\ZaloPayController::class, 'createPayment'])->middleware('jwt');
+$router->post('/api/payment/zalopay/callback', [\App\Controllers\Customer\ZaloPayController::class, 'callback']);
+$router->get('/payment/zalopay/return', [\App\Controllers\Customer\ZaloPayController::class, 'returnUrl']);
+
+// Chat API routes (Chat support system with Rasa integration)
+$router->post('/api/chat/init', [ApiChat::class, 'init'])->middleware('jwt');
+$router->post('/api/chat/send', [ApiChat::class, 'send'])->middleware('jwt');
+$router->get('/api/chat/messages/{sessionId}', [ApiChat::class, 'getMessages'])->middleware('jwt');
 
 /* routes admin */
 $router->group('/admin', function (Router $r): void {
@@ -359,12 +385,23 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/api/orders', [AdminOrder::class, 'apiIndex']);
     $r->get('/api/orders/next-code', [AdminOrder::class, 'nextCode']);
     $r->get('/api/orders/unpaid', [AdminOrder::class, 'unpaid']);
+    $r->post('/api/orders/calculate-with-promotions', [AdminOrder::class, 'calculateWithPromotions']);
     $r->get('/api/orders/{id}/items', [AdminOrder::class, 'getItems']);
     $r->get('/orders/{id}/print', [AdminOrder::class, 'print']);
     $r->post('/orders', [AdminOrder::class, 'store']);
     $r->put('/orders/{id}', [AdminOrder::class, 'update']);
     $r->post('/api/orders/export', [AdminOrder::class, 'export']);
     $r->delete('/orders/{id}', [AdminOrder::class, 'destroy']);
+
+    // GHN Order Processing
+    $r->post('/api/orders/{id}/process', [AdminOrder::class, 'processOrder']);
+    $r->post('/api/orders/{id}/ship-with-ghn', [AdminOrder::class, 'shipWithGHN']);
+    $r->post('/api/orders/{id}/cancel', [AdminOrder::class, 'cancelOrder']);
+    $r->post('/api/orders/{id}/manual-complete', [AdminOrder::class, 'manualComplete']);
+    $r->post('/api/orders/{id}/manual-cancel', [AdminOrder::class, 'manualCancel']);
+    $r->post('/api/orders/{id}/manual-ship', [AdminOrder::class, 'manualShip']);
+    $r->get('/api/orders/{id}/tracking', [AdminOrder::class, 'getTracking']);
+
 
     // Stock Outs (Phiếu xuất kho)
     $r->get('/stock-outs', [AdminStockOut::class, 'index']);
@@ -486,6 +523,15 @@ $router->group('/admin', function (Router $r): void {
     $r->post('/api/payroll/{id}/pay', [AdminPayroll::class, 'pay']);
     $r->post('/api/payroll/pay-all', [AdminPayroll::class, 'payAll']);
     $r->delete('/api/payroll/{id}', [AdminPayroll::class, 'delete']);
+
+    // Chat Support (Hỗ trợ trực tuyến)
+    $r->get('/chat-support', [AdminChatSupport::class, 'index']);
+    $r->get('/api/chat-support/stats', [AdminChatSupport::class, 'apiGetStats']);
+    $r->get('/api/chat-support/sessions', [AdminChatSupport::class, 'apiGetSessions']);
+    $r->get('/api/chat-support/messages/{sessionId}', [AdminChatSupport::class, 'apiGetMessages']);
+    $r->post('/api/chat-support/send', [AdminChatSupport::class, 'apiSendMessage']);
+    $r->post('/api/chat-support/assign', [AdminChatSupport::class, 'apiAssignStaff']);
+    $r->post('/api/chat-support/close', [AdminChatSupport::class, 'apiCloseSession']);
 });
 
 /* --- chạy router --- */

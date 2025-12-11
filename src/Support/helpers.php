@@ -434,3 +434,29 @@ if (!function_exists('pagination')) {
     return $html;
   }
 }
+
+/**
+ * Get avatar URL - supports both local paths and cloud URLs (ImgBB)
+ * 
+ * @param string|null $avatarUrl
+ * @return string
+ */
+if (!function_exists('getAvatarUrl')) {
+  function getAvatarUrl($avatarUrl)
+  {
+    if (empty($avatarUrl)) {
+      return '/assets/images/avatar/default.png';
+    }
+
+    // If it's a full URL (from ImgBB), return as is
+    if (str_starts_with($avatarUrl, 'http://') || str_starts_with($avatarUrl, 'https://')) {
+      return htmlspecialchars($avatarUrl);
+    }
+
+    // Otherwise, it's a local path
+    return '/assets/images/avatar/' . htmlspecialchars($avatarUrl);
+  }
+}
+
+// Load product image helper
+require_once __DIR__ . '/product_image_helper.php';

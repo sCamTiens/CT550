@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models\Repositories;
 
 use App\Core\DB;
@@ -59,14 +60,19 @@ class ProductRepository
      */
     private function getProductImage(int $productId): string
     {
-        // Check if product image exists in filesystem
-        $imagePath = __DIR__ . '/../../../public/assets/images/products/' . $productId . '/1.png';
+        // Query database for product image
+        $pdo = DB::pdo();
+        $stmt = $pdo->prepare("
+            SELECT image_url 
+            FROM product_images 
+            WHERE product_id = ? AND is_primary = 1
+            LIMIT 1
+        ");
+        $stmt->execute([$productId]);
+        $imageUrl = $stmt->fetchColumn();
 
-        if (file_exists($imagePath)) {
-            return '/assets/images/products/' . $productId . '/1.png';
-        }
-
-        return '/assets/images/products/default.png';
+        // Return the image URL from database, or default if not found
+        return $imageUrl ?: '/assets/images/products/default.png';
     }
 
     /**
@@ -276,9 +282,9 @@ class ProductRepository
                 INSERT INTO stocks (product_id, qty, safety_stock, updated_by)
                 VALUES (:pid, 0, 0, :uid)
             ")->execute([
-                        ':pid' => $id,
-                        ':uid' => $currentUser,
-                    ]);
+                ':pid' => $id,
+                ':uid' => $currentUser,
+            ]);
 
             $pdo->commit();
 

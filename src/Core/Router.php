@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Core;
 
 use App\Middlewares\JWTMiddleware;
@@ -92,7 +93,7 @@ final class Router
                         if (isset($this->middlewareMap[$mwName])) {
                             $mwClass = $this->middlewareMap[$mwName];
                             $result = $mwClass::handle($req);
-                            
+
                             // If middleware returns false, stop execution
                             if ($result === false) {
                                 return;
@@ -108,7 +109,7 @@ final class Router
                     [$cls, $fn] = $h;
                     $obj = new $cls;
 
-                    // Auto inject Request
+                    // Auto inject Request and Response
                     $rm = new \ReflectionMethod($obj, $fn);
                     $args = [];
                     foreach ($rm->getParameters() as $p) {
@@ -117,8 +118,14 @@ final class Router
                             $type instanceof \ReflectionNamedType
                             && $type->getName() === Request::class;
 
+                        $isRes =
+                            $type instanceof \ReflectionNamedType
+                            && $type->getName() === Response::class;
+
                         if ($isReq) {
                             $args[] = $req;
+                        } elseif ($isRes) {
+                            $args[] = new Response();
                         } elseif (array_key_exists($p->getName(), $params)) {
                             $args[] = $params[$p->getName()];
                         } elseif ($p->isDefaultValueAvailable()) {

@@ -1,0 +1,160 @@
+version: "3.1"
+
+nlu:
+  # =====================================================================
+  # CHÀO HỎI & TẠM BIỆT
+  # =====================================================================
+  - intent: greet
+    examples: |
+      - chào
+      - xin chào
+      - hello
+      - hi
+      - chào bạn
+      - chào shop
+      - alo
+      - có ai không
+      - có người ở đây không
+
+  - intent: goodbye
+    examples: |
+      - tạm biệt
+      - bye
+      - goodbye
+      - hẹn gặp lại
+      - cảm ơn nhé
+      - đủ rồi
+      - thôi đủ rồi
+      - ok cảm ơn
+
+  # =====================================================================
+  # KHẲNG ĐỊNH & PHỦ ĐỊNH
+  # =====================================================================
+  - intent: affirm
+    examples: |
+      - có
+      - đúng
+      - đúng rồi
+      - ok
+      - được
+      - đồng ý
+      - yes
+      - ừ
+
+  - intent: deny
+    examples: |
+      - không
+      - không phải
+      - sai rồi
+      - không đúng
+      - chưa
+      - no
+      - thôi
+
+  # =====================================================================
+  # KIỂM TRA ĐƠN HÀNG
+  # =====================================================================
+  - intent: check_order
+    examples: |
+      - kiểm tra đơn hàng [DH001](order_code)
+      - xem đơn [DH002](order_code)
+      - đơn hàng [DH003](order_code) của tôi
+      - cho tôi xem đơn [DH004](order_code)
+      - tình trạng đơn [DH005](order_code)
+      - đơn [DH006](order_code) đang ở đâu
+      - kiểm tra mã đơn [DH007](order_code)
+      - xem thông tin đơn [DH008](order_code)
+      - đơn hàng mã số [DH009](order_code)
+      - tôi muốn xem đơn [DH010](order_code)
+      - kiểm tra đơn
+      - xem đơn hàng
+      - đơn hàng của tôi thế nào
+      - cho tôi biết tình trạng đơn hàng
+
+  # =====================================================================
+  # TÌM SẢN PHẨM
+  # =====================================================================
+  - intent: search_product
+    examples: |
+      - tìm [nước giặt](product_name)
+      - có [sữa milo](product_name) không
+      - bán [bánh snack](product_name) không
+      - tìm sản phẩm [dầu gội](product_name)
+      - có [khăn giấy](product_name) không shop
+      - shop có bán [nước ngọt](product_name) không
+      - tìm giúp tôi [bột giặt](product_name)
+      - [cà phê](product_name) giá bao nhiêu
+      - tìm [mì gói](product_name) cho tôi
+      - có [sữa tắm](product_name) nào không
+      - [kem đánh răng](product_name) còn không
+      - tôi cần mua [nước rửa chén](product_name)
+      - cho tôi xem [bánh quy](product_name)
+      - tìm sản phẩm
+      - có sản phẩm gì
+      - xem sản phẩm
+
+  # =====================================================================
+  # LỊCH SỬ MUA HÀNG
+  # =====================================================================
+  - intent: order_history
+    examples: |
+      - lịch sử đơn hàng
+      - xem lịch sử mua hàng
+      - đơn hàng của tôi
+      - tôi đã mua những gì
+      - cho tôi xem các đơn hàng trước
+      - lịch sử giao dịch
+      - đơn hàng đã đặt
+      - các đơn hàng cũ
+      - tôi muốn xem lịch sử
+      - những đơn hàng trước đây
+      - đã từng mua gì
+      - xem các đơn cũ
+
+  # =====================================================================
+  # THEO DÕI ĐƠN HÀNG
+  # =====================================================================
+  - intent: track_order
+    examples: |
+      - theo dõi đơn [DH001](order_code)
+      - tracking đơn [DH002](order_code)
+      - đơn [DH003](order_code) đang ở đâu
+      - vận chuyển đơn [DH004](order_code)
+      - đơn [DH005](order_code) giao chưa
+      - ship đơn [DH006](order_code) đâu rồi
+      - đơn [DH007](order_code) đến chưa
+      - kiểm tra giao hàng [DH008](order_code)
+      - xem trạng thái vận chuyển [DH009](order_code)
+      - hàng đến khi nào
+      - theo dõi vận chuyển
+      - đơn hàng tôi giao chưa
+      - shipper đang ở đâu
+
+  # =====================================================================
+  # TRỢ GIÚP
+  # =====================================================================
+  - intent: help
+    examples: |
+      - giúp tôi
+      - help
+      - hướng dẫn
+      - bạn làm được gì
+      - bạn có thể giúp gì
+      - tôi có thể hỏi gì
+      - chức năng
+      - làm thế nào
+      - hỗ trợ
+      - cần hỗ trợ
+      - trợ giúp
+
+  # =====================================================================
+  # XÁC NHẬN BOT
+  # =====================================================================
+  - intent: bot_challenge
+    examples: |
+      - bạn là ai
+      - bạn là bot à
+      - bạn là con người không
+      - tôi đang nói chuyện với ai
+      - bạn là robot à
+      - ai đang trả lời tôi

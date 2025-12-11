@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models\Repositories;
 
 use App\Core\DB;
@@ -107,7 +108,7 @@ class OrderRepository
             error_log("=== OrderRepository::create START ===");
             error_log("Data received: " . json_encode($data, JSON_UNESCAPED_UNICODE));
             error_log("Current user: " . $currentUser);
-            
+
             // Validate required fields
             if (empty($data['code'])) {
                 throw new \Exception('Mã đơn hàng không được để trống');
@@ -115,7 +116,7 @@ class OrderRepository
             if (empty($data['items']) || !is_array($data['items'])) {
                 throw new \Exception('Đơn hàng phải có ít nhất 1 sản phẩm');
             }
-            
+
             $pdo->beginTransaction();
 
             // Map payment method
@@ -148,6 +149,49 @@ class OrderRepository
             $customerId = $data['customer_id'] ?? $data['payer_user_id'] ?? null;
             error_log("Customer ID: " . ($customerId ?? 'NULL'));
 
+            // === TỰ ĐỘNG TÍNH KHUYẾN MÃI NẾU CHƯA CÓ ===
+            if (empty($data['promotion_discount']) || $data['promotion_discount'] == 0) {
+                try {
+                    error_log("No promotion_discount provided, auto-calculating...");
+
+                    // Chuẩn bị data cho PromotionHelper
+                    $cartItems = [];
+                    foreach ($data['items'] as $item) {
+                        $cartItems[] = [
+                            'id' => $item['product_id'],
+                            'price' => $item['unit_price'] ?? 0,
+                            'quantity' => $item['qty'] ?? 1
+                        ];
+                    }
+
+                    if (!empty($cartItems)) {
+                        // Kiểm tra class tồn tại
+                        if (class_exists('\\App\\Support\\PromotionHelper')) {
+                            $promotionResult = \App\Support\PromotionHelper::calculateOrderTotal($cartItems);
+
+                            // Cập nhật data với thông tin khuyến mãi
+                            $data['subtotal'] = $promotionResult['subtotal'];
+                            $data['promotion_discount'] = $promotionResult['total_discount'];
+
+                            // Tính lại grand_total
+                            $data['total_amount'] = $promotionResult['grand_total'];
+
+                            error_log("Auto-calculated promotion: " . json_encode([
+                                'subtotal' => $promotionResult['subtotal'],
+                                'promotion_discount' => $promotionResult['total_discount'],
+                                'grand_total' => $promotionResult['grand_total']
+                            ]));
+                        } else {
+                            error_log("PromotionHelper class not found, skipping auto-calculation");
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    // Log lỗi nhưng không fail toàn bộ đơn hàng
+                    error_log("Error auto-calculating promotion: " . $e->getMessage());
+                    error_log("Stack trace: " . $e->getTraceAsString());
+                }
+            }
+
             // Tạo đơn hàng - SỬ DỤNG ĐÚNG TÊN CỘT DATABASE
             $sql = "
                 INSERT INTO orders
@@ -161,15 +205,15 @@ class OrderRepository
                 :coupon_code, :shipping_address_id, :note,
                 :created_by, NOW())
             ";
-            
+
             error_log("SQL: " . $sql);
             $stmt = $pdo->prepare($sql);
-            
+
             $params = [
                 ':code' => $data['code'],
                 ':user_id' => $customerId,
                 ':order_type' => 'Offline',
-                ':status' => 'Hoàn tất',
+                ':status' => 'Đã giao',
                 ':payment_id' => $paymentId,
                 ':payment_method' => $paymentMethod,
                 ':payment_status' => 'Đã thanh toán',
@@ -186,9 +230,9 @@ class OrderRepository
                 ':note' => $data['note'] ?? null,
                 ':created_by' => $currentUser,
             ];
-            
+
             error_log("Executing order INSERT with params: " . json_encode($params, JSON_UNESCAPED_UNICODE));
-            
+
             try {
                 $stmt->execute($params);
                 $id = (int) $pdo->lastInsertId();
@@ -229,7 +273,7 @@ class OrderRepository
                     if ($currentStock < $qtyNeeded) {
                         throw new \Exception(
                             "Sản phẩm '{$product['name']}' không đủ tồn kho. " .
-                            "Tồn kho hiện tại: {$currentStock}, yêu cầu: {$qtyNeeded}"
+                                "Tồn kho hiện tại: {$currentStock}, yêu cầu: {$qtyNeeded}"
                         );
                     }
                 }
@@ -289,7 +333,7 @@ class OrderRepository
             error_log("Creating receipt voucher...");
             $receiptCode = $this->generateReceiptCode($pdo);
             error_log("Receipt code: " . $receiptCode);
-            
+
             try {
                 $stmtReceipt = $pdo->prepare("
                     INSERT INTO receipt_vouchers
@@ -318,7 +362,7 @@ class OrderRepository
             error_log("Creating stock out...");
             $stockOutCode = $this->generateStockOutCode($pdo);
             error_log("Stock out code: " . $stockOutCode);
-            
+
             try {
                 $stmtStockOut = $pdo->prepare("
                     INSERT INTO stock_outs
@@ -420,18 +464,18 @@ class OrderRepository
             if (!empty($data['coupon_code'])) {
                 error_log("Incrementing used_count for coupon: " . $data['coupon_code']);
                 error_log("CustomerId for coupon logging: " . ($customerId ?? 'NULL'));
-                
+
                 try {
                     require_once __DIR__ . '/CouponRepository.php';
                     $couponRepo = new CouponRepository();
-                    
+
                     // Tăng used_count
                     $couponRepo->incrementUsedCount($data['coupon_code']);
                     error_log("Coupon used_count incremented successfully");
-                    
+
                     // Ghi log vào user_coupons
                     $discountAmount = $data['discount_amount'] ?? 0;
-                    
+
                     // Nếu không có customerId, thử lấy từ session hoặc data khác
                     $userIdForLog = $customerId;
                     if (!$userIdForLog && isset($data['user_id'])) {
@@ -442,7 +486,7 @@ class OrderRepository
                         $userIdForLog = $_SESSION['user']['id'];
                         error_log("Using user_id from session: {$userIdForLog}");
                     }
-                    
+
                     $couponRepo->logCouponUsage($data['coupon_code'], $userIdForLog, $id, $discountAmount);
                     error_log("Coupon usage logged successfully");
                 } catch (\Exception $e) {
@@ -457,7 +501,7 @@ class OrderRepository
                 try {
                     $pointsUsed = (int)$data['loyalty_points_used'];
                     error_log("Using loyalty points: $pointsUsed points for customer $customerId");
-                    
+
                     $customerRepo = new \App\Models\Repositories\CustomerRepository();
                     $result = $customerRepo->redeemLoyaltyPoints(
                         $customerId,
@@ -465,15 +509,15 @@ class OrderRepository
                         $id,
                         "Sử dụng điểm cho đơn hàng {$data['code']} (Giảm: " . number_format($pointsUsed, 0, ',', '.') . "đ)"
                     );
-                    
+
                     if ($result !== true) {
                         throw new \Exception($result ?: 'Không thể sử dụng điểm tích lũy');
                     }
-                    
+
                     // Cập nhật loyalty_points_used và loyalty_discount trong orders
                     $stmt = $pdo->prepare("UPDATE orders SET loyalty_points_used = ?, loyalty_discount = ? WHERE id = ?");
                     $stmt->execute([$pointsUsed, $pointsUsed, $id]);
-                    
+
                     error_log("Successfully used $pointsUsed loyalty points");
                 } catch (\Exception $e) {
                     error_log("Error using loyalty points: " . $e->getMessage());
@@ -492,10 +536,10 @@ class OrderRepository
                 try {
                     $totalAmount = (float)$data['total_amount'];
                     $pointsEarned = floor($totalAmount / 1000); // 1000đ = 1 điểm
-                    
+
                     if ($pointsEarned > 0) {
                         error_log("Earning loyalty points: $pointsEarned points for customer $customerId");
-                        
+
                         $customerRepo = new \App\Models\Repositories\CustomerRepository();
                         $result = $customerRepo->addLoyaltyPoints(
                             $customerId,
@@ -503,12 +547,12 @@ class OrderRepository
                             $id,
                             "Tích điểm từ đơn hàng {$data['code']} (Tổng tiền: " . number_format($totalAmount, 0, ',', '.') . "đ)"
                         );
-                        
+
                         if ($result) {
                             // Cập nhật loyalty_points_earned trong orders
                             $stmt = $pdo->prepare("UPDATE orders SET loyalty_points_earned = ? WHERE id = ?");
                             $stmt->execute([$pointsEarned, $id]);
-                            
+
                             error_log("Successfully earned $pointsEarned loyalty points");
                         }
                     }
@@ -523,7 +567,7 @@ class OrderRepository
                 'code' => $data['code'],
                 'payer_user_id' => $customerId,
                 'order_type' => 'Offline',
-                'status' => 'Hoàn tất',
+                'status' => 'Đã giao',
                 'payment_method' => $paymentMethod,
                 'payment_status' => 'Đã thanh toán',
                 'subtotal' => $data['subtotal'] ?? 0,
@@ -616,7 +660,7 @@ class OrderRepository
                 ':id' => $id,
                 ':user_id' => $customerId,
                 ':order_type' => 'Offline',
-                ':status' => 'Hoàn tất',
+                ':status' => $data['status'] ?? 'Chờ xử lý',
                 ':payment_method' => $paymentMethod,
                 ':payment_status' => 'Đã thanh toán',
                 ':subtotal' => $data['subtotal'] ?? 0,
@@ -727,7 +771,7 @@ class OrderRepository
             if ($beforeArray) {
                 $afterArray = [
                     'payer_user_id' => $customerId,
-                    'status' => 'Hoàn tất',
+                    'status' => $data['status'] ?? 'Chờ xử lý',
                     'payment_method' => $paymentMethod,
                     'payment_status' => 'Đã thanh toán',
                     'subtotal' => $data['subtotal'] ?? 0,
@@ -862,12 +906,12 @@ class OrderRepository
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$orderId]);
         $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-        
+
         // Add image path for each product
         foreach ($rows as &$row) {
             $row['product_image'] = $this->getProductImage($row['product_id']);
         }
-        
+
         return $rows;
     }
 
@@ -890,7 +934,7 @@ class OrderRepository
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$customerId]);
         $row = $stmt->fetch(\PDO::FETCH_ASSOC);
-        
+
         return $row ?: [];
     }
 

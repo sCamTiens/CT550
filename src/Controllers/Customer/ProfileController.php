@@ -192,7 +192,7 @@ class ProfileController extends Controller
     }
 
     /**
-     * POST /profile/upload-avatar - Upload avatar
+     * POST /profile/upload-avatar - Upload avatar lên ImgBB
      */
     public function uploadAvatar(Request $req): mixed
     {
@@ -215,27 +215,20 @@ class ProfileController extends Controller
             exit;
         }
 
-        $uploadDir = __DIR__ . '/../../../public/assets/images/avatar/';
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
-        }
+        try {
+            // Initialize ImgBB service
+            $imgbb = new \App\Support\ImageHostingService();
 
-        // Generate unique filename
-        $filename = $this->profileRepo->generateAvatarFilename($customerId, $file['name']);
-        $destination = $uploadDir . $filename;
+            // Upload to ImgBB
+            $result = $imgbb->uploadImage(
+                $file['tmp_name'],
+                "avatar_user_{$customerId}_" . time()
+            );
 
-        // Delete old avatar
-        $oldAvatar = $this->profileRepo->getAvatarUrl($customerId);
-        if ($oldAvatar) {
-            $this->profileRepo->deleteOldAvatar($oldAvatar);
-        }
-
-        // Move uploaded file
-        if (move_uploaded_file($file['tmp_name'], $destination)) {
-            // Update database
-            if ($this->profileRepo->updateAvatar($customerId, $filename)) {
+            // Update database with ImgBB URL
+            if ($this->profileRepo->updateAvatar($customerId, $result['url'])) {
                 // Update session
-                $_SESSION['customer']['avatar_url'] = $filename;
+                $_SESSION['customer']['avatar_url'] = $result['url'];
 
                 $_SESSION['profile_success'] = 'Cập nhật ảnh đại diện thành công!';
                 header('Location: /profile?tab=info&avatar-updated=1');
@@ -243,8 +236,9 @@ class ProfileController extends Controller
                 $_SESSION['flash_error'] = 'Không thể cập nhật database';
                 header('Location: /profile?tab=info');
             }
-        } else {
-            $_SESSION['flash_error'] = 'Không thể upload ảnh';
+        } catch (\Exception $e) {
+            error_log('[ProfileController::uploadAvatar] Error: ' . $e->getMessage());
+            $_SESSION['flash_error'] = 'Không thể upload ảnh: ' . $e->getMessage();
             header('Location: /profile?tab=info');
         }
 

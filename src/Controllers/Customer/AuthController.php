@@ -281,6 +281,18 @@ class AuthController extends Controller
     {
         unset($_SESSION['customer']);
         session_destroy();
+
+        // Check if POST/AJAX request
+        $isPost = $_SERVER['REQUEST_METHOD'] === 'POST';
+
+        if ($isPost) {
+            // Return JSON for POST requests
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'message' => 'Logged out']);
+            exit;
+        }
+
+        // Redirect for GET requests
         $this->redirect('/login');
     }
 
@@ -291,7 +303,7 @@ class AuthController extends Controller
     {
         // Try to get refresh token from session first
         $refreshToken = $_SESSION['customer']['refresh_token'] ?? null;
-        
+
         // Fall back to request body (for API clients)
         if (!$refreshToken) {
             $data = json_decode(file_get_contents('php://input'), true);

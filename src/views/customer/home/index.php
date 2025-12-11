@@ -541,7 +541,7 @@
                                 <a href="/products/<?= htmlspecialchars($p['slug'] ?? '') ?>">
                                     <div class="h-64 bg-gray-100 flex items-center justify-center overflow-hidden p-2">
                                         <?php if (!empty($p['image_url'])): ?>
-                                            <img src="<?= htmlspecialchars($p['image_url']) ?>?t=<?= !empty($p['updated_at']) ? strtotime($p['updated_at']) : time() ?>"
+                                            <img src="<?= getProductImageUrl($p['image_url']) ?>?t=<?= !empty($p['updated_at']) ? strtotime($p['updated_at']) : time() ?>"
                                                 alt="<?= htmlspecialchars($p['name']) ?>"
                                                 class="w-full h-full object-contain hover:scale-105 transition-transform duration-300">
                                         <?php else: ?>

@@ -3,6 +3,18 @@
 
 <head>
     <?php require __DIR__ . '/../partials/head.php'; ?>
+    <style>
+        /* Hide number input spinner arrows */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
 </head>
 
 <body class="bg-gray-50">
@@ -12,10 +24,17 @@
     <div id="toast-container"></div>
 
     <main class="container mx-auto px-4 py-8">
-        <h1 class="text-3xl font-bold mb-6 flex items-center gap-3">
-            <i class="fa-solid fa-shopping-cart text-[#002975]"></i>
-            Giỏ hàng của bạn
-        </h1>
+        <div class="flex justify-center">
+            <h1 class="text-3xl font-bold mb-6 flex items-center gap-3 text-[#002975]">
+                Giỏ hàng
+            </h1>
+        </div>
+
+        <?php
+        error_log("=== VIEW CART ===");
+        error_log("cartItems in view: " . (isset($cartItems) ? count($cartItems) : 'NOT SET'));
+        error_log("empty check: " . (empty($cartItems) ? 'TRUE' : 'FALSE'));
+        ?>
 
         <?php if (empty($cartItems)): ?>
             <!-- Giỏ hàng trống -->
@@ -41,72 +60,323 @@
                                 class="w-5 h-5 text-[#002975] rounded border-gray-300 focus:ring-2 focus:ring-[#002975]"
                                 onchange="toggleSelectAll(this.checked)">
                             <label for="select-all" class="font-semibold text-gray-700">
-                                Chọn tất cả (<?= count($cartItems) ?> sản phẩm)
+                                Chọn tất cả (<?= count($cartItems ?? []) ?> sản phẩm)
                             </label>
                         </div>
-                        <?php foreach ($cartItems as $item): ?>
-                            <div class="flex gap-4 p-4 border-b last:border-b-0 hover:bg-gray-50"
-                                data-product-id="<?= $item['id'] ?>">
-                                <!-- Checkbox -->
+
+                        <?php
+                        // Bước 1: Xác định combo trước
+                        $processedCombos = [];
+                        $comboProductIds = [];
+
+                        error_log("=== COMBO DETECTION START ===");
+                        error_log("Cart items: " . count($cartItems ?? []));
+                        error_log("Promotions: " . json_encode(array_keys($promotions ?? [])));
+
+                        foreach (($cartItems ?? []) as $item) {
+                            $productId = $item['id'];
+                            $itemPromotions = $promotions[$productId] ?? [];
+
+                            error_log("Checking product $productId for combos, promotions count: " . count($itemPromotions));
+
+                            foreach ($itemPromotions as $promo) {
+                                if ($promo['promo_type'] === 'combo' && !empty($promo['combo_price'])) {
+                                    $comboId = $promo['id'];
+                                    error_log("Found combo promo ID $comboId for product $productId");
+                                    if (!isset($processedCombos[$comboId])) {
+                                        $comboItems = $promo['combo_items'] ?? [];
+                                        $canApplyCombo = true;
+                                        $comboProducts = [];
+                                        $comboOriginalTotal = 0;
+                                        $tempComboProductIds = []; // Temporary array
+
+                                        foreach ($comboItems as $comboItem) {
+                                            $found = false;
+                                            foreach (($cartItems ?? []) as $cartItem) {
+                                                if (
+                                                    $cartItem['id'] == $comboItem['product_id'] &&
+                                                    $cartItem['quantity'] >= $comboItem['required_qty']
+                                                ) {
+                                                    $found = true;
+                                                    $comboProducts[] = $cartItem;
+                                                    $comboOriginalTotal += $cartItem['price'] * $comboItem['required_qty'];
+                                                    $tempComboProductIds[] = $cartItem['id']; // Add to temp
+                                                    error_log("Combo item found: product {$cartItem['id']}, added to temp");
+                                                    break;
+                                                }
+                                            }
+                                            if (!$found) {
+                                                $canApplyCombo = false;
+                                                error_log("Combo item not found or insufficient qty, combo cannot apply");
+                                                break;
+                                            }
+                                        }
+
+                                        if ($canApplyCombo) {
+                                            // Only add to comboProductIds if combo actually applies
+                                            $comboProductIds = array_merge($comboProductIds, $tempComboProductIds);
+                                            error_log("Combo $comboId CAN apply, added products to comboProductIds: " . json_encode($tempComboProductIds));
+
+                                            $processedCombos[$comboId] = [
+                                                'applied' => true,
+                                                'combo_price' => $promo['combo_price'],
+                                                'products' => $comboProducts,
+                                                'name' => $promo['name'],
+                                                'original_total' => $comboOriginalTotal
+                                            ];
+                                        } else {
+                                            error_log("Combo $comboId CANNOT apply, NOT adding to comboProductIds");
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        error_log("Final comboProductIds: " . json_encode($comboProductIds));
+                        error_log("=== COMBO DETECTION END ===");
+                        ?>
+                        <!-- Bước 2: Hiển thị combo trước -->
+                        <?php foreach ($processedCombos as $comboId => $combo):
+                            if (!$combo['applied']) continue;
+                        ?>
+                            <!-- COMBO HEADER -->
+                            <div class="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-300 rounded-t-lg p-3 m-4 mb-0">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span class="bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-bold">
+                                            🎁 COMBO
+                                        </span>
+                                        <span class="font-bold text-purple-900"><?= htmlspecialchars($combo['name']) ?></span>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-sm text-gray-500 line-through">
+                                            <?= number_format($combo['original_total'], 0, ',', '.') ?>₫
+                                        </div>
+                                        <div class="text-xl font-bold text-purple-600">
+                                            <?= number_format($combo['combo_price'], 0, ',', '.') ?>₫
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- COMBO PRODUCTS -->
+                            <?php foreach ($combo['products'] as $comboProduct): ?>
+                                <div class="flex gap-4 p-4 pl-8 border-b border-l-4 border-l-purple-400 bg-purple-50/30">
+                                    <div class="flex-shrink-0 flex items-center">
+                                        <input type="checkbox"
+                                            class="item-checkbox w-5 h-5 text-[#002975] rounded border-gray-300 focus:ring-2 focus:ring-[#002975]"
+                                            data-product-id="<?= $comboProduct['id'] ?>"
+                                            data-price="<?= $combo['combo_price'] / count($combo['products']) ?>"
+                                            data-quantity="<?= $comboProduct['quantity'] ?>" onchange="updateSelectedTotal()" checked>
+                                    </div>
+
+                                    <div class="flex-shrink-0">
+                                        <img src="<?= htmlspecialchars($comboProduct['image_url']) ?>"
+                                            alt="<?= htmlspecialchars($comboProduct['name']) ?>"
+                                            class="w-20 h-20 object-cover rounded-lg border-2">
+                                    </div>
+
+                                    <div class="flex-1">
+                                        <h3 class="font-bold text-base mb-1">
+                                            <?= htmlspecialchars($comboProduct['name']) ?>
+                                        </h3>
+                                        <div class="text-sm text-gray-600">Số lượng: <?= $comboProduct['quantity'] ?></div>
+                                        <div class="text-sm text-purple-600 font-semibold mt-1">
+                                            (Trong combo)
+                                        </div>
+                                    </div>
+
+                                    <div class="flex flex-col items-end justify-center">
+                                        <button onclick="removeItem(<?= $comboProduct['id'] ?>)"
+                                            class="text-red-600 hover:text-red-800 p-2 mb-2">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endforeach; ?>
+
+                        <!-- Bước 3: Hiển thị sản phẩm thường -->
+                        <?php
+                        error_log("=== PRODUCT LOOP START ===");
+                        foreach (($cartItems ?? []) as $item):
+                            $productId = $item['id'];
+                            error_log("Processing product ID: $productId");
+
+                            // Skip nếu sản phẩm đã thuộc combo
+                            if (in_array($productId, $comboProductIds)) {
+                                error_log("Product $productId is in combo, skipping");
+                                continue;
+                            }
+
+                            $itemPromotions = $promotions[$productId] ?? [];
+
+                            // Tính giá
+                            $originalPrice = $item['price'];
+                            $currentPrice = $originalPrice;
+                            $originalSubtotal = $originalPrice * $item['quantity'];
+                            $currentSubtotal = $originalSubtotal;
+                            $hasDiscount = false;
+                            $hasBundle = false;
+                            $bundleInfo = null;
+                            $hasGift = false;
+                            $giftInfo = null;
+
+                            foreach ($itemPromotions as $promo) {
+                                if ($promo['promo_type'] === 'discount') {
+                                    if ($promo['discount_type'] === 'percentage') {
+                                        $currentPrice = $originalPrice * (1 - $promo['discount_value'] / 100);
+                                    } else {
+                                        $currentPrice = $originalPrice - $promo['discount_value'];
+                                    }
+                                    $currentSubtotal = $currentPrice * $item['quantity'];
+                                    $hasDiscount = true;
+                                    break;
+                                }
+
+                                if ($promo['promo_type'] === 'bundle' && $item['quantity'] >= ($promo['required_qty'] ?? 1)) {
+                                    $requiredQty = $promo['required_qty'] ?? 1;
+                                    $bundlePrice = $promo['bundle_price'] ?? $originalPrice;
+                                    $bundleSets = floor($item['quantity'] / $requiredQty);
+                                    $currentSubtotal = $bundlePrice * $bundleSets;
+                                    $remainingQty = $item['quantity'] % $requiredQty;
+                                    if ($remainingQty > 0) {
+                                        $currentSubtotal += $originalPrice * $remainingQty;
+                                    }
+                                    $hasBundle = true;
+                                    $bundleInfo = [
+                                        'required_qty' => $requiredQty,
+                                        'bundle_price' => $bundlePrice
+                                    ];
+                                    break;
+                                }
+
+                                if ($promo['promo_type'] === 'gift' && $item['quantity'] >= ($promo['required_qty'] ?? 1)) {
+                                    $giftQty = floor($item['quantity'] / $promo['required_qty']) * $promo['gift_qty'];
+                                    $hasGift = true;
+                                    $giftInfo = [
+                                        'name' => $promo['gift_name'] ?? 'Quà tặng',
+                                        'image_url' => $promo['gift_image_url'] ?? '/assets/images/default-product.png',
+                                        'quantity' => $giftQty,
+                                        'required_qty' => $promo['required_qty'],
+                                        'gift_qty' => $promo['gift_qty']
+                                    ];
+                                }
+                            }
+                        ?>
+                            <!-- SẢN PHẨM CHÍNH -->
+                            <div class="flex gap-4 p-4 border-b hover:bg-gray-50" data-product-id="<?= $item['id'] ?>">
                                 <div class="flex-shrink-0 flex items-center">
                                     <input type="checkbox"
                                         class="item-checkbox w-5 h-5 text-[#002975] rounded border-gray-300 focus:ring-2 focus:ring-[#002975]"
-                                        data-product-id="<?= $item['id'] ?>" data-price="<?= $item['price'] ?>"
+                                        data-product-id="<?= $item['id'] ?>" data-price="<?= $currentPrice ?>"
                                         data-quantity="<?= $item['quantity'] ?>" onchange="updateSelectedTotal()" checked>
                                 </div>
 
-                                <!-- Hình ảnh -->
                                 <div class="flex-shrink-0">
                                     <img src="<?= htmlspecialchars($item['image_url']) ?>"
                                         alt="<?= htmlspecialchars($item['name']) ?>"
                                         class="w-24 h-24 object-cover rounded-lg border-2">
                                 </div>
 
-                                <!-- Thông tin -->
                                 <div class="flex-1">
                                     <h3 class="font-bold text-lg mb-1">
                                         <a href="/products/<?= htmlspecialchars($item['slug']) ?>" class="hover:text-[#002975]">
                                             <?= htmlspecialchars($item['name']) ?>
                                         </a>
                                     </h3>
-                                    <div class="text-red-600 font-semibold mb-2">
-                                        <?= number_format($item['price'], 0, ',', '.') ?>₫
+
+                                    <div class="mb-2">
+                                        <?php if ($hasDiscount || $hasBundle): ?>
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-gray-400 line-through text-sm">
+                                                    <?= number_format($originalPrice, 0, ',', '.') ?>₫
+                                                </span>
+                                                <span class="text-red-600 font-semibold">
+                                                    <?= number_format($currentPrice, 0, ',', '.') ?>₫
+                                                </span>
+                                                <span class="bg-red-100 text-red-600 px-2 py-1 rounded text-xs font-semibold">
+                                                    GIẢM GIÁ
+                                                </span>
+                                            </div>
+                                        <?php else: ?>
+                                            <div class="text-red-600 font-semibold">
+                                                <?= number_format($originalPrice, 0, ',', '.') ?>₫
+                                            </div>
+                                        <?php endif; ?>
+
+                                        <?php if ($hasBundle && $bundleInfo): ?>
+                                            <div class="text-sm text-green-600 mt-1">
+                                                Mua <?= $bundleInfo['required_qty'] ?> chỉ <?= number_format($bundleInfo['bundle_price'], 0, ',', '.') ?>₫
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
 
-                                    <!-- Số lượng -->
                                     <div class="flex items-center gap-4">
                                         <div class="flex items-center border-2 rounded-lg">
                                             <button onclick="updateQty(<?= $item['id'] ?>, -1)"
-                                                class="px-3 py-1 text-gray-600 hover:bg-gray-100 font-bold">
-                                                -
-                                            </button>
+                                                class="px-3 py-1 text-gray-600 hover:bg-gray-100 font-bold">-</button>
                                             <input type="number" id="qty-<?= $item['id'] ?>" value="<?= $item['quantity'] ?>"
                                                 min="1" max="<?= $item['stock_qty'] ?>"
                                                 class="w-16 text-center border-x-2 py-1 font-semibold"
                                                 onchange="changeQty(<?= $item['id'] ?>, this.value)">
                                             <button onclick="updateQty(<?= $item['id'] ?>, 1)"
-                                                class="px-3 py-1 text-gray-600 hover:bg-gray-100 font-bold">
-                                                +
-                                            </button>
+                                                class="px-3 py-1 text-gray-600 hover:bg-gray-100 font-bold">+</button>
                                         </div>
-
-                                        <div class="text-gray-600 text-sm">
-                                            Còn <?= $item['stock_qty'] ?> sản phẩm
-                                        </div>
+                                        <div class="text-gray-600 text-sm">Còn <?= $item['stock_qty'] ?> sản phẩm</div>
                                     </div>
                                 </div>
 
-                                <!-- Thành tiền & Xóa -->
                                 <div class="flex flex-col items-end justify-between">
                                     <button onclick="removeItem(<?= $item['id'] ?>)"
                                         class="text-red-600 hover:text-red-800 p-2">
                                         <i class="fa-solid fa-trash"></i>
                                     </button>
-                                    <div class="text-xl font-bold text-[#002975]" id="subtotal-<?= $item['id'] ?>">
-                                        <?= number_format($item['subtotal'], 0, ',', '.') ?>₫
+                                    <div class="text-right">
+                                        <?php if ($hasDiscount || $hasBundle): ?>
+                                            <div class="text-sm text-gray-400 line-through">
+                                                <?= number_format($originalSubtotal, 0, ',', '.') ?>₫
+                                            </div>
+                                        <?php endif; ?>
+                                        <div class="text-xl font-bold text-[#002975]" id="subtotal-<?= $item['id'] ?>">
+                                            <?= number_format($currentSubtotal, 0, ',', '.') ?>₫
+                                        </div>
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- QUÀ TẶNG NGAY DƯỚI SẢN PHẨM -->
+                            <?php if ($hasGift && $giftInfo): ?>
+                                <div class="flex gap-4 p-3 pl-12 border-b bg-yellow-50 ml-4">
+                                    <div class="flex-shrink-0 flex items-center">
+                                        <input type="checkbox" disabled class="w-5 h-5 opacity-50">
+                                    </div>
+
+                                    <div class="flex-shrink-0 relative">
+                                        <img src="<?= htmlspecialchars($giftInfo['image_url']) ?>"
+                                            alt="<?= htmlspecialchars($giftInfo['name']) ?>"
+                                            class="w-20 h-20 object-cover rounded-lg border-2 border-yellow-400">
+                                        <span class="absolute -top-2 -right-2 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+                                            QUÀ TẶNG
+                                        </span>
+                                    </div>
+
+                                    <div class="flex-1">
+                                        <h3 class="font-bold text-base mb-1 text-yellow-800">
+                                            <?= htmlspecialchars($giftInfo['name']) ?>
+                                        </h3>
+                                        <div class="text-sm text-gray-600 mb-1">
+                                            Số lượng: <?= $giftInfo['quantity'] ?>
+                                            (Mua <?= $giftInfo['required_qty'] ?> tặng <?= $giftInfo['gift_qty'] ?>)
+                                        </div>
+                                        <div class="text-green-600 font-semibold">0₫</div>
+                                    </div>
+
+                                    <div class="flex flex-col items-end justify-center">
+                                        <div class="text-lg font-bold text-green-600">0₫</div>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
                         <?php endforeach; ?>
                     </div>
                 </div>
@@ -117,10 +387,25 @@
                         <h2 class="text-xl font-bold mb-4 pb-4 border-b">Tổng đơn hàng</h2>
 
                         <div class="space-y-3 mb-4">
-                            <div class="flex justify-between text-gray-600">
-                                <span>Tạm tính:</span>
-                                <span id="temp-total"><?= number_format($total, 0, ',', '.') ?>₫</span>
-                            </div>
+                            <?php if ($totalDiscount > 0): ?>
+                                <div class="flex justify-between text-gray-600">
+                                    <span>Tạm tính (giá gốc):</span>
+                                    <span class="line-through"><?= number_format($originalTotal, 0, ',', '.') ?>₫</span>
+                                </div>
+                                <div class="flex justify-between text-green-600 font-semibold">
+                                    <span>Giảm giá:</span>
+                                    <span>-<?= number_format($totalDiscount, 0, ',', '.') ?>₫</span>
+                                </div>
+                                <div class="flex justify-between text-gray-900 font-semibold">
+                                    <span>Tạm tính (sau giảm):</span>
+                                    <span id="temp-total"><?= number_format($total, 0, ',', '.') ?>₫</span>
+                                </div>
+                            <?php else: ?>
+                                <div class="flex justify-between text-gray-600">
+                                    <span>Tạm tính:</span>
+                                    <span id="temp-total"><?= number_format($total, 0, ',', '.') ?>₫</span>
+                                </div>
+                            <?php endif; ?>
                             <div class="flex justify-between text-gray-600">
                                 <span>Phí vận chuyển:</span>
                                 <span>Miễn phí</span>
@@ -130,17 +415,18 @@
                         <div class="border-t pt-4 mb-6">
                             <div class="flex justify-between items-center">
                                 <span class="text-lg font-semibold">Tổng cộng:</span>
-                                <span class="text-2xl font-bold text-red-600" id="total-price">
-                                    <?= number_format($total, 0, ',', '.') ?>₫
-                                </span>
+                                <div class="text-right">
+                                    <?php if ($totalDiscount > 0): ?>
+                                        <div class="text-sm text-gray-400 line-through">
+                                            <?= number_format($originalTotal, 0, ',', '.') ?>₫
+                                        </div>
+                                    <?php endif; ?>
+                                    <span class="text-2xl font-bold text-red-600" id="total-price">
+                                        <?= number_format($total, 0, ',', '.') ?>₫
+                                    </span>
+                                </div>
                             </div>
                         </div>
-
-                        <!-- <button id="checkout-btn" type="button" onclick="event.preventDefault(); event.stopPropagation(); proceedToCheckout();" 
-                                class="block w-full bg-[#002975] text-white text-center px-6 py-3 rounded-lg hover:bg-[#001a54] transition-colors font-semibold text-lg mb-3 disabled:bg-gray-400 disabled:cursor-not-allowed">
-                            <i class="fa-solid fa-credit-card mr-2"></i>
-                            Thanh toán (<span id="selected-count">0</span> sản phẩm)
-                        </button> -->
 
                         <button id="checkout-btn" type="button"
                             class="block w-full bg-[#002975] text-white text-center px-6 py-3 rounded-lg hover:bg-[#001a54] transition-colors font-semibold text-lg mb-3 disabled:bg-gray-400 disabled:cursor-not-allowed">
@@ -167,13 +453,13 @@
 
     <script>
         // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function() {
             updateSelectedTotal();
 
             // Attach checkout handler
             const checkoutBtn = document.getElementById('checkout-btn');
             if (checkoutBtn) {
-                checkoutBtn.addEventListener('click', function (e) {
+                checkoutBtn.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
                     proceedToCheckout();
@@ -315,13 +601,16 @@
             }
 
             fetch('/cart/update', {
-                method: 'POST',
-                credentials: 'include',
-                headers: { 
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ product_id: productId, quantity: parseInt(quantity) })
-            })
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        product_id: productId,
+                        quantity: parseInt(quantity)
+                    })
+                })
                 .then(res => {
                     if (res.status === 401) {
                         showToast('Phiên đăng nhập hết hạn', 'error');
@@ -332,29 +621,9 @@
                 })
                 .then(data => {
                     if (data && data.success) {
-                        // Cập nhật subtotal
-                        const item = data.item;
-                        if (item) {
-                            const subtotalEl = document.getElementById(`subtotal-${productId}`);
-                            if (subtotalEl) {
-                                subtotalEl.textContent = new Intl.NumberFormat('vi-VN').format(item.subtotal) + '₫';
-                            }
-
-                            // Cập nhật checkbox data-quantity
-                            const checkbox = document.querySelector(`.item-checkbox[data-product-id="${productId}"]`);
-                            if (checkbox) {
-                                checkbox.dataset.quantity = quantity;
-                            }
-
-                            // Cập nhật tổng tiền selected
-                            updateSelectedTotal();
-
-                            // Cập nhật badge giỏ hàng
-                            const badge = document.getElementById('cart-badge');
-                            if (badge && data.cart_count !== undefined) {
-                                badge.textContent = data.cart_count;
-                            }
-                        }
+                        // Reload page để cập nhật quà tặng
+                        showToast('Đã cập nhật số lượng', 'success');
+                        setTimeout(() => location.reload(), 300);
                     } else if (data) {
                         showToast(data.message || 'Có lỗi xảy ra', 'error');
                     }
@@ -369,13 +638,15 @@
             if (!confirm('Bạn có chắc muốn xóa sản phẩm này?')) return;
 
             fetch('/cart/remove', {
-                method: 'POST',
-                credentials: 'include',
-                headers: { 
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ product_id: productId })
-            })
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        product_id: productId
+                    })
+                })
                 .then(res => {
                     if (res.status === 401) {
                         showToast('Phiên đăng nhập hết hạn', 'error');
@@ -402,12 +673,12 @@
             if (!confirm('Bạn có chắc muốn xóa toàn bộ giỏ hàng?')) return;
 
             fetch('/cart/clear', {
-                method: 'POST',
-                credentials: 'include',
-                headers: { 
-                    'Content-Type': 'application/json'
-                }
-            })
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
                 .then(res => {
                     if (res.status === 401) {
                         showToast('Phiên đăng nhập hết hạn', 'error');

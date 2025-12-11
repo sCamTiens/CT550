@@ -1,24 +1,107 @@
 <?php require __DIR__ . '/../partials/head.php'; ?>
 <?php require __DIR__ . '/../partials/header.php'; ?>
 
+<?php
+// Use images from database (product_images table already ordered by is_primary DESC, sort_order ASC)
+$allImages = !empty($images) && is_array($images) ? $images : [];
+
+// Fallback: if no images in DB, use product image_url
+if (empty($allImages) && !empty($product['image_url'])) {
+    $timestamp = !empty($product['updated_at']) ? strtotime($product['updated_at']) : time();
+    $allImages[] = $product['image_url'] . '?t=' . $timestamp;
+}
+?>
+
+<style>
+    /* Force horizontal layout for thumbnails - Enhanced */
+    .product-thumbnails {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 0.75rem !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        padding-bottom: 0.5rem !important;
+        width: 100% !important;
+        align-items: center !important;
+    }
+
+    .product-thumbnails img {
+        flex-shrink: 0 !important;
+        width: 90px !important;
+        height: 90px !important;
+        object-fit: cover !important;
+    }
+
+    /* Scrollbar styling for thumbnails */
+    .product-thumbnails::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    .product-thumbnails::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+
+    .product-thumbnails::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 3px;
+    }
+
+    .product-thumbnails::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+</style>
+
 <main class="container mx-auto px-4 py-8">
     <div class="bg-white rounded-xl shadow-md p-8">
         <div class="flex flex-col md:flex-row gap-8">
             <!-- Hình ảnh sản phẩm -->
             <div class="flex-shrink-0 w-full md:w-2/5">
-                <div class="bg-gray-50 rounded-xl border-2 p-4 flex items-center justify-center">
-                    <img src="<?= htmlspecialchars($product['image_url']) ?>?t=<?= !empty($product['updated_at']) ? strtotime($product['updated_at']) : time() ?>"
-                        alt="<?= htmlspecialchars($product['name']) ?>"
-                        class="w-full h-auto max-h-96 object-contain">
-                </div>
-                <?php if (!empty($images)): ?>
-                    <div class="flex gap-2 mt-4 overflow-x-auto">
-                        <?php foreach ($images as $img): ?>
-                            <img src="<?= htmlspecialchars($img) ?>"
-                                class="w-20 h-20 object-cover rounded-lg border-2 cursor-pointer hover:border-[#002975] transition-all">
-                        <?php endforeach; ?>
+                <!-- Image Gallery -->
+                <div x-data="productGallery()" x-init="init()">
+                    <!-- Main Image với Navigation Arrows -->
+                    <div class="relative bg-gray-50 rounded-xl border-2 p-4 mb-4">
+                        <div class="relative flex items-center justify-center min-h-[400px]">
+                            <img x-show="currentImage"
+                                x-bind:src="currentImage"
+                                alt="<?= htmlspecialchars($product['name']) ?>"
+                                class="w-full h-auto max-h-96 object-contain">
+
+                            <!-- Navigation Arrows -->
+                            <template x-if="imagesList.length > 1">
+                                <div>
+                                    <button x-on:click="previousImage()" type="button"
+                                        class="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-3 shadow-lg transition-all hover:scale-110 border-2 border-gray-200">
+                                        <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                        </svg>
+                                    </button>
+
+                                    <button x-on:click="nextImage()" type="button"
+                                        class="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-3 shadow-lg transition-all hover:scale-110 border-2 border-gray-200">
+                                        <svg class="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
                     </div>
-                <?php endif; ?>
+
+                    <!-- Horizontal Thumbnails - NẰM NGANG (PHP conditional) -->
+                    <?php if (count($allImages) > 1): ?>
+                        <div class="product-thumbnails">
+                            <template x-for="(img, index) in imagesList" x-bind:key="index">
+                                <img x-bind:src="img"
+                                    x-on:click="selectImage(index)"
+                                    x-bind:class="currentIndex === index ? 'border-[#002975] border-4 ring-2 ring-[#002975]/30' : 'border-gray-300 border-2 hover:border-[#002975]'"
+                                    alt="Thumbnail"
+                                    class="flex-shrink-0 object-cover rounded-lg cursor-pointer transition-all">
+                            </template>
+                        </div>
+                    <?php endif; ?>
+                </div>
             </div>
 
             <!-- Thông tin sản phẩm -->
@@ -66,7 +149,7 @@
                         <div class="text-sm text-gray-600 mb-2">Số lượng:</div>
                         <div class="flex items-center gap-4">
                             <div class="flex items-center border-2 rounded-lg">
-                                <button onclick="decreaseQty()"
+                                <button onclick="decreaseQty()" type="button"
                                     class="px-4 py-2 text-gray-600 hover:bg-gray-100 font-bold text-xl">
                                     -
                                 </button>
@@ -77,12 +160,12 @@
                                     max="9999"
                                     oninput="this.value = Math.max(0, Math.min(9999, parseInt(this.value) || 0))"
                                     class="w-20 text-center border-x-2 py-2 font-semibold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
-                                <button onclick="increaseQty()"
+                                <button onclick="increaseQty()" type="button"
                                     class="px-4 py-2 text-gray-600 hover:bg-gray-100 font-bold text-xl">
                                     +
                                 </button>
                             </div>
-                            <button onclick="addToCart()"
+                            <button onclick="addToCart()" type="button"
                                 class="flex-1 border border-[#002975] text-[#002975] px-8 py-3 rounded-lg hover:bg-[#002975] hover:text-white transition-colors font-semibold text-lg">
                                 <i class="fa-solid fa-cart-plus mr-2"></i>
                                 Thêm vào giỏ hàng
@@ -91,7 +174,7 @@
                     </div>
 
                     <div class="flex gap-3">
-                        <button onclick="buyNow()"
+                        <button onclick="buyNow()" type="button"
                             class="flex-1 bg-orange-500 text-white px-8 py-3 rounded-lg hover:bg-orange-600 transition-colors font-semibold text-lg text-center">
                             <i class="fa-solid fa-shopping-bag mr-2"></i>
                             Mua ngay
@@ -147,6 +230,39 @@
 </main>
 
 <script>
+    // Alpine.js component for product gallery
+    function productGallery() {
+        return {
+            imagesList: <?= json_encode($allImages) ?>,
+            currentIndex: 0,
+            currentImage: '',
+
+            init() {
+                console.log('📸 Images loaded:', this.imagesList.length, 'images');
+                console.log('Images array:', this.imagesList);
+                if (this.imagesList.length > 0) {
+                    this.currentImage = this.imagesList[0];
+                }
+            },
+
+            selectImage(index) {
+                this.currentIndex = index;
+                this.currentImage = this.imagesList[index];
+            },
+
+            nextImage() {
+                this.currentIndex = (this.currentIndex + 1) % this.imagesList.length;
+                this.currentImage = this.imagesList[this.currentIndex];
+            },
+
+            previousImage() {
+                this.currentIndex = (this.currentIndex - 1 + this.imagesList.length) % this.imagesList.length;
+                this.currentImage = this.imagesList[this.currentIndex];
+            }
+        }
+    }
+
+    // Quantity controls
     const maxQty = <?= $stockQty ?>;
 
     function increaseQty() {
@@ -170,19 +286,16 @@
         const productId = <?= (int)$product['id'] ?>;
         const stockQty = <?= $stockQty ?>;
 
-        // Validate quantity
         if (qty <= 0) {
             showToast('Vui lòng nhập số lượng hợp lệ', 'error');
             return;
         }
 
-        // Check stock
         if (qty > stockQty) {
             showToast('Số lượng tồn kho không đủ', 'error');
             return;
         }
 
-        // Send to cart API with JWT
         fetch('/api/cart/add', {
                 method: 'POST',
                 credentials: 'include',
@@ -207,7 +320,6 @@
 
                 if (data.success) {
                     showToast('Đã thêm ' + qty + ' sản phẩm vào giỏ hàng!', 'success');
-                    // Dispatch event to update cart badge
                     window.dispatchEvent(new CustomEvent('cart-updated', {
                         detail: {
                             cart_count: data.cart_count
@@ -228,19 +340,16 @@
         const productId = <?= (int)$product['id'] ?>;
         const stockQty = <?= $stockQty ?>;
 
-        // Validate quantity
         if (qty <= 0) {
             showToast('Vui lòng nhập số lượng hợp lệ', 'error');
             return;
         }
 
-        // Check stock
         if (qty > stockQty) {
             showToast('Số lượng tồn kho không đủ', 'error');
             return;
         }
 
-        // Add to cart first with JWT
         fetch('/api/cart/add', {
                 method: 'POST',
                 credentials: 'include',
@@ -264,7 +373,6 @@
                 if (!data) return;
 
                 if (data.success) {
-                    // Redirect to checkout immediately with this product
                     window.location.href = '/checkout?items=' + productId;
                 } else {
                     showToast((data.message || 'Có lỗi xảy ra'), 'error');

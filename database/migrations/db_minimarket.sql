@@ -30,7 +30,7 @@ CREATE TABLE users (
   password_hash VARCHAR(255),
   force_change_password BOOLEAN NOT NULL DEFAULT TRUE,
   full_name VARCHAR(250),
-  avatar_url VARCHAR(255),
+  avatar_url VARCHAR(512),
   gender ENUM('Nam','Nữ') NULL,
   date_of_birth DATE NULL,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -65,7 +65,11 @@ CREATE TABLE user_addresses (
   receiver_phone VARCHAR(32),
   line1 VARCHAR(255),
   commune_code VARCHAR(15) NULL COMMENT 'Mã phường/xã (ward_code từ bảng wards)',
+  ward_name VARCHAR(100) NULL COMMENT 'Ward name from GHN',
   province_code VARCHAR(2) NULL COMMENT 'Mã tỉnh/thành phố (province_code từ bảng provinces)',
+  province_name VARCHAR(100) NULL COMMENT 'Province name from GHN',
+  district_id INT NULL COMMENT 'GHN District ID',
+  district_name VARCHAR(100) NULL COMMENT 'District name from GHN',
   is_default BOOLEAN NOT NULL DEFAULT FALSE,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -75,7 +79,8 @@ CREATE TABLE user_addresses (
   CONSTRAINT fk_addr_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
   CONSTRAINT fk_addr_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
   INDEX idx_addr_commune (commune_code),
-  INDEX idx_addr_province (province_code)
+  INDEX idx_addr_province (province_code),
+  INDEX idx_user_addresses_district_id (district_id)
 ) ENGINE=InnoDB COMMENT='Bảng provinces và wards được import từ file provinces.sql và wards.sql';
 
 -- Phân loại nhân viên
@@ -192,15 +197,19 @@ CREATE TABLE products (
 CREATE TABLE product_images (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   product_id BIGINT NOT NULL,
-  image_url VARCHAR(255) NOT NULL,
+  image_url VARCHAR(512) NOT NULL,
+  image_type VARCHAR(20) DEFAULT 'main',
   is_primary BOOLEAN NOT NULL DEFAULT FALSE,
+  sort_order INT DEFAULT 1,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   created_by BIGINT NULL,
   updated_by BIGINT NULL,
   CONSTRAINT fk_pimg_created_by FOREIGN KEY(created_by) REFERENCES users(id),
   CONSTRAINT fk_pimg_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
-  CONSTRAINT fk_pimg_prod FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
+  CONSTRAINT fk_pimg_prod FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE,
+  INDEX idx_product_images_type (product_id, image_type),
+  INDEX idx_product_images_sort (product_id, sort_order)
 ) ENGINE=InnoDB;
 
 -- =====================================================================
@@ -344,7 +353,7 @@ CREATE TABLE promotion_combo_items (
 -- Mã giảm giá
 CREATE TABLE coupons (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  code VARCHAR(64) NOT NULL UNIQUE,
+  code VARCHAR(64) NOT NULL UNIQUE, 
   name VARCHAR(250),
   discount_type ENUM('Phần trăm','Số tiền') NOT NULL,
   discount_value DECIMAL(12,2) NOT NULL,
@@ -425,7 +434,14 @@ CREATE TABLE orders (
   code VARCHAR(32) NOT NULL UNIQUE,
   user_id BIGINT NULL,
   order_type ENUM('Online','Offline') NOT NULL DEFAULT 'Online',
-  status ENUM('Chờ xử lý','Đang xử lý','Hoàn tất','Đã hủy') NOT NULL DEFAULT 'Chờ xử lý',
+  status ENUM(
+      'Chờ xử lý',        -- Customer đặt hàng (mặc định)
+      'Đang xử lý',       -- Admin đang đóng gói
+      'Đang giao hàng',   -- GHN đang giao (bao gồm: Đã lấy hàng, Đang vận chuyển, Đang giao)
+      'Đã giao',          -- GHN giao thành công
+      'Đã hủy'            -- Đơn bị hủy
+  ) NOT NULL DEFAULT 'Chờ xử lý' COMMENT 'Trạng thái đơn hàng',
+  ghn_status VARCHAR(50) NULL COMMENT 'Trạng thái chi tiết từ GHN',
   subtotal DECIMAL(12,2) NOT NULL DEFAULT 0,
   promotion_discount DECIMAL(12,2) NOT NULL DEFAULT 0,
   discount_total DECIMAL(12,2) NOT NULL DEFAULT 0,
@@ -447,6 +463,24 @@ CREATE TABLE orders (
   payment_status ENUM('Chưa thanh toán','Đã thanh toán','Hoàn tiền') NOT NULL DEFAULT 'Chưa thanh toán',
   payment_id BIGINT NULL,
   shipping_address_id BIGINT NULL,
+  
+  -- GHN tracking info
+  ghn_order_code VARCHAR(50) NULL COMMENT 'Mã vận đơn GHN',
+  expected_delivery_time DATETIME NULL COMMENT 'Thời gian giao dự kiến',
+  ghn_tracking_data JSON NULL COMMENT 'GHN tracking JSON data',
+  
+  -- Delivery recipient info
+  delivery_name VARCHAR(250) NULL COMMENT 'Tên người nhận',
+  delivery_phone VARCHAR(32) NULL COMMENT 'SĐT người nhận',
+  delivery_address TEXT NULL COMMENT 'Địa chỉ giao hàng đầy đủ',
+  
+  -- GHN location IDs
+  shipping_province VARCHAR(100) NULL COMMENT 'Tên tỉnh/thành',
+  shipping_ward VARCHAR(100) NULL COMMENT 'Tên phường/xã',
+  shipping_province_id INT NULL COMMENT 'GHN Province ID',
+  shipping_district_id INT NULL COMMENT 'GHN District ID - BẮT BUỘC CHO GHN',
+  shipping_ward_code VARCHAR(20) NULL COMMENT 'GHN Ward Code',
+  
   note VARCHAR(255),
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -465,7 +499,9 @@ CREATE TABLE orders (
   INDEX idx_orders_user (user_id),
   INDEX idx_orders_status (status),
   INDEX idx_orders_createdat (created_at),
-  INDEX idx_orders_payment (payment_id)
+  INDEX idx_orders_payment (payment_id),
+  INDEX idx_orders_ghn_code (ghn_order_code),
+  INDEX idx_orders_delivery_time (expected_delivery_time)
 ) ENGINE=InnoDB;
 
 -- Mặt hàng trong đơn
@@ -550,24 +586,6 @@ CREATE TABLE coupon_usage (
   INDEX idx_coupon_user (coupon_id, user_id),
   INDEX idx_used_at (used_at)
 ) ENGINE=InnoDB COMMENT='Lịch sử sử dụng mã giảm giá';
-
--- Đánh giá sản phẩm
-CREATE TABLE product_reviews (
-  id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  order_id BIGINT NULL,
-  product_id BIGINT NOT NULL,
-  user_id BIGINT NOT NULL,
-  rating TINYINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
-  title VARCHAR(250),
-  content TEXT,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  created_by BIGINT NULL,
-  CONSTRAINT fk_prev_created_by FOREIGN KEY(created_by) REFERENCES users(id),
-  CONSTRAINT fk_prev_prod FOREIGN KEY(product_id) REFERENCES products(id),
-  CONSTRAINT fk_prev_user FOREIGN KEY(user_id) REFERENCES users(id),
-  CONSTRAINT fk_prev_order FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE SET NULL,
-  UNIQUE (product_id, user_id)
-) ENGINE=InnoDB;
 
 -- Phiếu thu
 CREATE TABLE receipt_vouchers (
@@ -1235,6 +1253,144 @@ CREATE TABLE notifications (
   INDEX idx_notif_user_read (user_id, is_read),
   INDEX idx_notif_created (created_at)
 ) ENGINE=InnoDB;
+
+-- Thông báo người dùng
+CREATE TABLE IF NOT EXISTS user_notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT,
+    is_read TINYINT(1) DEFAULT 0,
+    type VARCHAR(50) DEFAULT 'info', -- 'order_success', 'order_status_change'
+    related_link VARCHAR(255) NULL, -- Link tới chi tiết đơn hàng
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_user_read (user_id, is_read),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Lịch sử thay đổi trạng thái đơn hàng
+CREATE TABLE IF NOT EXISTS order_status_history (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    order_id BIGINT NOT NULL,
+    old_status VARCHAR(50) NULL,
+    new_status VARCHAR(50) NOT NULL,
+    note TEXT NULL COMMENT 'Ghi chú về thay đổi',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by BIGINT NULL,
+    
+    CONSTRAINT fk_osh_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    CONSTRAINT fk_osh_created_by FOREIGN KEY (created_by) REFERENCES users(id),
+    
+    INDEX idx_osh_order (order_id),
+    INDEX idx_osh_created_at (created_at)
+) ENGINE=InnoDB COMMENT='Lịch sử thay đổi trạng thái đơn hàng';
+
+-- =====================================================================
+-- HỆ THỐNG CHAT HỖ TRỢ KHÁCH HÀNG
+-- =====================================================================
+
+-- Bảng phiên chat
+CREATE TABLE IF NOT EXISTS chat_sessions (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    session_token VARCHAR(255) UNIQUE NOT NULL,
+    status ENUM('active', 'waiting', 'closed', 'archived') DEFAULT 'active',
+    assigned_staff_id BIGINT NULL,
+    is_ai_mode BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    closed_at TIMESTAMP NULL,
+    archived_at DATETIME NULL COMMENT 'Thời điểm archive (auto hoặc manual)',
+    auto_archived TINYINT(1) DEFAULT 0 COMMENT 'Được archive tự động (1) hay thủ công (0)',
+    last_customer_activity DATETIME NULL COMMENT 'Lần cuối khách hàng hoạt động',
+    last_staff_activity DATETIME NULL COMMENT 'Lần cuối nhân viên trả lời',
+    bot_shift_end DATETIME NULL COMMENT 'Thời điểm kết thúc ca bot (22:00-6:00)',
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (assigned_staff_id) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_user (user_id),
+    INDEX idx_status (status),
+    INDEX idx_created (created_at),
+    INDEX idx_last_staff_activity (last_staff_activity),
+    INDEX idx_archived_at (archived_at),
+    INDEX idx_auto_archived (auto_archived)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Bảng tin nhắn
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    session_id INT NOT NULL,
+    sender_type ENUM('customer', 'staff', 'ai') NOT NULL,
+    sender_id BIGINT NULL,
+    message TEXT NOT NULL,
+    message_type ENUM('text', 'image', 'order_link', 'product_link') DEFAULT 'text',
+    metadata JSON NULL COMMENT 'Lưu thông tin bổ sung như order_id, product_id',
+    is_read BOOLEAN DEFAULT FALSE,
+    status ENUM('sent', 'delivered', 'read') DEFAULT 'sent',
+    delivered_at TIMESTAMP NULL,
+    read_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE,
+    INDEX idx_session (session_id),
+    INDEX idx_created (created_at),
+    INDEX idx_message_status (status, sender_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Bảng cấu hình giờ làm việc
+CREATE TABLE IF NOT EXISTS support_hours (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    day_of_week TINYINT NOT NULL COMMENT '0=CN, 1=T2, ..., 6=T7',
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_day (day_of_week)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Bảng nhân viên hỗ trợ online
+CREATE TABLE IF NOT EXISTS staff_online_status (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    staff_id BIGINT NOT NULL,
+    is_online BOOLEAN DEFAULT FALSE,
+    last_active_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    max_concurrent_chats INT DEFAULT 5,
+    current_chat_count INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (staff_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_staff (staff_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Bảng quick replies (câu trả lời nhanh cho nhân viên)
+CREATE TABLE IF NOT EXISTS chat_quick_replies (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    category VARCHAR(100) NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    usage_count INT DEFAULT 0,
+    created_by BIGINT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Giờ làm việc mặc định (6h - 22h, mỗi ngày)
+INSERT INTO support_hours (day_of_week, start_time, end_time, is_active) VALUES
+(1, '06:00:00', '22:00:00', TRUE), -- Thứ 2
+(2, '06:00:00', '22:00:00', TRUE), -- Thứ 3
+(3, '06:00:00', '22:00:00', TRUE), -- Thứ 4
+(4, '06:00:00', '22:00:00', TRUE), -- Thứ 5
+(5, '06:00:00', '22:00:00', TRUE), -- Thứ 6
+(6, '06:00:00', '22:00:00', TRUE), -- Thứ 7
+(0, '06:00:00', '22:00:00', FALSE); -- Chủ nhật (nghỉ)
+
+-- Quick replies mẫu
+INSERT INTO chat_quick_replies (title, content, category) VALUES
+('Chào mừng', 'Xin chào! Tôi có thể giúp gì cho bạn?', 'greeting'),
+('Hỏi thông tin đơn hàng', 'Bạn vui lòng cung cấp mã đơn hàng để tôi kiểm tra giúp bạn nhé!', 'order'),
+('Hướng dẫn thanh toán', 'Chúng tôi hỗ trợ thanh toán qua VNPay, ZaloPay và COD. Bạn muốn thanh toán bằng hình thức nào?', 'payment'),
+('Chính sách đổi trả', 'Chúng tôi hỗ trợ đổi trả trong vòng 7 ngày nếu sản phẩm còn nguyên tem, chưa qua sử dụng.', 'policy'),
+('Cảm ơn', 'Cảm ơn bạn đã liên hệ! Chúc bạn một ngày tốt lành!', 'closing');
 
 -- Quản lý công việc hệ thống
 CREATE TABLE system_jobs (

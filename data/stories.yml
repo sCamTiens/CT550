@@ -1,0 +1,107 @@
+version: "3.1"
+
+stories:
+  # =====================================================================
+  # STORY 1: CHÀO HỎI VÀ KIỂM TRA ĐƠN HÀNG
+  # =====================================================================
+  - story: greet and check order
+    steps:
+      - intent: greet
+      - action: utter_greet
+      - intent: check_order
+      - action: action_check_order
+
+  # =====================================================================
+  # STORY 2: TÌM SẢN PHẨM
+  # =====================================================================
+  - story: search product after greet
+    steps:
+      - intent: greet
+      - action: utter_greet
+      - intent: search_product
+      - action: action_search_product
+
+  - story: direct search product
+    steps:
+      - intent: search_product
+      - action: action_search_product
+
+  # =====================================================================
+  # STORY 3: XEM LỊCH SỬ MUA HÀNG
+  # =====================================================================
+  - story: view order history
+    steps:
+      - intent: greet
+      - action: utter_greet
+      - intent: order_history
+      - action: action_order_history
+
+  - story: direct order history
+    steps:
+      - intent: order_history
+      - action: action_order_history
+
+  # =====================================================================
+  # STORY 4: THEO DÕI ĐƠN HÀNG
+  # =====================================================================
+  - story: track order after greet
+    steps:
+      - intent: greet
+      - action: utter_greet
+      - intent: track_order
+      - action: action_track_order
+
+  - story: direct track order
+    steps:
+      - intent: track_order
+      - action: action_track_order
+
+  # =====================================================================
+  # STORY 5: YÊU CẦU TRỢ GIÚP
+  # =====================================================================
+  - story: ask for help
+    steps:
+      - intent: help
+      - action: action_help
+
+  - story: greet then help
+    steps:
+      - intent: greet
+      - action: utter_greet
+      - intent: help
+      - action: action_help
+
+  # =====================================================================
+  # STORY 6: KIỂM TRA ĐƠN SAU ĐÓ THEO DÕI
+  # =====================================================================
+  - story: check then track order
+    steps:
+      - intent: check_order
+      - action: action_check_order
+      - intent: track_order
+      - action: action_track_order
+
+  # =====================================================================
+  # STORY 7: TÌM SẢN PHẨM SAU ĐÓ XEM LỊCH SỬ
+  # =====================================================================
+  - story: search product then check history
+    steps:
+      - intent: search_product
+      - action: action_search_product
+      - intent: order_history
+      - action: action_order_history
+
+  # =====================================================================
+  # STORY 8: KẾT THÚC HỘI THOẠI
+  # =====================================================================
+  - story: say goodbye
+    steps:
+      - intent: goodbye
+      - action: utter_goodbye
+
+  - story: help then goodbye
+    steps:
+      - intent: help
+      - action: action_help
+      - intent: goodbye
+      - action: utter_goodbye

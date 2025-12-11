@@ -85,7 +85,7 @@ $items = $items ?? [];
               '1' => 'Hoạt động',
               '0' => 'Khóa'
             ])
-              ?>
+            ?>
             <?= dateFilterPopover('created_at', 'Thời gian tạo') ?>
             <?= textFilterPopover('created_by_name', 'Người tạo') ?>
             <?= dateFilterPopover('updated_at', 'Thời gian cập nhật') ?>
@@ -143,8 +143,8 @@ $items = $items ?? [];
               <td class="py-2 px-4 text-center">
                 <template x-if="c.avatar_url">
                   <div class="flex items-center justify-center mx-auto">
-                    <img x-show="c.avatar_url" :src="'/assets/images/avatar/' + c.avatar_url" :alt="c.full_name"
-                    class="w-12 h-12 rounded-full object-cover border-2 border-gray-200">
+                    <img :src="getAvatarUrl(c.avatar_url)" :alt="c.full_name"
+                      class="w-12 h-12 rounded-full object-cover border-2 border-gray-200">
                   </div>
                 </template>
                 <template x-if="!c.avatar_url">
@@ -365,7 +365,7 @@ $items = $items ?? [];
           <div class="grid grid-cols-2 gap-4">
             <div class="flex items-center gap-3">
               <template x-if="detailCustomer.avatar_url">
-                <img :src="'/assets/images/avatar/' + detailCustomer.avatar_url" :alt="detailCustomer.full_name"
+                <img :src="getAvatarUrl(detailCustomer.avatar_url)" :alt="detailCustomer.full_name"
                   class="w-20 h-20 rounded-full object-cover border-2 border-blue-300">
               </template>
               <template x-if="!detailCustomer.avatar_url">
@@ -833,7 +833,11 @@ $items = $items ?? [];
       },
 
       openChangePassword: false,
-      formChangePassword: { user_id: null, password: '', password_confirm: '' },
+      formChangePassword: {
+        user_id: null,
+        password: '',
+        password_confirm: ''
+      },
       showChangePassword: false,
       showChangePasswordConfirm: false,
       changePasswordErrors: {},
@@ -880,8 +884,8 @@ $items = $items ?? [];
         show: false,
         title: '',
         message: '',
-        onConfirm: () => { },
-        onCancel: () => { }
+        onConfirm: () => {},
+        onCancel: () => {}
       },
 
       showConfirm(title, message, onConfirm, onCancel = () => {}) {
@@ -905,12 +909,25 @@ $items = $items ?? [];
       },
 
       openChangePasswordModal(c) {
-        this.formChangePassword = { user_id: c.id, password: '', password_confirm: '' };
+        this.formChangePassword = {
+          user_id: c.id,
+          password: '',
+          password_confirm: ''
+        };
         this.showChangePassword = false;
         this.showChangePasswordConfirm = false;
         this.changePasswordErrors = {};
         this.changePasswordTouched = false;
         this.openChangePassword = true;
+      },
+
+      // Helper to get correct avatar URL
+      getAvatarUrl(url) {
+        if (!url) return '/assets/images/avatar/default.png';
+        if (url.indexOf('http://') === 0 || url.indexOf('https://') === 0) {
+          return url; // Already absolute URL
+        }
+        return '/assets/images/avatar/' + url; // Local path
       },
 
       async openAddressModal(customerId, customerName) {
@@ -1009,13 +1026,18 @@ $items = $items ?? [];
 
       formatMoney(amount) {
         if (!amount) return '0';
-        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+        return new Intl.NumberFormat('vi-VN', {
+          style: 'currency',
+          currency: 'VND'
+        }).format(amount);
       },
 
       generateChangePassword() {
         const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
         let len = Math.floor(Math.random() * 5) + 8; // 8-12 ký tự
-        let pw = Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+        let pw = Array.from({
+          length: len
+        }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
         this.formChangePassword.password = pw;
         this.formChangePassword.password_confirm = pw;
         this.showChangePassword = true;
@@ -1041,8 +1063,17 @@ $items = $items ?? [];
 
       // ===== FILTERS =====
       openFilter: {
-        username: false, full_name: false, email: false, phone: false, gender: false, is_active: false, date_of_birth: false,
-        created_at: false, created_by: false, updated_at: false, updated_by: false
+        username: false,
+        full_name: false,
+        email: false,
+        phone: false,
+        gender: false,
+        is_active: false,
+        date_of_birth: false,
+        created_at: false,
+        created_by: false,
+        updated_at: false,
+        updated_by: false
       },
 
       filters: {
@@ -1052,17 +1083,31 @@ $items = $items ?? [];
         phone: '',
         gender: '',
         is_active: '',
-        date_of_birth_type: '', date_of_birth_value: '', date_of_birth_from: '', date_of_birth_to: '',
-        created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
+        date_of_birth_type: '',
+        date_of_birth_value: '',
+        date_of_birth_from: '',
+        date_of_birth_to: '',
+        created_at_type: '',
+        created_at_value: '',
+        created_at_from: '',
+        created_at_to: '',
         created_by: '',
-        updated_at_type: '', updated_at_value: '', updated_at_from: '', updated_at_to: '',
+        updated_at_type: '',
+        updated_at_value: '',
+        updated_at_from: '',
+        updated_at_to: '',
         updated_by: ''
       },
 
       // -------------------------------------------
       // Hàm lọc tổng quát, hỗ trợ text / number / date
       // -------------------------------------------
-      applyFilter(val, type, { value, from, to, dataType }) {
+      applyFilter(val, type, {
+        value,
+        from,
+        to,
+        dataType
+      }) {
         if (val == null) return false;
 
         // ---------------- TEXT ----------------
@@ -1082,9 +1127,10 @@ $items = $items ?? [];
 
           if (!query) return true;
 
-          if (type === 'eq') return hasAccent(query)
-            ? raw === query  // có dấu → so đúng dấu
-            : str === queryNoAccent; // không dấu → so không dấu
+          if (type === 'eq') return hasAccent(query) ?
+            raw === query // có dấu → so đúng dấu
+            :
+            str === queryNoAccent; // không dấu → so không dấu
 
           if (type === 'contains' || type === 'like') {
             if (hasAccent(query)) {
@@ -1212,7 +1258,9 @@ $items = $items ?? [];
         for (const k in this.openFilter) this.openFilter[k] = false;
         this.openFilter[key] = true;
       },
-      closeFilter(key) { this.openFilter[key] = false; },
+      closeFilter(key) {
+        this.openFilter[key] = false;
+      },
       resetFilter(key) {
         if (['date_of_birth', 'updated_at', 'created_at'].includes(key)) {
           this.filters[`${key}_type`] = '';
@@ -1238,12 +1286,12 @@ $items = $items ?? [];
         const now = new Date();
         const currentMonth = now.getMonth();
         const currentYear = now.getFullYear();
-        
+
         return this.filtered().filter(c => {
           if (!c.created_at) return false;
           const createdDate = new Date(c.created_at);
-          return createdDate.getMonth() === currentMonth && 
-                 createdDate.getFullYear() === currentYear;
+          return createdDate.getMonth() === currentMonth &&
+            createdDate.getFullYear() === currentYear;
         }).length;
       },
 
@@ -1257,7 +1305,9 @@ $items = $items ?? [];
 
         const now = new Date();
         const dateStr = now.toLocaleDateString('vi-VN').replace(/\//g, '-');
-        const timeStr = now.toLocaleTimeString('vi-VN', { hour12: false }).replace(/:/g, '-');
+        const timeStr = now.toLocaleTimeString('vi-VN', {
+          hour12: false
+        }).replace(/:/g, '-');
         const filename = `Khach_hang_${dateStr}_${timeStr}.xlsx`;
 
         const exportData = {
@@ -1279,10 +1329,12 @@ $items = $items ?? [];
         };
 
         fetch('/admin/api/customers/export', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(exportData)
-        })
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(exportData)
+          })
           .then(response => {
             if (!response.ok) throw new Error('Export failed');
             return response.blob();
@@ -1347,7 +1399,7 @@ $items = $items ?? [];
         this.form = {
           ...customer,
           date_of_birth: dateOfBirth,
-          is_active: String(customer.is_active ?? '1')  // ép về string để dropdown match
+          is_active: String(customer.is_active ?? '1') // ép về string để dropdown match
         };
 
         this.openEdit = true;
@@ -1355,7 +1407,9 @@ $items = $items ?? [];
 
       // reset validation/password state is handled in resetForm()
       // helper to clear a single field error
-      clearError(field) { this.errors[field] = ''; },
+      clearError(field) {
+        this.errors[field] = '';
+      },
       validateField(field) {
         const value = (this.form[field] || '').toString().trim();
         let msg = '';
@@ -1393,7 +1447,9 @@ $items = $items ?? [];
       generatePassword() {
         const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
         let len = Math.floor(Math.random() * 5) + 8; // 8-12
-        let pw = Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+        let pw = Array.from({
+          length: len
+        }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
         this.form.password = pw;
         this.form.password_confirm = pw;
         this.showPassword = true;
@@ -1457,8 +1513,12 @@ $items = $items ?? [];
         try {
           const res = await fetch(`/admin/api/customers/${this.formChangePassword.user_id}/password`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password: this.formChangePassword.password })
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              password: this.formChangePassword.password
+            })
           });
           const data = await res.json();
           if (res.ok && data && data.ok) {
@@ -1508,7 +1568,9 @@ $items = $items ?? [];
         try {
           const resp = await fetch(api.create, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json'
+            },
             body: JSON.stringify(this.serializeForm())
           });
           const data = await resp.json().catch(() => ({}));
@@ -1549,7 +1611,9 @@ $items = $items ?? [];
 
           const resp = await fetch(api.update(id), {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json'
+            },
             body: JSON.stringify(payload)
           });
 
@@ -1577,13 +1641,15 @@ $items = $items ?? [];
       async remove(id) {
         const customer = this.items.find(c => Number(c.id) === Number(id));
         const name = customer ? customer.full_name : 'khách hàng này';
-        
+
         this.showConfirm(
           'Xác nhận xóa',
           `Bạn có chắc chắn muốn xóa khách hàng "${name}"?`,
           async () => {
             try {
-              const resp = await fetch(api.remove(id), { method: 'DELETE' });
+              const resp = await fetch(api.remove(id), {
+                method: 'DELETE'
+              });
               const data = await resp.json().catch(() => ({}));
               if (resp.ok) {
                 this.items = this.items.filter(item => Number(item.id) !== Number(id));

@@ -1,9 +1,11 @@
 <?php
+
 namespace App\Controllers\Admin;
 
 use App\Models\Repositories\ProductRepository;
 
 use App\Controllers\Admin\AuthController;
+
 class ProductController extends BaseAdminController
 {
     private $productRepo;
@@ -126,103 +128,122 @@ class ProductController extends BaseAdminController
                 ORDER BY p.name ASC";
         $stmt = $pdo->query($sql);
         $products = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-        
+
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['products' => $products], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
-    /** POST /admin/api/products/upload-images - Upload ảnh sản phẩm */
+    /** POST /admin/api/products/upload-images - Upload ảnh sản phẩm lên ImgBB */
     public function uploadImages()
     {
         header('Content-Type: application/json; charset=utf-8');
-        
+
         try {
             if (!isset($_POST['product_id'])) {
                 throw new \Exception('Thiếu product_id');
             }
-            
+
             $productId = (int)$_POST['product_id'];
-            $uploadDir = __DIR__ . '/../../../public/assets/images/products/' . $productId;
-            
-            // Tạo thư mục nếu chưa có
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
-            }
-            
-            $uploadedFiles = [];
-            
-            // Upload ảnh chính (1.png)
+            $uploadedImages = [];
+
+            // Initialize ImgBB service
+            $imgbb = new \App\Support\ImageHostingService();
+
+            // Upload main image
             if (isset($_FILES['main_image']) && $_FILES['main_image']['error'] === UPLOAD_ERR_OK) {
                 $mainImage = $_FILES['main_image'];
+
+                // Validate file type
                 $ext = strtolower(pathinfo($mainImage['name'], PATHINFO_EXTENSION));
-                
-                if (!in_array($ext, ['png', 'jpg', 'jpeg'])) {
-                    throw new \Exception('Ảnh chính chỉ chấp nhận PNG, JPG, JPEG');
+                if (!in_array($ext, ['png', 'jpg', 'jpeg', 'gif', 'webp'])) {
+                    throw new \Exception('Ảnh chính chỉ chấp nhận PNG, JPG, JPEG, GIF, WEBP');
                 }
-                
-                if ($mainImage['size'] > 2 * 1024 * 1024) {
-                    throw new \Exception('Ảnh chính không được vượt quá 2MB');
+
+                // Validate file size (5MB)
+                if ($mainImage['size'] > 5 * 1024 * 1024) {
+                    throw new \Exception('Ảnh chính không được vượt quá 5MB');
                 }
-                
-                $mainPath = $uploadDir . '/1.png';
-                
-                // Convert to PNG if needed
-                $this->convertAndSaveImage($mainImage['tmp_name'], $mainPath, $ext);
-                $uploadedFiles[] = '1.png';
+
+                // Upload to ImgBB
+                $result = $imgbb->uploadImage(
+                    $mainImage['tmp_name'],
+                    "product_{$productId}_main_" . time()
+                );
+
+                $uploadedImages[] = [
+                    'url' => $result['url'],
+                    'is_primary' => true,
+                    'sort_order' => 1
+                ];
             }
-            
-            // Upload ảnh phụ (2.png, 3.png, ...)
+
+            // Upload sub images
             if (isset($_FILES['sub_images']) && is_array($_FILES['sub_images']['name'])) {
                 $subImages = $_FILES['sub_images'];
                 $count = count($subImages['name']);
-                
+
                 for ($i = 0; $i < $count && $i < 5; $i++) {
                     if ($subImages['error'][$i] === UPLOAD_ERR_OK) {
                         $ext = strtolower(pathinfo($subImages['name'][$i], PATHINFO_EXTENSION));
-                        
-                        if (!in_array($ext, ['png', 'jpg', 'jpeg'])) {
+
+                        if (!in_array($ext, ['png', 'jpg', 'jpeg', 'gif', 'webp'])) {
                             continue;
                         }
-                        
-                        if ($subImages['size'][$i] > 2 * 1024 * 1024) {
+
+                        if ($subImages['size'][$i] > 5 * 1024 * 1024) {
                             continue;
                         }
-                        
-                        $subPath = $uploadDir . '/' . ($i + 2) . '.png';
-                        $this->convertAndSaveImage($subImages['tmp_name'][$i], $subPath, $ext);
-                        $uploadedFiles[] = ($i + 2) . '.png';
+
+                        // Upload to ImgBB
+                        $result = $imgbb->uploadImage(
+                            $subImages['tmp_name'][$i],
+                            "product_{$productId}_sub" . ($i + 1) . "_" . time()
+                        );
+
+                        $uploadedImages[] = [
+                            'url' => $result['url'],
+                            'is_primary' => false,
+                            'sort_order' => $i + 2
+                        ];
                     }
                 }
             }
-            
-            // Lưu thông tin ảnh vào database
+
+            if (empty($uploadedImages)) {
+                throw new \Exception('Không có ảnh nào được upload');
+            }
+
+            // Save to database
             $pdo = \App\Core\DB::pdo();
             $currentUser = $_SESSION['user']['id'] ?? null;
-            
+
+            // Delete old images
             $stmt = $pdo->prepare("DELETE FROM product_images WHERE product_id = ?");
             $stmt->execute([$productId]);
-            
-            foreach ($uploadedFiles as $idx => $filename) {
+
+            // Insert new images
+            foreach ($uploadedImages as $imageData) {
                 $stmt = $pdo->prepare("
-                    INSERT INTO product_images (product_id, image_url, is_primary, created_by, updated_by)
-                    VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO product_images (product_id, image_url, is_primary, sort_order, created_by, updated_by)
+                    VALUES (?, ?, ?, ?, ?, ?)
                 ");
                 $stmt->execute([
                     $productId,
-                    "/assets/images/products/{$productId}/{$filename}",
-                    $idx === 0 ? 1 : 0,
+                    $imageData['url'],
+                    $imageData['is_primary'] ? 1 : 0,
+                    $imageData['sort_order'],
                     $currentUser,
                     $currentUser
                 ]);
             }
-            
+
             echo json_encode([
                 'success' => true,
-                'uploaded' => $uploadedFiles,
-                'message' => 'Upload ảnh thành công'
+                'uploaded' => count($uploadedImages),
+                'images' => $uploadedImages,
+                'message' => 'Upload ảnh thành công lên ImgBB'
             ], JSON_UNESCAPED_UNICODE);
-            
         } catch (\Exception $e) {
             http_response_code(500);
             echo json_encode([
@@ -232,37 +253,13 @@ class ProductController extends BaseAdminController
         }
         exit;
     }
-    
-    private function convertAndSaveImage($sourcePath, $destPath, $sourceExt)
-    {
-        // Load image based on type
-        switch ($sourceExt) {
-            case 'jpeg':
-            case 'jpg':
-                $image = imagecreatefromjpeg($sourcePath);
-                break;
-            case 'png':
-                $image = imagecreatefrompng($sourcePath);
-                break;
-            default:
-                throw new \Exception('Định dạng ảnh không được hỗ trợ');
-        }
-        
-        if (!$image) {
-            throw new \Exception('Không thể đọc file ảnh');
-        }
-        
-        // Convert to PNG and save
-        imagepng($image, $destPath, 9);
-        imagedestroy($image);
-    }
 
     /** POST /admin/api/products/export - Xuất Excel */
     public function export()
     {
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
         $products = $data['products'] ?? [];
-        
+
         if (empty($products)) {
             http_response_code(400);
             echo json_encode(['error' => 'Không có dữ liệu để xuất']);
@@ -270,26 +267,26 @@ class ProductController extends BaseAdminController
         }
 
         require_once __DIR__ . '/../../../vendor/autoload.php';
-        
+
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        
+
         // Header
         $sheet->mergeCells('A1:M1');
         $sheet->setCellValue('A1', 'MINIGO');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
         $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-        
+
         $exportDate = $data['export_date'] ?? date('d/m/Y');
         $sheet->mergeCells('A2:M2');
         $sheet->setCellValue('A2', "Ngày xuất: $exportDate");
         $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-        
+
         $sheet->mergeCells('A3:M3');
         $sheet->setCellValue('A3', 'DANH SÁCH SẢN PHẨM');
         $sheet->getStyle('A3')->getFont()->setBold(true)->setSize(14);
         $sheet->getStyle('A3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-        
+
         // Column headers
         $headers = ['STT', 'SKU', 'Tên sản phẩm', 'Loại sản phẩm', 'Thương hiệu', 'Giá bán', 'Giá nhập', 'Tồn kho', 'Trạng thái', 'Thời gian tạo', 'Người tạo', 'Thời gian cập nhật', 'Người cập nhật'];
         $col = 'A';
@@ -301,7 +298,7 @@ class ProductController extends BaseAdminController
         $sheet->getStyle('A5:M5')->getFill()
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
             ->getStartColor()->setRGB('E2EFDA');
-        
+
         // Data
         $row = 6;
         foreach ($products as $index => $product) {
@@ -321,26 +318,26 @@ class ProductController extends BaseAdminController
 
             $row++;
         }
-        
+
         // Number format for prices and stock
         $lastRow = $row - 1;
         $sheet->getStyle("F6:H$lastRow")->getNumberFormat()
             ->setFormatCode('#,##0');
-        
+
         // Borders
         $sheet->getStyle("A5:M$lastRow")->getBorders()->getAllBorders()
             ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
-        
+
         // Auto-size columns
         foreach (range('A', 'M') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
-        
+
         // Output
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment;filename="' . ($data['filename'] ?? 'San_pham.xlsx') . '"');
         header('Cache-Control: max-age=0');
-        
+
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
         $writer->save('php://output');
         exit;
@@ -350,13 +347,13 @@ class ProductController extends BaseAdminController
     public function downloadTemplate()
     {
         require_once __DIR__ . '/../../../vendor/autoload.php';
-        
+
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-        
+
         // ========== SHEET 1: Mẫu nhập sản phẩm ==========
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Mẫu nhập');
-        
+
         // Header row
         $headers = [
             'STT',
@@ -370,7 +367,7 @@ class ProductController extends BaseAdminController
             'Giá nhập',
             'Trạng thái'
         ];
-        
+
         $col = 'A';
         foreach ($headers as $header) {
             if (is_array($header)) {
@@ -390,7 +387,7 @@ class ProductController extends BaseAdminController
             }
             $col++;
         }
-        
+
         // Style header
         $sheet->getStyle('A1:J1')->getFont()->setBold(true)->setSize(11);
         $sheet->getStyle('A1:J1')->getFill()
@@ -402,7 +399,7 @@ class ProductController extends BaseAdminController
             ->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER)
             ->setWrapText(true);
         $sheet->getRowDimension(1)->setRowHeight(40);
-        
+
         // Sample data (sẽ để trống để user tự điền, hoặc có 1 dòng mẫu)
         $sheet->setCellValue('A2', 1);
         $sheet->setCellValue('B2', 'Coca Cola 330ml');
@@ -414,24 +411,24 @@ class ProductController extends BaseAdminController
         $sheet->setCellValue('H2', 10000);
         $sheet->setCellValue('I2', 8000);
         $sheet->setCellValue('J2', 'Hoạt động');
-        
+
         // Borders
         $sheet->getStyle('A1:J2')->getBorders()->getAllBorders()
             ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
-        
+
         // Auto-size columns
         foreach (range('A', 'J') as $c) {
             $sheet->getColumnDimension($c)->setAutoSize(true);
         }
-        
+
         // ========== SHEET 2: Danh sách Loại sản phẩm ==========
         $categorySheet = $spreadsheet->createSheet();
         $categorySheet->setTitle('Loại sản phẩm');
-        
+
         // Get categories from database
         $pdo = \App\Core\DB::pdo();
         $categories = $pdo->query("SELECT id, name, slug FROM categories ORDER BY id ASC")->fetchAll(\PDO::FETCH_ASSOC);
-        
+
         // Headers
         $categorySheet->setCellValue('A1', 'ID');
         $categorySheet->setCellValue('B1', 'Tên loại sản phẩm');
@@ -440,7 +437,7 @@ class ProductController extends BaseAdminController
         $categorySheet->getStyle('A1:C1')->getFill()
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
             ->getStartColor()->setRGB('4CAF50');
-        
+
         // Data
         $row = 2;
         foreach ($categories as $category) {
@@ -449,22 +446,22 @@ class ProductController extends BaseAdminController
             $categorySheet->setCellValue('C' . $row, $category['slug']);
             $row++;
         }
-        
+
         // Style
         $categorySheet->getStyle('A1:C' . ($row - 1))->getBorders()->getAllBorders()
             ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
         foreach (range('A', 'C') as $c) {
             $categorySheet->getColumnDimension($c)->setAutoSize(true);
         }
-        
+
         // ========== SHEET 3: Danh sách Thương hiệu ==========
         $brandSheet = $spreadsheet->createSheet();
         $brandSheet->setTitle('Thương hiệu');
-        
+
         // Get brands from database
         $pdo = \App\Core\DB::pdo();
         $brands = $pdo->query("SELECT id, name, slug FROM brands ORDER BY id ASC")->fetchAll(\PDO::FETCH_ASSOC);
-        
+
         // Headers
         $brandSheet->setCellValue('A1', 'ID');
         $brandSheet->setCellValue('B1', 'Tên thương hiệu');
@@ -473,7 +470,7 @@ class ProductController extends BaseAdminController
         $brandSheet->getStyle('A1:C1')->getFill()
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
             ->getStartColor()->setRGB('FF9800');
-        
+
         // Data
         $row = 2;
         foreach ($brands as $brand) {
@@ -482,21 +479,21 @@ class ProductController extends BaseAdminController
             $brandSheet->setCellValue('C' . $row, $brand['slug']);
             $row++;
         }
-        
+
         // Style
         $brandSheet->getStyle('A1:C' . ($row - 1))->getBorders()->getAllBorders()
             ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
         foreach (range('A', 'C') as $c) {
             $brandSheet->getColumnDimension($c)->setAutoSize(true);
         }
-        
+
         // ========== SHEET 4: Danh sách Đơn vị tính ==========
         $unitSheet = $spreadsheet->createSheet();
         $unitSheet->setTitle('Đơn vị tính');
-        
+
         // Get units from database
         $units = $pdo->query("SELECT id, name, slug FROM units ORDER BY id ASC")->fetchAll(\PDO::FETCH_ASSOC);
-        
+
         // Headers
         $unitSheet->setCellValue('A1', 'ID');
         $unitSheet->setCellValue('B1', 'Tên đơn vị');
@@ -505,7 +502,7 @@ class ProductController extends BaseAdminController
         $unitSheet->getStyle('A1:C1')->getFill()
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
             ->getStartColor()->setRGB('2196F3');
-        
+
         // Data
         $row = 2;
         foreach ($units as $unit) {
@@ -514,22 +511,22 @@ class ProductController extends BaseAdminController
             $unitSheet->setCellValue('C' . $row, $unit['slug']);
             $row++;
         }
-        
+
         // Style
         $unitSheet->getStyle('A1:C' . ($row - 1))->getBorders()->getAllBorders()
             ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
         foreach (range('A', 'C') as $c) {
             $unitSheet->getColumnDimension($c)->setAutoSize(true);
         }
-        
+
         // Set active sheet back to first sheet
         $spreadsheet->setActiveSheetIndex(0);
-        
+
         // Output
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment;filename="Mau_nhap_san_pham.xlsx"');
         header('Cache-Control: max-age=0');
-        
+
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
         $writer->save('php://output');
         exit;
@@ -633,9 +630,9 @@ class ProductController extends BaseAdminController
 
             foreach ($data as $index => $row) {
                 $rowNumber = $index + 2; // +2 vì bỏ header và index từ 0
-                
+
                 $name = trim($row[1] ?? '');
-                
+
                 // Skip dòng trống
                 if ($name === '') continue;
 
@@ -786,12 +783,12 @@ class ProductController extends BaseAdminController
                 } catch (\PDOException $e) {
                     // Xử lý lỗi database với thông báo tiếng Việt
                     $errorMessage = 'Lỗi database';
-                    
+
                     // Kiểm tra lỗi duplicate entry (SQLSTATE 23000, Error 1062)
                     if ($e->getCode() == 23000 || (isset($e->errorInfo[0]) && $e->errorInfo[0] == '23000')) {
                         // Phân tích thông báo lỗi để xác định trường bị trùng
                         $originalMessage = $e->getMessage();
-                        
+
                         if (strpos($originalMessage, "for key 'slug'") !== false || strpos($originalMessage, "for key 'products.slug'") !== false) {
                             $errorMessage = "Slug '$slug' đã tồn tại trong hệ thống";
                         } elseif (strpos($originalMessage, "for key 'sku'") !== false || strpos($originalMessage, "for key 'products.sku'") !== false) {
@@ -804,7 +801,7 @@ class ProductController extends BaseAdminController
                     } else {
                         $errorMessage = 'Lỗi database: ' . $e->getMessage();
                     }
-                    
+
                     $rowData['status'] = 'failed';
                     $rowData['errors'] = $errorMessage;
                     $errors[] = "Dòng $rowNumber: " . $errorMessage;
@@ -852,7 +849,6 @@ class ProductController extends BaseAdminController
                 'status' => $status,
                 'message' => $message
             ], JSON_UNESCAPED_UNICODE);
-
         } catch (\Exception $e) {
             http_response_code(500);
             echo json_encode(['error' => 'Lỗi khi đọc file: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);

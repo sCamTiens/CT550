@@ -34,7 +34,7 @@
         // Chỉ hiển thị nút chấm công cho nhân viên (không phải Admin)
         $isAdmin = ($_SESSION['user']['staff_role'] ?? '') === 'Admin';
         if (!$isAdmin):
-            ?>
+        ?>
             <!-- Nút chấm công -->
             <div class="relative" x-data="attendanceButtonData()">
                 <template x-if="currentShift && isInWorkingHours">
@@ -144,7 +144,7 @@
         <div class="relative">
             <?php
             $user = $_SESSION['admin_user'] ?? [];
-            $avatar = !empty($user['avatar_url']) ? '/assets/images/avatar/' . $user['avatar_url'] : '/assets/images/avatar/default.png';
+            $avatar = getAvatarUrl($user['avatar_url'] ?? null);
             $fullName = htmlspecialchars($user['full_name'] ?? 'Admin');
             ?>
             <button id="user-menu-btn" class="flex items-center gap-2 px-3 py-2 bg-white rounded-lg focus:outline-none
@@ -271,9 +271,9 @@
                 this.processing = true;
 
                 try {
-                    const endpoint = this.hasCheckedIn && !this.hasCheckedOut
-                        ? '/admin/api/attendance/check-out'
-                        : '/admin/api/attendance/check-in';
+                    const endpoint = this.hasCheckedIn && !this.hasCheckedOut ?
+                        '/admin/api/attendance/check-out' :
+                        '/admin/api/attendance/check-in';
 
                     const res = await fetch(endpoint, {
                         method: 'POST',
@@ -315,7 +315,7 @@
                         bg-white rounded-xl shadow-lg border-2 animate-slide-in
                     `;
 
-                                toast.innerHTML = `
+                toast.innerHTML = `
                         <div class="flex items-center flex-1">
                             <svg class="flex-shrink-0 w-6 h-6 ${type === 'success' ? 'text-green-600' : 'text-red-600'} mr-3"
                                 xmlns="http://www.w3.org/2000/svg" fill="none"
@@ -465,7 +465,7 @@
     }
 
     // User dropdown (existing code)
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function() {
         const btn = document.getElementById('user-menu-btn');
         const dropdown = document.getElementById('user-dropdown');
 
@@ -485,7 +485,7 @@
     });
 
     // Listen for avatar update event and update the header avatar
-    window.addEventListener('avatar-updated', function (e) {
+    window.addEventListener('avatar-updated', function(e) {
         const img = document.querySelector('#user-menu-btn img');
         if (img && e.detail && e.detail.url) {
             img.src = e.detail.url + '?t=' + Date.now(); // cache bust

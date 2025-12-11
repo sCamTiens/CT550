@@ -14,7 +14,7 @@
         highlight: -1,
         async choose(customer) {
             form.customer_id = customer.id;
-            this.search = customer.name;
+            this.search = customer.full_name;
             this.open = false;
             // Cập nhật điểm khách hàng khi chọn
             await updateCustomerLoyaltyPoints();
@@ -31,7 +31,7 @@
         },
         reset() {
             const selected = customers.find(c => c.id == form.customer_id);
-            this.search = selected ? selected.name : '';
+            this.search = selected ? selected.full_name : '';
             this.filtered = customers;
             this.highlight = -1;
         }
@@ -42,7 +42,7 @@
 
         <div class="relative">
             <input type="text" x-model="search" @focus="open = true; filtered = customers"
-                @input="open = true; filtered = customers.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || (c.phone && c.phone.includes(search)))"
+                @input="open = true; filtered = customers.filter(c => c.full_name.toLowerCase().includes(search.toLowerCase()) || (c.phone && c.phone.includes(search)))"
                 class="w-full border rounded px-3 py-2 pr-8 bg-white text-sm cursor-pointer focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
                 :class="!form.customer_id ? 'text-slate-400' : 'text-slate-900'" placeholder="-- Chọn khách hàng --" />
 
@@ -66,7 +66,7 @@
                         : 'hover:bg-[#002975] hover:text-white text-black'),
                         'px-3 py-2 cursor-pointer transition-colors text-sm'
                     ]">
-                    <div x-text="customer.name"></div>
+                    <div x-text="customer.full_name"></div>
                     <div class="text-xs opacity-75" x-text="customer.phone || ''"></div>
                 </div>
             </template>

@@ -13,26 +13,25 @@ class AddressRepository
     public function getCustomerAddresses(int $customerId): array
     {
         $stmt = DB::pdo()->prepare("
-            SELECT 
-                ua.id,
-                ua.user_id,
-                ua.receiver_name as recipient_name,
-                ua.receiver_phone as phone_number,
-                ua.line1 as address_line,
-                ua.province_code,
-                ua.commune_code,
-                ua.is_default,
-                ua.created_at,
-                ua.updated_at,
-                p.name as province,
-                w.name as ward,
-                '' as district
-            FROM user_addresses ua
-            LEFT JOIN provinces p ON ua.province_code = p.province_code
-            LEFT JOIN wards w ON ua.commune_code = w.ward_code
-            WHERE ua.user_id = :user_id 
-            ORDER BY ua.is_default DESC, ua.created_at DESC
-        ");
+        SELECT 
+            ua.id,
+            ua.user_id,
+            ua.receiver_name as recipient_name,
+            ua.receiver_phone as phone_number,
+            ua.line1 as address_line,
+            ua.province_code,
+            ua.province_name as province,
+            ua.district_id,
+            ua.district_name as district,
+            ua.commune_code,
+            ua.ward_name as ward,
+            ua.is_default,
+            ua.created_at,
+            ua.updated_at
+        FROM user_addresses ua
+        WHERE ua.user_id = :user_id 
+        ORDER BY ua.is_default DESC, ua.created_at DESC
+    ");
         $stmt->execute(['user_id' => $customerId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -43,8 +42,23 @@ class AddressRepository
     public function getDefaultAddress(int $customerId): ?array
     {
         $stmt = DB::pdo()->prepare("
-            SELECT * FROM user_addresses 
-            WHERE user_id = :user_id AND is_default = 1 
+            SELECT 
+                ua.id,
+                ua.user_id,
+                ua.receiver_name as recipient_name,
+                ua.receiver_phone as phone_number,
+                ua.line1 as address_line,
+                ua.province_code,
+                ua.province_name as province,
+                ua.district_id,
+                ua.district_name as district,
+                ua.commune_code,
+                ua.ward_name as ward,
+                ua.is_default,
+                ua.created_at,
+                ua.updated_at
+            FROM user_addresses ua
+            WHERE ua.user_id = :user_id AND ua.is_default = 1 
             LIMIT 1
         ");
         $stmt->execute(['user_id' => $customerId]);
@@ -58,24 +72,24 @@ class AddressRepository
     public function getAddressById(int $addressId, int $customerId): ?array
     {
         $stmt = DB::pdo()->prepare("
-            SELECT 
-                ua.id,
-                ua.user_id,
-                ua.receiver_name as recipient_name,
-                ua.receiver_phone as phone_number,
-                ua.line1 as address_line,
-                ua.province_code,
-                ua.commune_code,
-                ua.is_default,
-                ua.created_at,
-                ua.updated_at,
-                p.name as province,
-                w.name as ward
-            FROM user_addresses ua
-            LEFT JOIN provinces p ON ua.province_code = p.province_code
-            LEFT JOIN wards w ON ua.commune_code = w.ward_code
-            WHERE ua.id = :id AND ua.user_id = :user_id
-        ");
+        SELECT 
+            ua.id,
+            ua.user_id,
+            ua.receiver_name as recipient_name,
+            ua.receiver_phone as phone_number,
+            ua.line1 as address_line,
+            ua.province_code,
+            ua.province_name as province,
+            ua.district_id,
+            ua.district_name as district,
+            ua.commune_code,
+            ua.ward_name as ward,
+            ua.is_default,
+            ua.created_at,
+            ua.updated_at
+        FROM user_addresses ua
+        WHERE ua.id = :id AND ua.user_id = :user_id
+    ");
         $stmt->execute([
             'id' => $addressId,
             'user_id' => $customerId
@@ -97,28 +111,25 @@ class AddressRepository
         $stmt = DB::pdo()->prepare("
             INSERT INTO user_addresses (
                 user_id, receiver_name, receiver_phone, 
-                line1, province_code, commune_code, is_default, created_by
+                line1, province_code, province_name, district_id, district_name, commune_code, ward_name, is_default, created_by
             ) VALUES (
                 :user_id, :receiver_name, :receiver_phone, 
-                :line1, :province_code, :commune_code, :is_default, :created_by
+                :line1, :province_code, :province_name, :district_id, :district_name, :commune_code, :ward_name, :is_default, :created_by
             )
         ");
 
-        $fullAddress = $data['address_line'];
-        if (!empty($data['ward_name'])) {
-            $fullAddress .= ', ' . $data['ward_name'];
-        }
-        if (!empty($data['province_name'])) {
-            $fullAddress .= ', ' . $data['province_name'];
-        }
 
         $stmt->execute([
             'user_id' => $customerId,
             'receiver_name' => $data['recipient_name'],
             'receiver_phone' => $data['phone_number'],
-            'line1' => $fullAddress,
+            'line1' => $data['address_line'], // Store raw address line only
             'province_code' => $data['province_code'] ?? null,
+            'province_name' => $data['province_name'] ?? null,
+            'district_id' => $data['district_id'] ?? null,
+            'district_name' => $data['district_name'] ?? null,
             'commune_code' => $data['ward_code'] ?? null,
+            'ward_name' => $data['ward_name'] ?? null,
             'is_default' => $data['is_default'] ?? false,
             'created_by' => $customerId
         ]);
@@ -142,29 +153,30 @@ class AddressRepository
                 receiver_phone = :receiver_phone,
                 line1 = :line1,
                 province_code = :province_code,
+                province_name = :province_name,
+                district_id = :district_id,
+                district_name = :district_name,
                 commune_code = :commune_code,
+                ward_name = :ward_name,
                 is_default = :is_default,
                 updated_by = :updated_by,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = :id AND user_id = :user_id
         ");
 
-        $fullAddress = $data['address_line'];
-        if (!empty($data['ward_name'])) {
-            $fullAddress .= ', ' . $data['ward_name'];
-        }
-        if (!empty($data['province_name'])) {
-            $fullAddress .= ', ' . $data['province_name'];
-        }
 
         return $stmt->execute([
             'id' => $addressId,
             'user_id' => $customerId,
             'receiver_name' => $data['recipient_name'],
             'receiver_phone' => $data['phone_number'],
-            'line1' => $fullAddress,
+            'line1' => $data['address_line'], // Store raw address line only
             'province_code' => $data['province_code'] ?? null,
+            'province_name' => $data['province_name'] ?? null,
+            'district_id' => $data['district_id'] ?? null,
+            'district_name' => $data['district_name'] ?? null,
             'commune_code' => $data['ward_code'] ?? null,
+            'ward_name' => $data['ward_name'] ?? null,
             'is_default' => $data['is_default'] ?? false,
             'updated_by' => $customerId
         ]);

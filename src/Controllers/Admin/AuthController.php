@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controllers\Admin;
 
 use App\Core\Controller;
@@ -27,7 +28,7 @@ class AuthController extends Controller
         // Kiểm tra nếu vừa đăng nhập thất bại thì không tự động đăng nhập bằng cookie
         $justFailed = $_SESSION['login_failed'] ?? false;
         unset($_SESSION['login_failed']);
-        
+
         // Tự động đăng nhập lại nếu có cookie admin_remember và chưa có session
         // NHƯNG chỉ khi KHÔNG vừa đăng nhập thất bại
         if (!$justFailed && empty($_SESSION['user']) && !empty($_COOKIE['admin_remember'])) {
@@ -71,9 +72,9 @@ class AuthController extends Controller
         if (!EnvHelper::isAllowedIP($clientIP)) {
             $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
             $isJsonReq = stripos($contentType, 'application/json') !== false;
-            
+
             $errorMsg = 'IP của bạn (' . $clientIP . ') không được phép đăng nhập. Vui lòng kết nối từ văn phòng.';
-            
+
             if ($isJsonReq) {
                 http_response_code(403);
                 header('Content-Type: application/json; charset=utf-8');
@@ -88,7 +89,7 @@ class AuthController extends Controller
         error_log("=== LOGIN ATTEMPT START ===");
         error_log("REQUEST_METHOD: " . ($_SERVER['REQUEST_METHOD'] ?? 'NONE'));
         error_log("CONTENT_TYPE: " . ($_SERVER['CONTENT_TYPE'] ?? 'NONE'));
-        
+
         $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
         if (stripos($contentType, 'application/json') !== false) {
             $raw = file_get_contents('php://input');
@@ -131,13 +132,13 @@ class AuthController extends Controller
             // Xóa session để tránh tự động đăng nhập lại khi reload
             unset($_SESSION['admin_user']);
             unset($_SESSION['user']);
-            
+
             // Đánh dấu là vừa đăng nhập thất bại để không tự động login bằng cookie
             $_SESSION['login_failed'] = true;
-            
+
             // KHÔNG xóa cookie ở đây vì có thể user nhập sai 1 lần
             // Cookie chỉ nên xóa khi logout
-            
+
             if ($isJsonReq) {
                 http_response_code(401);
                 header('Content-Type: application/json; charset=utf-8');
@@ -191,7 +192,7 @@ class AuthController extends Controller
         ];
         $_SESSION['admin_user'] = $sessData;
         $_SESSION['user'] = $sessData; // để CategoryController dùng
-        
+
         // Xóa flag login_failed khi đăng nhập thành công
         unset($_SESSION['login_failed']);
 
@@ -203,13 +204,13 @@ class AuthController extends Controller
             try {
                 // Kiểm tra tồn kho thấp
                 DailyStockAlertService::runDailyCheck();
-                
+
                 // Kiểm tra phiếu nhập sắp đến hạn thanh toán
                 DailyPaymentDueAlertService::runDailyCheck();
-                
+
                 // Kiểm tra hàng hết hạn/sắp hết hạn
                 DailyExpiryAlertService::runDailyCheck();
-                
+
                 $_SESSION['last_stock_check'] = $today;
             } catch (\Exception $e) {
                 // Bỏ qua lỗi, không ảnh hưởng đăng nhập
@@ -245,7 +246,7 @@ class AuthController extends Controller
             'role_id' => (int) $user->role_id,
             'staff_role' => $staffRole
         ];
-        
+
         $accessToken = JWTHelper::generateToken($tokenPayload);
         $refreshToken = JWTHelper::generateRefreshToken($tokenPayload);
 
@@ -275,22 +276,32 @@ class AuthController extends Controller
         // Debug log
         error_log("=== LOGOUT CALLED ===");
         error_log("Session before logout: " . json_encode($_SESSION));
-        
+
         // Xóa session
         unset($_SESSION['admin_user']);
         unset($_SESSION['user']);
         unset($_SESSION['last_stock_check']);
-        
+
         // Xóa cookie remember nếu có
         if (isset($_COOKIE['admin_remember'])) {
             setcookie('admin_remember', '', time() - 3600, '/', '', false, true);
         }
-        
+
         // Debug log
         error_log("Session after logout: " . json_encode($_SESSION));
+
+        // Check if AJAX/POST request
+        $isPost = $_SERVER['REQUEST_METHOD'] === 'POST';
+
+        if ($isPost) {
+            // Return JSON for POST requests
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'message' => 'Logged out']);
+            exit;
+        }
+
+        // Redirect for normal GET requests
         error_log("Redirecting to /admin/login");
-        
-        // Redirect về trang login
         header('Location: /admin/login');
         exit;
     }
@@ -307,46 +318,40 @@ class AuthController extends Controller
             header('Location: /admin/profile/profile?tab=info&error=upload');
             exit;
         }
-        $targetDir = __DIR__ . '/../../../public/assets/images/avatar/';
-        if (!is_dir($targetDir)) {
-            mkdir($targetDir, 0777, true);
-        }
-        $targetFile = $targetDir . $currentUserId . '.png';
         $tmpFile = $_FILES['avatar']['tmp_name'];
-        $allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+        $allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
         $fileType = mime_content_type($tmpFile);
+
         if (!in_array($fileType, $allowedTypes)) {
             header('Location: /admin/profile/profile?tab=info&error=type');
             exit;
         }
-        // Xóa file cũ nếu tồn tại
-        if (file_exists($targetFile)) {
-            unlink($targetFile);
-        }
-        if ($fileType !== 'image/png') {
-            $image = imagecreatefromstring(file_get_contents($tmpFile));
-            if ($image === false) {
-                header('Location: /admin/profile/profile?tab=info&error=convert');
-                exit;
-            }
-            imagepng($image, $targetFile);
-            imagedestroy($image);
-        } else {
-            move_uploaded_file($tmpFile, $targetFile);
-        }
-        // Cập nhật DB
-        $avatarPath = '' . $currentUserId . '.png';
-        UserRepository::updateAvatar($currentUserId, $avatarPath);
-        // Cập nhật lại session
-        if (isset($_SESSION['user'])) {
-            $_SESSION['user']['avatar_url'] = $avatarPath;
-        }
-        if (isset($_SESSION['admin_user'])) {
-            $_SESSION['admin_user']['avatar_url'] = $avatarPath;
-        }
-        header('Location: /admin/profile?tab=info&avatar-updated=1');
-        exit;
 
+        try {
+            // Upload to ImgBB
+            $imgbb = new \App\Support\ImageHostingService();
+            $result = $imgbb->uploadImage(
+                $tmpFile,
+                "admin_avatar_{$currentUserId}_" . time()
+            );
+
+            // Update DB with ImgBB URL
+            UserRepository::updateAvatar($currentUserId, $result['url']);
+
+            // Update session
+            if (isset($_SESSION['user'])) {
+                $_SESSION['user']['avatar_url'] = $result['url'];
+            }
+            if (isset($_SESSION['admin_user'])) {
+                $_SESSION['admin_user']['avatar_url'] = $result['url'];
+            }
+
+            header('Location: /admin/profile?tab=info&avatar-updated=1');
+        } catch (\Exception $e) {
+            error_log('[AuthController::uploadAvatar] Error: ' . $e->getMessage());
+            header('Location: /admin/profile/profile?tab=info&error=convert');
+        }
+        exit;
     }
 
     // Xử lý cập nhật thông tin cá nhân
@@ -450,7 +455,7 @@ class AuthController extends Controller
 
         // Validate refresh token
         $decoded = JWTHelper::validateToken($refreshToken);
-        
+
         if (!$decoded || ($decoded->type ?? '') !== 'refresh') {
             http_response_code(401);
             header('Content-Type: application/json');

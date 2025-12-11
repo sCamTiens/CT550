@@ -1,0 +1,76 @@
+version: "3.1"
+
+intents:
+  - greet
+  - goodbye
+  - affirm
+  - deny
+  - check_order
+  - search_product
+  - order_history
+  - track_order
+  - help
+  - bot_challenge
+
+entities:
+  - order_code
+  - product_name
+  - email
+  - phone
+
+slots:
+  order_code:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: order_code
+
+  product_name:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: product_name
+
+  user_id:
+    type: text
+    mappings:
+      - type: custom
+
+  email:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: email
+
+  phone:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: phone
+
+responses:
+  utter_greet:
+    - text: "Xin chào! Tôi là trợ lý ảo của Mini Market. Tôi có thể giúp gì cho bạn? 😊"
+    - text: "Chào bạn! Bạn cần hỗ trợ gì về đơn hàng hoặc sản phẩm không? 🛒"
+
+  utter_goodbye:
+    - text: "Tạm biệt! Chúc bạn một ngày tốt lành! 👋"
+    - text: "Hẹn gặp lại bạn! Cảm ơn đã liên hệ! 😊"
+
+  utter_iamabot:
+    - text: "Tôi là chatbot hỗ trợ khách hàng của Mini Market, được phát triển bằng Rasa AI! 🤖"
+
+  utter_default:
+    - text: "Xin lỗi, tôi không hiểu ý bạn. Bạn có thể nói rõ hơn được không? 🤔"
+    - text: "Tôi chưa hiểu câu hỏi của bạn. Bạn cần giúp về đơn hàng hay sản phẩm? 💬"
+
+actions:
+  - action_check_order
+  - action_search_product
+  - action_order_history
+  - action_track_order
+  - action_help
+
+session_config:
+  session_expiration_time: 60
+  carry_over_slots_to_new_session: true

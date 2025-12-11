@@ -110,7 +110,7 @@ $items = $items ?? [];
                 </button>
               </td>
               <td class="py-2 px-4 text-center">
-                <img :src="p.image_url + '?t=' + (p.updated_at ? new Date(p.updated_at).getTime() : Date.now())"
+                <img :src="getProductImageUrl(p.image_url)"
                   class="w-12 h-12 object-cover rounded-full border mx-auto bg-white" :alt="p.name">
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.sku"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.barcode"></td>
@@ -365,8 +365,8 @@ $items = $items ?? [];
         show: false,
         title: '',
         message: '',
-        onConfirm: () => { },
-        onCancel: () => { }
+        onConfirm: () => {},
+        onCancel: () => {}
       },
 
       // phân trang
@@ -409,13 +409,28 @@ $items = $items ?? [];
       },
 
       errors: {
-        name: '', sku: '', slug: '', sale_price: '', cost_price: '', brand_id: '', category_id: '',
-        unit_id: '', pack_size: '', description: ''
+        name: '',
+        sku: '',
+        slug: '',
+        sale_price: '',
+        cost_price: '',
+        brand_id: '',
+        category_id: '',
+        unit_id: '',
+        pack_size: '',
+        description: ''
       },
 
       touched: {
-        name: false, sku: false, sale_price: false, cost_price: false, brand_id: false, category_id: false,
-        unit_id: false, pack_size: false, description: ''
+        name: false,
+        sku: false,
+        sale_price: false,
+        cost_price: false,
+        brand_id: false,
+        category_id: false,
+        unit_id: false,
+        pack_size: false,
+        description: ''
       },
 
       // lifecycle
@@ -433,30 +448,71 @@ $items = $items ?? [];
         }
       },
 
+      // Helper to get correct product image URL
+      getProductImageUrl(url) {
+        if (!url) return '/assets/images/products/default.png';
+        if (url.indexOf('http://') === 0 || url.indexOf('https://') === 0) {
+          return url; // Already absolute URL
+        }
+        return url.startsWith('/') ? url : '/' + url; // Local path
+      },
+
       // ===== FILTERS =====
       openFilter: {
-        sku: false, barcode: false, name: false, slug: false,
-        brand: false, category: false, sale_price: false, cost_price: false,
-        unit: false, status: false, created_at: false, created_by: false,
-        updated_at: false, updated_by: false
+        sku: false,
+        barcode: false,
+        name: false,
+        slug: false,
+        brand: false,
+        category: false,
+        sale_price: false,
+        cost_price: false,
+        unit: false,
+        status: false,
+        created_at: false,
+        created_by: false,
+        updated_at: false,
+        updated_by: false
       },
 
       filters: {
-        sku: '', barcode: '', name: '', slug: '',
-        brand: '', category: '',
-        sale_price_type: '', sale_price_value: '', sale_price_from: '', sale_price_to: '',
-        cost_price_type: '', cost_price_value: '', cost_price_from: '', cost_price_to: '',
-        unit: '', status: '',
-        created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
+        sku: '',
+        barcode: '',
+        name: '',
+        slug: '',
+        brand: '',
+        category: '',
+        sale_price_type: '',
+        sale_price_value: '',
+        sale_price_from: '',
+        sale_price_to: '',
+        cost_price_type: '',
+        cost_price_value: '',
+        cost_price_from: '',
+        cost_price_to: '',
+        unit: '',
+        status: '',
+        created_at_type: '',
+        created_at_value: '',
+        created_at_from: '',
+        created_at_to: '',
         created_by: '',
-        updated_at_type: '', updated_at_value: '', updated_at_from: '', updated_at_to: '',
+        updated_at_type: '',
+        updated_at_value: '',
+        updated_at_from: '',
+        updated_at_to: '',
         updated_by: ''
       },
 
       // ------------------------------------------------------------------
       // Hàm lọc tổng quát — hỗ trợ TEXT, NUMBER, DATE
       // ------------------------------------------------------------------
-      applyFilter(val, type, { value, from, to, dataType }) {
+      applyFilter(val, type, {
+        value,
+        from,
+        to,
+        dataType
+      }) {
         if (val == null) return false;
 
         // ---------------- TEXT ----------------
@@ -475,14 +531,14 @@ $items = $items ?? [];
 
           if (!query) return true;
 
-          if (type === 'eq') return hasAccent(query)
-            ? raw === query
-            : str === queryNoAccent;
+          if (type === 'eq') return hasAccent(query) ?
+            raw === query :
+            str === queryNoAccent;
 
           if (type === 'contains' || type === 'like') {
-            return hasAccent(query)
-              ? raw.includes(query)
-              : str.includes(queryNoAccent);
+            return hasAccent(query) ?
+              raw.includes(query) :
+              str.includes(queryNoAccent);
           }
 
           return true;
@@ -572,10 +628,10 @@ $items = $items ?? [];
         // --- Lọc theo thương hiệu và loại (text hiển thị) ---
         ['brand', 'category', 'unit'].forEach(key => {
           if (this.filters[key]) {
-            const field = key === 'brand' ? 'brand_name'
-              : key === 'category' ? 'category_name'
-                : key === 'unit' ? 'unit_name'
-                  : key;
+            const field = key === 'brand' ? 'brand_name' :
+              key === 'category' ? 'category_name' :
+              key === 'unit' ? 'unit_name' :
+              key;
             data = data.filter(o =>
               this.applyFilter(o[field], 'contains', {
                 value: this.filters[key],
@@ -646,7 +702,9 @@ $items = $items ?? [];
         for (const k in this.openFilter) this.openFilter[k] = false;
         this.openFilter[key] = true;
       },
-      closeFilter(key) { this.openFilter[key] = false; },
+      closeFilter(key) {
+        this.openFilter[key] = false;
+      },
       resetFilter(key) {
         if (['created_at', 'updated_at', 'sale_price', 'cost_price'].includes(key)) {
           this.filters[`${key}_type`] = '';
@@ -661,18 +719,49 @@ $items = $items ?? [];
 
       resetForm() {
         this.form = {
-          id: null, name: '', slug: '', sku: '',
-          sale_price: 0, sale_priceFormatted: '',
-          cost_price: 0, cost_priceFormatted: '',
-          unit_id: '', brand_id: '', category_id: '',
-          pack_size: '', barcode: '', description: '',
+          id: null,
+          name: '',
+          slug: '',
+          sku: '',
+          sale_price: 0,
+          sale_priceFormatted: '',
+          cost_price: 0,
+          cost_priceFormatted: '',
+          unit_id: '',
+          brand_id: '',
+          category_id: '',
+          pack_size: '',
+          barcode: '',
+          description: '',
           is_active: 1,
           mainImage: null,
           mainImagePreview: '',
           subImages: []
         };
-        this.errors = { name: '', sku: '', slug: '', sale_price: '', cost_price: '', brand_id: '', category_id: '', unit_id: '', pack_size: '', description: '' };
-        this.touched = { name: false, sku: false, slug: false, sale_price: false, cost_price: false, brand_id: false, category_id: false, unit_id: false, pack_size: false, description: false };
+        this.errors = {
+          name: '',
+          sku: '',
+          slug: '',
+          sale_price: '',
+          cost_price: '',
+          brand_id: '',
+          category_id: '',
+          unit_id: '',
+          pack_size: '',
+          description: ''
+        };
+        this.touched = {
+          name: false,
+          sku: false,
+          slug: false,
+          sale_price: false,
+          cost_price: false,
+          brand_id: false,
+          category_id: false,
+          unit_id: false,
+          pack_size: false,
+          description: false
+        };
       },
 
       // ===== utilities =====
@@ -689,7 +778,11 @@ $items = $items ?? [];
       },
 
       // ===== Barcode helpers (EAN-13, prefix 893) =====
-      randomDigits(n) { return Array.from({ length: n }, () => Math.floor(Math.random() * 10)).join(''); },
+      randomDigits(n) {
+        return Array.from({
+          length: n
+        }, () => Math.floor(Math.random() * 10)).join('');
+      },
       ean13CheckDigit12(d12) {
         let sum = 0;
         for (let i = 0; i < 12; i++) {
@@ -727,19 +820,19 @@ $items = $items ?? [];
 
       // Khi gõ vào ô input giá bán
       onSalePriceInput(e) {
-        let raw = e.target.value.replace(/,/g, '');     // bỏ dấu phẩy
+        let raw = e.target.value.replace(/,/g, ''); // bỏ dấu phẩy
         let val = Number(raw);
         if (Number.isNaN(val)) val = 0;
-        this.form.sale_price = val;                          // giá trị gốc (dùng để lưu DB)
+        this.form.sale_price = val; // giá trị gốc (dùng để lưu DB)
         this.form.sale_priceFormatted = val.toLocaleString('en-US'); // hiển thị: 100,000
       },
 
       // Khi gõ vào ô input giá nhập
       onCostPriceInput(e) {
-        let raw = e.target.value.replace(/,/g, '');     // bỏ dấu phẩy
+        let raw = e.target.value.replace(/,/g, ''); // bỏ dấu phẩy
         let val = Number(raw);
         if (Number.isNaN(val)) val = 0;
-        this.form.cost_price = val;                          // giá trị gốc (dùng để lưu DB)
+        this.form.cost_price = val; // giá trị gốc (dùng để lưu DB)
         this.form.cost_priceFormatted = val.toLocaleString('en-US'); // hiển thị: 100,000
       },
 
@@ -900,8 +993,16 @@ $items = $items ?? [];
       // ===== validate khi submit =====
       validateForm() {
         this.errors = {
-          name: '', sku: '', slug: '', sale_price: '', cost_price: '', brand_id: '', category_id: '',
-          unit_id: '', pack_size: '', description: ''
+          name: '',
+          sku: '',
+          slug: '',
+          sale_price: '',
+          cost_price: '',
+          brand_id: '',
+          category_id: '',
+          unit_id: '',
+          pack_size: '',
+          description: ''
         };
         let ok = true;
 
@@ -927,7 +1028,9 @@ $items = $items ?? [];
             const data = await r.json();
             this.brands = data.items;
           }
-        } catch (e) { console.error(e); }
+        } catch (e) {
+          console.error(e);
+        }
 
         try {
           const r = await fetch(api.categories);
@@ -935,7 +1038,9 @@ $items = $items ?? [];
             const data = await r.json();
             this.categories = data.items;
           }
-        } catch (e) { console.error(e); }
+        } catch (e) {
+          console.error(e);
+        }
 
         try {
           const r = await fetch(api.units);
@@ -943,7 +1048,9 @@ $items = $items ?? [];
             const data = await r.json();
             this.units = data.items;
           }
-        } catch (e) { console.error(e); }
+        } catch (e) {
+          console.error(e);
+        }
       },
 
       async fetchAll() {
@@ -954,7 +1061,9 @@ $items = $items ?? [];
             const data = await r.json();
             this.items = Array.isArray(data) ? data : (data.items || []);
           }
-        } finally { this.loading = false; }
+        } finally {
+          this.loading = false;
+        }
       },
 
       // ui actions
@@ -1062,7 +1171,9 @@ $items = $items ?? [];
           // Step 1: Create product first
           const r = await fetch(api.create, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json'
+            },
             body: JSON.stringify(this.form)
           });
           if (!r.ok) throw new Error((await r.json()).error || 'Không thể thêm sản phẩm');
@@ -1093,7 +1204,9 @@ $items = $items ?? [];
           this.showToast('Thêm sản phẩm thành công!', 'success');
         } catch (e) {
           this.showToast(e.message || 'Không thể thêm sản phẩm');
-        } finally { this.submitting = false; }
+        } finally {
+          this.submitting = false;
+        }
       },
 
       async submitUpdate() {
@@ -1109,7 +1222,9 @@ $items = $items ?? [];
 
           const r = await fetch(api.update(this.form.id), {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json'
+            },
             body: JSON.stringify(payload)
           });
 
@@ -1146,7 +1261,8 @@ $items = $items ?? [];
           }
 
           const i = this.items.findIndex(x => x.id == res.id);
-          if (i > -1) this.items[i] = res; else this.items.unshift(res);
+          if (i > -1) this.items[i] = res;
+          else this.items.unshift(res);
 
           // Sau khi cập nhật thành công, gọi lại fetchAll để reload ảnh mới
           await this.fetchAll();
@@ -1170,9 +1286,11 @@ $items = $items ?? [];
           `Bạn có chắc chắn muốn xóa sản phẩm "${name}"?`,
           async () => {
             try {
-              const r = await fetch(api.remove(id), { method: 'DELETE' });
+              const r = await fetch(api.remove(id), {
+                method: 'DELETE'
+              });
               if (!r.ok) {
-                const txt = await r.text();   // đọc thô để debug
+                const txt = await r.text(); // đọc thô để debug
                 throw new Error(`Server error: ${txt}`);
               }
               const res = await r.json();
@@ -1213,7 +1331,9 @@ $items = $items ?? [];
 
         const now = new Date();
         const dateStr = now.toLocaleDateString('vi-VN').replace(/\//g, '-');
-        const timeStr = now.toLocaleTimeString('vi-VN', { hour12: false }).replace(/:/g, '-');
+        const timeStr = now.toLocaleTimeString('vi-VN', {
+          hour12: false
+        }).replace(/:/g, '-');
         const filename = `San_pham_${dateStr}_${timeStr}.xlsx`;
 
         const exportData = {
@@ -1236,10 +1356,12 @@ $items = $items ?? [];
         };
 
         fetch('/admin/api/products/export', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(exportData)
-        })
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(exportData)
+          })
           .then(response => {
             if (!response.ok) throw new Error('Export failed');
             return response.blob();
@@ -1332,7 +1454,7 @@ $items = $items ?? [];
         }
       },
 
-      showConfirm(title, message, onConfirm, onCancel = () => { }) {
+      showConfirm(title, message, onConfirm, onCancel = () => {}) {
         this.confirmDialog = {
           show: true,
           title,
@@ -1349,9 +1471,21 @@ $items = $items ?? [];
 
         const toast = document.createElement('div');
         const colors = {
-          success: { text: 'text-green-700', border: 'border-green-400', icon: 'text-green-600' },
-          warning: { text: 'text-yellow-700', border: 'border-yellow-400', icon: 'text-yellow-600' },
-          error: { text: 'text-red-700', border: 'border-red-400', icon: 'text-red-600' }
+          success: {
+            text: 'text-green-700',
+            border: 'border-green-400',
+            icon: 'text-green-600'
+          },
+          warning: {
+            text: 'text-yellow-700',
+            border: 'border-yellow-400',
+            icon: 'text-yellow-600'
+          },
+          error: {
+            text: 'text-red-700',
+            border: 'border-red-400',
+            icon: 'text-red-600'
+          }
         };
         const color = colors[type] || colors.error;
 
@@ -1359,11 +1493,11 @@ $items = $items ?? [];
           `fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 mb-4 text-base font-semibold
             ${color.text} ${color.border} bg-white rounded-xl shadow-lg border-2`;
 
-        const iconPath = type === 'success'
-          ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />`
-          : type === 'warning'
-            ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5 12a7 7 0 0114 0 7 7 0 01-14 0z" />`
-            : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`;
+        const iconPath = type === 'success' ?
+          `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />` :
+          type === 'warning' ?
+          `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5 12a7 7 0 0114 0 7 7 0 01-14 0z" />` :
+          `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`;
 
         toast.innerHTML = `
             <svg class="flex-shrink-0 w-6 h-6 ${color.icon} mr-3" 

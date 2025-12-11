@@ -26,9 +26,7 @@
                     <!-- Avatar -->
                     <div class="flex flex-col items-center mb-6">
                         <?php
-                        $avatarPath = !empty($customer['avatar_url'])
-                            ? "/assets/images/avatar/" . htmlspecialchars($customer['avatar_url'])
-                            : "/assets/images/avatar/default.png";
+                        $avatarPath = getAvatarUrl($customer['avatar_url'] ?? null);
                         ?>
                         <img src="<?= $avatarPath ?>?v=<?= time() ?>" alt="Avatar"
                             class="w-32 h-32 rounded-full border-4 border-[#002975] object-cover mb-4">
@@ -378,6 +376,32 @@
                                             class="text-gray-400 hover:text-gray-600 text-2xl">
                                             <i class="fa-solid fa-times"></i>
                                         </button>
+                                    </div>
+
+                                    <!-- Order Status Stepper -->
+                                    <div class="px-6 py-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
+                                        <div class="flex items-center justify-between relative">
+                                            <!-- Progress line -->
+                                            <div class="absolute top-5 left-0 right-0 h-1 bg-gray-300 z-0"
+                                                style="width: calc(100% - 40px); margin-left: 20px;"></div>
+                                            <div class="absolute top-5 left-0 h-1 bg-green-500 z-0 transition-all duration-500"
+                                                :style="`width: ${getProgressWidth()}; margin-left: 20px;`"></div>
+
+                                            <!-- Steps -->
+                                            <template x-for="(step, index) in getOrderSteps()" :key="index">
+                                                <div class="flex flex-col items-center relative z-10 flex-1">
+                                                    <!-- Circle -->
+                                                    <div class="w-10 h-10 rounded-full flex items-center justify-center border-4 bg-white transition-all duration-300"
+                                                        :class="step.active ? 'border-green-500 bg-green-500' : 'border-gray-300 bg-white'">
+                                                        <i :class="step.icon + (step.active ? ' text-white' : ' text-gray-400')" class="text-lg"></i>
+                                                    </div>
+                                                    <!-- Label -->
+                                                    <div class="mt-2 text-xs font-semibold text-center w-24"
+                                                        :class="step.active ? 'text-green-600' : 'text-gray-500'"
+                                                        x-text="step.label"></div>
+                                                </div>
+                                            </template>
+                                        </div>
                                     </div>
 
                                     <!-- Body -->
@@ -867,13 +891,13 @@
                     phone: <?= json_encode($customer['phone'] ?? '') ?>,
                     gender: <?= json_encode($customer['gender'] ?? '') ?>,
                     date_of_birth: <?php
-                    $dob = $customer['date_of_birth'] ?? '';
-                    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dob)) {
-                        $parts = explode('-', $dob);
-                        $dob = $parts[2] . '/' . $parts[1] . '/' . $parts[0];
-                    }
-                    echo json_encode($dob);
-                    ?>
+                                    $dob = $customer['date_of_birth'] ?? '';
+                                    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dob)) {
+                                        $parts = explode('-', $dob);
+                                        $dob = $parts[2] . '/' . $parts[1] . '/' . $parts[0];
+                                    }
+                                    echo json_encode($dob);
+                                    ?>
                 },
                 errors: {},
                 clearError(f) {
@@ -1268,6 +1292,13 @@
 
                 async init() {
                     await this.fetchData();
+
+                    // Auto open order detail if param exists
+                    const params = new URLSearchParams(window.location.search);
+                    const openOrderId = params.get('open');
+                    if (openOrderId) {
+                        this.viewDetail(openOrderId);
+                    }
                 },
 
                 async fetchData() {
@@ -1491,21 +1522,21 @@
 
                 getStatusClass(status) {
                     const classes = {
-                        'Chờ xử lý': 'bg-yellow-100 text-yellow-700',     // Pending
-                        'Đang xử lý': 'bg-blue-100 text-blue-700',        // Processing
-                        'Đang giao': 'bg-purple-100 text-purple-700',     // Shipping
-                        'Hoàn tất': 'bg-green-100 text-green-700',        // Completed
-                        'Đã hủy': 'bg-red-100 text-red-700'               // Cancelled
+                        'Chờ xử lý': 'bg-yellow-100 text-yellow-800', // Pending
+                        'Đang xử lý': 'bg-blue-100 text-blue-800', // Processing
+                        'Đang giao hàng': 'bg-orange-100 text-orange-800', // Shipping
+                        'Đã giao': 'bg-green-100 text-green-800', // Completed
+                        'Đã hủy': 'bg-red-100 text-red-800' // Cancelled
                     };
                     return classes[status] || 'bg-gray-100 text-gray-700';
                 },
 
                 getPaymentStatusClass(status) {
                     const classes = {
-                        'Đã thanh toán': 'bg-green-100 text-green-700',       // Success
-                        'Chưa thanh toán': 'bg-yellow-100 text-yellow-700',   // Pending
-                        'Thất bại': 'bg-red-100 text-red-700',                // Failed
-                        'Đã hoàn lại tiền': 'bg-gray-100 text-gray-700'       // Refunded
+                        'Đã thanh toán': 'bg-green-100 text-green-700', // Success
+                        'Chưa thanh toán': 'bg-yellow-100 text-yellow-700', // Pending
+                        'Thất bại': 'bg-red-100 text-red-700', // Failed
+                        'Đã hoàn lại tiền': 'bg-gray-100 text-gray-700' // Refunded
                     };
                     return classes[status] || 'bg-gray-100 text-gray-700';
                 },
@@ -1591,12 +1622,73 @@
                         console.error('Cancel order error:', err);
                         showToast('Không thể hủy đơn hàng', 'error');
                     }
+                },
+
+                getOrderSteps() {
+                    const status = this.viewOrder.status_label || '';
+                    const steps = [{
+                            label: 'Chờ xử lý',
+                            icon: 'fa-solid fa-clock',
+                            key: 'Chờ xử lý'
+                        },
+                        {
+                            label: 'Đang xử lý',
+                            icon: 'fa-solid fa-boxes-packing',
+                            key: 'Đang xử lý'
+                        },
+                        {
+                            label: 'Đang giao hàng',
+                            icon: 'fa-solid fa-truck-fast',
+                            key: 'Đang giao hàng'
+                        },
+                        {
+                            label: 'Đã giao',
+                            icon: 'fa-solid fa-circle-check',
+                            key: 'Đã giao'
+                        }
+                    ];
+
+                    // Nếu đơn bị hủy, chỉ hiển thị bước đầu và bước hủy
+                    if (status === 'Đã hủy') {
+                        return [{
+                                label: 'Chờ xử lý',
+                                icon: 'fa-solid fa-clock',
+                                active: true
+                            },
+                            {
+                                label: 'Đã hủy',
+                                icon: 'fa-solid fa-ban',
+                                active: true,
+                                isCancel: true
+                            }
+                        ];
+                    }
+
+                    // Xác định bước hiện tại
+                    const currentIndex = steps.findIndex(s => s.key === status);
+
+                    return steps.map((step, index) => ({
+                        ...step,
+                        active: index <= currentIndex
+                    }));
+                },
+
+                getProgressWidth() {
+                    const steps = this.getOrderSteps();
+                    const activeCount = steps.filter(s => s.active).length;
+                    const totalSteps = steps.length;
+
+                    if (activeCount === 0) return '0%';
+                    if (this.viewOrder.status_label === 'Đã hủy') return '33%';
+
+                    const percentage = ((activeCount - 1) / (totalSteps - 1)) * 100;
+                    return `calc(${percentage}% - ${20 - (20 * percentage / 100)}px)`;
                 }
             }
         }
 
         // Flatpickr date picker
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function() {
             flatpickr('input[name="date_of_birth"]', {
                 dateFormat: 'd/m/Y',
                 locale: 'vn',
@@ -1605,7 +1697,7 @@
         });
 
         // Flatpickr init cho filter popover
-        window.__initFlatpickr = function (el) {
+        window.__initFlatpickr = function(el) {
             const inputs = el.querySelectorAll('input.flatpickr');
             inputs.forEach(input => {
                 if (input._flatpickr) return; // Đã init rồi
@@ -1616,7 +1708,7 @@
                 flatpickr(input, {
                     dateFormat: 'Y-m-d',
                     locale: 'vn',
-                    onChange: function (selectedDates, dateStr) {
+                    onChange: function(selectedDates, dateStr) {
                         // Cập nhật filter value vào Alpine.js component
                         const component = Alpine.$data(el.closest('[x-data]'));
                         if (component && component.filters) {
@@ -1628,7 +1720,7 @@
         };
 
         // Helper: mở flatpickr khi click icon calendar
-        window.openFlatpickr = function (iconEl) {
+        window.openFlatpickr = function(iconEl) {
             const input = iconEl.closest('.relative').querySelector('input.flatpickr');
             if (input && input._flatpickr) {
                 input._flatpickr.open();

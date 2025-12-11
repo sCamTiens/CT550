@@ -73,12 +73,6 @@ class JWTMiddleware
             error_log('[JWTMiddleware] Session access_token exists: ' . (isset($_SESSION['customer']['access_token']) ? 'YES' : 'NO'));
 
             if (!$token) {
-                // If not an API request, redirect to login page
-                if (!$isApiRequest) {
-                    header('Location: /login');
-                    exit;
-                }
-
                 self::sendUnauthorizedResponse('Token not provided');
                 return false;
             }
@@ -93,15 +87,9 @@ class JWTMiddleware
             }
 
             if (!$userData) {
-                // If not an API request, redirect to login page
-                if (!$isApiRequest) {
-                    // Clear invalid session
-                    unset($_SESSION['customer']);
-                    header('Location: /login');
-                    exit;
-                }
-
-                self::sendUnauthorizedResponse('Invalid or expired token');
+                // Clear invalid session
+                unset($_SESSION['customer']);
+                self::sendUnauthorizedResponse('Token không hợp lệ hoặc đã hết hạn');
                 return false;
             }
 
@@ -114,16 +102,7 @@ class JWTMiddleware
             error_log('[JWTMiddleware] Error: ' . $e->getMessage());
             error_log('[JWTMiddleware] Stack trace: ' . $e->getTraceAsString());
 
-            // Check if API request
-            $uri = $_SERVER['REQUEST_URI'] ?? '';
-            $isApiRequest = str_starts_with($uri, '/api/');
-
-            if (!$isApiRequest) {
-                header('Location: /login');
-                exit;
-            }
-
-            // Always return JSON for API requests
+            // Always return 401 for any authentication error
             http_response_code(401);
             header('Content-Type: application/json');
             echo json_encode([

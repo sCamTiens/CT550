@@ -186,21 +186,44 @@ class VNPayController extends Controller
                 // Generate order code
                 $orderCode = 'ORD' . date('YmdHis') . rand(100, 999);
 
-                // Insert order
+                // Fetch shipping address for GHN
+                $addressRepo = new \App\Models\Customer\Repositories\AddressRepository();
+                $address = $addressRepo->getAddressById($pendingOrder['address_id'], $customerId);
+
+                if (!$address) {
+                    throw new \Exception('Địa chỉ giao hàng không hợp lệ');
+                }
+
+                // Get district ID (may be null for old addresses)
+                $districtId = $address['district_id'] ?? null;
+
+                // Insert order with shipping address data for GHN
                 $stmt = $pdo->prepare("
                     INSERT INTO orders (
                         code, user_id, order_type, status, subtotal, grand_total, 
-                        payment_method, payment_status, shipping_address_id, 
+                        payment_method, payment_status, shipping_address_id,
+                        delivery_name, delivery_phone, delivery_address,
+                        shipping_province, shipping_district, shipping_ward,
+                        shipping_province_id, shipping_district_id, shipping_ward_code,
                         created_at, updated_at
                     )
-                    VALUES (?, ?, 'Online', 'Chờ xử lý', ?, ?, 'VNPay', 'Đã thanh toán', ?, NOW(), NOW())
+                    VALUES (?, ?, 'Online', 'Chờ xử lý', ?, ?, 'VNPay', 'Đã thanh toán', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
                 ");
                 $stmt->execute([
                     $orderCode,
                     $customerId,
                     $pendingOrder['subtotal'],
                     $pendingOrder['subtotal'],
-                    $pendingOrder['address_id']
+                    $pendingOrder['address_id'],
+                    $address['recipient_name'] ?? $address['receiver_name'] ?? '',
+                    $address['phone_number'] ?? $address['receiver_phone'] ?? '',
+                    $address['address_line'] ?? $address['line1'] ?? '',
+                    $address['province'] ?? $address['province_name'] ?? '',
+                    $address['district'] ?? $address['district_name'] ?? '',
+                    $address['ward'] ?? $address['ward_name'] ?? '',
+                    $address['province_code'] ?? null,
+                    $districtId,
+                    $address['commune_code'] ?? ''
                 ]);
 
                 $orderId = $pdo->lastInsertId();

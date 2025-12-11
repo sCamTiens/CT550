@@ -59,13 +59,13 @@ if (!$isLogged && $requiresAuth) {
     // Global variable for login status
     window.isUserLoggedIn = <?= json_encode($isLogged) ?>;
     window.customerData = <?= json_encode($isLogged ? $_SESSION['customer'] ?? null : null) ?>;
-    
+
     // Auto-refresh token helper
     window.refreshTokenIfNeeded = async function() {
         if (!window.isUserLoggedIn) {
             return false;
         }
-        
+
         try {
             const response = await fetch('/api/customer/refresh-token', {
                 method: 'POST',
@@ -73,9 +73,9 @@ if (!$isLogged && $requiresAuth) {
                     'Content-Type': 'application/json'
                 }
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
                 // Token refreshed successfully
                 return true;
@@ -91,19 +91,19 @@ if (!$isLogged && $requiresAuth) {
             return false;
         }
     };
-    
+
     // Global fetch wrapper with auto-retry on 401
     window.fetchWithAuth = async function(url, options = {}) {
         // Add credentials to send session cookie
         options.credentials = 'same-origin';
-        
+
         let response = await fetch(url, options);
-        
+
         // If 401 Unauthorized, try to refresh token and retry once
         if (response.status === 401 && window.isUserLoggedIn) {
             console.log('[fetchWithAuth] Got 401, attempting token refresh...');
             const refreshed = await window.refreshTokenIfNeeded();
-            
+
             if (refreshed) {
                 console.log('[fetchWithAuth] Token refreshed, retrying request...');
                 // Retry original request
@@ -112,10 +112,10 @@ if (!$isLogged && $requiresAuth) {
                 console.log('[fetchWithAuth] Token refresh failed, redirecting to login...');
             }
         }
-        
+
         return response;
     };
-    
+
     tailwind.config = {
         theme: {
             extend: {
@@ -193,5 +193,8 @@ if (!$isLogged && $requiresAuth) {
         }, 4000);
     }
 </script>
+
+<!-- Auto Logout Handler -->
+<script src="/assets/js/auto-logout.js"></script>
 
 <div id="toast-container" class="fixed top-5 right-5 z-[60] flex flex-col items-end"></div>

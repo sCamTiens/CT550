@@ -19,7 +19,7 @@ class GoogleAuthController extends Controller
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
-        
+
         header('Content-Type: application/json');
 
         try {
@@ -63,26 +63,26 @@ class GoogleAuthController extends Controller
                     exit;
                 }
 
-                // User is customer - update Google ID and avatar
+                // User is customer - update Google ID and avatar URL
                 $googleAvatarUrl = $userData['picture'] ?? null;
-                $localAvatarFilename = null;
-                
-                // Download avatar từ Google nếu có
+                $avatarUrl = null;
+
+                // Use Google avatar URL directly (no download)
                 if ($googleAvatarUrl) {
-                    $localAvatarFilename = $this->downloadGoogleAvatar($googleAvatarUrl, $user['id'], $user['avatar_url'] ?? null);
+                    $avatarUrl = $this->getGoogleAvatarUrl($googleAvatarUrl);
                 }
-                
+
                 if (empty($user['google_id'])) {
                     // Chưa có google_id - cập nhật google_id và avatar
                     $updateStmt = $pdo->prepare("UPDATE users SET google_id = ?, avatar_url = ?, updated_at = NOW() WHERE id = ?");
-                    $updateStmt->execute([$userData['sub'], $localAvatarFilename, $user['id']]);
+                    $updateStmt->execute([$userData['sub'], $avatarUrl, $user['id']]);
                     $user['google_id'] = $userData['sub'];
-                    $user['avatar_url'] = $localAvatarFilename;
-                } elseif ($localAvatarFilename) {
-                    // Đã có google_id - chỉ cập nhật avatar nếu download thành công
+                    $user['avatar_url'] = $avatarUrl;
+                } elseif ($avatarUrl) {
+                    // Đã có google_id - chỉ cập nhật avatar nếu có URL
                     $updateStmt = $pdo->prepare("UPDATE users SET avatar_url = ?, updated_at = NOW() WHERE id = ?");
-                    $updateStmt->execute([$localAvatarFilename, $user['id']]);
-                    $user['avatar_url'] = $localAvatarFilename;
+                    $updateStmt->execute([$avatarUrl, $user['id']]);
+                    $user['avatar_url'] = $avatarUrl;
                 }
             } else {
                 // User doesn't exist - create new customer account
@@ -109,15 +109,13 @@ class GoogleAuthController extends Controller
                 ]);
 
                 $userId = $pdo->lastInsertId();
-                
-                // Download avatar với user ID thật
+
+                // Get Google avatar URL (no download)
                 $googleAvatarUrl = $userData['picture'] ?? null;
                 if ($googleAvatarUrl) {
-                    $localAvatarFilename = $this->downloadGoogleAvatar($googleAvatarUrl, $userId);
-                    if ($localAvatarFilename) {
-                        $updateStmt = $pdo->prepare("UPDATE users SET avatar_url = ? WHERE id = ?");
-                        $updateStmt->execute([$localAvatarFilename, $userId]);
-                    }
+                    $avatarUrl = $this->getGoogleAvatarUrl($googleAvatarUrl);
+                    $updateStmt = $pdo->prepare("UPDATE users SET avatar_url = ? WHERE id = ?");
+                    $updateStmt->execute([$avatarUrl, $userId]);
                 }
 
                 // Fetch newly created user
@@ -148,7 +146,7 @@ class GoogleAuthController extends Controller
             // Load giỏ hàng từ database
             $cartRepo = new \App\Models\Customer\Repositories\CartRepository();
             $cartFromDB = $cartRepo->loadCartFromDB($user['id']);
-            
+
             // Merge với giỏ hàng session (nếu có)
             if (!empty($_SESSION['cart'])) {
                 foreach ($_SESSION['cart'] as $productId => $item) {
@@ -160,7 +158,7 @@ class GoogleAuthController extends Controller
                 }
                 $cartRepo->saveCartToDB($user['id'], $cartFromDB);
             }
-            
+
             $_SESSION['cart'] = $cartFromDB;
 
             echo json_encode([
@@ -188,7 +186,7 @@ class GoogleAuthController extends Controller
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
-        
+
         header('Content-Type: application/json');
 
         try {
@@ -232,26 +230,26 @@ class GoogleAuthController extends Controller
                     exit;
                 }
 
-                // User is customer - update Google ID and avatar
+                // User is customer - update Google ID and avatar URL
                 $googleAvatarUrl = $input['picture'] ?? null;
-                $localAvatarFilename = null;
-                
-                // Download avatar từ Google nếu có
+                $avatarUrl = null;
+
+                // Use Google avatar URL directly (no download)
                 if ($googleAvatarUrl) {
-                    $localAvatarFilename = $this->downloadGoogleAvatar($googleAvatarUrl, $user['id'], $user['avatar_url'] ?? null);
+                    $avatarUrl = $this->getGoogleAvatarUrl($googleAvatarUrl);
                 }
-                
+
                 if (empty($user['google_id'])) {
                     // Chưa có google_id - cập nhật google_id và avatar
                     $updateStmt = $pdo->prepare("UPDATE users SET google_id = ?, avatar_url = ?, updated_at = NOW() WHERE id = ?");
-                    $updateStmt->execute([$googleId, $localAvatarFilename, $user['id']]);
+                    $updateStmt->execute([$googleId, $avatarUrl, $user['id']]);
                     $user['google_id'] = $googleId;
-                    $user['avatar_url'] = $localAvatarFilename;
-                } elseif ($localAvatarFilename) {
-                    // Đã có google_id - chỉ cập nhật avatar nếu download thành công
+                    $user['avatar_url'] = $avatarUrl;
+                } elseif ($avatarUrl) {
+                    // Đã có google_id - chỉ cập nhật avatar nếu có URL
                     $updateStmt = $pdo->prepare("UPDATE users SET avatar_url = ?, updated_at = NOW() WHERE id = ?");
-                    $updateStmt->execute([$localAvatarFilename, $user['id']]);
-                    $user['avatar_url'] = $localAvatarFilename;
+                    $updateStmt->execute([$avatarUrl, $user['id']]);
+                    $user['avatar_url'] = $avatarUrl;
                 }
             } else {
                 // User doesn't exist - create new customer account
@@ -267,7 +265,7 @@ class GoogleAuthController extends Controller
                 // Download avatar từ Google nếu có (tạm thời dùng user ID 0, sẽ cập nhật sau)
                 $googleAvatarUrl = $input['picture'] ?? null;
                 $localAvatarFilename = null;
-                
+
                 $insertStmt = $pdo->prepare("
                     INSERT INTO users (username, email, full_name, google_id, avatar_url, role_id, created_at, updated_at, force_change_password)
                     VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW(), FALSE)
@@ -282,14 +280,12 @@ class GoogleAuthController extends Controller
                 ]);
 
                 $userId = $pdo->lastInsertId();
-                
-                // Bây giờ download avatar với user ID thật
+
+                // Get Google avatar URL (no download)
                 if ($googleAvatarUrl) {
-                    $localAvatarFilename = $this->downloadGoogleAvatar($googleAvatarUrl, $userId);
-                    if ($localAvatarFilename) {
-                        $updateStmt = $pdo->prepare("UPDATE users SET avatar_url = ? WHERE id = ?");
-                        $updateStmt->execute([$localAvatarFilename, $userId]);
-                    }
+                    $avatarUrl = $this->getGoogleAvatarUrl($googleAvatarUrl);
+                    $updateStmt = $pdo->prepare("UPDATE users SET avatar_url = ? WHERE id = ?");
+                    $updateStmt->execute([$avatarUrl, $userId]);
                 }
 
                 // Fetch newly created user
@@ -320,7 +316,7 @@ class GoogleAuthController extends Controller
             // Load giỏ hàng từ database
             $cartRepo = new \App\Models\Customer\Repositories\CartRepository();
             $cartFromDB = $cartRepo->loadCartFromDB($user['id']);
-            
+
             // Merge với giỏ hàng session (nếu có)
             if (!empty($_SESSION['cart'])) {
                 foreach ($_SESSION['cart'] as $productId => $item) {
@@ -332,7 +328,7 @@ class GoogleAuthController extends Controller
                 }
                 $cartRepo->saveCartToDB($user['id'], $cartFromDB);
             }
-            
+
             $_SESSION['cart'] = $cartFromDB;
 
             echo json_encode([
@@ -408,69 +404,20 @@ class GoogleAuthController extends Controller
 
         return $username;
     }
-    
+
     /**
-     * Download Google avatar and save to local server
+     * Get Google avatar URL (no download, use Google CDN directly)
      */
-    private function downloadGoogleAvatar(string $googleAvatarUrl, int $userId, ?string $oldAvatarUrl = null): ?string
+    private function getGoogleAvatarUrl(string $googleAvatarUrl): string
     {
-        error_log("=== DOWNLOAD AVATAR START ===");
-        error_log("URL: " . $googleAvatarUrl);
-        error_log("User ID: " . $userId);
-        
-        try {
-            // Bỏ tham số size để lấy ảnh chất lượng cao hơn
-            $googleAvatarUrl = preg_replace('/=s\d+-c$/', '', $googleAvatarUrl);
-            error_log("Clean URL: " . $googleAvatarUrl);
-            
-            // Download ảnh
-            $imageContent = file_get_contents($googleAvatarUrl);
-            if ($imageContent === false) {
-                error_log("FAIL: Cannot download from Google");
-                return null;
-            }
-            error_log("SUCCESS: Downloaded " . strlen($imageContent) . " bytes");
-            
-            // Tạo tên file unique
-            $extension = 'jpg'; // Google avatar thường là jpg
-            $filename = 'google_' . $userId . '_' . time() . '.' . $extension;
-            $uploadDir = str_replace('\\', '/', __DIR__ . '/../../../public/assets/images/avatar/');
-            error_log("Upload dir: " . $uploadDir);
-            error_log("Filename: " . $filename);
-            
-            // Tạo thư mục nếu chưa có
-            if (!is_dir($uploadDir)) {
-                error_log("Creating directory...");
-                mkdir($uploadDir, 0755, true);
-            }
-            
-            // Lưu file
-            $filepath = $uploadDir . $filename;
-            error_log("Full path: " . $filepath);
-            
-            $result = file_put_contents($filepath, $imageContent);
-            if ($result === false) {
-                error_log("FAIL: Cannot write file");
-                return null;
-            }
-            error_log("SUCCESS: Saved " . $result . " bytes to " . $filepath);
-            
-            // Xóa ảnh Google cũ nếu có
-            if (!empty($oldAvatarUrl) && strpos($oldAvatarUrl, 'google_') === 0) {
-                $oldFile = $uploadDir . $oldAvatarUrl;
-                if (file_exists($oldFile)) {
-                    unlink($oldFile);
-                    error_log("Deleted old avatar: " . $oldFile);
-                }
-            }
-            
-            error_log("=== DOWNLOAD AVATAR SUCCESS: " . $filename . " ===");
-            return $filename;
-        } catch (\Exception $e) {
-            error_log("EXCEPTION: " . $e->getMessage());
-            error_log("=== DOWNLOAD AVATAR FAILED ===");
-            return null;
-        }
+        // Remove size parameter to get high quality image
+        // Google format: https://lh3.googleusercontent.com/...=s96-c
+        // We want: https://lh3.googleusercontent.com/... (original size)
+        $cleanUrl = preg_replace('/=s\d+-c$/', '', $googleAvatarUrl);
+
+        error_log("Google avatar URL (cleaned): " . $cleanUrl);
+
+        return $cleanUrl;
     }
     /**
      * Generate JWT access token
@@ -506,5 +453,4 @@ class GoogleAuthController extends Controller
         $jwtSecret = Config::get('JWT_SECRET', 'your-secret-key');
         return JWT::encode($payload, $jwtSecret, 'HS256');
     }
-
 }

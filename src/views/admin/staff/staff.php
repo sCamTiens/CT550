@@ -105,7 +105,7 @@ $items = $items ?? [];
                                             d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                 </button>
-                                
+
                                 <button @click="openEditModal(s)"
                                     class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
                                     title="Sửa">
@@ -137,7 +137,7 @@ $items = $items ?? [];
                             <td class="py-2 px-4 text-center">
                                 <div class="flex flex-col items-center gap-1">
                                     <template x-if="s.avatar_url">
-                                        <img :src="'/assets/images/avatar/' + s.avatar_url" :alt="s.full_name"
+                                        <img :src="getAvatarUrl(s.avatar_url)" :alt="s.full_name"
                                             class="w-12 h-12 rounded-full object-cover border-2 border-gray-200">
                                     </template>
                                     <template x-if="!s.avatar_url">
@@ -394,7 +394,7 @@ $items = $items ?? [];
                 <h3 class="text-xl font-bold text-gray-800">
                     Lịch sử thay đổi lương: <span class="text-[#002975]" x-text="historyStaffName"></span>
                 </h3>
-                <button @click="exportSalaryHistory()" 
+                <button @click="exportSalaryHistory()"
                     class="px-3 py-2 border border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white text-sm flex items-center gap-2">
                     <i class="fa-solid fa-file-excel"></i>
                     Xuất Excel
@@ -440,7 +440,7 @@ $items = $items ?? [];
                 <template x-if="!loadingHistory && salaryHistory.length === 0">
                     <div class="text-center py-12">
                         <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                         <h3 class="text-xl font-semibold text-gray-700 mb-2">Chưa có lịch sử thay đổi lương</h3>
@@ -518,13 +518,21 @@ $items = $items ?? [];
     function staffPage() {
         return {
             openChangePassword: false,
-            formChangePassword: { user_id: null, password: '', password_confirm: '' },
+            formChangePassword: {
+                user_id: null,
+                password: '',
+                password_confirm: ''
+            },
             showChangePassword: false,
             showChangePasswordConfirm: false,
             changePasswordErrors: {},
             changePasswordTouched: false,
             openChangePasswordModal(s) {
-                this.formChangePassword = { user_id: s.user_id, password: '', password_confirm: '' };
+                this.formChangePassword = {
+                    user_id: s.user_id,
+                    password: '',
+                    password_confirm: ''
+                };
                 this.showChangePassword = false;
                 this.showChangePasswordConfirm = false;
                 this.changePasswordErrors = {};
@@ -535,7 +543,9 @@ $items = $items ?? [];
             generateChangePassword() {
                 const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
                 let len = Math.floor(Math.random() * 5) + 8; // 8-12 ký tự
-                let pw = Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+                let pw = Array.from({
+                    length: len
+                }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
                 this.formChangePassword.password = pw;
                 this.formChangePassword.password_confirm = pw;
                 this.showChangePassword = true;
@@ -584,8 +594,12 @@ $items = $items ?? [];
                 try {
                     const res = await fetch(`/admin/api/staff/${this.formChangePassword.user_id}/password`, {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ password: this.formChangePassword.password })
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            password: this.formChangePassword.password
+                        })
                     });
 
                     console.log('Response status:', res.status);
@@ -617,7 +631,7 @@ $items = $items ?? [];
                 try {
                     const res = await fetch(`/admin/api/payroll/salary-history?user_id=${userId}`);
                     const data = await res.json();
-                    
+
                     if (data.success) {
                         this.salaryHistory = data.data || [];
                     } else {
@@ -652,6 +666,15 @@ $items = $items ?? [];
                 }
             },
 
+            // Helper to get correct avatar URL
+            getAvatarUrl(url) {
+                if (!url) return '/assets/images/avatar/default.png';
+                if (url.indexOf('http://') === 0 || url.indexOf('https://') === 0) {
+                    return url; // Already absolute URL
+                }
+                return '/assets/images/avatar/' + url; // Local path
+            },
+
             formatMoney(amount) {
                 return new Intl.NumberFormat('vi-VN', {
                     style: 'currency',
@@ -660,11 +683,18 @@ $items = $items ?? [];
             },
 
             items: [],
-            staffRoles: [
-                { name: 'Kho' },
-                { name: 'Nhân viên bán hàng' },
-                { name: 'Hỗ trợ trực tuyến' },
-                { name: 'Admin' }
+            staffRoles: [{
+                    name: 'Kho'
+                },
+                {
+                    name: 'Nhân viên bán hàng'
+                },
+                {
+                    name: 'Hỗ trợ trực tuyến'
+                },
+                {
+                    name: 'Admin'
+                }
             ],
             loading: true,
             openAdd: false,
@@ -674,8 +704,8 @@ $items = $items ?? [];
             perPageOptions: [10, 25, 50],
             submitting: false,
             form: {},
-            errors: {},         // lưu lỗi từng trường
-            touched: {},        // lưu trạng thái đã chạm (blur)
+            errors: {}, // lưu lỗi từng trường
+            touched: {}, // lưu trạng thái đã chạm (blur)
 
             showPassword: false,
             showPasswordConfirm: false,
@@ -719,7 +749,9 @@ $items = $items ?? [];
             generatePassword() {
                 const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
                 let len = Math.floor(Math.random() * 5) + 8; // 8-12 ký tự
-                let pw = Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+                let pw = Array.from({
+                    length: len
+                }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
                 this.form.password = pw;
                 this.form.password_confirm = pw;
                 this.showPassword = true;
@@ -744,8 +776,20 @@ $items = $items ?? [];
 
             // ===== FILTERS =====
             openFilter: {
-                username: false, full_name: false, staff_role: false, gender: false, email: false, phone: false, is_active: false, hired_at: false, note: false,
-                created_at: false, created_by: false, updated_at: false, updated_by: false, base_salary: false
+                username: false,
+                full_name: false,
+                staff_role: false,
+                gender: false,
+                email: false,
+                phone: false,
+                is_active: false,
+                hired_at: false,
+                note: false,
+                created_at: false,
+                created_by: false,
+                updated_at: false,
+                updated_by: false,
+                base_salary: false
             },
 
             filters: {
@@ -754,21 +798,41 @@ $items = $items ?? [];
                 staff_role: '',
                 email: '',
                 gender: '',
-                phone_type: '', phone_value: '', phone_from: '', phone_to: '',
+                phone_type: '',
+                phone_value: '',
+                phone_from: '',
+                phone_to: '',
                 is_active: '',
-                hired_at_type: '', hired_at_value: '', hired_at_from: '', hired_at_to: '',
+                hired_at_type: '',
+                hired_at_value: '',
+                hired_at_from: '',
+                hired_at_to: '',
                 note: '',
-                created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
+                created_at_type: '',
+                created_at_value: '',
+                created_at_from: '',
+                created_at_to: '',
                 created_by: '',
-                updated_at_type: '', updated_at_value: '', updated_at_from: '', updated_at_to: '',
+                updated_at_type: '',
+                updated_at_value: '',
+                updated_at_from: '',
+                updated_at_to: '',
                 updated_by: '',
-                base_salary_type: '', base_salary_value: '', base_salary_from: '', base_salary_to: ''
+                base_salary_type: '',
+                base_salary_value: '',
+                base_salary_from: '',
+                base_salary_to: ''
             },
 
             // -------------------------------------------
             // Hàm lọc tổng quát, hỗ trợ text / number / date
             // -------------------------------------------
-            applyFilter(val, type, { value, from, to, dataType }) {
+            applyFilter(val, type, {
+                value,
+                from,
+                to,
+                dataType
+            }) {
                 if (val == null) return false;
 
                 // ---------------- TEXT ----------------
@@ -788,9 +852,10 @@ $items = $items ?? [];
 
                     if (!query) return true;
 
-                    if (type === 'eq') return hasAccent(query)
-                        ? raw === query  // có dấu → so đúng dấu
-                        : str === queryNoAccent; // không dấu → so không dấu
+                    if (type === 'eq') return hasAccent(query) ?
+                        raw === query // có dấu → so đúng dấu
+                        :
+                        str === queryNoAccent; // không dấu → so không dấu
 
                     if (type === 'contains' || type === 'like') {
                         if (hasAccent(query)) {
@@ -932,7 +997,9 @@ $items = $items ?? [];
                 for (const k in this.openFilter) this.openFilter[k] = false;
                 this.openFilter[key] = true;
             },
-            closeFilter(key) { this.openFilter[key] = false; },
+            closeFilter(key) {
+                this.openFilter[key] = false;
+            },
             resetFilter(key) {
                 if (['hired_at', 'updated_at', 'created_at'].includes(key)) {
                     this.filters[`${key}_type`] = '';
@@ -969,7 +1036,7 @@ $items = $items ?? [];
                     const staffRes = await fetch('/admin/api/staff');
                     const staffData = await staffRes.json();
                     this.items = staffData.items || [];
-                    
+
                     // Debug: In ra console để kiểm tra dữ liệu
                     console.log('=== DEBUG STAFF DATA ===');
                     console.log('Total items:', this.items.length);
@@ -1115,7 +1182,9 @@ $items = $items ?? [];
                 try {
                     const res = await fetch('/admin/api/staff', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
                         body: JSON.stringify(this.form),
                     });
                     const data = await res.json();
@@ -1178,7 +1247,9 @@ $items = $items ?? [];
                 try {
                     const res = await fetch(`/admin/api/staff/${this.form.user_id}`, {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
                         body: JSON.stringify(this.form),
                     });
                     const data = await res.json();
@@ -1200,13 +1271,15 @@ $items = $items ?? [];
             async remove(id) {
                 const staff = this.items.find(s => s.user_id === id);
                 const staffName = staff ? staff.full_name : 'nhân viên này';
-                
+
                 this.showConfirm(
                     'Xác nhận xóa',
                     `Bạn có chắc chắn muốn xóa nhân viên "${staffName}"?`,
                     async () => {
                         try {
-                            const res = await fetch(`/admin/api/staff/${id}`, { method: 'DELETE' });
+                            const res = await fetch(`/admin/api/staff/${id}`, {
+                                method: 'DELETE'
+                            });
                             if (res.ok) {
                                 this.items = this.items.filter(i => i.user_id !== id);
                                 this.showToast('Xóa nhân viên thành công!', 'success');
@@ -1269,10 +1342,14 @@ $items = $items ?? [];
                 const filename = `Nhan_vien_${dateStr}_${timeStr}.xlsx`;
 
                 fetch('/admin/api/staff/export', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ items: data })
-                })
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            items: data
+                        })
+                    })
                     .then(res => {
                         if (!res.ok) throw new Error('Export failed');
                         return res.blob();

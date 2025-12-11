@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models\Customer\Repositories;
 
 use App\Core\DB;
@@ -12,20 +13,20 @@ class CartRepository
     public function getOrCreateCartId(int $userId): int
     {
         $pdo = DB::pdo();
-        
+
         // Tìm cart hiện tại
         $stmt = $pdo->prepare("SELECT id FROM carts WHERE user_id = ?");
         $stmt->execute([$userId]);
         $cartId = $stmt->fetchColumn();
-        
+
         if ($cartId) {
             return (int)$cartId;
         }
-        
+
         // Tạo mới nếu chưa có
         $stmt = $pdo->prepare("INSERT INTO carts (user_id, created_by) VALUES (?, ?)");
         $stmt->execute([$userId, $userId]);
-        
+
         return (int)$pdo->lastInsertId();
     }
 
@@ -35,7 +36,7 @@ class CartRepository
     public function loadCartFromDB(int $userId): array
     {
         $pdo = DB::pdo();
-        
+
         $stmt = $pdo->prepare("
             SELECT ci.product_id, ci.qty, ci.price, p.name
             FROM carts c
@@ -43,10 +44,10 @@ class CartRepository
             INNER JOIN products p ON p.id = ci.product_id
             WHERE c.user_id = ? AND p.is_active = 1
         ");
-        
+
         $stmt->execute([$userId]);
         $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
+
         $cart = [];
         foreach ($items as $item) {
             $cart[$item['product_id']] = [
@@ -56,7 +57,7 @@ class CartRepository
                 'qty' => (int)$item['qty']
             ];
         }
-        
+
         return $cart;
     }
 
@@ -68,43 +69,42 @@ class CartRepository
         if (empty($cart)) {
             return $this->clearCartDB($userId);
         }
-        
+
         $pdo = DB::pdo();
-        
+
         try {
             $pdo->beginTransaction();
-            
+
             // Get or create cart
             $cartId = $this->getOrCreateCartId($userId);
-            
+
             // Clear old items
             $stmt = $pdo->prepare("DELETE FROM cart_items WHERE cart_id = ?");
             $stmt->execute([$cartId]);
-            
+
             // Insert new items
             $stmt = $pdo->prepare("
                 INSERT INTO cart_items (cart_id, product_id, qty, price, created_by)
                 VALUES (?, ?, ?, ?, ?)
             ");
-            
+
             foreach ($cart as $productId => $item) {
                 $qty = is_array($item) ? ($item['qty'] ?? 0) : $item;
                 $price = is_array($item) ? ($item['price'] ?? 0) : 0;
-                
+
                 if ($qty <= 0) continue;
-                
+
                 // Get current price if not in session
                 if ($price <= 0) {
                     $productInfo = $this->getProductInfo($productId);
                     $price = $productInfo['price'] ?? 0;
                 }
-                
+
                 $stmt->execute([$cartId, $productId, $qty, $price, $userId]);
             }
-            
+
             $pdo->commit();
             return true;
-            
         } catch (\Exception $e) {
             $pdo->rollBack();
             error_log("Error saving cart to DB: " . $e->getMessage());
@@ -118,10 +118,10 @@ class CartRepository
     public function addItemToDB(int $userId, int $productId, int $quantity, float $price): bool
     {
         $pdo = DB::pdo();
-        
+
         try {
             $cartId = $this->getOrCreateCartId($userId);
-            
+
             // Check if item exists
             $stmt = $pdo->prepare("
                 SELECT id, qty FROM cart_items 
@@ -129,7 +129,7 @@ class CartRepository
             ");
             $stmt->execute([$cartId, $productId]);
             $existing = $stmt->fetch(PDO::FETCH_ASSOC);
-            
+
             if ($existing) {
                 // Update quantity
                 $newQty = $existing['qty'] + $quantity;
@@ -147,9 +147,8 @@ class CartRepository
                 ");
                 $stmt->execute([$cartId, $productId, $quantity, $price, $userId]);
             }
-            
+
             return true;
-            
         } catch (\Exception $e) {
             error_log("Error adding item to DB: " . $e->getMessage());
             return false;
@@ -162,10 +161,10 @@ class CartRepository
     public function updateItemDB(int $userId, int $productId, int $quantity): bool
     {
         $pdo = DB::pdo();
-        
+
         try {
             $cartId = $this->getOrCreateCartId($userId);
-            
+
             if ($quantity <= 0) {
                 // Remove item
                 $stmt = $pdo->prepare("
@@ -182,9 +181,8 @@ class CartRepository
                 ");
                 $stmt->execute([$quantity, $userId, $cartId, $productId]);
             }
-            
+
             return true;
-            
         } catch (\Exception $e) {
             error_log("Error updating item in DB: " . $e->getMessage());
             return false;
@@ -197,7 +195,7 @@ class CartRepository
     public function removeItemDB(int $userId, int $productId): bool
     {
         $pdo = DB::pdo();
-        
+
         try {
             $stmt = $pdo->prepare("
                 DELETE ci FROM cart_items ci
@@ -205,9 +203,8 @@ class CartRepository
                 WHERE c.user_id = ? AND ci.product_id = ?
             ");
             $stmt->execute([$userId, $productId]);
-            
+
             return true;
-            
         } catch (\Exception $e) {
             error_log("Error removing item from DB: " . $e->getMessage());
             return false;
@@ -220,7 +217,7 @@ class CartRepository
     public function clearCartDB(int $userId): bool
     {
         $pdo = DB::pdo();
-        
+
         try {
             $stmt = $pdo->prepare("
                 DELETE ci FROM cart_items ci
@@ -228,9 +225,8 @@ class CartRepository
                 WHERE c.user_id = ?
             ");
             $stmt->execute([$userId]);
-            
+
             return true;
-            
         } catch (\Exception $e) {
             error_log("Error clearing cart from DB: " . $e->getMessage());
             return false;
@@ -248,7 +244,7 @@ class CartRepository
 
         $pdo = DB::pdo();
         $productIds = array_keys($cart);
-        
+
         // Create named placeholders
         $placeholders = [];
         $params = [];
@@ -266,11 +262,11 @@ class CartRepository
             LEFT JOIN stocks s ON p.id = s.product_id
             WHERE p.id IN ($placeholderStr) AND p.is_active = 1
         ");
-        
+
         foreach ($params as $key => $val) {
             $stmt->bindValue($key, $val, \PDO::PARAM_INT);
         }
-        
+
         $stmt->execute();
         $products = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
@@ -279,7 +275,7 @@ class CartRepository
             $productId = $product['id'];
             $item = $cart[$productId];
             $quantity = is_array($item) ? ($item['qty'] ?? 0) : $item;
-            
+
             if (!is_numeric($quantity) || $quantity <= 0) {
                 continue;
             }
@@ -324,7 +320,7 @@ class CartRepository
         ");
         $stmt->execute([':pid' => $productId]);
         $stock = $stmt->fetchColumn();
-        
+
         return $stock !== false ? (int)$stock : false;
     }
 
@@ -341,20 +337,28 @@ class CartRepository
         ");
         $stmt->execute([':id' => $productId]);
         $product = $stmt->fetch(\PDO::FETCH_ASSOC);
-        
+
         return $product ?: null;
     }
 
     /**
-     * Lấy đường dẫn ảnh sản phẩm (giống ProductRepository)
+     * Lấy đường dẫn ảnh sản phẩm từ database
      */
     private function getProductImage(int $productId): string
     {
-        // Check if product image exists in filesystem
-        $imagePath = __DIR__ . '/../../../../public/assets/images/products/' . $productId . '/1.png';
+        // Query main image from product_images table
+        $stmt = DB::pdo()->prepare("
+            SELECT image_url 
+            FROM product_images 
+            WHERE product_id = ? AND image_type = 'main' 
+            ORDER BY is_primary DESC, sort_order ASC
+            LIMIT 1
+        ");
+        $stmt->execute([$productId]);
+        $imageUrl = $stmt->fetchColumn();
 
-        if (file_exists($imagePath)) {
-            return '/assets/images/products/' . $productId . '/1.png';
+        if ($imageUrl) {
+            return $imageUrl; // Return as-is (could be ImgBB URL or local path)
         }
 
         return '/assets/images/products/default.png';
@@ -374,7 +378,7 @@ class CartRepository
     public function validateQuantity(int $productId, int $requestedQty): array
     {
         $stock = $this->checkStock($productId);
-        
+
         if ($stock === false) {
             return [
                 'valid' => false,

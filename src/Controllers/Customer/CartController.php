@@ -136,7 +136,18 @@ class CartController extends Controller
         // Thêm gift_image_url cho mỗi gift
         foreach ($giftPromos as &$gift) {
             if (!empty($gift['gift_product_id'])) {
-                $gift['gift_image_url'] = "/assets/images/products/{$gift['gift_product_id']}/1.png";
+                // Query from product_images table
+                $stmtImg = $pdo->prepare("
+                    SELECT image_url 
+                    FROM product_images 
+                    WHERE product_id = ? AND image_type = 'main' 
+                    ORDER BY is_primary DESC, sort_order ASC
+                    LIMIT 1
+                ");
+                $stmtImg->execute([$gift['gift_product_id']]);
+                $imageUrl = $stmtImg->fetchColumn();
+
+                $gift['gift_image_url'] = $imageUrl ?: '/assets/images/products/default.png';
             }
         }
 

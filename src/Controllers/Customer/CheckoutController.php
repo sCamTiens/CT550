@@ -51,8 +51,11 @@ class CheckoutController extends Controller
 
         // Kiểm tra nếu có ?product_id=X (mua ngay 1 sản phẩm)
         $productId = $_GET['product_id'] ?? null;
+        $selectedIds = []; // Initialize để tránh undefined variable warning
 
         if ($productId) {
+            error_log("=== CHECKOUT BUY NOW === Product ID: $productId");
+
             // Mua ngay: Lấy thông tin sản phẩm từ DB
             $stmt = $pdo->prepare("
                 SELECT p.id, p.name, p.slug, p.sale_price AS price, 
@@ -65,23 +68,37 @@ class CheckoutController extends Controller
             $product = $stmt->fetch(\PDO::FETCH_ASSOC);
 
             if (!$product) {
+                error_log("=== PRODUCT NOT FOUND === ID: $productId");
                 $_SESSION['error'] = 'Sản phẩm không tồn tại';
                 header('Location: /');
                 exit;
             }
+
+            error_log("=== PRODUCT FOUND === " . json_encode($product));
 
             // Tạo cart item với số lượng 1
             $product['image_url'] = $this->productRepo->getProductImage($product['id']);
             $product['quantity'] = 1;
             $product['subtotal'] = $product['price'];
 
+            error_log("=== PRODUCT IMAGE === " . ($product['image_url'] ?? 'NO IMAGE'));
+
             $cartItems = [$product];
             $subtotal = $product['price'];
+
+            error_log("=== BUY NOW CART ITEMS === Count: " . count($cartItems));
+            error_log("=== BUY NOW SUBTOTAL === " . $subtotal);
+            error_log("=== BUY NOW PRODUCT ===" . json_encode([
+                'id' => $product['id'],
+                'name' => $product['name'],
+                'price' => $product['price'],
+                'quantity' => $product['quantity'],
+                'image_url' => $product['image_url']
+            ]));
         } else {
             // Checkout từ giỏ hàng - Load từ database thay vì session
             // 1) Nếu có ?items=1,2,3 thì dùng nó (ưu tiên)
             $itemsParam = $_GET['items'] ?? null;
-            $selectedIds = [];
 
             if (!empty($itemsParam)) {
                 $selectedIds = array_filter(array_map('intval', explode(',', $itemsParam)));
@@ -114,12 +131,28 @@ class CheckoutController extends Controller
 
             // DEBUG: Log checkout page load
             error_log("[CheckoutController->index] Selected IDs from URL: " . ($itemsParam ?? 'ALL'));
-            error_log("[CheckoutController->index] Cart items count: " . count($cartItems));
+            error_log("[CheckoutController->index] Parsed selectedIds: " . json_encode($selectedIds));
+            error_log("[CheckoutController->index] All cart items count: " . count($allCartItems));
+            error_log("[CheckoutController->index] Filtered cart items count: " . count($cartItems));
+            error_log("[CheckoutController->index] Cart items IDs: " . json_encode(array_column($cartItems, 'id')));
             error_log("[CheckoutController->index] Subtotal for display: " . $subtotal);
         }
 
+        // Lưu selectedIds vào session để dùng trong process() (tránh mất data khi refresh)
+        $_SESSION['checkout_selected_items'] = $selectedIds;
+
         // Lấy khuyến mãi áp dụng cho từng sản phẩm
         $promotions = $this->getApplicablePromotions($cartItems, $pdo);
+
+        // LƯU GIÁ GỐC TRƯỚC KHI ÁP DỤNG KHUYẾN MÃI
+        // Tính giống CartController: Tổng giá × số lượng của TẤT CẢ sản phẩm được chọn
+        $originalSubtotalBeforePromo = 0;
+        foreach ($cartItems as $item) {
+            $itemOriginal = $item['price'] * $item['quantity'];
+            $originalSubtotalBeforePromo += $itemOriginal;
+            error_log("[CheckoutController] Product ID {$item['id']} (name: {$item['name']}): price={$item['price']} × qty={$item['quantity']} = " . number_format($itemOriginal, 0, ',', '.'));
+        }
+        error_log("[CheckoutController] Total originalSubtotalBeforePromo: " . number_format($originalSubtotalBeforePromo, 0, ',', '.') . " from " . count($cartItems) . " items");
 
         // Tính lại subtotal sau khi áp dụng khuyến mãi
         $subtotalAfterPromo = 0;
@@ -215,6 +248,8 @@ class CheckoutController extends Controller
                 }
             }
 
+            // CẬP NHẬT SUBTOTAL SAU KHI ÁP DỤNG KHUYẾN MÃI
+            $cartItems[$index]['subtotal'] = $itemTotal;
             $subtotalAfterPromo += $itemTotal;
         }
 
@@ -226,7 +261,7 @@ class CheckoutController extends Controller
         }
 
         // Tính tổng giảm giá
-        $totalDiscount = $subtotal - $subtotalAfterPromo;
+        $totalDiscount = $originalSubtotalBeforePromo - $subtotalAfterPromo;
         if ($totalDiscount < 0) $totalDiscount = 0; // Đảm bảo không âm
 
         // Lấy địa chỉ khách hàng
@@ -236,7 +271,7 @@ class CheckoutController extends Controller
         return $this->view('customer.checkout.checkout', [
             'cartItems' => $cartItems,
             'subtotal' => $subtotalAfterPromo,  // Tổng sau khuyến mãi
-            'originalSubtotal' => $subtotal,    // Tổng giá gốc (chưa giảm)
+            'originalSubtotal' => $originalSubtotalBeforePromo,    // Tổng giá gốc (chưa giảm)
             'totalDiscount' => $totalDiscount,  // Tổng giảm giá
             'addresses' => $addresses,
             'defaultAddress' => $defaultAddress,
@@ -311,7 +346,7 @@ class CheckoutController extends Controller
         // Thêm gift_image_url cho mỗi gift
         foreach ($giftPromos as &$gift) {
             if (!empty($gift['gift_product_id'])) {
-                $gift['gift_image_url'] = "/assets/images/products/{$gift['gift_product_id']}/1.png";
+                $gift['gift_image_url'] = $this->productRepo->getProductImage($gift['gift_product_id']);
             }
         }
 
@@ -362,9 +397,9 @@ class CheckoutController extends Controller
 
                 case 'gift':
                     // Quà tặng: thông tin đã được lấy trong query ban đầu
-                    // Chỉ cần đảm bảo gift_image_url đã có
-                    if (empty($promo['gift_image_url']) && !empty($promo['gift_product_id'])) {
-                        $promo['gift_image_url'] = "/assets/images/products/{$promo['gift_product_id']}/1.png";
+                    // Lấy ảnh chính xác từ ProductRepository
+                    if (!empty($promo['gift_product_id'])) {
+                        $promo['gift_image_url'] = $this->productRepo->getProductImage($promo['gift_product_id']);
                     }
                     break;
 
@@ -377,7 +412,13 @@ class CheckoutController extends Controller
                         WHERE pci.promotion_id = ?
                     ");
                     $comboStmt->execute([$promo['id']]);
-                    $promo['combo_items'] = $comboStmt->fetchAll(\PDO::FETCH_ASSOC);
+                    $items = $comboStmt->fetchAll(\PDO::FETCH_ASSOC);
+
+                    // Add image URL for combo items
+                    foreach ($items as &$item) {
+                        $item['image_url'] = $this->productRepo->getProductImage($item['product_id']);
+                    }
+                    $promo['combo_items'] = $items;
                     break;
             }
 
@@ -431,9 +472,11 @@ class CheckoutController extends Controller
 
             $pdo = \App\Core\DB::pdo();
 
-            // Lấy thông tin từ checkout page (items được chọn từ ?items=1,2,3)
+            // Lấy thông tin từ SESSION (ưu tiên) hoặc từ checkout page (?items=1,2,3)
             $selectedItemIds = [];
-            if (!empty($_GET['items'])) {
+            if (!empty($_SESSION['checkout_selected_items'])) {
+                $selectedItemIds = $_SESSION['checkout_selected_items'];
+            } elseif (!empty($_GET['items'])) {
                 $selectedItemIds = array_filter(array_map('intval', explode(',', $_GET['items'])));
             }
 
@@ -465,15 +508,20 @@ class CheckoutController extends Controller
             $subtotal = array_sum(array_column($cartItems, 'subtotal'));
 
             // DEBUG: Log để kiểm tra
-            error_log("[CheckoutController->process] Selected item IDs: " . json_encode($selectedItemIds));
+            error_log("[CheckoutController->process] Payment method: " . $data['payment_method']);
+            error_log("[CheckoutController->process] Selected item IDs from URL: " . json_encode($selectedItemIds));
             error_log("[CheckoutController->process] Cart items count: " . count($cartItems));
+            error_log("[CheckoutController->process] All cart items count: " . count($allCartItems));
             error_log("[CheckoutController->process] Subtotal calculated: " . $subtotal);
+            error_log("[CheckoutController->process] Cart items: " . json_encode(array_map(function ($item) {
+                return ['id' => $item['id'], 'name' => $item['name'], 'subtotal' => $item['subtotal']];
+            }, $cartItems)));
 
             // Map payment method to DB enum values
             $paymentMethodMap = [
                 'cod' => 'Thanh toán khi nhận hàng (COD)',
                 'vnpay' => 'VNPay',
-                'momo' => 'MoMo'
+                'zalopay' => 'ZaloPay'
             ];
             $dbPaymentMethod = $paymentMethodMap[$data['payment_method']] ?? 'Thanh toán khi nhận hàng (COD)';
 
@@ -566,28 +614,162 @@ class CheckoutController extends Controller
                 exit;
             }
 
+            // === ZaloPay: Lưu pending data vào DATABASE ===
+            if ($data['payment_method'] === 'zalopay') {
+                $pdo = \App\Core\DB::pdo();
+
+                // Lưu pending order vào bảng tạm
+                $pendingData = json_encode([
+                    'customer_id' => $customerId,
+                    'address_id' => $data['address_id'],
+                    'cart_items' => $cartItems,
+                    'subtotal' => $subtotal,
+                    'selected_item_ids' => $selectedItemIds
+                ]);
+
+                $transID = time();
+                $appTransId = date('ymd') . '_' . $transID;
+
+                // Insert vào pending_orders table
+                $stmt = $pdo->prepare("
+                    INSERT INTO pending_orders (txn_ref, customer_id, order_data, created_at)
+                    VALUES (?, ?, ?, NOW())
+                    ON DUPLICATE KEY UPDATE order_data = ?, created_at = NOW()
+                ");
+                $stmt->execute([$appTransId, $customerId, $pendingData, $pendingData]);
+
+                // ZaloPay config
+                $appId = getenv('ZALOPAY_APP_ID');
+                $key1 = getenv('ZALOPAY_KEY1');
+                $endpoint = getenv('ZALOPAY_ENDPOINT');
+                $callbackUrl = getenv('ZALOPAY_CALLBACK_URL') ?: 'http://localhost/payment/zalopay/callback';
+
+                if (!$appId || !$key1 || !$endpoint) {
+                    http_response_code(500);
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Cấu hình ZaloPay chưa đầy đủ'
+                    ]);
+                    exit;
+                }
+
+                // Build payment data
+                $embedData = json_encode([
+                    'redirecturl' => getenv('APP_URL') . '/payment/zalopay/return'
+                ]);
+
+                $items = json_encode([]);
+
+                $order = [
+                    'app_id' => (int)$appId,
+                    'app_trans_id' => $appTransId,
+                    'app_user' => 'user_' . $customerId,
+                    'app_time' => round(microtime(true) * 1000),
+                    'amount' => (int)$subtotal,
+                    'item' => $items,
+                    'embed_data' => $embedData,
+                    'description' => 'Thanh toán đơn hàng MiniGo - ' . $customerId,
+                    'bank_code' => '',
+                    'callback_url' => $callbackUrl
+                ];
+
+                // Create MAC
+                $macData = $order['app_id'] . '|' . $order['app_trans_id'] . '|' . $order['app_user'] . '|' .
+                    $order['amount'] . '|' . $order['app_time'] . '|' . $order['embed_data'] . '|' .
+                    $order['item'];
+                $order['mac'] = hash_hmac('sha256', $macData, $key1);
+
+                // Call ZaloPay API
+                $context = stream_context_create([
+                    'http' => [
+                        'header' => "Content-type: application/x-www-form-urlencoded\r\n",
+                        'method' => 'POST',
+                        'content' => http_build_query($order)
+                    ]
+                ]);
+
+                $response = file_get_contents($endpoint, false, $context);
+                $result = json_decode($response, true);
+
+                if ($result['return_code'] == 1) {
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Đang chuyển đến trang thanh toán ZaloPay',
+                        'payment_method' => 'zalopay',
+                        'payment_url' => $result['order_url']
+                    ]);
+                } else {
+                    http_response_code(400);
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Không thể tạo thanh toán ZaloPay: ' . ($result['return_message'] ?? 'Unknown error')
+                    ]);
+                }
+                exit;
+            }
+
             // === COD và các phương thức khác: Tạo đơn ngay ===
             $pdo->beginTransaction();
             try {
                 // Generate order code
                 $orderCode = 'ORD' . date('YmdHis') . rand(100, 999);
 
-                // Insert order
+                // Fetch shipping address for GHN
+                $address = $this->addressRepo->getAddressById($data['address_id'], $customerId);
+
+                if (!$address) {
+                    throw new \Exception('Địa chỉ giao hàng không hợp lệ');
+                }
+
+                // Get district ID from address (saved when user selected district)
+                $districtId = $address['district_id'] ?? null;
+
+                // TODO: Uncomment this when GHN API integration is fully tested
+                /*
+                if (!empty($address['commune_code'])) {
+                    try {
+                        $districtInfo = \App\Support\GHNWardCache::getDistrictByWardCode(
+                            $address['commune_code'],
+                            $address['province_code']
+                        );
+
+                        if ($districtInfo) {
+                            $districtId = $districtInfo['district_id'];
+                        }
+                    } catch (\Exception $e) {
+                        error_log("Failed to get district from GHN: " . $e->getMessage());
+                    }
+                }
+                */
+
+                // Insert order with shipping address data for GHN
                 $stmt = $pdo->prepare("
                     INSERT INTO orders (
-                        code, user_id, order_type, status, subtotal, grand_total, 
-                        payment_method, payment_status, shipping_address_id, 
+                        code, user_id, order_type, status, subtotal, grand_total,
+                        payment_method, payment_status, shipping_address_id,
+                        delivery_name, delivery_phone, delivery_address,
+                        shipping_province, shipping_district, shipping_ward,
+                        shipping_province_id, shipping_district_id, shipping_ward_code,
                         created_at, updated_at
                     )
-                    VALUES (?, ?, 'Online', 'Chờ xử lý', ?, ?, ?, 'Chưa thanh toán', ?, NOW(), NOW())
+                    VALUES (?, ?, 'Online', 'Chờ xử lý', ?, ?, ?, 'Chưa thanh toán', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
                 ");
                 $stmt->execute([
                     $orderCode,
                     $customerId,
                     $subtotal,
-                    $subtotal,
+                    $subtotal, // grand_total (total_amount)
                     $dbPaymentMethod,
-                    $data['address_id']
+                    $data['address_id'],
+                    $address['recipient_name'] ?? $address['receiver_name'] ?? '',
+                    $address['phone_number'] ?? $address['receiver_phone'] ?? '',
+                    $address['address_line'] ?? $address['line1'] ?? '',
+                    $address['province'] ?? $address['province_name'] ?? '',
+                    $address['district'] ?? $address['district_name'] ?? '', // district_name
+                    $address['ward'] ?? $address['ward_name'] ?? '',
+                    $address['province_code'] ?? null,
+                    $districtId, // Only save district_id (needed by GHN)
+                    $address['commune_code'] ?? ''
                 ]);
 
                 $orderId = $pdo->lastInsertId();
@@ -629,6 +811,18 @@ class CheckoutController extends Controller
                 }
 
                 $pdo->commit();
+
+                // Gửi thông báo cho khách hàng
+                try {
+                    \App\Support\NotificationHelper::send(
+                        (int)$customerId,
+                        'Đặt hàng thành công',
+                        'Đơn hàng ' . $orderCode . ' của bạn đã được khởi tạo thành công.',
+                        '/profile?tab=orders&open=' . $orderId,
+                        'success'
+                    );
+                } catch (\Throwable $ex) { /* Ignore notification error */
+                }
 
                 // COD - Redirect to success page (like VNPay)
                 $_SESSION['order_success'] = [

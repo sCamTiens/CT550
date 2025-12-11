@@ -9,9 +9,7 @@ $currentUserId = $_SESSION['user']['id'] ?? ($_SESSION['admin_user']['id'] ?? nu
 
 // Lấy thông tin người dùng
 $user = $_SESSION['user'] ?? $_SESSION['admin_user'] ?? [];
-$avatarPath = !empty($user['avatar_url'])
-    ? "/assets/images/avatar/" . htmlspecialchars($user['avatar_url'])
-    : "/assets/images/avatar/default.png";
+$avatarPath = getAvatarUrl($user['avatar_url'] ?? null);
 ?>
 
 <style>
@@ -40,8 +38,8 @@ $avatarPath = !empty($user['avatar_url'])
             <div class="w-full mb-5">
                 <div class="text-center">
                     <span class="inline-block px-4 py-2 rounded-lg font-semibold text-sm
-                        <?= ($_SESSION['user']['staff_role'] ?? '') === 'Admin' 
-                            ? 'bg-blue-100 text-blue-700' 
+                        <?= ($_SESSION['user']['staff_role'] ?? '') === 'Admin'
+                            ? 'bg-blue-100 text-blue-700'
                             : 'bg-green-100 text-green-700' ?>">
                         <?= htmlspecialchars($_SESSION['user']['staff_role'] ?? 'Không xác định') ?>
                     </span>
@@ -92,7 +90,7 @@ $avatarPath = !empty($user['avatar_url'])
 
             <?php if (!empty($_SESSION['profile_success'])): ?>
                 <script>
-                    document.addEventListener("DOMContentLoaded", function () {
+                    document.addEventListener("DOMContentLoaded", function() {
                         const msg = <?= json_encode($_SESSION['profile_success']) ?>;
                         const box = document.getElementById('toast-container');
                         if (box) {
@@ -110,7 +108,7 @@ $avatarPath = !empty($user['avatar_url'])
 
             <?php if (!empty($_SESSION['flash_error'])): ?>
                 <script>
-                    document.addEventListener("DOMContentLoaded", function () {
+                    document.addEventListener("DOMContentLoaded", function() {
                         const msg = <?= json_encode($_SESSION['flash_error']) ?>;
                         const box = document.getElementById('toast-container');
                         if (box) {
@@ -205,20 +203,20 @@ $avatarPath = !empty($user['avatar_url'])
                         Lưu thay đổi
                     </button>
                 </div>
-                </form>
+            </form>
 
-            <?php else: ?>
-                <!-- Toast hiển thị lỗi hoặc thành công khi đổi mật khẩu -->
-                <div id="toast-container"></div>
+        <?php else: ?>
+            <!-- Toast hiển thị lỗi hoặc thành công khi đổi mật khẩu -->
+            <div id="toast-container"></div>
 
-                <?php if (isset($_GET['error']) && $_GET['error'] === 'old'): ?>
-                    <script>
-                        document.addEventListener("DOMContentLoaded", function () {
-                            const box = document.getElementById('toast-container');
-                            if (box) {
-                                const toast = document.createElement('div');
-                                toast.className = "fixed top-5 right-5 z-[60] flex items-center w-[400px] p-4 mb-4 text-base font-semibold text-red-700 border-red-400 bg-white border-2 rounded-lg shadow";
-                                toast.innerHTML = `
+            <?php if (isset($_GET['error']) && $_GET['error'] === 'old'): ?>
+                <script>
+                    document.addEventListener("DOMContentLoaded", function() {
+                        const box = document.getElementById('toast-container');
+                        if (box) {
+                            const toast = document.createElement('div');
+                            toast.className = "fixed top-5 right-5 z-[60] flex items-center w-[400px] p-4 mb-4 text-base font-semibold text-red-700 border-red-400 bg-white border-2 rounded-lg shadow";
+                            toast.innerHTML = `
                             <svg class="flex-shrink-0 w-6 h-6 text-red-600 mr-3"
                                 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                 stroke="currentColor">
@@ -226,36 +224,36 @@ $avatarPath = !empty($user['avatar_url'])
                                     d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />
                             </svg>
                             <div class="flex-1">Mật khẩu hiện tại không đúng.</div>`;
-                                box.appendChild(toast);
-                                setTimeout(() => toast.remove(), 3500);
-                            }
-                        });
-                    </script>
-                <?php endif; ?>
-                <?php if (isset($_GET['error']) && $_GET['error'] === 'same'): ?>
-                    <script>
-                        document.addEventListener("DOMContentLoaded", function () {
-                            const box = document.getElementById('toast-container');
-                            if (box) {
-                                const toast = document.createElement('div');
-                                toast.className = "fixed top-5 right-5 z-[60] flex items-center w-[400px] p-4 mb-4 text-base font-semibold text-red-700 border-red-400 bg-white border-2 rounded-lg shadow";
-                                toast.innerHTML = `<svg class=\"flex-shrink-0 w-6 h-6 text-red-600 mr-3\"
+                            box.appendChild(toast);
+                            setTimeout(() => toast.remove(), 3500);
+                        }
+                    });
+                </script>
+            <?php endif; ?>
+            <?php if (isset($_GET['error']) && $_GET['error'] === 'same'): ?>
+                <script>
+                    document.addEventListener("DOMContentLoaded", function() {
+                        const box = document.getElementById('toast-container');
+                        if (box) {
+                            const toast = document.createElement('div');
+                            toast.className = "fixed top-5 right-5 z-[60] flex items-center w-[400px] p-4 mb-4 text-base font-semibold text-red-700 border-red-400 bg-white border-2 rounded-lg shadow";
+                            toast.innerHTML = `<svg class=\"flex-shrink-0 w-6 h-6 text-red-600 mr-3\"
                                     xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z\" /></svg><div class=\"flex-1\">Mật khẩu mới không được trùng với mật khẩu hiện tại.</div>`;
-                                box.appendChild(toast);
-                                setTimeout(() => toast.remove(), 3000);
-                            }
-                        });
-                    </script>
-                <?php endif; ?>
+                            box.appendChild(toast);
+                            setTimeout(() => toast.remove(), 3000);
+                        }
+                    });
+                </script>
+            <?php endif; ?>
 
-                <?php if (isset($_GET['error']) && $_GET['error'] === 'confirm'): ?>
-                    <script>
-                        document.addEventListener("DOMContentLoaded", function () {
-                            const box = document.getElementById('toast-container');
-                            if (box) {
-                                const toast = document.createElement('div');
-                                toast.className = "fixed top-5 right-5 z-[60] flex items-center w-[400px] p-4 mb-4 text-base font-semibold text-red-700 border-red-400 bg-white border-2 rounded-lg shadow";
-                                toast.innerHTML = `
+            <?php if (isset($_GET['error']) && $_GET['error'] === 'confirm'): ?>
+                <script>
+                    document.addEventListener("DOMContentLoaded", function() {
+                        const box = document.getElementById('toast-container');
+                        if (box) {
+                            const toast = document.createElement('div');
+                            toast.className = "fixed top-5 right-5 z-[60] flex items-center w-[400px] p-4 mb-4 text-base font-semibold text-red-700 border-red-400 bg-white border-2 rounded-lg shadow";
+                            toast.innerHTML = `
                             <svg class="flex-shrink-0 w-6 h-6 text-red-600 mr-3"
                                 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                 stroke="currentColor">
@@ -263,21 +261,21 @@ $avatarPath = !empty($user['avatar_url'])
                                     d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />
                             </svg>
                             <div class="flex-1">Mật khẩu xác nhận không khớp.</div>`;
-                                box.appendChild(toast);
-                                setTimeout(() => toast.remove(), 3500);
-                            }
-                        });
-                    </script>
-                <?php endif; ?>
+                            box.appendChild(toast);
+                            setTimeout(() => toast.remove(), 3500);
+                        }
+                    });
+                </script>
+            <?php endif; ?>
 
-                <?php if (isset($_GET['success'])): ?>
-                    <script>
-                        document.addEventListener("DOMContentLoaded", function () {
-                            const box = document.getElementById('toast-container');
-                            if (box) {
-                                const toast = document.createElement('div');
-                                toast.className = "fixed top-5 right-5 z-[60] flex items-center w-[400px] p-4 mb-4 text-base font-semibold text-green-700 border-green-400 bg-green-50 border-l-4 rounded-lg shadow";
-                                toast.innerHTML = `
+            <?php if (isset($_GET['success'])): ?>
+                <script>
+                    document.addEventListener("DOMContentLoaded", function() {
+                        const box = document.getElementById('toast-container');
+                        if (box) {
+                            const toast = document.createElement('div');
+                            toast.className = "fixed top-5 right-5 z-[60] flex items-center w-[400px] p-4 mb-4 text-base font-semibold text-green-700 border-green-400 bg-green-50 border-l-4 rounded-lg shadow";
+                            toast.innerHTML = `
                             <svg class="flex-shrink-0 w-6 h-6 text-green-600 mr-3"
                                 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                 stroke="currentColor">
@@ -285,117 +283,127 @@ $avatarPath = !empty($user['avatar_url'])
                                     d="M5 13l4 4L19 7" />
                             </svg>
                             <div class="flex-1">Đổi mật khẩu thành công!</div>`;
-                                box.appendChild(toast);
-                                setTimeout(() => toast.remove(), 3500);
-                            }
-                        });
-                    </script>
-                <?php endif; ?>
-
-                <h2 class="text-3xl font-bold mb-4 text-[#002975]">Đặt lại mật khẩu</h2>
-                <form method="post" action="/admin/profile/change-password" class="space-y-4" x-data="changePasswordForm()"
-                    @submit.prevent="submitForm($event)">
-                    <input type="hidden" name="user_id" value="<?= htmlspecialchars($currentUserId) ?>">
-                    <div>
-                        <label class="block text-sm font-medium">Mật khẩu hiện tại <span
-                                class="text-red-500">*</span></label>
-                        <div class="relative">
-                            <input :type="show.old_password ? 'text' : 'password'" name="old_password"
-                                class="w-full border rounded-lg px-3 py-2 pr-10" placeholder="Nhập mật khẩu hiện tại"
-                                x-model="form.old_password" @input="clearError('old_password')"
-                                @blur="validateField('old_password')">
-                            <button type="button" tabindex="-1" @click="show.old_password = !show.old_password"
-                                class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#002975] focus:outline-none">
-                                <i :class="show.old_password ? 'fa-regular fa-eye' : 'fa-regular fa-eye-slash'"></i>
-                            </button>
-                        </div>
-                        <p x-show="errors.old_password" x-text="errors.old_password" class="text-red-500 text-xs mt-1"></p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium">Mật khẩu mới <span class="text-red-500">*</span></label>
-                        <div class="relative">
-                            <input :type="show.new_password ? 'text' : 'password'" name="new_password"
-                                class="w-full border rounded-lg px-3 py-2 pr-10" placeholder="Nhập mật khẩu mới"
-                                x-model="form.new_password" @input="clearError('new_password')"
-                                @blur="validateField('new_password')">
-                            <button type="button" tabindex="-1" @click="show.new_password = !show.new_password"
-                                class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#002975] focus:outline-none">
-                                <i :class="show.new_password ? 'fa-regular fa-eye' : 'fa-regular fa-eye-slash'"></i>
-                            </button>
-                        </div>
-                        <p x-show="errors.new_password" x-text="errors.new_password" class="text-red-500 text-xs mt-1"></p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium">Xác nhận mật khẩu <span
-                                class="text-red-500">*</span></label>
-                        <div class="relative">
-                            <input :type="show.confirm_password ? 'text' : 'password'" name="confirm_password"
-                                class="w-full border rounded-lg px-3 py-2 pr-10" placeholder="Nhập lại mật khẩu mới"
-                                x-model="form.confirm_password" @input="clearError('confirm_password')"
-                                @blur="validateField('confirm_password')">
-                            <button type="button" tabindex="-1" @click="show.confirm_password = !show.confirm_password"
-                                class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#002975] focus:outline-none">
-                                <i :class="show.confirm_password ? 'fa-regular fa-eye' : 'fa-regular fa-eye-slash'"></i>
-                            </button>
-                        </div>
-                        <p x-show="errors.confirm_password" x-text="errors.confirm_password"
-                            class="text-red-500 text-xs mt-1">
-                        </p>
-                    </div>
-                    <div class="flex gap-3 justify-end">
-                        <button type="button"
-                            class="px-4 py-2 text-[#002975] rounded-lg border border-[#002975] bg-white hover:bg-[#002975] hover:text-white"
-                            @click="resetForm">
-                            Hủy
-                        </button>
-                        <button type="submit" class="px-4 py-2 bg-[#002975] text-white rounded-lg hover:bg-[#002975]/90">
-                            Đổi mật khẩu
-                        </button>
-                    </div>
-                </form>
-                <script>
-                    function changePasswordForm() {
-                        return {
-                            form: { old_password: '', new_password: '', confirm_password: '' },
-                            errors: {},
-                            show: { old_password: false, new_password: false, confirm_password: false },
-                            clearError(f) { this.errors[f] = '' },
-                            validateField(f) {
-                                if (f === 'old_password' && !this.form.old_password.trim()) this.errors.old_password = 'Vui lòng nhập mật khẩu hiện tại';
-                                if (f === 'new_password') {
-                                    const v = this.form.new_password;
-                                    if (!v) this.errors.new_password = 'Vui lòng nhập mật khẩu mới';
-                                    else if (v.length < 8) this.errors.new_password = 'Mật khẩu phải từ 8 ký tự trở lên';
-                                    else if (!/[A-Z]/.test(v)) this.errors.new_password = 'Mật khẩu phải có chữ hoa';
-                                    else if (!/[a-z]/.test(v)) this.errors.new_password = 'Mật khẩu phải có chữ thường';
-                                    else if (!/[0-9]/.test(v)) this.errors.new_password = 'Mật khẩu phải có số';
-                                    else if (!/[^A-Za-z0-9]/.test(v)) this.errors.new_password = 'Mật khẩu phải có ký tự đặc biệt';
-                                    else this.errors.new_password = '';
-                                }
-                                if (f === 'confirm_password') {
-                                    if (!this.form.confirm_password) this.errors.confirm_password = 'Vui lòng nhập lại mật khẩu mới';
-                                    else if (this.form.confirm_password !== this.form.new_password) this.errors.confirm_password = 'Mật khẩu xác nhận không khớp';
-                                    else this.errors.confirm_password = '';
-                                }
-                            },
-                            validateForm() {
-                                ['old_password', 'new_password', 'confirm_password'].forEach(f => this.validateField(f));
-                                return Object.values(this.errors).every(v => !v);
-                            },
-                            submitForm(e) {
-                                if (!this.validateForm()) return;
-                                e.target.submit();
-                            },
-                            resetForm() {
-                                this.form.old_password = '';
-                                this.form.new_password = '';
-                                this.form.confirm_password = '';
-                                this.errors = {};
-                            }
+                            box.appendChild(toast);
+                            setTimeout(() => toast.remove(), 3500);
                         }
-                    }
+                    });
                 </script>
             <?php endif; ?>
+
+            <h2 class="text-3xl font-bold mb-4 text-[#002975]">Đặt lại mật khẩu</h2>
+            <form method="post" action="/admin/profile/change-password" class="space-y-4" x-data="changePasswordForm()"
+                @submit.prevent="submitForm($event)">
+                <input type="hidden" name="user_id" value="<?= htmlspecialchars($currentUserId) ?>">
+                <div>
+                    <label class="block text-sm font-medium">Mật khẩu hiện tại <span
+                            class="text-red-500">*</span></label>
+                    <div class="relative">
+                        <input :type="show.old_password ? 'text' : 'password'" name="old_password"
+                            class="w-full border rounded-lg px-3 py-2 pr-10" placeholder="Nhập mật khẩu hiện tại"
+                            x-model="form.old_password" @input="clearError('old_password')"
+                            @blur="validateField('old_password')">
+                        <button type="button" tabindex="-1" @click="show.old_password = !show.old_password"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#002975] focus:outline-none">
+                            <i :class="show.old_password ? 'fa-regular fa-eye' : 'fa-regular fa-eye-slash'"></i>
+                        </button>
+                    </div>
+                    <p x-show="errors.old_password" x-text="errors.old_password" class="text-red-500 text-xs mt-1"></p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium">Mật khẩu mới <span class="text-red-500">*</span></label>
+                    <div class="relative">
+                        <input :type="show.new_password ? 'text' : 'password'" name="new_password"
+                            class="w-full border rounded-lg px-3 py-2 pr-10" placeholder="Nhập mật khẩu mới"
+                            x-model="form.new_password" @input="clearError('new_password')"
+                            @blur="validateField('new_password')">
+                        <button type="button" tabindex="-1" @click="show.new_password = !show.new_password"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#002975] focus:outline-none">
+                            <i :class="show.new_password ? 'fa-regular fa-eye' : 'fa-regular fa-eye-slash'"></i>
+                        </button>
+                    </div>
+                    <p x-show="errors.new_password" x-text="errors.new_password" class="text-red-500 text-xs mt-1"></p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium">Xác nhận mật khẩu <span
+                            class="text-red-500">*</span></label>
+                    <div class="relative">
+                        <input :type="show.confirm_password ? 'text' : 'password'" name="confirm_password"
+                            class="w-full border rounded-lg px-3 py-2 pr-10" placeholder="Nhập lại mật khẩu mới"
+                            x-model="form.confirm_password" @input="clearError('confirm_password')"
+                            @blur="validateField('confirm_password')">
+                        <button type="button" tabindex="-1" @click="show.confirm_password = !show.confirm_password"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#002975] focus:outline-none">
+                            <i :class="show.confirm_password ? 'fa-regular fa-eye' : 'fa-regular fa-eye-slash'"></i>
+                        </button>
+                    </div>
+                    <p x-show="errors.confirm_password" x-text="errors.confirm_password"
+                        class="text-red-500 text-xs mt-1">
+                    </p>
+                </div>
+                <div class="flex gap-3 justify-end">
+                    <button type="button"
+                        class="px-4 py-2 text-[#002975] rounded-lg border border-[#002975] bg-white hover:bg-[#002975] hover:text-white"
+                        @click="resetForm">
+                        Hủy
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-[#002975] text-white rounded-lg hover:bg-[#002975]/90">
+                        Đổi mật khẩu
+                    </button>
+                </div>
+            </form>
+            <script>
+                function changePasswordForm() {
+                    return {
+                        form: {
+                            old_password: '',
+                            new_password: '',
+                            confirm_password: ''
+                        },
+                        errors: {},
+                        show: {
+                            old_password: false,
+                            new_password: false,
+                            confirm_password: false
+                        },
+                        clearError(f) {
+                            this.errors[f] = ''
+                        },
+                        validateField(f) {
+                            if (f === 'old_password' && !this.form.old_password.trim()) this.errors.old_password = 'Vui lòng nhập mật khẩu hiện tại';
+                            if (f === 'new_password') {
+                                const v = this.form.new_password;
+                                if (!v) this.errors.new_password = 'Vui lòng nhập mật khẩu mới';
+                                else if (v.length < 8) this.errors.new_password = 'Mật khẩu phải từ 8 ký tự trở lên';
+                                else if (!/[A-Z]/.test(v)) this.errors.new_password = 'Mật khẩu phải có chữ hoa';
+                                else if (!/[a-z]/.test(v)) this.errors.new_password = 'Mật khẩu phải có chữ thường';
+                                else if (!/[0-9]/.test(v)) this.errors.new_password = 'Mật khẩu phải có số';
+                                else if (!/[^A-Za-z0-9]/.test(v)) this.errors.new_password = 'Mật khẩu phải có ký tự đặc biệt';
+                                else this.errors.new_password = '';
+                            }
+                            if (f === 'confirm_password') {
+                                if (!this.form.confirm_password) this.errors.confirm_password = 'Vui lòng nhập lại mật khẩu mới';
+                                else if (this.form.confirm_password !== this.form.new_password) this.errors.confirm_password = 'Mật khẩu xác nhận không khớp';
+                                else this.errors.confirm_password = '';
+                            }
+                        },
+                        validateForm() {
+                            ['old_password', 'new_password', 'confirm_password'].forEach(f => this.validateField(f));
+                            return Object.values(this.errors).every(v => !v);
+                        },
+                        submitForm(e) {
+                            if (!this.validateForm()) return;
+                            e.target.submit();
+                        },
+                        resetForm() {
+                            this.form.old_password = '';
+                            this.form.new_password = '';
+                            this.form.confirm_password = '';
+                            this.errors = {};
+                        }
+                    }
+                }
+            </script>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -408,16 +416,18 @@ $avatarPath = !empty($user['avatar_url'])
                 phone: <?= json_encode($user['phone'] ?? '') ?>,
                 gender: <?= json_encode($user['gender'] ?? '') ?>,
                 date_of_birth: <?php
-                $dob = $user['date_of_birth'] ?? '';
-                if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dob)) {
-                    $parts = explode('-', $dob);
-                    $dob = $parts[2] . '/' . $parts[1] . '/' . $parts[0];
-                }
-                echo json_encode($dob);
-                ?>
+                                $dob = $user['date_of_birth'] ?? '';
+                                if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dob)) {
+                                    $parts = explode('-', $dob);
+                                    $dob = $parts[2] . '/' . $parts[1] . '/' . $parts[0];
+                                }
+                                echo json_encode($dob);
+                                ?>
             },
             errors: {},
-            clearError(f) { this.errors[f] = '' },
+            clearError(f) {
+                this.errors[f] = ''
+            },
             validateField(f) {
                 if (f === 'fullname' && !this.form.fullname.trim()) {
                     this.errors.fullname = 'Họ và tên không được bỏ trống';
@@ -502,12 +512,14 @@ $avatarPath = !empty($user['avatar_url'])
 </script>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function() {
         const params = new URLSearchParams(window.location.search);
         if (params.has('avatar-updated')) {
-            const imgPath = <?= json_encode("/assets/images/avatar/" . ($_SESSION['admin_user']['avatar_url'] ?? $_SESSION['user']['avatar_url'] ?? 'default.png')) ?>;
+            const imgPath = <?= json_encode(getAvatarUrl($_SESSION['admin_user']['avatar_url'] ?? $_SESSION['user']['avatar_url'] ?? null)) ?>;
             window.dispatchEvent(new CustomEvent('avatar-updated', {
-                detail: { url: imgPath }
+                detail: {
+                    url: imgPath
+                }
             }));
             params.delete('avatar-updated');
             const cleanUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
