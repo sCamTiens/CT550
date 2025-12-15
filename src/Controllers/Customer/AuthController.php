@@ -4,11 +4,15 @@ namespace App\Controllers\Customer;
 
 use App\Core\Controller;
 use App\Models\Customer\Repositories\CustomerRepository;
+use App\Models\Repositories\PasswordResetRepository;
+use App\Services\EmailService;
 use App\Support\JWTHelper;
 
 class AuthController extends Controller
 {
     private $customerRepo;
+    private $passwordResetRepo;
+    private $emailService;
 
     public function __construct()
     {
@@ -16,6 +20,8 @@ class AuthController extends Controller
             session_start();
         }
         $this->customerRepo = new CustomerRepository();
+        $this->passwordResetRepo = new PasswordResetRepository();
+        $this->emailService = new EmailService();
     }
 
     /**
@@ -47,7 +53,7 @@ class AuthController extends Controller
         }
 
         // Tìm khách hàng theo username hoặc email
-        $customer = $this->customerRepo->findByUsernameOrEmail($username);
+        $customer =  $this->customerRepo->findByUsernameOrEmail($username);
 
         if (!$customer) {
             $this->json(['success' => false, 'message' => 'Tài khoản hoặc mật khẩu không chính xác'], 401);
@@ -95,6 +101,7 @@ class AuthController extends Controller
             'full_name' => $customer['full_name'],
             'phone' => $customer['phone'],
             'avatar_url' => $customer['avatar_url'] ?? null,
+            'loyalty_points' => $customer['loyalty_points'] ?? 0,
             'access_token' => $accessToken,
             'refresh_token' => $refreshToken,
         ];
@@ -255,6 +262,7 @@ class AuthController extends Controller
                     'full_name' => $result['full_name'],
                     'phone' => $result['phone'],
                     'avatar_url' => $result['avatar_url'] ?? null,
+                    'loyalty_points' => $result['loyalty_points'] ?? 0,
                     'access_token' => $accessToken,
                     'refresh_token' => $refreshToken,
                 ];
@@ -340,6 +348,198 @@ class AuthController extends Controller
             'token_type' => 'Bearer',
             'expires_in' => (int)(getenv('JWT_EXPIRY') ?: 3600)
         ]);
+    }
+
+    /**
+     * Gửi mã OTP để reset mật khẩu
+     * POST /forgot-password
+     */
+    public function forgotPassword()
+    {
+        $data = json_decode(file_get_contents('php://input'), true);
+        $email = trim($data['email'] ?? '');
+
+        if (empty($email)) {
+            $this->json(['success' => false, 'message' => 'Vui lòng nhập email'], 400);
+            return;
+        }
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $this->json(['success' => false, 'message' => 'Email không đúng định dạng'], 400);
+            return;
+        }
+
+        // Kiểm tra email có tồn tại không
+        $customer = $this->customerRepo->findByEmail($email);
+
+        if (!$customer) {
+            $this->json(['success' => false, 'message' => 'Email không tồn tại trong hệ thống'], 404);
+            return;
+        }
+
+        // Tạo mã OTP
+        $otpCode = $this->passwordResetRepo->createOTP($email);
+
+        // Gửi email
+        $result = $this->emailService->sendOTPEmail($email, $otpCode, $customer['full_name'] ?? '');
+
+        if ($result['success']) {
+            // Tính thời gian hết hạn (10 phút từ bây giờ)
+            $expiresAt = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+
+            $this->json([
+                'success' => true,
+                'message' => 'Mã xác nhận đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư.',
+                'expires_at' => $expiresAt,
+                'expires_in_seconds' => 600 // 10 minutes = 600 seconds
+            ]);
+        } else {
+            $this->json([
+                'success' => false,
+                'message' => 'Không thể gửi email. Vui lòng thử lại sau.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Xác thực mã OTP
+     * POST /verify-otp
+     */
+    public function verifyOTP()
+    {
+        try {
+            $data = json_decode(file_get_contents('php://input'), true);
+            $email = trim($data['email'] ?? '');
+            $otpCode = trim($data['otp_code'] ?? '');
+
+            error_log("[AuthController] Verify OTP - Email: $email, Code: $otpCode");
+
+            if (empty($email) || empty($otpCode)) {
+                error_log("[AuthController] Verify OTP - Missing data");
+                $this->json(['success' => false, 'message' => 'Vui lòng nhập đầy đủ thông tin'], 400);
+                return;
+            }
+
+            // Xác thực OTP
+            $isValid = $this->passwordResetRepo->verifyOTP($email, $otpCode);
+
+            error_log("[AuthController] Verify OTP - Result: " . ($isValid ? 'VALID' : 'INVALID'));
+
+            if ($isValid) {
+                $this->json([
+                    'success' => true,
+                    'message' => 'Mã xác nhận đúng. Vui lòng đặt lại mật khẩu.'
+                ]);
+            } else {
+                $this->json([
+                    'success' => false,
+                    'message' => 'Mã xác nhận không đúng hoặc đã hết hạn'
+                ], 400);
+            }
+        } catch (\Exception $e) {
+            error_log("[AuthController] Verify OTP - Exception: " . $e->getMessage());
+            error_log("[AuthController] Verify OTP - Trace: " . $e->getTraceAsString());
+            $this->json([
+                'success' => false,
+                'message' => 'Có lỗi xảy ra: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Đặt lại mật khẩu sau khi xác thực OTP
+     * POST /reset-password
+     */
+    public function resetPassword()
+    {
+        $data = json_decode(file_get_contents('php://input'), true);
+        $email = trim($data['email'] ?? '');
+        $otpCode = trim($data['otp_code'] ?? '');
+        $newPassword = trim($data['new_password'] ?? '');
+        $confirmPassword = trim($data['confirm_password'] ?? '');
+
+        if (empty($email) || empty($otpCode) || empty($newPassword)) {
+            $this->json(['success' => false, 'message' => 'Vui lòng nhập đầy đủ thông tin'], 400);
+            return;
+        }
+
+        if ($newPassword !== $confirmPassword) {
+            $this->json(['success' => false, 'message' => 'Mật khẩu xác nhận không khớp'], 400);
+            return;
+        }
+
+        // Validate password strength
+        if (strlen($newPassword) < 8) {
+            $this->json(['success' => false, 'message' => 'Mật khẩu phải có ít nhất 8 ký tự'], 400);
+            return;
+        }
+
+        // Check for uppercase letter
+        if (!preg_match('/[A-Z]/', $newPassword)) {
+            $this->json(['success' => false, 'message' => 'Mật khẩu phải chứa ít nhất 1 chữ hoa'], 400);
+            return;
+        }
+
+        // Check for lowercase letter
+        if (!preg_match('/[a-z]/', $newPassword)) {
+            $this->json(['success' => false, 'message' => 'Mật khẩu phải chứa ít nhất 1 chữ thường'], 400);
+            return;
+        }
+
+        // Check for number
+        if (!preg_match('/[0-9]/', $newPassword)) {
+            $this->json(['success' => false, 'message' => 'Mật khẩu phải chứa ít nhất 1 chữ số'], 400);
+            return;
+        }
+
+        // Check for special character
+        if (!preg_match('/[!@#$%^&*()_+\-=\[\]{};:\'",.<>?\/\\\\|`~]/', $newPassword)) {
+            $this->json(['success' => false, 'message' => 'Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt'], 400);
+            return;
+        }
+
+        // Xác thực OTP lần nữa
+        if (!$this->passwordResetRepo->verifyOTP($email, $otpCode)) {
+            $this->json([
+                'success' => false,
+                'message' => 'Mã xác nhận không đúng hoặc đã hết hạn'
+            ], 400);
+            return;
+        }
+
+        // Tìm customer theo email
+        $customer = $this->customerRepo->findByEmail($email);
+
+        if (!$customer) {
+            $this->json(['success' => false, 'message' => 'Email không tồn tại'], 404);
+            return;
+        }
+
+        // Cập nhật mật khẩu mới
+        try {
+            $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+
+            // Cập nhật trong database
+            $stmt = \App\Core\DB::pdo()->prepare("
+                UPDATE users 
+                SET password_hash = ?
+                WHERE email = ?
+            ");
+
+            if ($stmt->execute([$hashedPassword, $email])) {
+                // Đánh dấu OTP đã sử dụng
+                $this->passwordResetRepo->markOTPAsUsed($email, $otpCode);
+
+                $this->json([
+                    'success' => true,
+                    'message' => 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.'
+                ]);
+            } else {
+                $this->json(['success' => false, 'message' => 'Không thể cập nhật mật khẩu'], 500);
+            }
+        } catch (\Exception $e) {
+            $this->json(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()], 500);
+        }
     }
 
     /**

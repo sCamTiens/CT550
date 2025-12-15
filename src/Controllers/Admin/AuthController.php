@@ -193,6 +193,12 @@ class AuthController extends Controller
         $_SESSION['admin_user'] = $sessData;
         $_SESSION['user'] = $sessData; // để CategoryController dùng
 
+        // DEBUG: Verify session was saved
+        error_log("=== SESSION SAVED AFTER LOGIN ===");
+        error_log("Session ID: " . session_id());
+        error_log("admin_user set: " . (isset($_SESSION['admin_user']) ? 'YES' : 'NO'));
+        error_log("user set: " . (isset($_SESSION['user']) ? 'YES' : 'NO'));
+
         // Xóa flag login_failed khi đăng nhập thành công
         unset($_SESSION['login_failed']);
 

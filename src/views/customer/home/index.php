@@ -33,8 +33,22 @@
 
         .hot-label {
             color: white;
-            background: linear-gradient(149deg, #5ba2feff, #2f84f5ff, #043fadff, #043fadff, #2f84f5ff, #5ba2feff);
-            background-size: 1200% 1200%;
+            background: linear-gradient(90deg,
+                    #7C3AED 0%,
+                    /* purple-600 */
+                    #A855F7 20%,
+                    /* purple-500 */
+                    #D946EF 40%,
+                    /* fuchsia-500 */
+                    #EC4899 60%,
+                    /* pink-500 */
+                    #F472B6 80%,
+                    /* pink-400 */
+                    #A855F7 100%
+                    /* quay về tím */
+                );
+
+            background-size: 400% 400%;
             animation: hot-animation 5s ease infinite;
         }
 
@@ -77,6 +91,12 @@
 </head>
 
 <body class="bg-gray-50" x-data="{ showFilterModal: false, ...filterModal() }">
+    <?php
+    // Safety: Initialize $hasActiveFilters if not set from controller
+    if (!isset($hasActiveFilters)) {
+        $hasActiveFilters = false;
+    }
+    ?>
     <?php require __DIR__ . '/../partials/header.php'; ?>
 
     <main class="container mx-auto px-4 py-6">
@@ -140,19 +160,19 @@
 
             <!-- Nội dung chính -->
             <div class="flex-1">
-                <!-- Khuyến mãi (hiển thị khi có promotions) -->
-                <?php if (!empty($promotions)): ?>
+                <!-- Khuyến mãi (hiển thị khi KHÔNG có filter/search) -->
+                <?php if (!empty($promotions) && !$hasActiveFilters): ?>
                     <section class="mb-6" x-data="promotionsSlider()">
                         <?php if (isset($_GET['debug'])): ?>
                             <pre style='background: #ffff99; padding: 10px; margin: 10px;'>
-                                === IN VIEW (before loop) ===
-                                Total promotions: <?= count($promotions) ?>
+                                                === IN VIEW (before loop) ===
+                                                Total promotions: <?= count($promotions) ?>
 
-                                <?php foreach ($promotions as $idx => $p): ?>
-                                            [<?= $idx ?>] ID: <?= $p['id'] ?>, Type: <?= $p['promo_type'] ?>, Name: <?= $p['name'] ?>
+                                                <?php foreach ($promotions as $idx => $p): ?>
+                                                                    [<?= $idx ?>] ID: <?= $p['id'] ?>, Type: <?= $p['promo_type'] ?>, Name: <?= $p['name'] ?>
 
-                                <?php endforeach; ?>
-                            </pre>
+                                                <?php endforeach; ?>
+                                            </pre>
                         <?php endif; ?>
 
                         <div class="relative bg-white rounded-xl shadow-lg overflow-hidden">
@@ -489,92 +509,209 @@
                     </section>
                 <?php endif; ?>
 
-                <!-- Tiêu đề danh mục + Nút Filter -->
-                <div class="mb-6 flex items-center justify-between">
-                    <div>
-                        <?php if (isset($query) && !empty($query)): ?>
-                            <h2 class="text-2xl font-bold text-gray-800 mb-2">
-                                <i class="fa-solid fa-search text-[#002975] mr-2"></i>
-                                Kết quả tìm kiếm: "<?= htmlspecialchars($query) ?>"
-                            </h2>
-                            <p class="text-gray-600">
-                                Tìm thấy <?= $products['total'] ?? 0 ?> sản phẩm
-                            </p>
-                        <?php elseif ($selectedCategory): ?>
-                            <h2 class="text-2xl font-bold text-gray-800 mb-2">
-                                <i class="fa-solid fa-tag text-[#002975] mr-2"></i>
-                                <?= htmlspecialchars($selectedCategory['name']) ?>
-                            </h2>
-                            <p class="text-gray-600">
-                                Tìm thấy <?= $products['total'] ?? 0 ?> sản phẩm
-                            </p>
-                        <?php else: ?>
-                            <h2 class="text-2xl font-bold text-gray-800 mb-2">
-                                <i class="fa-solid fa-sparkles text-[#002975] mr-2"></i>
-                                Tất cả sản phẩm
-                            </h2>
-                            <p class="text-gray-600">
-                                Khám phá <?= $products['total'] ?? 0 ?> sản phẩm của chúng tôi
-                            </p>
-                        <?php endif; ?>
-                    </div>
+                <!-- Đề xuất cho bạn (hiển thị khi KHÔNG có filter/search) -->
+                <?php if (!empty($recommendedProducts)): ?>
+                    <section class="mb-8">
+                        <div class="bg-white rounded-b-xl shadow-lg p-6">
+                            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                                <?php foreach ($recommendedProducts as $rec): ?>
+                                    <div x-data="{ qty: 1 }"
+                                        class="bg-white border-2 border-gray-200 rounded-lg overflow-hidden hover:shadow-xl hover:border-purple-400 transition-all duration-300 group">
+                                        <!-- Ảnh - Link đến chi tiết -->
+                                        <a href="/products/<?= htmlspecialchars($rec['slug'] ?? '') ?>">
+                                            <div
+                                                class="h-50 bg-gray-50 flex items-center justify-center overflow-hidden p-2 relative">
+                                                <?php if (!empty($rec['image_url'])): ?>
+                                                    <img src="<?= getProductImageUrl($rec['image_url']) ?>?t=<?= !empty($rec['updated_at']) ? strtotime($rec['updated_at']) : time() ?>"
+                                                        alt="<?= htmlspecialchars($rec['name']) ?>"
+                                                        class="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300">
+                                                <?php else: ?>
+                                                    <i class="fa-solid fa-image text-4xl text-gray-300"></i>
+                                                <?php endif; ?>
+                                                <!-- Badge "Đề xuất" -->
+                                                <div
+                                                    class="absolute top-2 right-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full font-semibold shadow-lg">
+                                                    <i class="fa-solid fa-heart mr-1"></i>
+                                                    Gợi ý
+                                                </div>
+                                            </div>
+                                        </a>
 
-                    <!-- Nút Filter -->
-                    <button @click="showFilterModal = true" title="Lọc sản phẩm"
-                        class="flex items-center gap-2 px-6 py-3 bg-white border-2 border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white transition-all font-semibold shadow-md">
-                        <i class="fa-solid fa-filter"></i>
-                    </button>
-                </div>
+                                        <div class="p-3">
+                                            <!-- Tên sản phẩm - Link đến chi tiết -->
+                                            <a href="/products/<?= htmlspecialchars($rec['slug'] ?? '') ?>">
+                                                <h3
+                                                    class="font-medium text-gray-800 mb-2 line-clamp-2 text-xs h-8 hover:text-purple-600 transition-colors">
+                                                    <?= htmlspecialchars($rec['name'] ?? 'No name') ?>
+                                                </h3>
+                                            </a>
+
+                                            <!-- Giá -->
+                                            <p class="text-lg font-bold text-purple-600 mb-3">
+                                                <?= number_format((float) ($rec['final_price'] ?? $rec['price'] ?? 0), 0, ',', '.') ?>₫
+                                            </p>
+
+                                            <!-- Số lượng -->
+                                            <div class="flex items-center justify-center gap-1 mb-2">
+                                                <button @click="qty = Math.max(0, Number(qty) - 1)" type="button"
+                                                    class="w-7 h-7 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100 transition-colors">
+                                                    <i class="fa-solid fa-minus text-xs"></i>
+                                                </button>
+                                                <input type="number" x-model.number="qty"
+                                                    @blur="qty = Math.max(0, Math.min(9999, Number(qty) || 0))" min="0"
+                                                    max="9999"
+                                                    class="w-12 text-center border border-gray-300 rounded py-1 font-semibold text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
+                                                <button @click="qty = Math.min(9999, Number(qty) + 1)" type="button"
+                                                    class="w-7 h-7 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100 transition-colors">
+                                                    <i class="fa-solid fa-plus text-xs"></i>
+                                                </button>
+                                            </div>
+
+                                            <!-- Nút Thêm vào giỏ -->
+                                            <button
+                                                @click="addProductToCart(<?= (int) $rec['id'] ?>, qty, <?= (int) ($rec['stock_qty'] ?? 0) ?>)"
+                                                class="w-full px-2 py-2 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-600 hover:text-white transition-all text-xs font-semibold mb-1">
+                                                <i class="fa-solid fa-cart-plus mr-1"></i>
+                                                Thêm
+                                            </button>
+
+                                            <!-- Nút Mua ngay -->
+                                            <button
+                                                @click="buyProductNow(<?= (int) $rec['id'] ?>, <?= (int) ($rec['stock_qty'] ?? 0) ?>)"
+                                                class="w-full px-2 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all text-xs font-semibold">
+                                                <i class="fa-solid fa-shopping-bag mr-1"></i>
+                                                Mua ngay
+                                            </button>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    </section>
+                <?php endif; ?>
+
+                <!-- Tiêu đề danh mục + Nút Filter -->
+                <section class="mb-6">
+                    <div
+                        class="bg-gradient-to-r from-gray-50 to-slate-100 rounded-xl p-6 shadow-sm border border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <?php if (isset($query) && !empty($query)): ?>
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <div class="bg-blue-100 p-2 rounded-lg">
+                                            <i class="fa-solid fa-search text-blue-600 text-xl"></i>
+                                        </div>
+                                        <h2 class="text-2xl font-bold text-gray-800">
+                                            Kết quả tìm kiếm: "<?= htmlspecialchars($query) ?>"
+                                        </h2>
+                                    </div>
+                                    <p class="text-gray-600 ml-14">
+                                        <span class="font-semibold text-gray-700"><?= $products['total'] ?? 0 ?></span> sản
+                                        phẩm được tìm thấy
+                                    </p>
+                                <?php elseif ($selectedCategory): ?>
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <div class="bg-indigo-100 p-2 rounded-lg">
+                                            <i class="fa-solid fa-tag text-indigo-600 text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <h2 class="text-2xl font-bold text-[#002975]">
+                                                <?= htmlspecialchars($selectedCategory['name']) ?>
+                                            </h2>
+                                            <p class="text-gray-600 mt-2">
+                                                <span
+                                                    class="font-semibold text-gray-700"><?= $products['total'] ?? 0 ?></span>
+                                                sản phẩm trong danh mục này
+                                            </p>
+                                        </div>
+
+                                    </div>
+
+                                <?php else: ?>
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <div class="bg-gradient-to-br from-slate-100 to-gray-200 p-2 rounded-lg">
+                                            <i class="fa-solid fa-store text-[#002975] text-xl"></i>
+                                        </div>
+                                        <h2 class="text-2xl font-bold text-[#002975]">
+                                            Tất cả sản phẩm
+                                        </h2>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+
+                            <!-- Nút Filter -->
+                            <button @click="showFilterModal = true" title="Lọc sản phẩm"
+                                class="flex items-center gap-2 px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-lg hover:border-[#002975] hover:text-[#002975] transition-all font-semibold shadow-sm hover:shadow-md">
+                                <i class="fa-solid fa-filter"></i>
+                                <span class="hidden md:inline">Lọc</span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
 
                 <!-- Danh sách sản phẩm -->
                 <?php if (empty($products['data'])): ?>
-                    <div class="bg-white rounded-xl shadow-md p-12 text-center">
-                        <i class="fa-solid fa-box-open text-6xl text-gray-300 mb-4"></i>
-                        <p class="text-gray-500 text-lg">Không có sản phẩm nào trong danh mục này</p>
+                    <div
+                        class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl shadow-sm p-16 text-center border border-gray-200">
+                        <div
+                            class="bg-white rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-4 shadow-md">
+                            <i class="fa-solid fa-box-open text-5xl text-gray-300"></i>
+                        </div>
+                        <p class="text-gray-600 text-lg font-medium">Không có sản phẩm nào trong danh mục này</p>
+                        <p class="text-gray-500 text-sm mt-2">Vui lòng thử lại với bộ lọc khác</p>
                     </div>
                 <?php else: ?>
-                    <div class="grid grid-cols-5 gap-4 mb-6">
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 mb-8">
                         <?php foreach ($products['data'] as $p): ?>
                             <div x-data="{ qty: 1 }"
-                                class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-300">
+                                class="group bg-white rounded-xl border-2 border-gray-100 overflow-hidden hover:border-blue-200 hover:shadow-xl transition-all duration-300 flex flex-col">
+
                                 <!-- Ảnh - Link đến chi tiết -->
-                                <a href="/products/<?= htmlspecialchars($p['slug'] ?? '') ?>">
-                                    <div class="h-64 bg-gray-100 flex items-center justify-center overflow-hidden p-2">
+                                <a href="/products/<?= htmlspecialchars($p['slug'] ?? '') ?>" class="block">
+                                    <div
+                                        class="relative bg-gradient-to-br from-gray-50 to-gray-100 h-62 flex items-center justify-center overflow-hidden p-3">
                                         <?php if (!empty($p['image_url'])): ?>
                                             <img src="<?= getProductImageUrl($p['image_url']) ?>?t=<?= !empty($p['updated_at']) ? strtotime($p['updated_at']) : time() ?>"
                                                 alt="<?= htmlspecialchars($p['name']) ?>"
-                                                class="w-full h-full object-contain hover:scale-105 transition-transform duration-300">
+                                                class="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500">
                                         <?php else: ?>
                                             <i class="fa-solid fa-image text-5xl text-gray-300"></i>
                                         <?php endif; ?>
+
+                                        <!-- Hover overlay -->
+                                        <div
+                                            class="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                        </div>
                                     </div>
                                 </a>
 
-                                <div class="p-3">
+                                <div class="p-4 flex-1 flex flex-col">
                                     <!-- Tên sản phẩm - Link đến chi tiết -->
-                                    <a href="/products/<?= htmlspecialchars($p['slug'] ?? '') ?>">
+                                    <a href="/products/<?= htmlspecialchars($p['slug'] ?? '') ?>" class="block mb-3">
                                         <h3
-                                            class="font-medium text-gray-800 mb-2 line-clamp-2 text-sm h-10 hover:text-[#002975] transition-colors">
+                                            class="font-semibold text-gray-800 mb-1 line-clamp-2 text-sm leading-snug h-10 group-hover:text-[#002975] transition-colors">
                                             <?= htmlspecialchars($p['name'] ?? 'No name') ?>
                                         </h3>
                                     </a>
 
                                     <!-- Giá -->
-                                    <p class="text-xl font-bold text-red-600 mb-3">
-                                        <?= number_format((float) ($p['price'] ?? 0), 0, ',', '.') ?>₫
-                                    </p>
+                                    <div class="mb-3">
+                                        <p class="text-xl font-bold text-red-600">
+                                            <?= number_format((float) ($p['price'] ?? 0), 0, ',', '.') ?>₫
+                                        </p>
+                                    </div>
 
                                     <!-- Số lượng -->
-                                    <div class="flex items-center justify-center gap-2 mb-2">
+                                    <div class="flex items-center justify-center gap-2 mb-3 mt-auto">
                                         <button @click="qty = Math.max(0, Number(qty) - 1)" type="button"
-                                            class="w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100 transition-colors">
+                                            class="w-8 h-8 flex items-center justify-center border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 transition-all">
                                             <i class="fa-solid fa-minus text-xs"></i>
                                         </button>
                                         <input type="number" x-model.number="qty"
                                             @blur="qty = Math.max(0, Math.min(9999, Number(qty) || 0))" min="0" max="9999"
-                                            class="w-16 text-center border border-gray-300 rounded py-1 font-semibold text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
+                                            class="w-14 text-center border-2 border-gray-200 rounded-lg py-1.5 font-bold text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
                                         <button @click="qty = Math.min(9999, Number(qty) + 1)" type="button"
-                                            class="w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100 transition-colors">
+                                            class="w-8 h-8 flex items-center justify-center border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 hover:text-blue-600 transition-all">
                                             <i class="fa-solid fa-plus text-xs"></i>
                                         </button>
                                     </div>
@@ -582,16 +719,16 @@
                                     <!-- Nút Thêm vào giỏ -->
                                     <button
                                         @click="addProductToCart(<?= (int) $p['id'] ?>, qty, <?= (int) ($p['stock_qty'] ?? 0) ?>)"
-                                        class="w-full px-3 py-2 border border-[#002975] text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white transition-all text-sm font-semibold mb-2">
-                                        <i class="fa-solid fa-cart-plus mr-1"></i>
-                                        Thêm vào giỏ
+                                        class="w-full px-3 py-2.5 border-2 border-gray-200 text-[#002975] rounded-lg hover:bg-[#002975] hover:text-white transition-all text-sm font-semibold mb-2 flex items-center justify-center gap-2 group/btn">
+                                        <i class="fa-solid fa-cart-plus group-hover/btn:scale-110 transition-transform"></i>
+                                        <span>Thêm vào giỏ</span>
                                     </button>
 
                                     <!-- Nút Mua ngay -->
                                     <button @click="buyProductNow(<?= (int) $p['id'] ?>, <?= (int) ($p['stock_qty'] ?? 0) ?>)"
-                                        class="w-full px-3 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all text-sm font-semibold">
-                                        <i class="fa-solid fa-shopping-bag mr-1"></i>
-                                        Mua ngay
+                                        class="w-full px-3 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 hover:shadow-lg transition-all text-sm font-semibold flex items-center justify-center gap-2 group/btn">
+                                        <i class="fa-solid fa-bolt group-hover/btn:scale-110 transition-transform"></i>
+                                        <span>Mua ngay</span>
                                     </button>
                                 </div>
                             </div>

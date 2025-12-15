@@ -1,16 +1,21 @@
 <?php
+
 namespace App\Controllers\Admin;
 
 use App\Models\Repositories\CustomerRepository;
+use App\Services\EmailService;
 
 class CustomerController extends BaseAdminController
 {
     private CustomerRepository $repo;
 
+    private $emailService;
+
     public function __construct()
     {
         parent::__construct();
         $this->repo = new CustomerRepository();
+        $this->emailService = new EmailService();
     }
 
     /** Trang quản lý khách hàng */
@@ -46,6 +51,9 @@ class CustomerController extends BaseAdminController
         $payload['created_by'] = $this->currentUserId();
         $payload['updated_by'] = $this->currentUserId();
 
+        // Lưu password để gửi email (vì khi tạo customer, password sẽ được hash)
+        $plainPassword = $payload['password'] ?? null;
+
         try {
             $created = $this->repo->create($payload);
 
@@ -55,6 +63,20 @@ class CustomerController extends BaseAdminController
 
             if (is_string($created)) {
                 $this->json(['error' => $created], 422); // báo chi tiết lỗi
+            }
+
+            // Gửi email thông báo mật khẩu cho khách hàng mới
+            if ($plainPassword && !empty($created['email'])) {
+                $emailResult = $this->emailService->sendPasswordEmail(
+                    $created,
+                    $plainPassword,
+                    'customer',
+                    true // isNew = true (tạo mới)
+                );
+
+                if (!$emailResult['success']) {
+                    error_log('Failed to send password email: ' . $emailResult['message']);
+                }
             }
 
             $this->json($created, 201);
@@ -160,8 +182,28 @@ class CustomerController extends BaseAdminController
             return $this->json(['error' => 'Mật khẩu phải ít nhất 8 ký tự'], 422);
         }
         try {
+            // Lấy thông tin khách hàng trước khi đổi mật khẩu
+            $customer = $this->repo->find($id);
+            if (!$customer) {
+                return $this->json(['error' => 'Không tìm thấy khách hàng'], 404);
+            }
+
             $ok = $this->repo->changePassword($id, $password);
             if ($ok) {
+                // Gửi email thông báo mật khẩu mới
+                if (!empty($customer['email'])) {
+                    $emailResult = $this->emailService->sendPasswordEmail(
+                        $customer,
+                        $password,
+                        'customer',
+                        false // isNew = false (đổi mật khẩu)
+                    );
+
+                    if (!$emailResult['success']) {
+                        error_log('Failed to send password email: ' . $emailResult['message']);
+                    }
+                }
+
                 $this->json(['ok' => true]);
             } else {
                 $this->json(['error' => 'Không thể đổi mật khẩu'], 500);
@@ -223,6 +265,13 @@ class CustomerController extends BaseAdminController
     {
         try {
             $items = $this->repo->getOrderItems($id);
+
+            // DEBUG
+            error_log("Order items count: " . count($items));
+            if (count($items) > 0) {
+                error_log("First item: " . json_encode($items[0]));
+            }
+
             $this->json(['items' => $items]);
         } catch (\PDOException $e) {
             $this->json([
@@ -653,7 +702,6 @@ class CustomerController extends BaseAdminController
                 ]
             ], JSON_UNESCAPED_UNICODE);
             exit;
-
         } catch (\Throwable $e) {
             // Log the error
             error_log("Import Error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
@@ -835,5 +883,4 @@ class CustomerController extends BaseAdminController
         $writer->save('php://output');
         exit;
     }
-
 }

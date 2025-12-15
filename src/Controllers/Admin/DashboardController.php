@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controllers\Admin;
 
 use App\Core\DB;
@@ -33,11 +34,11 @@ class DashboardController extends BaseAdminController
         $stmt->execute([$today]);
         $orders_today = (int) $stmt->fetchColumn();
 
-        // 2. Tính doanh thu hôm nay
+        // 2. Tính doanh thu hôm nay (từ phiếu thu)
         $stmt = $pdo->prepare("
-            SELECT COALESCE(SUM(grand_total), 0) 
-            FROM orders 
-            WHERE DATE(created_at) = ? AND status = 'Hoàn tất'
+            SELECT COALESCE(SUM(amount), 0) 
+            FROM receipt_vouchers 
+            WHERE DATE(COALESCE(received_at, created_at)) = ?
         ");
         $stmt->execute([$today]);
         $revenue_today = (float) $stmt->fetchColumn();
@@ -192,13 +193,12 @@ class DashboardController extends BaseAdminController
         $expense = [0, 0, 0, 0];
 
         if ($week > 0 && $week <= 4) {
-            // Doanh thu tuần cụ thể
+            // Doanh thu tuần cụ thể (từ phiếu thu)
             $stmt = $pdo->prepare("
-            SELECT COALESCE(SUM(grand_total),0)/1000000
-            FROM orders
-            WHERE DATE_FORMAT(created_at,'%Y-%m')=? 
-              AND status='Hoàn tất'
-              AND WEEK(created_at,1) - WEEK(DATE_SUB(created_at,INTERVAL DAYOFMONTH(created_at)-1 DAY),1)+1=?
+            SELECT COALESCE(SUM(amount),0)/1000000
+            FROM receipt_vouchers
+            WHERE DATE_FORMAT(COALESCE(received_at, created_at),'%Y-%m')=? 
+              AND WEEK(COALESCE(received_at, created_at),1) - WEEK(DATE_SUB(COALESCE(received_at, created_at),INTERVAL DAYOFMONTH(COALESCE(received_at, created_at))-1 DAY),1)+1=?
         ");
             $stmt->execute([$yearMonth, $week]);
             $revenue[$week - 1] = round((float) $stmt->fetchColumn(), 1);
@@ -217,12 +217,12 @@ class DashboardController extends BaseAdminController
             $revenue = [$revenue[$week - 1]];
             $expense = [$expense[$week - 1]];
         } else {
-            // All weeks
+            // All weeks (từ phiếu thu)
             $stmt = $pdo->prepare("
-            SELECT WEEK(created_at,1) - WEEK(DATE_SUB(created_at,INTERVAL DAYOFMONTH(created_at)-1 DAY),1)+1 as w,
-                   COALESCE(SUM(grand_total),0)/1000000 as amt
-            FROM orders
-            WHERE DATE_FORMAT(created_at,'%Y-%m')=? AND status='Hoàn tất'
+            SELECT WEEK(COALESCE(received_at, created_at),1) - WEEK(DATE_SUB(COALESCE(received_at, created_at),INTERVAL DAYOFMONTH(COALESCE(received_at, created_at))-1 DAY),1)+1 as w,
+                   COALESCE(SUM(amount),0)/1000000 as amt
+            FROM receipt_vouchers
+            WHERE DATE_FORMAT(COALESCE(received_at, created_at),'%Y-%m')=?
             GROUP BY w
         ");
             $stmt->execute([$yearMonth]);
@@ -271,11 +271,11 @@ class DashboardController extends BaseAdminController
         $revenue = [];
         $expense = [];
 
-        // Doanh thu theo ngày
+        // Doanh thu theo ngày (từ phiếu thu)
         $stmt = $pdo->prepare("
-        SELECT DAY(created_at) as d, COALESCE(SUM(grand_total),0)/1000000 as amt
-        FROM orders
-        WHERE YEAR(created_at)=? AND MONTH(created_at)=? AND status='Hoàn tất'
+        SELECT DAY(COALESCE(received_at, created_at)) as d, COALESCE(SUM(amount),0)/1000000 as amt
+        FROM receipt_vouchers
+        WHERE YEAR(COALESCE(received_at, created_at))=? AND MONTH(COALESCE(received_at, created_at))=?
         GROUP BY d
     ");
         $stmt->execute([$yearInt, $monthInt]);
@@ -290,6 +290,9 @@ class DashboardController extends BaseAdminController
     ");
         $stmt->execute([$yearInt, $monthInt]);
         $expenseData = $stmt->fetchAll(\PDO::FETCH_KEY_PAIR);
+
+        // Debug: Log expense data
+        error_log("[Dashboard] Monthly Expense Data for $yearMonth: " . json_encode($expenseData));
 
         // Build mảng đầy đủ
         for ($d = 1; $d <= $daysInMonth; $d++) {
@@ -314,7 +317,7 @@ class DashboardController extends BaseAdminController
     private function getYearlyData($pdo, ?string $targetYear = null): array
     {
         $year = $targetYear ? (int) $targetYear : (int) date('Y');
-        
+
         $labels = [];
         $revenue = array_fill(0, 12, 0);
         $expense = array_fill(0, 12, 0);
@@ -324,11 +327,11 @@ class DashboardController extends BaseAdminController
             $labels[] = 'Tháng ' . $m;
         }
 
-        // Doanh thu theo tháng
+        // Doanh thu theo tháng (từ phiếu thu)
         $stmt = $pdo->prepare("
-        SELECT MONTH(created_at) as m, COALESCE(SUM(grand_total),0)/1000000 as amt
-        FROM orders
-        WHERE YEAR(created_at) = ? AND status='Hoàn tất'
+        SELECT MONTH(COALESCE(received_at, created_at)) as m, COALESCE(SUM(amount),0)/1000000 as amt
+        FROM receipt_vouchers
+        WHERE YEAR(COALESCE(received_at, created_at)) = ?
         GROUP BY m
     ");
         $stmt->execute([$year]);
@@ -387,13 +390,12 @@ class DashboardController extends BaseAdminController
             $labels[] = 'Tháng ' . $m;
         }
 
-        // Doanh thu theo tháng trong quý
+        // Doanh thu theo tháng trong quý (từ phiếu thu)
         $stmt = $pdo->prepare("
-            SELECT MONTH(created_at) as m, COALESCE(SUM(grand_total),0)/1000000 as amt
-            FROM orders
-            WHERE YEAR(created_at) = ? 
-                AND MONTH(created_at) BETWEEN ? AND ?
-                AND status='Hoàn tất'
+            SELECT MONTH(COALESCE(received_at, created_at)) as m, COALESCE(SUM(amount),0)/1000000 as amt
+            FROM receipt_vouchers
+            WHERE YEAR(COALESCE(received_at, created_at)) = ? 
+                AND MONTH(COALESCE(received_at, created_at)) BETWEEN ? AND ?
             GROUP BY m
         ");
         $stmt->execute([$year, $startMonth, $endMonth]);
@@ -460,11 +462,11 @@ class DashboardController extends BaseAdminController
         $revenue = [];
         $expense = [];
 
-        // Doanh thu theo ngày
+        // Doanh thu theo ngày (từ phiếu thu)
         $stmt = $pdo->prepare("
-            SELECT DATE(created_at) as d, COALESCE(SUM(grand_total),0)/1000000 as amt
-            FROM orders
-            WHERE DATE(created_at) BETWEEN ? AND ? AND status='Hoàn tất'
+            SELECT DATE(COALESCE(received_at, created_at)) as d, COALESCE(SUM(amount),0)/1000000 as amt
+            FROM receipt_vouchers
+            WHERE DATE(COALESCE(received_at, created_at)) BETWEEN ? AND ?
             GROUP BY d
             ORDER BY d
         ");
@@ -485,7 +487,7 @@ class DashboardController extends BaseAdminController
         // Build mảng theo từng ngày
         $current = new \DateTime($fromDate);
         $end = new \DateTime($toDate);
-        
+
         while ($current <= $end) {
             $dateStr = $current->format('Y-m-d');
             $labels[] = $current->format('d/m');
@@ -513,11 +515,11 @@ class DashboardController extends BaseAdminController
         $revenue = [];
         $expense = [];
 
-        // Doanh thu theo tuần
+        // Doanh thu theo tuần (từ phiếu thu)
         $stmt = $pdo->prepare("
-            SELECT YEARWEEK(created_at, 1) as yw, COALESCE(SUM(grand_total),0)/1000000 as amt
-            FROM orders
-            WHERE DATE(created_at) BETWEEN ? AND ? AND status='Hoàn tất'
+            SELECT YEARWEEK(COALESCE(received_at, created_at), 1) as yw, COALESCE(SUM(amount),0)/1000000 as amt
+            FROM receipt_vouchers
+            WHERE DATE(COALESCE(received_at, created_at)) BETWEEN ? AND ?
             GROUP BY yw
             ORDER BY yw
         ");
@@ -539,14 +541,14 @@ class DashboardController extends BaseAdminController
         $current = new \DateTime($fromDate);
         $current->modify('monday this week'); // Bắt đầu từ thứ 2
         $end = new \DateTime($toDate);
-        
+
         $weekNum = 1;
         while ($current <= $end) {
             $yearWeek = $current->format('oW'); // Format: YYYYWW (ISO-8601)
             $labels[] = 'Tuần ' . $weekNum;
             $revenue[] = isset($revenueData[$yearWeek]) ? round($revenueData[$yearWeek], 1) : 0;
             $expense[] = isset($expenseData[$yearWeek]) ? round($expenseData[$yearWeek], 1) : 0;
-            
+
             $current->modify('+1 week');
             $weekNum++;
         }
@@ -560,5 +562,4 @@ class DashboardController extends BaseAdminController
             'profit' => array_sum($revenue) - array_sum($expense)
         ];
     }
-
 }

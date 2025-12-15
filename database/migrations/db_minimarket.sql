@@ -896,89 +896,6 @@ CREATE TABLE stock_out_items (
 ) ENGINE=InnoDB;
 
 -- =====================================================================
--- 7) GIAO HÀNG
--- =====================================================================
-
--- Thông tin vận đơn
-CREATE TABLE shipments (
-  id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  order_id BIGINT NOT NULL,
-  mode ENUM('third_party') NOT NULL DEFAULT 'third_party',
-  carrier VARCHAR(50) NOT NULL,
-  package_no INT NOT NULL DEFAULT 1,
-  service_type_id TINYINT NULL,
-  service_code VARCHAR(30) NULL,
-  tracking_code VARCHAR(100) NULL,
-  carrier_order_code VARCHAR(100) NULL,
-  tracking_url VARCHAR(255) NULL,
-  status ENUM(
-    'Mới tạo',
-    'Đã gửi yêu cầu',
-    'Đã lấy hàng',
-    'Đang vận chuyển',
-    'Đang giao',
-    'Giao thành công',
-    'Phát không thành',
-    'Chuyển hoàn',
-    'Đã hủy'
-  ) NOT NULL DEFAULT 'Mới tạo',
-  fee DECIMAL(12,2) NOT NULL DEFAULT 0,
-  cod_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
-  label_url VARCHAR(255),
-  expected_delivery_date DATE NULL,
-  pickup_time DATETIME NULL,
-  handover_at DATETIME NULL,
-  last_synced_at DATETIME NULL,
-  meta JSON,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  created_by BIGINT NULL,
-  CONSTRAINT fk_ship_created_by FOREIGN KEY(created_by) REFERENCES users(id),
-  UNIQUE KEY uniq_ship (order_id, package_no),
-  UNIQUE KEY uniq_tracking (tracking_code),
-  INDEX idx_ship_order (order_id),
-  INDEX idx_ship_status (status),
-  INDEX idx_ship_created (created_at),
-  INDEX idx_ship_updated (updated_at),
-  INDEX idx_ship_track (tracking_code),
-  INDEX idx_ship_carrier_order (carrier_order_code),
-  CONSTRAINT fk_shp_order FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
--- Sự kiện giao hàng
-CREATE TABLE shipment_events (
-  id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  shipment_id BIGINT NOT NULL,
-  tracking_code VARCHAR(100) NOT NULL,
-  status VARCHAR(80) NOT NULL,
-  mapped_status ENUM(
-    'Mới tạo',
-    'Đã gửi yêu cầu',
-    'Đã lấy hàng',
-    'Đang vận chuyển',
-    'Đang giao',
-    'Giao thành công',
-    'Phát không thành',
-    'Chuyển hoàn',
-    'Đã hủy'
-  ) NULL,
-  detail VARCHAR(255),
-  location VARCHAR(250) NULL,
-  hub_code VARCHAR(64) NULL,
-  event_time DATETIME NOT NULL,
-  raw_payload JSON,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  created_by BIGINT NULL,
-  CONSTRAINT fk_sev_created_by FOREIGN KEY(created_by) REFERENCES users(id),
-  INDEX idx_sev_shipment (shipment_id),
-  INDEX idx_sev_track (tracking_code),
-  INDEX idx_sev_event_at (event_time),
-  INDEX idx_sev_mapped (mapped_status),
-  CONSTRAINT fk_sev_shipment FOREIGN KEY (shipment_id) REFERENCES shipments(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
--- =====================================================================
 -- 8) DỊCH VỤ KHÁCH HÀNG
 -- =====================================================================
 
@@ -1074,31 +991,6 @@ CREATE TABLE similar_items (
   PRIMARY KEY (product_id, similar_id),
   CONSTRAINT fk_sim_prod FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE,
   CONSTRAINT fk_sim_sim FOREIGN KEY(similar_id) REFERENCES products(id) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
--- =====================================================================
--- 11) CONFIG
--- =====================================================================
-
--- Zones giao hàng
-CREATE TABLE shipping_zones (
-  id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  name VARCHAR(100) NOT NULL,
-  base_fee DECIMAL(12,2) NOT NULL DEFAULT 0,
-  fee_per_km DECIMAL(12,2) NOT NULL DEFAULT 0,
-  cod_surcharge DECIMAL(12,2) NOT NULL DEFAULT 0,
-  is_active BOOLEAN NOT NULL DEFAULT TRUE
-) ENGINE=InnoDB;
-
--- Cấu hình carrier
-CREATE TABLE carrier_configs (
-  id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  carrier VARCHAR(50) NOT NULL UNIQUE,
-  api_key VARCHAR(255) NOT NULL,
-  api_secret VARCHAR(255) NULL,
-  sandbox BOOLEAN NOT NULL DEFAULT TRUE,
-  webhook_secret VARCHAR(255) NULL,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 -- =====================================================================
@@ -1625,3 +1517,41 @@ CREATE TABLE IF NOT EXISTS `pending_orders` (
 
 -- Xóa các pending orders cũ hơn 30 phút (có thể chạy định kỳ)
 -- DELETE FROM pending_orders WHERE created_at < DATE_SUB(NOW(), INTERVAL 30 MINUTE);
+
+CREATE TABLE IF NOT EXISTS search_history (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NULL COMMENT 'ID người dùng (NULL nếu guest)',
+    search_query VARCHAR(500) NOT NULL COMMENT 'Từ khóa tìm kiếm',
+    search_type ENUM('product', 'category', 'brand') NOT NULL DEFAULT 'product' COMMENT 'Loại tìm kiếm',
+    results_count INT NOT NULL DEFAULT 0 COMMENT 'Số kết quả trả về',
+    ip_address VARCHAR(45) NULL COMMENT 'IP address của người tìm kiếm',
+    user_agent TEXT NULL COMMENT 'User agent (browser info)',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Indexes
+    INDEX idx_sh_user (user_id),
+    INDEX idx_sh_query (search_query(255)),
+    INDEX idx_sh_created (created_at),
+    INDEX idx_sh_user_created (user_id, created_at),
+    
+    -- Foreign key
+    CONSTRAINT fk_sh_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE = InnoDB 
+COMMENT = 'Lịch sử tìm kiếm của người dùng để cải thiện gợi ý sản phẩm';
+
+-- Create index for better performance on recommendation queries
+CREATE INDEX idx_sh_recommendation 
+ON search_history (user_id, results_count, created_at);
+
+-- Bảng lưu mã OTP cho reset password
+CREATE TABLE IF NOT EXISTS password_resets (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    email VARCHAR(250) NOT NULL,
+    otp_code VARCHAR(6) NOT NULL,
+    expires_at DATETIME NOT NULL,
+    is_used BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_email (email),
+    INDEX idx_otp_code (otp_code),
+    INDEX idx_expires_at (expires_at)
+) ENGINE=InnoDB COMMENT='Lưu mã OTP để reset mật khẩu';

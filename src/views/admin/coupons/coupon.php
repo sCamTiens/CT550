@@ -101,28 +101,37 @@ $items = $items ?? [];
                                     <span class="text-gray-400">—</span>
                                 <?php endif; ?>
                             </td>
-                            <td class="py-2 px-4" x-text="c.code"></td>
-                            <td class="py-2 px-4" x-text="c.description || '—'"></td>
-                            <td class="py-2 px-4"
+                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="c.code"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line" x-text="c.description || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
                                 x-text="c.discount_type === 'percentage' ? 'Phần trăm' : 'Số tiền cố định'"></td>
-                            <td class="py-2 px-4 text-right"
+                            <td class="py-2 px-4 text-right break-words whitespace-pre-line"
                                 x-text="c.discount_type === 'percentage' ? (c.discount_value + '%') : formatCurrency(c.discount_value)">
                             </td>
-                            <td class="py-2 px-4 text-right" x-text="formatCurrency(c.min_order_value)"></td>
-                            <td class="py-2 px-4 text-right"
+                            <td class="py-2 px-4 text-right break-words whitespace-pre-line"
+                                x-text="formatCurrency(c.min_order_value)"></td>
+                            <td class="py-2 px-4 text-right break-words whitespace-pre-line"
                                 x-text="c.max_discount > 0 ? formatCurrency(c.max_discount) : '—'"></td>
-                            <td class="py-2 px-4 text-center" x-text="c.max_uses || '∞'"></td>
-                            <td class="py-2 px-4 text-center" x-text="c.used_count || 0"></td>
-                            <td class="py-2 px-4 text-right" x-text="c.starts_at || '—'"></td>
-                            <td class="py-2 px-4 text-right" x-text="c.ends_at || '—'"></td>
-                            <td class="py-2 px-4 text-center">
+                            <td class="py-2 px-4 text-center break-words whitespace-pre-line"
+                                x-text="c.max_uses || '∞'"></td>
+                            <td class="py-2 px-4 text-center break-words whitespace-pre-line"
+                                x-text="c.used_count || 0"></td>
+                            <td class="py-2 px-4 text-right break-words whitespace-pre-line"
+                                x-text="c.starts_at || '—'"></td>
+                            <td class="py-2 px-4 text-right break-words whitespace-pre-line"
+                                x-text="c.ends_at || '—'"></td>
+                            <td class="py-2 px-4 text-center break-words whitespace-pre-line">
                                 <span :class="c.is_active == 1 ? 'text-green-600' : 'text-red-600'"
                                     x-text="c.is_active == 1 ? 'Kích hoạt' : 'Vô hiệu hóa'"></span>
                             </td>
-                            <td class="py-2 px-4 text-right" x-text="c.created_at || '—'"></td>
-                            <td class="py-2 px-4" x-text="c.created_by_name || '—'"></td>
-                            <td class="py-2 px-4 text-right" x-text="c.updated_at || '—'"></td>
-                            <td class="py-2 px-4" x-text="c.updated_by_name || '—'"></td>
+                            <td class="py-2 px-4 text-right break-words whitespace-pre-line"
+                                x-text="c.created_at || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
+                                x-text="c.created_by_name || '—'"></td>
+                            <td class="py-2 px-4 text-right break-words whitespace-pre-line"
+                                x-text="c.updated_at || '—'"></td>
+                            <td class="py-2 px-4 break-words whitespace-pre-line"
+                                x-text="c.updated_by_name || '—'"></td>
                         </tr>
                     </template>
 
@@ -310,10 +319,16 @@ $items = $items ?? [];
             submitting: false,
             form: {},
             errors: {
-                code: '', discount_value: '', starts_at: '', ends_at: ''
+                code: '',
+                discount_value: '',
+                starts_at: '',
+                ends_at: ''
             },
             touched: {
-                code: false, discount_value: false, starts_at: false, ends_at: false
+                code: false,
+                discount_value: false,
+                starts_at: false,
+                ends_at: false
             },
 
             // Import Excel
@@ -361,33 +376,76 @@ $items = $items ?? [];
 
             // ===== FILTERS =====
             openFilter: {
-                code: false, description: false, discount_type: false, discount_value: false,
-                min_order_value: false, max_discount: false, max_uses: false, used_count: false,
-                starts_at: false, ends_at: false, is_active: false, created_at: false, created_by: false,
-                updated_at: false, updated_by: false,
+                code: false,
+                description: false,
+                discount_type: false,
+                discount_value: false,
+                min_order_value: false,
+                max_discount: false,
+                max_uses: false,
+                used_count: false,
+                starts_at: false,
+                ends_at: false,
+                is_active: false,
+                created_at: false,
+                created_by: false,
+                updated_at: false,
+                updated_by: false,
             },
             filters: {
                 code: '',
                 description: '',
                 discount_type: '',
-                discount_value_type: '', discount_value_value: '', discount_value_from: '', discount_value_to: '',
-                min_order_value_type: '', min_order_value_value: '', min_order_value_from: '', min_order_value_to: '',
-                max_discount_type: '', max_discount_value: '', max_discount_from: '', max_discount_to: '',
-                max_uses_type: '', max_uses_value: '', max_uses_from: '', max_uses_to: '',
-                used_count_type: '', used_count_value: '', used_count_from: '', used_count_to: '',
-                starts_at_type: '', starts_at_value: '', starts_at_from: '', starts_at_to: '',
-                ends_at_type: '', ends_at_value: '', ends_at_from: '', ends_at_to: '',
+                discount_value_type: '',
+                discount_value_value: '',
+                discount_value_from: '',
+                discount_value_to: '',
+                min_order_value_type: '',
+                min_order_value_value: '',
+                min_order_value_from: '',
+                min_order_value_to: '',
+                max_discount_type: '',
+                max_discount_value: '',
+                max_discount_from: '',
+                max_discount_to: '',
+                max_uses_type: '',
+                max_uses_value: '',
+                max_uses_from: '',
+                max_uses_to: '',
+                used_count_type: '',
+                used_count_value: '',
+                used_count_from: '',
+                used_count_to: '',
+                starts_at_type: '',
+                starts_at_value: '',
+                starts_at_from: '',
+                starts_at_to: '',
+                ends_at_type: '',
+                ends_at_value: '',
+                ends_at_from: '',
+                ends_at_to: '',
                 is_active: '',
-                created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
+                created_at_type: '',
+                created_at_value: '',
+                created_at_from: '',
+                created_at_to: '',
                 created_by: '',
-                updated_at_type: '', updated_at_value: '', updated_at_from: '', updated_at_to: '',
+                updated_at_type: '',
+                updated_at_value: '',
+                updated_at_from: '',
+                updated_at_to: '',
                 updated_by: '',
             },
 
             // -------------------------------------------
             // Hàm lọc tổng quát, hỗ trợ text / number / date
             // -------------------------------------------
-            applyFilter(val, type, { value, from, to, dataType }) {
+            applyFilter(val, type, {
+                value,
+                from,
+                to,
+                dataType
+            }) {
                 if (val == null) return false;
 
                 // ---------------- TEXT ----------------
@@ -407,9 +465,10 @@ $items = $items ?? [];
 
                     if (!query) return true;
 
-                    if (type === 'eq') return hasAccent(query)
-                        ? raw === query  // có dấu → so đúng dấu
-                        : str === queryNoAccent; // không dấu → so không dấu
+                    if (type === 'eq') return hasAccent(query) ?
+                        raw === query // có dấu → so đúng dấu
+                        :
+                        str === queryNoAccent; // không dấu → so không dấu
 
                     if (type === 'contains' || type === 'like') {
                         if (hasAccent(query)) {
@@ -551,7 +610,9 @@ $items = $items ?? [];
                 for (const k in this.openFilter) this.openFilter[k] = false;
                 this.openFilter[key] = true;
             },
-            closeFilter(key) { this.openFilter[key] = false; },
+            closeFilter(key) {
+                this.openFilter[key] = false;
+            },
             resetFilter(key) {
                 if (['starts_at', 'ends_at', 'created_at', 'updated_at'].includes(key)) {
                     this.filters[`${key}_type`] = '';
@@ -714,7 +775,9 @@ $items = $items ?? [];
                     const url = this.form.id ? api.update(this.form.id) : api.create;
                     const r = await fetch(url, {
                         method,
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
                         body: JSON.stringify(submitData)
                     });
 
@@ -742,13 +805,15 @@ $items = $items ?? [];
             async remove(id) {
                 const coupon = this.items.find(c => Number(c.id) === Number(id));
                 const code = coupon ? coupon.code : 'mã giảm giá này';
-                
+
                 this.showConfirm(
                     'Xác nhận xóa',
                     `Bạn có chắc chắn muốn xóa mã giảm giá "${code}"?`,
                     async () => {
                         try {
-                            const r = await fetch(api.remove(id), { method: 'DELETE' });
+                            const r = await fetch(api.remove(id), {
+                                method: 'DELETE'
+                            });
                             if (!r.ok) throw new Error('Xóa thất bại');
                             await this.fetchAll();
                             this.showToast('Xóa thành công!', 'success');
@@ -822,10 +887,14 @@ $items = $items ?? [];
                 const filename = `Ma_giam_gia_${dateStr}_${timeStr}.xlsx`;
 
                 fetch('/admin/api/coupons/export', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ items: data })
-                })
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            items: data
+                        })
+                    })
                     .then(res => {
                         if (!res.ok) throw new Error('Export failed');
                         return res.blob();

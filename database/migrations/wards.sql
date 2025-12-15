@@ -3343,3 +3343,4 @@ INSERT INTO `wards` (`id`, `ward_code`, `name`, `province_code`, `created_at`, `
 COMMIT;
 
 SET FOREIGN_KEY_CHECKS = 1;
+

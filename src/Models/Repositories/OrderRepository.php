@@ -879,7 +879,6 @@ class OrderRepository
 
         return '/assets/images/products/default.png';
     }
-
     public function getOrderItems(int $orderId): array
     {
         $pdo = DB::pdo();
@@ -894,22 +893,30 @@ class OrderRepository
                 p.name as product_name, 
                 p.sku as product_sku,
                 u.name as unit,
-                us.full_name as created_by_name
+                us.full_name as created_by_name,
+                GROUP_CONCAT(pi.image_url ORDER BY pi.is_primary DESC, pi.sort_order ASC SEPARATOR '|||') AS product_images_concat
             FROM order_items oi
             LEFT JOIN products p ON p.id = oi.product_id
             LEFT JOIN units u ON u.id = p.unit_id
             LEFT JOIN orders o ON o.id = oi.order_id
             LEFT JOIN users us ON us.id = o.created_by
+            LEFT JOIN product_images pi ON pi.product_id = p.id
             WHERE oi.order_id = ?
+            GROUP BY oi.id, oi.order_id, oi.product_id, oi.qty, oi.unit_price, oi.line_total, p.name, p.sku, u.name, us.full_name
             ORDER BY oi.id
         ";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$orderId]);
         $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-        // Add image path for each product
+        // Convert product_images_concat to array
         foreach ($rows as &$row) {
-            $row['product_image'] = $this->getProductImage($row['product_id']);
+            if (!empty($row['product_images_concat'])) {
+                $row['product_images'] = explode('|||', $row['product_images_concat']);
+            } else {
+                $row['product_images'] = [];
+            }
+            unset($row['product_images_concat']);
         }
 
         return $rows;

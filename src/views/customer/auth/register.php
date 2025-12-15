@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,6 +14,7 @@
         }
     </style>
 </head>
+
 <body class="gradient-bg min-h-screen flex items-center justify-center p-4">
     <!-- Toast Container -->
     <div id="toast-container"></div>
@@ -32,13 +34,12 @@
                         <i class="fa-solid fa-user mr-2 text-[#002975]"></i>
                         Họ và tên <span class="text-red-500">*</span>
                     </label>
-                    <input 
-                        type="text" 
-                        name="full_name" 
+                    <input
+                        type="text"
+                        name="full_name"
                         required
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#002975] focus:border-transparent transition-all"
-                        placeholder="Nguyễn Văn A"
-                    >
+                        placeholder="Nguyễn Văn A">
                 </div>
 
                 <!-- Username -->
@@ -47,14 +48,13 @@
                         <i class="fa-solid fa-at mr-2 text-[#002975]"></i>
                         Tên đăng nhập <span class="text-red-500">*</span>
                     </label>
-                    <input 
-                        type="text" 
-                        name="username" 
+                    <input
+                        type="text"
+                        name="username"
                         required
                         pattern="[a-zA-Z0-9_]{3,20}"
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#002975] focus:border-transparent transition-all"
-                        placeholder="username123"
-                    >
+                        placeholder="username123">
                     <p class="text-xs text-gray-500 mt-1">3-20 ký tự, chỉ chữ, số và dấu gạch dưới</p>
                 </div>
 
@@ -64,13 +64,12 @@
                         <i class="fa-solid fa-envelope mr-2 text-[#002975]"></i>
                         Email <span class="text-red-500">*</span>
                     </label>
-                    <input 
-                        type="email" 
-                        name="email" 
+                    <input
+                        type="email"
+                        name="email"
                         required
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#002975] focus:border-transparent transition-all"
-                        placeholder="email@example.com"
-                    >
+                        placeholder="email@example.com">
                 </div>
 
                 <!-- Số điện thoại -->
@@ -79,13 +78,12 @@
                         <i class="fa-solid fa-phone mr-2 text-[#002975]"></i>
                         Số điện thoại
                     </label>
-                    <input 
-                        type="tel" 
-                        name="phone" 
+                    <input
+                        type="tel"
+                        name="phone"
                         pattern="[0-9]{10,11}"
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#002975] focus:border-transparent transition-all"
-                        placeholder="0123456789"
-                    >
+                        placeholder="0123456789">
                     <p class="text-xs text-gray-500 mt-1">10-11 chữ số</p>
                 </div>
 
@@ -96,20 +94,18 @@
                         Mật khẩu <span class="text-red-500">*</span>
                     </label>
                     <div class="relative">
-                        <input 
-                            type="password" 
-                            name="password" 
+                        <input
+                            type="password"
+                            name="password"
                             id="password"
                             required
                             minlength="6"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#002975] focus:border-transparent transition-all pr-12"
-                            placeholder="Ít nhất 6 ký tự"
-                        >
-                        <button 
-                            type="button" 
+                            placeholder="Ít nhất 6 ký tự">
+                        <button
+                            type="button"
                             onclick="togglePassword('password', 'toggleIcon1')"
-                            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                        >
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700">
                             <i class="fa-solid fa-eye" id="toggleIcon1"></i>
                         </button>
                     </div>
@@ -122,20 +118,18 @@
                         Xác nhận mật khẩu <span class="text-red-500">*</span>
                     </label>
                     <div class="relative">
-                        <input 
-                            type="password" 
-                            name="confirm_password" 
+                        <input
+                            type="password"
+                            name="confirm_password"
                             id="confirm_password"
                             required
                             minlength="6"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#002975] focus:border-transparent transition-all pr-12"
-                            placeholder="Nhập lại mật khẩu"
-                        >
-                        <button 
-                            type="button" 
+                            placeholder="Nhập lại mật khẩu">
+                        <button
+                            type="button"
                             onclick="togglePassword('confirm_password', 'toggleIcon2')"
-                            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                        >
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700">
                             <i class="fa-solid fa-eye" id="toggleIcon2"></i>
                         </button>
                     </div>
@@ -144,14 +138,13 @@
 
             <!-- Điều khoản -->
             <div class="flex items-start">
-                <input 
-                    type="checkbox" 
-                    id="terms" 
+                <input
+                    type="checkbox"
+                    id="terms"
                     required
-                    class="mt-1 rounded border-gray-300 text-[#002975] focus:ring-[#002975]"
-                >
+                    class="mt-1 rounded border-gray-300 text-[#002975] focus:ring-[#002975]">
                 <label for="terms" class="ml-2 text-sm text-gray-600">
-                    Tôi đồng ý với 
+                    Tôi đồng ý với
                     <a href="/terms" class="text-[#002975] hover:underline">Điều khoản dịch vụ</a>
                     và
                     <a href="/privacy" class="text-[#002975] hover:underline">Chính sách bảo mật</a>
@@ -159,11 +152,10 @@
             </div>
 
             <!-- Submit button -->
-            <button 
-                type="submit" 
+            <button
+                type="submit"
                 id="submitBtn"
-                class="w-full bg-[#002975] text-white py-3 rounded-lg font-semibold hover:bg-[#001a54] transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+                class="w-full bg-[#002975] text-white py-3 rounded-lg font-semibold hover:bg-[#001a54] transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed">
                 <i class="fa-solid fa-user-plus mr-2"></i>
                 Đăng ký
             </button>
@@ -213,7 +205,7 @@
         function togglePassword(inputId, iconId) {
             const passwordInput = document.getElementById(inputId);
             const toggleIcon = document.getElementById(iconId);
-            
+
             if (passwordInput.type === 'password') {
                 passwordInput.type = 'text';
                 toggleIcon.classList.remove('fa-eye');
@@ -271,8 +263,8 @@
             // Password validation
             inputs.password.addEventListener('blur', function() {
                 const value = this.value;
-                if (value.length < 6) {
-                    showToast('Mật khẩu phải có ít nhất 6 ký tự', 'error');
+                if (value.length < 8 || !/[A-Z]/.test(value) || !/[a-z]/.test(value) || !/[0-9]/.test(value) || !/[!@#$%^&*()_+\-=\[\]{};:'",.<>?\//\\|`~]/.test(value)) {
+                    showToast('Mật khẩu phải có ít nhất 8 ký tự bao gồm ít nhất 1 chữ Cái in hoa, 1 chữ cái thường, 1 số và 1 ký tự đặc biệt', 'error');
                     this.focus();
                 }
             });
@@ -298,10 +290,10 @@
         // Handle form submission
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const submitBtn = document.getElementById('submitBtn');
             const formData = new FormData(e.target);
-            
+
             // Get values
             const username = formData.get('username').trim();
             const email = formData.get('email').trim();
@@ -356,11 +348,11 @@
                 showToast('Vui lòng đồng ý với điều khoản dịch vụ', 'error');
                 return;
             }
-            
+
             // Disable button
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Đang xử lý...';
-            
+
             try {
                 const data = {
                     username: username,
@@ -370,7 +362,7 @@
                     full_name: fullName,
                     phone: phone
                 };
-                
+
                 const response = await fetch('/api/customer/register', {
                     method: 'POST',
                     credentials: 'include',
@@ -379,9 +371,9 @@
                     },
                     body: JSON.stringify(data)
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
                     showToast('Đăng ký thành công! Đang chuyển hướng...', 'success');
                     setTimeout(() => {
@@ -400,4 +392,5 @@
         });
     </script>
 </body>
+
 </html>

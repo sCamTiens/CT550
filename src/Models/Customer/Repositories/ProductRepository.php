@@ -414,6 +414,12 @@ class ProductRepository
             $params[':max_price'] = $filters['max_price'];
         }
 
+        // Search filter (name, SKU, barcode)
+        if (!empty($filters['search'])) {
+            $where[] = '(p.name LIKE :search OR p.sku LIKE :search OR p.barcode LIKE :search)';
+            $params[':search'] = '%' . $filters['search'] . '%';
+        }
+
         $whereClause = implode(' AND ', $where);
 
         // Determine ORDER BY clause

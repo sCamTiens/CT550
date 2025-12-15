@@ -52,6 +52,9 @@ class OrderController extends BaseAdminController
     /** POST /admin/orders (create) */
     public function store()
     {
+        // Check permission
+        $this->checkCanCreateDeleteOrders();
+
         // Log request data để debug
         $rawInput = file_get_contents('php://input');
         error_log("=== ORDER CREATE REQUEST ===");
@@ -164,6 +167,9 @@ class OrderController extends BaseAdminController
     /** DELETE /admin/orders/{id} */
     public function destroy($id)
     {
+        // Check permission
+        $this->checkCanCreateDeleteOrders();
+
         header('Content-Type: application/json; charset=utf-8');
         try {
             $this->orderRepo->delete($id);
@@ -407,6 +413,9 @@ class OrderController extends BaseAdminController
     /** POST /admin/api/orders/{id}/process - Xử lý đơn hàng */
     public function processOrder($id)
     {
+        // Check permission
+        $this->checkCanChangeOrderStatus();
+
         header('Content-Type: application/json; charset=utf-8');
         try {
             $ghnOrderService = new \App\Support\GHNOrderService();
@@ -508,6 +517,9 @@ class OrderController extends BaseAdminController
     /** POST /admin/api/orders/{id}/manual-ship - Chuyển sang Đang giao thủ công */
     public function manualShip($id)
     {
+        // Check permission
+        $this->checkCanChangeOrderStatus();
+
         header('Content-Type: application/json; charset=utf-8');
         try {
             $stmt = \App\Core\DB::pdo()->prepare("
@@ -538,6 +550,82 @@ class OrderController extends BaseAdminController
         return $_SESSION['user']['id'] ?? null;
     }
 
+    /**
+     * Check if current user can create/delete orders
+     * Online Support (staff_role = 'Hỗ trợ trực tuyến') cannot create/delete
+     */
+    private function checkCanCreateDeleteOrders()
+    {
+        $userId = $_SESSION['user']['id'] ?? null;
+        $userName = $_SESSION['user']['full_name'] ?? 'Unknown';
+
+        if (!$userId) {
+            http_response_code(403);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['error' => 'Unauthorized'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // Get staff_role from staff_profiles table
+        $pdo = \App\Core\DB::pdo();
+        $stmt = $pdo->prepare("SELECT staff_role FROM staff_profiles WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        $staffRole = $stmt->fetchColumn();
+
+        // Debug log
+        error_log("[Permission Check] User: $userName (ID: $userId, Staff Role: $staffRole) attempting to create/delete order");
+
+        if ($staffRole === 'Hỗ trợ trực tuyến') { // Online Support
+            error_log("[Permission DENIED] Online Support cannot create/delete orders");
+            http_response_code(403);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'error' => 'Bạn không có quyền thực hiện thao tác này. Chức năng này chỉ dành cho Nhân viên bán hàng và Quản lý.'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        error_log("[Permission GRANTED] User can create/delete orders");
+    }
+
+    /**
+     * Check if current user can change order status
+     * Sales Staff (staff_role = 'Nhân viên bán hàng') cannot change status
+     */
+    private function checkCanChangeOrderStatus()
+    {
+        $userId = $_SESSION['user']['id'] ?? null;
+        $userName = $_SESSION['user']['full_name'] ?? 'Unknown';
+
+        if (!$userId) {
+            http_response_code(403);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['error' => 'Unauthorized'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // Get staff_role from staff_profiles table
+        $pdo = \App\Core\DB::pdo();
+        $stmt = $pdo->prepare("SELECT staff_role FROM staff_profiles WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        $staffRole = $stmt->fetchColumn();
+
+        // Debug log
+        error_log("[Permission Check] User: $userName (ID: $userId, Staff Role: $staffRole) attempting to change order status");
+
+        if ($staffRole === 'Nhân viên bán hàng') { // Sales Staff
+            error_log("[Permission DENIED] Sales Staff cannot change order status");
+            http_response_code(403);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'error' => 'Bạn không có quyền chuyển trạng thái đơn hàng. Chức năng này chỉ dành cho Quản lý.'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        error_log("[Permission GRANTED] User can change order status");
+    }
+
     private function sendOrderStatusNotification($orderId, $statusText)
     {
         try {
@@ -562,6 +650,9 @@ class OrderController extends BaseAdminController
     /** POST /admin/api/orders/{id}/manual-complete - Hoàn tất thủ công */
     public function manualComplete($id)
     {
+        // Check permission
+        $this->checkCanChangeOrderStatus();
+
         header('Content-Type: application/json; charset=utf-8');
         try {
             $userId = $this->currentUserId();
@@ -643,6 +734,9 @@ class OrderController extends BaseAdminController
     /** POST /admin/api/orders/{id}/manual-cancel - Hủy thủ công & Hoàn kho */
     public function manualCancel($id)
     {
+        // Check permission
+        $this->checkCanChangeOrderStatus();
+
         header('Content-Type: application/json; charset=utf-8');
         try {
             $userId = $this->currentUserId();

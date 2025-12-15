@@ -49,6 +49,7 @@ install_python310.md
 # Database migration files with sensitive data
 **/insert*.sql
 **/insert_*.sql
+**/full.sql
 
 # Batch scripts
 *.bat

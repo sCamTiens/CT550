@@ -111,7 +111,8 @@ $items = $items ?? [];
               </td>
               <td class="py-2 px-4 text-center">
                 <img :src="getProductImageUrl(p.image_url)"
-                  class="w-12 h-12 object-cover rounded-full border mx-auto bg-white" :alt="p.name">
+                  @click="openLightbox(getProductImageUrl(p.image_url))"
+                  class="w-12 h-12 object-cover rounded-full border mx-auto bg-white cursor-pointer hover:opacity-80 transition" :alt="p.name">
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.sku"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.barcode"></td>
               <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.name"></td>
@@ -328,6 +329,35 @@ $items = $items ?? [];
       </div>
     </div>
   </div>
+
+  <!-- Lightbox Modal -->
+  <div x-show="lightbox.show"
+    x-transition:enter="transition ease-out duration-200"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition ease-in duration-150"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    class="fixed inset-0 bg-black bg-opacity-90 z-[9999] flex items-center justify-center p-4"
+    @click.stop="closeLightbox()"
+    style="display: none;">
+
+    <!-- Close Button -->
+    <button @click.stop="closeLightbox()"
+      class="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10">
+      <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+
+    <!-- Image Container -->
+    <div @click.stop class="relative max-w-7xl max-h-[90vh] flex items-center justify-center">
+      <img :src="lightbox.imageUrl"
+        alt="Preview"
+        class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+        @click.stop>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -406,6 +436,12 @@ $items = $items ?? [];
         mainImage: null,
         mainImagePreview: '',
         subImages: []
+      },
+
+      // Lightbox state
+      lightbox: {
+        show: false,
+        imageUrl: ''
       },
 
       errors: {
@@ -843,13 +879,13 @@ $items = $items ?? [];
 
         // Validate file
         if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
-          alert('Chỉ chấp nhận file PNG, JPG, JPEG');
+          this.showToast('Chỉ chấp nhận file PNG, JPG, JPEG');
           e.target.value = '';
           return;
         }
 
         if (file.size > 2 * 1024 * 1024) { // 2MB
-          alert('Kích thước file không được vượt quá 2MB');
+          this.showToast('Kích thước file không được vượt quá 2MB');
           e.target.value = '';
           return;
         }
@@ -908,6 +944,17 @@ $items = $items ?? [];
 
       removeSubImage(index) {
         this.form.subImages.splice(index, 1);
+      },
+
+      // ===== LIGHTBOX =====
+      openLightbox(imageUrl) {
+        this.lightbox.imageUrl = imageUrl;
+        this.lightbox.show = true;
+      },
+
+      closeLightbox() {
+        this.lightbox.show = false;
+        this.lightbox.imageUrl = '';
       },
 
       // ===== validate 1 field (gọi khi blur / input) =====
@@ -1075,13 +1122,72 @@ $items = $items ?? [];
       },
 
       async openEditModal(p) {
-        this.resetForm();
+        // Reset errors và touched state
+        this.errors = {
+          name: '',
+          sku: '',
+          slug: '',
+          sale_price: '',
+          cost_price: '',
+          brand_id: '',
+          category_id: '',
+          unit_id: '',
+          pack_size: '',
+          description: ''
+        };
+        this.touched = {
+          name: false,
+          sku: false,
+          slug: false,
+          sale_price: false,
+          cost_price: false,
+          brand_id: false,
+          category_id: false,
+          unit_id: false,
+          pack_size: false,
+          description: false
+        };
 
         // Tìm id tương ứng với tên để fill lại
         const brand = this.brands.find(b => b.name === p.brand_name);
         const category = this.categories.find(c => c.name === p.category_name);
         const unit = this.units.find(u => u.name === p.unit_name);
 
+        // Fetch images from database
+        let mainImagePreview = '';
+        const subImages = [];
+
+        try {
+          const res = await fetch(`/admin/api/products/${p.id}/images`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.images) {
+              // Tìm ảnh chính (is_primary = 1)
+              const mainImg = data.images.find(img => img.is_primary == 1);
+              if (mainImg) {
+                mainImagePreview = mainImg.image_url;
+                console.log('✓ Ảnh chính từ DB:', mainImagePreview);
+              }
+
+              // Ảnh phụ (is_primary = 0)
+              const subImgs = data.images.filter(img => img.is_primary == 0);
+              subImgs.forEach(img => {
+                subImages.push({
+                  file: null,
+                  preview: img.image_url,
+                  existing: true
+                });
+                console.log('✓ Ảnh phụ từ DB:', img.image_url);
+              });
+            }
+          } else {
+            console.warn('Không thể lấy danh sách ảnh từ DB');
+          }
+        } catch (e) {
+          console.error('Lỗi khi fetch ảnh:', e);
+        }
+
+        // Set form data với ảnh đã load
         this.form = {
           id: p.id,
           name: p.name || '',
@@ -1099,57 +1205,17 @@ $items = $items ?? [];
           description: p.description || '',
           is_active: p.is_active == 1,
           mainImage: null,
-          mainImagePreview: '',
-          subImages: []
+          mainImagePreview: mainImagePreview,
+          subImages: subImages
         };
 
-        // Mở modal trước
+        // Mở modal SAU KHI đã load xong tất cả dữ liệu
         this.openEdit = true;
-
-        // Đợi modal render xong rồi mới load ảnh
-        await this.$nextTick();
-
-        // Load ảnh chính sau khi modal đã mở
-        const mainImageUrl = `/assets/images/products/${p.id}/1.png?t=${Date.now()}`;
-        try {
-          const checkImg = new Image();
-          await new Promise((resolve, reject) => {
-            checkImg.onload = () => {
-              // Set preview SAU KHI ảnh đã load xong
-              this.form.mainImagePreview = mainImageUrl;
-              console.log('Ảnh chính đã load:', mainImageUrl);
-              resolve();
-            };
-            checkImg.onerror = () => {
-              console.warn('Ảnh chính không tồn tại:', mainImageUrl);
-              reject();
-            };
-            checkImg.src = mainImageUrl;
-          });
-        } catch (e) {
-          console.log('Không tìm thấy ảnh chính');
-        }
-
-        // Load ảnh phụ
-        for (let i = 2; i <= 6; i++) {
-          try {
-            const img = new Image();
-            await new Promise((resolve, reject) => {
-              img.onload = () => {
-                this.form.subImages.push({
-                  file: null,
-                  preview: img.src,
-                  existing: true
-                });
-                resolve();
-              };
-              img.onerror = reject;
-              img.src = `/assets/images/products/${p.id}/${i}.png?t=${Date.now()}`;
-            });
-          } catch (e) {
-            // Bỏ qua nếu ảnh không tồn tại
-          }
-        }
+        console.log('📝 Form data:', {
+          id: this.form.id,
+          mainImage: this.form.mainImagePreview,
+          subImages: this.form.subImages.length
+        });
       },
 
       // CRUD
@@ -1198,7 +1264,9 @@ $items = $items ?? [];
             this.showToast('Sản phẩm đã tạo nhưng có lỗi khi upload ảnh', 'warning');
           }
 
-          this.items.unshift(product);
+          // Reload danh sách để lấy image_url từ database
+          await this.fetchAll();
+
           this.openAdd = false;
           this.resetForm();
           this.showToast('Thêm sản phẩm thành công!', 'success');

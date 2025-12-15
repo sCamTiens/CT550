@@ -179,6 +179,17 @@ $pageTitle = $pageTitle ?? 'Chat Support';
         overflow-y: auto;
         padding: 20px;
         background: #f9fafb;
+        user-select: text !important;
+        -webkit-user-select: text !important;
+        -moz-user-select: text !important;
+        -ms-user-select: text !important;
+    }
+
+    .chat-messages * {
+        user-select: text !important;
+        -webkit-user-select: text !important;
+        -moz-user-select: text !important;
+        -ms-user-select: text !important;
     }
 
     .message {
@@ -205,6 +216,11 @@ $pageTitle = $pageTitle ?? 'Chat Support';
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
+        user-select: none !important;
+        /* Don't select avatar icons */
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
     }
 
     .message-content {
@@ -216,6 +232,11 @@ $pageTitle = $pageTitle ?? 'Chat Support';
         border-radius: 16px;
         background: white;
         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        user-select: text;
+        /* Allow text selection */
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
     }
 
     .message.customer .message-bubble {
@@ -235,6 +256,8 @@ $pageTitle = $pageTitle ?? 'Chat Support';
         color: #9ca3af;
         margin-top: 4px;
         padding: 0 4px;
+        user-select: text;
+        /* Allow text selection */
     }
 
     .chat-input-area {
@@ -443,6 +466,17 @@ $pageTitle = $pageTitle ?? 'Chat Support';
         font-size: 14px;
         font-weight: 700;
         color: #ef4444;
+    }
+
+    /* Text Selection Styling */
+    .chat-messages ::selection {
+        background: #bfdbfe;
+        color: #1e40af;
+    }
+
+    .chat-messages ::-moz-selection {
+        background: #bfdbfe;
+        color: #1e40af;
     }
 </style>
 
@@ -720,7 +754,14 @@ $pageTitle = $pageTitle ?? 'Chat Support';
         `;
         }).join('');
 
-        container.scrollTop = container.scrollHeight;
+        // Only auto-scroll if user is near the bottom (within 100px)
+        const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+
+        if (isNearBottom || messages.length === 1) {
+            setTimeout(() => {
+                container.scrollTop = container.scrollHeight;
+            }, 50);
+        }
     }
 
     async function sendMessage() {

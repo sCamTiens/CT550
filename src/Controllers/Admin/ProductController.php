@@ -150,8 +150,12 @@ class ProductController extends BaseAdminController
             // Initialize ImgBB service
             $imgbb = new \App\Support\ImageHostingService();
 
+            // Track which types of images are being uploaded
+            $hasMainImage = isset($_FILES['main_image']) && $_FILES['main_image']['error'] === UPLOAD_ERR_OK;
+            $hasSubImages = isset($_FILES['sub_images']) && is_array($_FILES['sub_images']['name']);
+
             // Upload main image
-            if (isset($_FILES['main_image']) && $_FILES['main_image']['error'] === UPLOAD_ERR_OK) {
+            if ($hasMainImage) {
                 $mainImage = $_FILES['main_image'];
 
                 // Validate file type
@@ -179,7 +183,7 @@ class ProductController extends BaseAdminController
             }
 
             // Upload sub images
-            if (isset($_FILES['sub_images']) && is_array($_FILES['sub_images']['name'])) {
+            if ($hasSubImages) {
                 $subImages = $_FILES['sub_images'];
                 $count = count($subImages['name']);
 
@@ -218,9 +222,28 @@ class ProductController extends BaseAdminController
             $pdo = \App\Core\DB::pdo();
             $currentUser = $_SESSION['user']['id'] ?? null;
 
-            // Delete old images
-            $stmt = $pdo->prepare("DELETE FROM product_images WHERE product_id = ?");
-            $stmt->execute([$productId]);
+            // Only delete images that are being replaced
+            if ($hasMainImage) {
+                // Delete old main image
+                $stmt = $pdo->prepare("DELETE FROM product_images WHERE product_id = ? AND is_primary = 1");
+                $stmt->execute([$productId]);
+            }
+
+            if ($hasSubImages && !empty($uploadedImages)) {
+                // Delete old sub images (only if we have new sub images)
+                $hasNewSubImages = false;
+                foreach ($uploadedImages as $img) {
+                    if (!$img['is_primary']) {
+                        $hasNewSubImages = true;
+                        break;
+                    }
+                }
+
+                if ($hasNewSubImages) {
+                    $stmt = $pdo->prepare("DELETE FROM product_images WHERE product_id = ? AND is_primary = 0");
+                    $stmt->execute([$productId]);
+                }
+            }
 
             // Insert new images
             foreach ($uploadedImages as $imageData) {
@@ -243,6 +266,38 @@ class ProductController extends BaseAdminController
                 'uploaded' => count($uploadedImages),
                 'images' => $uploadedImages,
                 'message' => 'Upload ảnh thành công lên ImgBB'
+            ], JSON_UNESCAPED_UNICODE);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE);
+        }
+        exit;
+    }
+
+    /** GET /admin/api/products/{id}/images - Lấy danh sách ảnh của sản phẩm */
+    public function getImages($id)
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        try {
+            $productId = (int)$id;
+            $pdo = \App\Core\DB::pdo();
+
+            $stmt = $pdo->prepare("
+                SELECT id, image_url, is_primary, sort_order
+                FROM product_images
+                WHERE product_id = ?
+                ORDER BY sort_order ASC
+            ");
+            $stmt->execute([$productId]);
+            $images = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            echo json_encode([
+                'success' => true,
+                'images' => $images
             ], JSON_UNESCAPED_UNICODE);
         } catch (\Exception $e) {
             http_response_code(500);

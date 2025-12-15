@@ -45,7 +45,7 @@
                                 <div class="text-center">
                                     <div class="text-xs text-gray-600">Điểm tích lũy</div>
                                     <div class="text-2xl font-bold text-[#002975]">
-                                        <?= number_format($customer['loyalty_points'] ?? 0, 0, ',', '.') ?>
+                                        <?= htmlspecialchars(number_format($customer['loyalty_points'] ?? 0, 0, ',', '.')) ?>
                                     </div>
                                 </div>
                             </div>

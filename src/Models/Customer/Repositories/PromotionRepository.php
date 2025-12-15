@@ -8,15 +8,22 @@ use PDO;
 class PromotionRepository
 {
     /**
-     * Lấy đường dẫn ảnh sản phẩm
+     * Lấy đường dẫn ảnh sản phẩm từ database
      */
     private function getProductImage(int $productId): string
     {
-        // Check if product image exists in filesystem
-        $imagePath = __DIR__ . '/../../../../public/assets/images/products/' . $productId . '/1.png';
+        // Query main image from product_images table
+        $stmt = DB::pdo()->prepare("
+            SELECT image_url 
+            FROM product_images 
+            WHERE product_id = ? AND image_type = 'main' 
+            LIMIT 1
+        ");
+        $stmt->execute([$productId]);
+        $imageUrl = $stmt->fetchColumn();
 
-        if (file_exists($imagePath)) {
-            return '/assets/images/products/' . $productId . '/1.png';
+        if ($imageUrl) {
+            return $imageUrl; // Return as-is (could be ImgBB URL or local path)
         }
 
         return '/assets/images/products/default.png';

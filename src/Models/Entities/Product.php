@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models\Entities;
 
 class Product
@@ -25,6 +26,7 @@ class Product
 	public $category_name;
 	public $unit_name;
 	public $stock_qty;
+	public $stock;
 	public $created_by_name;
 	public $updated_by_name;
 	public $image_url;

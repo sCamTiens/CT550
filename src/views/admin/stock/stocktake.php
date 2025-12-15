@@ -29,46 +29,47 @@ $items = $items ?? [];
       <div class="absolute inset-0 flex flex-col items-center justify-center bg-white bg-opacity-70 z-10">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         <p class="mt-2 text-gray-600">Đang tải dữ liệu...</p>
-        </div>
-        </template> <div style="overflow-x:auto; max-width:100%;" class="pb-40">
-        <table style="width:100%; min-width:1200px; border-collapse:collapse;">
-          <thead>
-            <tr class="bg-gray-50 text-slate-600">
-              <th class="py-2 px-4 text-center" style="min-width: 120px;">Thao tác</th>
-              <?= textFilterPopover('id', 'Mã kiểm kê') ?>
-              <?= textFilterPopover('created_by_name', 'Người tạo') ?>
-              <?= dateFilterPopover('created_at', 'Ngày tạo') ?>
-              <?= textFilterPopover('note', 'Ghi chú') ?>
-            </tr>
-          </thead>
-          <tbody>
-            <template x-for="s in paginated()" :key="s.id">
-              <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
-                <td class="py-2 px-4 text-center">
-                  <button @click.stop="viewDetail(s.id)"
-                    class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
-                    title="Xem chi tiết">
-                    <i class="fa-solid fa-eye"></i>
-                  </button>
-                </td>
-                <td class="py-2 px-4 break-words whitespace-pre-line text-center" x-text="s.id"></td>
-                <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.created_by_name"></td>
-                <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.created_at"></td>
-                <td class="py-2 px-4 break-words whitespace-pre-line"
-                  :class="(s.note || '—') === '—' ? 'text-center' : 'text-left'" x-text="s.note || '—'"></td>
-              </tr>
-            </template>
-            <tr x-show="!loading && filtered().length===0">
-              <td colspan="5" class="py-12 text-center text-slate-500">
-                <div class="flex flex-col items-center justify-center">
-                  <img src="/assets/images/Null.png" alt="Trống" class="w-40 h-24 mb-3 opacity-80">
-                  <div class="text-lg text-slate-300">Trống</div>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-          </table>
       </div>
+    </template>
+    <div style="overflow-x:auto; max-width:100%;" class="pb-40">
+      <table style="width:100%; min-width:1200px; border-collapse:collapse;">
+        <thead>
+          <tr class="bg-gray-50 text-slate-600">
+            <th class="py-2 px-4 text-center" style="min-width: 120px;">Thao tác</th>
+            <?= textFilterPopover('id', 'Mã kiểm kê') ?>
+            <?= textFilterPopover('created_by_name', 'Người tạo') ?>
+            <?= dateFilterPopover('created_at', 'Ngày tạo') ?>
+            <?= textFilterPopover('note', 'Ghi chú') ?>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="s in paginated()" :key="s.id">
+            <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
+              <td class="py-2 px-4 text-center">
+                <button @click.stop="viewDetail(s.id)"
+                  class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
+                  title="Xem chi tiết">
+                  <i class="fa-solid fa-eye"></i>
+                </button>
+              </td>
+              <td class="py-2 px-4 break-words whitespace-pre-line text-center" x-text="s.id"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line" x-text="s.created_by_name"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line text-right" x-text="s.created_at"></td>
+              <td class="py-2 px-4 break-words whitespace-pre-line"
+                :class="(s.note || '—') === '—' ? 'text-center' : 'text-left'" x-text="s.note || '—'"></td>
+            </tr>
+          </template>
+          <tr x-show="!loading && filtered().length===0">
+            <td colspan="5" class="py-12 text-center text-slate-500">
+              <div class="flex flex-col items-center justify-center">
+                <img src="/assets/images/Null.png" alt="Trống" class="w-40 h-24 mb-3 opacity-80">
+                <div class="text-lg text-slate-300">Trống</div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
   <!-- Pagination -->
   <div class="flex items-center justify-center mt-4 px-4 gap-6">
@@ -103,9 +104,9 @@ $items = $items ?? [];
   <div x-show="showCreateModal" @click.self="showCreateModal = false"
     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
     <div class="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] flex flex-col">
-      <div class="px-6 py-4 border-b flex justify-between items-center">
+      <div class="px-6 py-4 border-b flex justify-center items-center relative">
         <h3 class="text-xl font-bold text-[#002975]">Tạo Phiếu Kiểm Kê Kho</h3>
-        <button @click="showCreateModal = false" class="text-gray-500 hover:text-gray-700">
+        <button @click="showCreateModal = false" class="text-gray-500 absolute right-5 hover:text-gray-700">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -207,9 +208,9 @@ $items = $items ?? [];
   <div x-show="showDetailModal" @click.self="showDetailModal = false"
     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
     <div class="bg-white rounded-lg w-full max-w-6xl max-h-[90vh] flex flex-col">
-      <div class="px-6 py-4 border-b flex justify-between items-center">
+      <div class="px-6 py-4 border-b flex justify-center items-center relative">
         <h3 class="text-xl font-bold text-[#002975]">Chi Tiết Phiếu Kiểm Kê</h3>
-        <button @click="showDetailModal = false" class="text-gray-500 hover:text-gray-700">
+        <button @click="showDetailModal = false" class="text-gray-500 absolute right-5 hover:text-gray-700">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -311,7 +312,7 @@ $items = $items ?? [];
   function stocktakePage() {
     const api = {
       list: '/admin/api/stocktakes',
-      create:  '/admin/api/stocktakes/create',
+      create: '/admin/api/stocktakes/create',
       detail: '/admin/api/stocktakes/',
       products: '/admin/api/products/stock-list',
     };
@@ -356,18 +357,31 @@ $items = $items ?? [];
 
       // ===== FILTERS =====
       openFilter: {
-        id: false, note: false, created_at: false, created_by_name: false
+        id: false,
+        note: false,
+        created_at: false,
+        created_by_name: false
       },
 
       filters: {
-        id: '', note: '', created_by_name: '',
-        created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: ''
+        id: '',
+        note: '',
+        created_by_name: '',
+        created_at_type: '',
+        created_at_value: '',
+        created_at_from: '',
+        created_at_to: ''
       },
 
       // ------------------------------------------------------------------
       // Hàm lọc tổng quát — hỗ trợ TEXT, NUMBER, DATE
       // ------------------------------------------------------------------
-      applyFilter(val, type, { value, from, to, dataType }) {
+      applyFilter(val, type, {
+        value,
+        from,
+        to,
+        dataType
+      }) {
         if (val == null) return false;
 
         // -------- TEXT --------
@@ -386,14 +400,14 @@ $items = $items ?? [];
 
           if (!query) return true;
 
-          if (type === 'eq') return hasAccent(query)
-            ? raw === query
-            : str === queryNoAccent;
+          if (type === 'eq') return hasAccent(query) ?
+            raw === query :
+            str === queryNoAccent;
 
           if (type === 'contains' || type === 'like') {
-            return hasAccent(query)
-              ? raw.includes(query)
-              : str.includes(queryNoAccent);
+            return hasAccent(query) ?
+              raw.includes(query) :
+              str.includes(queryNoAccent);
           }
 
           return true;
@@ -503,7 +517,9 @@ $items = $items ?? [];
         for (const k in this.openFilter) this.openFilter[k] = false;
         this.openFilter[key] = true;
       },
-      closeFilter(key) { this.openFilter[key] = false; },
+      closeFilter(key) {
+        this.openFilter[key] = false;
+      },
       resetFilter(key) {
         // --- Date type ---
         if (['created_at'].includes(key)) {
@@ -529,7 +545,9 @@ $items = $items ?? [];
             const data = await r.json();
             this.items = Array.isArray(data) ? data : [];
           }
-        } finally { this.loading = false; }
+        } finally {
+          this.loading = false;
+        }
       },
 
       // ===== CREATE STOCKTAKE =====
@@ -545,7 +563,10 @@ $items = $items ?? [];
             console.log('Products data:', data);
             this.allProducts = data.products || [];
             this.filteredProducts = this.allProducts;
-            this.newStocktake = { note: '', items: {} };
+            this.newStocktake = {
+              note: '',
+              items: {}
+            };
             this.productSearch = '';
             this.showCreateModal = true;
           } else {
@@ -617,7 +638,9 @@ $items = $items ?? [];
         try {
           const r = await fetch(api.create, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json'
+            },
             body: JSON.stringify({
               note: this.newStocktake.note,
               items: items
@@ -694,7 +717,7 @@ $items = $items ?? [];
                     <div class="flex-1">${msg}</div>
                 `;
 
-                box.appendChild(toast);
+        box.appendChild(toast);
         setTimeout(() => toast.remove(), 3000);
       },
     }

@@ -22,7 +22,8 @@ $allowedSections = RoleMiddleware::getAllowedSections();
             || this.currentPath.includes('/admin/purchase-orders') 
             || this.currentPath.includes('/admin/stock-outs') 
             || this.currentPath.includes('/admin/stocktakes') 
-            || this.currentPath.includes('/admin/product-batches')) {
+            || this.currentPath.includes('/admin/product-batches')
+            || this.currentPath.includes('/admin/stock-movements')) {
             this.groups.inventory = true;
         }
         if (this.currentPath.includes('/admin/receipt_vouchers') 
@@ -234,6 +235,16 @@ $allowedSections = RoleMiddleware::getAllowedSections();
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l9 4 9-4" />
                         </svg>
                         Lô sản phẩm
+                    </a>
+
+                    <a href="/admin/stock-movements"
+                        :class="['flex items-center gap-2 px-3 py-2 rounded', currentPath.startsWith('/admin/stock-movements') ? 'bg-[#002975] text-white' : 'hover:bg-[#002975] hover:text-white']">
+                        <!-- History / clock icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Lịch sử thay đổi
                     </a>
                 </div>
             </div>

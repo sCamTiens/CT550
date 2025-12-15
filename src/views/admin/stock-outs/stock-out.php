@@ -420,7 +420,7 @@ $items = $items ?? [];
                             <table class="w-full">
                                 <thead class="bg-gray-50">
                                     <tr>
-                                        <th class="px-3 py-2 text-left text-sm font-semibold text-gray-700">Sản phẩm -
+                                        <th class="px-3 py-2 text-left text-sm font-semibold text-gray-700 break-words whitespace-pre-line">Sản phẩm -
                                             Mã lô</th>
                                         <th class="px-3 py-2 text-center text-sm font-semibold text-gray-700">NSX/HSD
                                         </th>
@@ -436,7 +436,7 @@ $items = $items ?? [];
                                     <template x-if="viewItem.items && viewItem.items.length > 0">
                                         <template x-for="(item, idx) in viewItem.items" :key="idx">
                                             <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
-                                                <td class="px-3 py-2">
+                                                <td class="px-3 py-2 break-words whitespace-normal">
                                                     <div class="font-medium" x-text="item.product_name"></div>
                                                     <div class="text-xs">Lô: <span x-text="item.batch_code"></span>
                                                     </div>
@@ -619,11 +619,11 @@ $items = $items ?? [];
                 show: false,
                 title: '',
                 message: '',
-                onConfirm: () => { },
-                onCancel: () => { }
+                onConfirm: () => {},
+                onCancel: () => {}
             },
 
-            showConfirm(title, message, onConfirm, onCancel = () => { }) {
+            showConfirm(title, message, onConfirm, onCancel = () => {}) {
                 this.confirmDialog = {
                     show: true,
                     title,
@@ -697,30 +697,64 @@ $items = $items ?? [];
 
             // ===== FILTERS =====
             openFilter: {
-                code: false, customer_name: false, item_product: false,
-                item_qty: false, item_price: false,
-                order_code: false, type: false,
-                status: false, out_date: false,
-                total_amount: false, note: false, created_at: false, created_by_name: false
+                code: false,
+                customer_name: false,
+                item_product: false,
+                item_qty: false,
+                item_price: false,
+                order_code: false,
+                type: false,
+                status: false,
+                out_date: false,
+                total_amount: false,
+                note: false,
+                created_at: false,
+                created_by_name: false
             },
 
             filters: {
-                code: '', customer_name: '', type: '', note: '', status: '', created_by_name: '', order_code: '',
+                code: '',
+                customer_name: '',
+                type: '',
+                note: '',
+                status: '',
+                created_by_name: '',
+                order_code: '',
 
                 item_product: '',
 
-                item_qty_type: '', item_qty_value: '', item_qty_from: '', item_qty_to: '',
-                item_price_type: '', item_price_value: '', item_price_from: '', item_price_to: '',
+                item_qty_type: '',
+                item_qty_value: '',
+                item_qty_from: '',
+                item_qty_to: '',
+                item_price_type: '',
+                item_price_value: '',
+                item_price_from: '',
+                item_price_to: '',
 
-                total_amount_type: '', total_amount_value: '', total_amount_from: '', total_amount_to: '',
-                out_date_type: '', out_date_value: '', out_date_from: '', out_date_to: '',
-                created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: ''
+                total_amount_type: '',
+                total_amount_value: '',
+                total_amount_from: '',
+                total_amount_to: '',
+                out_date_type: '',
+                out_date_value: '',
+                out_date_from: '',
+                out_date_to: '',
+                created_at_type: '',
+                created_at_value: '',
+                created_at_from: '',
+                created_at_to: ''
             },
 
             // ------------------------------------------------------------------
             // Hàm lọc tổng quát — hỗ trợ TEXT, NUMBER, DATE
             // ------------------------------------------------------------------
-            applyFilter(val, type, { value, from, to, dataType }) {
+            applyFilter(val, type, {
+                value,
+                from,
+                to,
+                dataType
+            }) {
                 if (val == null) return false;
 
                 // -------- TEXT --------
@@ -739,14 +773,14 @@ $items = $items ?? [];
 
                     if (!query) return true;
 
-                    if (type === 'eq') return hasAccent(query)
-                        ? raw === query
-                        : str === queryNoAccent;
+                    if (type === 'eq') return hasAccent(query) ?
+                        raw === query :
+                        str === queryNoAccent;
 
                     if (type === 'contains' || type === 'like') {
-                        return hasAccent(query)
-                            ? raw.includes(query)
-                            : str.includes(queryNoAccent);
+                        return hasAccent(query) ?
+                            raw.includes(query) :
+                            str.includes(queryNoAccent);
                     }
 
                     return true;
@@ -911,7 +945,9 @@ $items = $items ?? [];
                 for (const k in this.openFilter) this.openFilter[k] = false;
                 this.openFilter[key] = true;
             },
-            closeFilter(key) { this.openFilter[key] = false; },
+            closeFilter(key) {
+                this.openFilter[key] = false;
+            },
             resetFilter(key) {
                 // --- Date type ---
                 if (['created_at', 'out_date'].includes(key)) {
@@ -1124,7 +1160,9 @@ $items = $items ?? [];
                 try {
                     const res = await fetch(api.create, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
                         body: JSON.stringify(this.form)
                     });
                     if (res.ok) {
@@ -1147,7 +1185,9 @@ $items = $items ?? [];
                 try {
                     const res = await fetch(api.update(this.form.id), {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
                         body: JSON.stringify(this.form)
                     });
                     if (res.ok) {
@@ -1173,7 +1213,9 @@ $items = $items ?? [];
                     `Bạn có chắc chắn muốn xóa phiếu xuất kho "${code}"?`,
                     async () => {
                         try {
-                            const res = await fetch(api.remove(id), { method: 'DELETE' });
+                            const res = await fetch(api.remove(id), {
+                                method: 'DELETE'
+                            });
                             if (res.ok) {
                                 this.items = this.items.filter(r => r.id !== id);
                                 this.showToast('Xóa phiếu xuất kho thành công!', 'success');
@@ -1196,7 +1238,9 @@ $items = $items ?? [];
                     `Bạn có chắc chắn muốn duyệt phiếu xuất kho "${code}"?`,
                     async () => {
                         try {
-                            const res = await fetch(api.approve(id), { method: 'POST' });
+                            const res = await fetch(api.approve(id), {
+                                method: 'POST'
+                            });
                             if (res.ok) {
                                 await this.fetchAll();
                                 this.showToast('Duyệt phiếu xuất kho thành công!', 'success');
@@ -1219,7 +1263,9 @@ $items = $items ?? [];
                     `Bạn có chắc chắn muốn hoàn thành phiếu xuất kho "${code}"?`,
                     async () => {
                         try {
-                            const res = await fetch(api.complete(id), { method: 'POST' });
+                            const res = await fetch(api.complete(id), {
+                                method: 'POST'
+                            });
                             if (res.ok) {
                                 await this.fetchAll();
                                 this.showToast('Hoàn thành phiếu xuất kho thành công!', 'success');
@@ -1262,15 +1308,17 @@ $items = $items ?? [];
                 const toDate = this.filters.out_date_to || '';
 
                 fetch('/admin/api/stock-outs/export', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        items: data,
-                        from_date: fromDate,
-                        to_date: toDate,
-                        filename: filename
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            items: data,
+                            from_date: fromDate,
+                            to_date: toDate,
+                            filename: filename
+                        })
                     })
-                })
                     .then(res => {
                         if (!res.ok) throw new Error('Export failed');
                         return res.blob();

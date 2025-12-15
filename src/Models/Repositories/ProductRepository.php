@@ -147,7 +147,7 @@ class ProductRepository
                    p.created_by, cu.full_name AS created_by_name,
                    p.updated_by, uu.full_name AS updated_by_name,
                    b.name AS brand_name, c.name AS category_name, u.name AS unit_name,
-                   s.qty AS stock_qty 
+                   COALESCE(s.qty, 0) AS stock 
             FROM products p
             LEFT JOIN brands b ON b.id = p.brand_id
             LEFT JOIN categories c ON c.id = p.category_id
@@ -183,7 +183,7 @@ class ProductRepository
                    p.created_by, cu.full_name AS created_by_name,
                    p.updated_by, uu.full_name AS updated_by_name,
                    b.name AS brand_name, c.name AS category_name, u.name AS unit_name,
-                   s.qty AS stock_qty 
+                   COALESCE(s.qty, 0) AS stock 
             FROM products p
             LEFT JOIN brands b ON b.id = p.brand_id
             LEFT JOIN categories c ON c.id = p.category_id
@@ -218,7 +218,7 @@ class ProductRepository
                    p.created_by, cu.full_name AS created_by_name,
                    p.updated_by, uu.full_name AS updated_by_name,
                    b.name AS brand_name, c.name AS category_name, u.name AS unit_name,
-                   s.qty AS stock_qty 
+                   COALESCE(s.qty, 0) AS stock 
             FROM products p
             LEFT JOIN brands b ON b.id = p.brand_id
             LEFT JOIN categories c ON c.id = p.category_id

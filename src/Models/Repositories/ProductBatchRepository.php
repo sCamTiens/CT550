@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models\Repositories;
 
 use App\Core\DB;
@@ -16,13 +17,26 @@ class ProductBatchRepository
                     p.name AS product_name, 
                     p.sku AS product_sku,
                     u1.full_name AS created_by_name,
-                    u2.full_name AS updated_by_name
+                    u2.full_name AS updated_by_name,
+                    -- Tính số ngày đến hạn (dương = chưa hết hạn, âm = đã hết hạn)
+                    DATEDIFF(pb.exp_date, CURDATE()) AS days_to_expiry,
+                    -- Priority: lô có tồn kho = 0 sẽ có priority thấp nhất
+                    CASE 
+                        WHEN pb.current_qty = 0 THEN 3  -- Tồn kho = 0: Ưu tiên thấp nhất
+                        WHEN DATEDIFF(pb.exp_date, CURDATE()) < 0 THEN 0  -- Đã hết hạn và còn tồn: Ưu tiên cao nhất
+                        WHEN DATEDIFF(pb.exp_date, CURDATE()) <= 30 THEN 1  -- Sắp hết hạn (30 ngày) và còn tồn
+                        ELSE 2  -- Còn hạn lâu
+                    END AS priority
                 FROM product_batches pb
                 JOIN products p ON pb.product_id = p.id
                 LEFT JOIN users u1 ON pb.created_by = u1.id
                 LEFT JOIN users u2 ON pb.updated_by = u2.id
                 WHERE pb.is_active = 1
-                ORDER BY pb.created_at DESC
+                ORDER BY 
+                    priority ASC,           -- Lô hết hạn/sắp hết hạn (có tồn kho) lên đầu, lô tồn kho = 0 xuống cuối
+                    days_to_expiry ASC,     -- Trong cùng priority, sắp hết hạn hơn lên trước
+                    pb.exp_date ASC,        -- Backup sort
+                    pb.created_at DESC      -- Mới nhất lên trước
                 LIMIT ?
                 ";
         $st = $pdo->prepare($sql);

@@ -29,13 +29,6 @@
         }
         window._logoutInProgress = true;
 
-        // Show toast
-        if (typeof window.showToast === 'function') {
-            window.showToast('Phiên đăng nhập đã hết hạn. Đang chuyển về trang đăng nhập...', 'error');
-        } else {
-            showLogoutToast();
-        }
-
         const currentPath = window.location.pathname;
         const isAdmin = currentPath.startsWith('/admin');
         const logoutUrl = isAdmin ? '/admin/logout' : '/logout';

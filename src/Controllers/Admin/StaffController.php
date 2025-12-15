@@ -1,16 +1,21 @@
 <?php
+
 namespace App\Controllers\Admin;
 
 use App\Models\Repositories\StaffRepository;
 use App\Models\Repositories\RoleRepository;
+use App\Services\EmailService;
 
 class StaffController extends BaseAdminController
 {
     protected $repo;
+    protected $emailService; // Declare emailService property
+
     public function __construct()
     {
         parent::__construct();
         $this->repo = new StaffRepository();
+        $this->emailService = new EmailService(); // 2. Add emailService property to __construct
     }
 
     /**
@@ -25,8 +30,28 @@ class StaffController extends BaseAdminController
             return $this->json(['error' => 'Mật khẩu phải ít nhất 8 ký tự'], 422);
         }
         try {
+            // Lấy thông tin nhân viên trước khi đổi mật khẩu
+            $staff = $this->repo->find($id);
+            if (!$staff) {
+                return $this->json(['error' => 'Không tìm thấy nhân viên'], 404);
+            }
+
             $ok = $this->repo->changePassword($id, $password);
             if ($ok) {
+                // Gửi email thông báo mật khẩu mới
+                if (!empty($staff['email'])) {
+                    $emailResult = $this->emailService->sendPasswordEmail(
+                        $staff,
+                        $password,
+                        'staff',
+                        false // isNew = false (đổi mật khẩu)
+                    );
+
+                    if (!$emailResult['success']) {
+                        error_log('Failed to send password email: ' . $emailResult['message']);
+                    }
+                }
+
                 return $this->json(['ok' => true]);
             } else {
                 return $this->json(['error' => 'Không thể đổi mật khẩu'], 500);
@@ -102,7 +127,7 @@ class StaffController extends BaseAdminController
         }
     }
 
-        /** API: Tạo mới nhân viên */
+    /** API: Tạo mới nhân viên */
     public function store()
     {
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
@@ -130,17 +155,35 @@ class StaffController extends BaseAdminController
 
         try {
             $data['created_by'] = $this->currentUserId();
+            // Lưu password để gửi email (vì khi tạo staff, password sẽ được hash)
+            $plainPassword = $data['password'] ?? null;
+
             $result = $this->repo->create($data);
             if (is_string($result)) {
                 return $this->json(['error' => $result], 409);
             }
+
+            // Gửi email thông báo mật khẩu cho nhân viên mới
+            if ($plainPassword && !empty($result['email'])) {
+                $emailResult = $this->emailService->sendPasswordEmail(
+                    $result,
+                    $plainPassword,
+                    'staff',
+                    true // isNew = true (tạo mới)
+                );
+
+                if (!$emailResult['success']) {
+                    error_log('Failed to send password email: ' . $emailResult['message']);
+                }
+            }
+
             $this->json($result);
         } catch (\PDOException $e) {
             $this->json(['error' => 'Lỗi khi thêm nhân viên', 'detail' => $e->getMessage()], 500);
         }
     }
 
-        /** API: Cập nhật nhân viên */
+    /** API: Cập nhật nhân viên */
     public function update($id)
     {
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
@@ -655,7 +698,6 @@ class StaffController extends BaseAdminController
                 ]
             ], JSON_UNESCAPED_UNICODE);
             exit;
-
         } catch (\Throwable $e) {
             // Log the error
             error_log("Import Error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
@@ -705,7 +747,7 @@ class StaffController extends BaseAdminController
         // Merge success and error rows into one array for display
         $allRows = array_merge($successRows, $errorRows);
         // Sort by row number
-        usort($allRows, function($a, $b) {
+        usort($allRows, function ($a, $b) {
             return ($a['row'] ?? 0) - ($b['row'] ?? 0);
         });
 

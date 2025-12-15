@@ -748,11 +748,11 @@ class CheckoutController extends Controller
                         code, user_id, order_type, status, subtotal, grand_total,
                         payment_method, payment_status, shipping_address_id,
                         delivery_name, delivery_phone, delivery_address,
-                        shipping_province, shipping_district, shipping_ward,
+                        shipping_province, shipping_ward,
                         shipping_province_id, shipping_district_id, shipping_ward_code,
                         created_at, updated_at
                     )
-                    VALUES (?, ?, 'Online', 'Chờ xử lý', ?, ?, ?, 'Chưa thanh toán', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+                    VALUES (?, ?, 'Online', 'Chờ xử lý', ?, ?, ?, 'Chưa thanh toán', ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
                 ");
                 $stmt->execute([
                     $orderCode,
@@ -765,7 +765,6 @@ class CheckoutController extends Controller
                     $address['phone_number'] ?? $address['receiver_phone'] ?? '',
                     $address['address_line'] ?? $address['line1'] ?? '',
                     $address['province'] ?? $address['province_name'] ?? '',
-                    $address['district'] ?? $address['district_name'] ?? '', // district_name
                     $address['ward'] ?? $address['ward_name'] ?? '',
                     $address['province_code'] ?? null,
                     $districtId, // Only save district_id (needed by GHN)
@@ -812,6 +811,15 @@ class CheckoutController extends Controller
 
                 $pdo->commit();
 
+                // Lấy thông tin khách hàng để gửi email
+                $customerStmt = $pdo->prepare("
+                    SELECT id, username, email, full_name, phone 
+                    FROM users 
+                    WHERE id = ?
+                ");
+                $customerStmt->execute([$customerId]);
+                $customerInfo = $customerStmt->fetch(\PDO::FETCH_ASSOC);
+
                 // Gửi thông báo cho khách hàng
                 try {
                     \App\Support\NotificationHelper::send(
@@ -822,6 +830,46 @@ class CheckoutController extends Controller
                         'success'
                     );
                 } catch (\Throwable $ex) { /* Ignore notification error */
+                }
+
+                // Gửi email xác nhận đơn hàng
+                if ($customerInfo && !empty($customerInfo['email'])) {
+                    try {
+                        // Lấy thông tin đơn hàng vừa tạo kèm thông tin địa chỉ đầy đủ
+                        $orderStmt = $pdo->prepare("
+                            SELECT o.*, ua.district_name as shipping_district
+                            FROM orders o
+                            LEFT JOIN user_addresses ua ON o.shipping_address_id = ua.id
+                            WHERE o.id = ?
+                        ");
+                        $orderStmt->execute([$orderId]);
+                        $orderData = $orderStmt->fetch(\PDO::FETCH_ASSOC);
+
+                        // Lấy chi tiết sản phẩm trong đơn hàng
+                        $itemsStmt = $pdo->prepare("
+                            SELECT oi.*, p.name as product_name
+                            FROM order_items oi
+                            INNER JOIN products p ON oi.product_id = p.id
+                            WHERE oi.order_id = ?
+                        ");
+                        $itemsStmt->execute([$orderId]);
+                        $orderItems = $itemsStmt->fetchAll(\PDO::FETCH_ASSOC);
+
+                        // Gửi email
+                        $emailService = new \App\Services\EmailService();
+                        $emailResult = $emailService->sendOrderConfirmation($orderData, $customerInfo, $orderItems);
+
+                        if ($emailResult['success']) {
+                            error_log("Order confirmation email sent successfully for order: " . $orderCode);
+                        } else {
+                            error_log("Failed to send order confirmation email: " . $emailResult['message']);
+                        }
+                    } catch (\Throwable $emailEx) {
+                        // Log lỗi nhưng không làm fail transaction
+                        error_log("Error sending order confirmation email: " . $emailEx->getMessage());
+                    }
+                } else {
+                    error_log("Cannot send order confirmation email: Customer email is missing for user ID: " . $customerId);
                 }
 
                 // COD - Redirect to success page (like VNPay)

@@ -667,8 +667,8 @@ $items = $items ?? [];
                 show: false,
                 title: '',
                 message: '',
-                onConfirm: () => { },
-                onCancel: () => { }
+                onConfirm: () => {},
+                onCancel: () => {}
             },
             currentPage: 1,
             perPage: 20,
@@ -753,7 +753,8 @@ $items = $items ?? [];
                             return;
                         }
                         const data = await res.json();
-                        po.items = data.lines || [];
+                        // Sửa: API trả về 'items', không phải 'lines'
+                        po.items = data.items || [];
                     } catch (e) {
                         console.error(`Cannot load items for PO ${po.id}:`, e);
                         po.items = [];
@@ -857,25 +858,56 @@ $items = $items ?? [];
 
             // filters
             openFilter: {
-                code: false, supplier_name: false, item_product: false, item_qty: false, item_price: false,
-                total_amount: false, paid_amount: false,
-                due_date: false, note: false, payment_status: false,
-                received_at: false, created_by: false, updated_at: false, updated_by: false
+                code: false,
+                supplier_name: false,
+                item_product: false,
+                item_qty: false,
+                item_price: false,
+                total_amount: false,
+                paid_amount: false,
+                due_date: false,
+                note: false,
+                payment_status: false,
+                received_at: false,
+                created_by: false,
+                updated_at: false,
+                updated_by: false
             },
             filters: {
                 code: '',
                 supplier_name: '',
                 item_product: '',
-                item_qty_type: '', item_qty_value: '', item_qty_from: '', item_qty_to: '',
-                item_price_type: '', item_price_value: '', item_price_from: '', item_price_to: '',
-                total_amount_type: '', total_amount_value: '', total_amount_from: '', total_amount_to: '',
-                paid_amount_type: '', paid_amount_value: '', paid_amount_from: '', paid_amount_to: '',
-                due_date_type: '', due_date_value: '', due_date_from: '', due_date_to: '',
+                item_qty_type: '',
+                item_qty_value: '',
+                item_qty_from: '',
+                item_qty_to: '',
+                item_price_type: '',
+                item_price_value: '',
+                item_price_from: '',
+                item_price_to: '',
+                total_amount_type: '',
+                total_amount_value: '',
+                total_amount_from: '',
+                total_amount_to: '',
+                paid_amount_type: '',
+                paid_amount_value: '',
+                paid_amount_from: '',
+                paid_amount_to: '',
+                due_date_type: '',
+                due_date_value: '',
+                due_date_from: '',
+                due_date_to: '',
                 note: '',
                 payment_status: '',
-                received_at_type: '', received_at_value: '', received_at_from: '', received_at_to: '',
+                received_at_type: '',
+                received_at_value: '',
+                received_at_from: '',
+                received_at_to: '',
                 created_by: '',
-                updated_at_type: '', updated_at_value: '', updated_at_from: '', updated_at_to: '',
+                updated_at_type: '',
+                updated_at_value: '',
+                updated_at_from: '',
+                updated_at_to: '',
                 updated_by: '',
             },
 
@@ -911,7 +943,12 @@ $items = $items ?? [];
             // -------------------------------------------
             // Hàm lọc tổng quát, hỗ trợ text / number / date
             // -------------------------------------------
-            applyFilter(val, type, { value, from, to, dataType }) {
+            applyFilter(val, type, {
+                value,
+                from,
+                to,
+                dataType
+            }) {
                 if (val == null) return false;
 
                 // ---------------- TEXT ----------------
@@ -931,9 +968,10 @@ $items = $items ?? [];
 
                     if (!query) return true;
 
-                    if (type === 'eq') return hasAccent(query)
-                        ? raw === query  // có dấu → so đúng dấu
-                        : str === queryNoAccent; // không dấu → so không dấu
+                    if (type === 'eq') return hasAccent(query) ?
+                        raw === query // có dấu → so đúng dấu
+                        :
+                        str === queryNoAccent; // không dấu → so không dấu
 
                     if (type === 'contains' || type === 'like') {
                         if (hasAccent(query)) {
@@ -1129,7 +1167,9 @@ $items = $items ?? [];
                 for (const k in this.openFilter) this.openFilter[k] = false;
                 this.openFilter[key] = true;
             },
-            closeFilter(key) { this.openFilter[key] = false; },
+            closeFilter(key) {
+                this.openFilter[key] = false;
+            },
             resetFilter(key) {
                 if (['received_at', 'updated_at', 'due_date'].includes(key)) {
                     this.filters[`${key}_type`] = '';
@@ -1141,8 +1181,7 @@ $items = $items ?? [];
                     this.filters[`${key}_value`] = '';
                     this.filters[`${key}_from`] = '';
                     this.filters[`${key}_to`] = '';
-                }
-                else {
+                } else {
                     this.filters[key] = '';
                 }
                 this.openFilter[key] = false;
@@ -1173,7 +1212,13 @@ $items = $items ?? [];
                 Promise.all([fetchSuppliersPromise, fetchProductsPromise]).then(() => {
                     // Thêm dòng đầu tiên nếu chưa có
                     if (!this.lines || this.lines.length === 0) {
-                        this.lines.push({ product_id: '', qty: 1, unit_cost: 0, mfg_date: '', exp_date: '' });
+                        this.lines.push({
+                            product_id: '',
+                            qty: 1,
+                            unit_cost: 0,
+                            mfg_date: '',
+                            exp_date: ''
+                        });
                     }
 
                     // Mở modal
@@ -1213,7 +1258,7 @@ $items = $items ?? [];
                             qty: line.quantity, // Backend trả về 'quantity', không phải 'qty'
                             unit_cost: line.unit_cost,
                             mfg_date: line.manufacture_date || '', // Backend trả về 'manufacture_date'
-                            exp_date: line.expiry_date || ''  // Backend trả về 'expiry_date'
+                            exp_date: line.expiry_date || '' // Backend trả về 'expiry_date'
                         }));
 
                         // Nếu suppliers hoặc products chưa được fetch, fetch chúng
@@ -1337,7 +1382,9 @@ $items = $items ?? [];
 
                     const res = await fetch('/admin/api/purchase-orders', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
                         body: JSON.stringify(payload),
                     });
                     const data = await res.json();
@@ -1379,7 +1426,9 @@ $items = $items ?? [];
                 try {
                     const res = await fetch(`/admin/api/purchase-orders/${this.form.id}`, {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
                         body: JSON.stringify(this.form),
                     });
                     const data = await res.json();
@@ -1407,7 +1456,9 @@ $items = $items ?? [];
                     `Bạn có chắc chắn muốn xóa phiếu nhập "${code}"?\n\nHành động này sẽ xóa tất cả dữ liệu liên quan (lô hàng, biến động kho, phiếu chi).`,
                     async () => {
                         try {
-                            const res = await fetch(`/admin/api/purchase-orders/${id}`, { method: 'DELETE' });
+                            const res = await fetch(`/admin/api/purchase-orders/${id}`, {
+                                method: 'DELETE'
+                            });
                             const data = await res.json();
 
                             if (res.ok) {
@@ -1435,7 +1486,7 @@ $items = $items ?? [];
                 );
 
                 if (printWindow) {
-                    printWindow.onload = function () {
+                    printWindow.onload = function() {
                         printWindow.print();
                     };
                 }
@@ -1467,15 +1518,17 @@ $items = $items ?? [];
                 const toDate = this.filters.received_to || '';
 
                 fetch('/admin/api/purchase-orders/export', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        items: data,
-                        from_date: fromDate,
-                        to_date: toDate,
-                        filename: filename
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            items: data,
+                            from_date: fromDate,
+                            to_date: toDate,
+                            filename: filename
+                        })
                     })
-                })
                     .then(res => {
                         if (!res.ok) throw new Error('Export failed');
                         return res.blob();
@@ -1601,7 +1654,7 @@ $items = $items ?? [];
                 }
             },
 
-            showConfirm(title, message, onConfirm, onCancel = () => { }) {
+            showConfirm(title, message, onConfirm, onCancel = () => {}) {
                 this.confirmDialog = {
                     show: true,
                     title,

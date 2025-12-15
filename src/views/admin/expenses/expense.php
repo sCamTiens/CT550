@@ -394,8 +394,9 @@ $items = $items ?? [];
                 <div x-show="open" @click.outside="open=false"
                     class="absolute right-0 mt-1 bg-white border rounded shadow w-28 z-50">
                     <template x-for="opt in perPageOptions" :key="opt">
-                        <button class="block w-full text-left px-4 py-2 hover:bg-gray-100"
-                            @click="perPage=opt; open=false">{{ opt }}</button>
+                        <div @click="perPage=opt;open=false"
+                            class="px-3 py-2 cursor-pointer hover:bg-[#002975] hover:text-white"
+                            x-text="opt + ' / trang'"></div>
                     </template>
                 </div>
             </div>
@@ -512,9 +513,20 @@ $items = $items ?? [];
 
             // ===== FILTERS =====
             openFilter: {
-                code: false, type: false, purchase_order_code: false, supplier_name: false, staff_name: false, method: false,
-                amount: false, paid_by_name: false, paid_at: false, txn_ref: false,
-                bank_time: false, note: false, created_at: false, created_by: false
+                code: false,
+                type: false,
+                purchase_order_code: false,
+                supplier_name: false,
+                staff_name: false,
+                method: false,
+                amount: false,
+                paid_by_name: false,
+                paid_at: false,
+                txn_ref: false,
+                bank_time: false,
+                note: false,
+                created_at: false,
+                created_by: false
             },
             filters: {
                 code: '',
@@ -523,20 +535,37 @@ $items = $items ?? [];
                 supplier_name: '',
                 staff_name: '',
                 method: '',
-                amount_type: '', amount_value: '', amount_from: '', amount_to: '',
+                amount_type: '',
+                amount_value: '',
+                amount_from: '',
+                amount_to: '',
                 paid_by_name: '',
-                paid_at_type: '', paid_at_value: '', paid_at_from: '', paid_at_to: '',
+                paid_at_type: '',
+                paid_at_value: '',
+                paid_at_from: '',
+                paid_at_to: '',
                 txn_ref: '',
-                bank_time_type: '', bank_time_value: '', bank_time_from: '', bank_time_to: '',
+                bank_time_type: '',
+                bank_time_value: '',
+                bank_time_from: '',
+                bank_time_to: '',
                 note: '',
-                created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
+                created_at_type: '',
+                created_at_value: '',
+                created_at_from: '',
+                created_at_to: '',
                 created_by: ''
             },
 
             // -------------------------------------------
             // Hàm lọc tổng quát, hỗ trợ text / number / date
             // -------------------------------------------
-            applyFilter(val, type, { value, from, to, dataType }) {
+            applyFilter(val, type, {
+                value,
+                from,
+                to,
+                dataType
+            }) {
                 if (val == null) return false;
 
                 // ---------------- TEXT ----------------
@@ -556,9 +585,10 @@ $items = $items ?? [];
 
                     if (!query) return true;
 
-                    if (type === 'eq') return hasAccent(query)
-                        ? raw === query  // có dấu → so đúng dấu
-                        : str === queryNoAccent; // không dấu → so không dấu
+                    if (type === 'eq') return hasAccent(query) ?
+                        raw === query // có dấu → so đúng dấu
+                        :
+                        str === queryNoAccent; // không dấu → so không dấu
 
                     if (type === 'contains' || type === 'like') {
                         if (hasAccent(query)) {
@@ -729,7 +759,9 @@ $items = $items ?? [];
                 for (const k in this.openFilter) this.openFilter[k] = false;
                 this.openFilter[key] = true;
             },
-            closeFilter(key) { this.openFilter[key] = false; },
+            closeFilter(key) {
+                this.openFilter[key] = false;
+            },
             resetFilter(key) {
                 if (['created_at', 'bank_time', 'paid_at'].includes(key)) {
                     this.filters[`${key}_type`] = '';
@@ -943,7 +975,9 @@ $items = $items ?? [];
                 try {
                     const res = await fetch(api.create, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
                         body: JSON.stringify(this.form)
                     });
                     if (res.ok) {
@@ -975,7 +1009,9 @@ $items = $items ?? [];
                 try {
                     const res = await fetch(api.update(this.form.id), {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
                         body: JSON.stringify(this.form)
                     });
                     if (res.ok) {
@@ -995,16 +1031,18 @@ $items = $items ?? [];
             async remove(id) {
                 const item = this.items.find(e => e.id === id);
                 const code = item ? item.code : 'phiếu chi này';
-                const details = item
-                    ? `\n\nLoại: ${item.type || 'N/A'}\nSố tiền: ${this.formatCurrency(item.amount)}\n\nLưu ý: Nếu phiếu nhập đã thanh toán hết, bạn không thể xóa phiếu chi này.`
-                    : '';
+                const details = item ?
+                    `\n\nLoại: ${item.type || 'N/A'}\nSố tiền: ${this.formatCurrency(item.amount)}\n\nLưu ý: Nếu phiếu nhập đã thanh toán hết, bạn không thể xóa phiếu chi này.` :
+                    '';
 
                 this.showConfirm(
                     'Xác nhận xóa',
                     `Bạn có chắc chắn muốn xóa phiếu chi "${code}"?${details}`,
                     async () => {
                         try {
-                            const res = await fetch(api.remove(id), { method: 'DELETE' });
+                            const res = await fetch(api.remove(id), {
+                                method: 'DELETE'
+                            });
                             if (res.ok) {
                                 this.items = this.items.filter(e => e.id !== id);
                                 this.showToast('Xóa phiếu chi thành công!', 'success');
@@ -1081,10 +1119,14 @@ $items = $items ?? [];
                 const filename = `Phieu_chi_${dateStr}_${timeStr}.xlsx`;
 
                 fetch('/admin/api/expense_vouchers/export', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ items: data })
-                })
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            items: data
+                        })
+                    })
                     .then(res => {
                         if (!res.ok) throw new Error('Export failed');
                         return res.blob();

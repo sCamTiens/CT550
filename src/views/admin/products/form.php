@@ -323,10 +323,11 @@
           <template x-if="form.mainImagePreview">
             <div class="relative w-full h-full">
               <img :src="form.mainImagePreview" alt="Preview"
-                class="w-full h-full object-cover rounded-lg transition-transform duration-200 hover:scale-105">
+                @click="openLightbox(form.mainImagePreview)"
+                class="w-full h-full object-cover rounded-lg transition-transform duration-200 hover:scale-105 cursor-pointer">
               <!-- Ảnh chính -->
               <button type="button" @click="removeMainImage()" class="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 
-                    flex items-center justify-center shadow-md text-sm">✕
+                    flex items-center justify-center shadow-md text-sm z-10">✕
               </button>
             </div>
           </template>
@@ -375,10 +376,11 @@
         <template x-for="(img, idx) in form.subImages" :key="idx">
           <div class="relative w-full h-24 border-2 border-[#002975] rounded-lg overflow-hidden">
             <img :src="img.preview"
-              class="w-full h-full object-cover rounded-lg transition-transform duration-200 hover:scale-105">
+              @click="openLightbox(img.preview)"
+              class="w-full h-full object-cover rounded-lg transition-transform duration-200 hover:scale-105 cursor-pointer">
             <!-- Ảnh phụ -->
             <button type="button" @click="removeSubImage(idx)" class="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 
-                  flex items-center justify-center shadow-md text-sm">✕
+                  flex items-center justify-center shadow-md text-sm z-10">✕
             </button>
 
             <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs text-center py-1">
@@ -403,7 +405,7 @@
         </template>
       </div>
 
-      <p class="text-xs text-gray-500">PNG, JPG (max 2MB mỗi ảnh)</p>
+      <p class="text-xs text-gray-500">PNG, JPG (Tối đa 2MB mỗi ảnh)</p>
     </div>
   </div>
 

@@ -42,7 +42,7 @@ $items = $items ?? [];
         </div>
         <div class="bg-white rounded-lg shadow p-4">
             <div class="text-gray-500 text-sm mb-1">Đơn hàng hoàn thành</div>
-            <div class="text-2xl font-bold text-purple-600" x-text="countByStatus('Hoàn thành')"></div>
+            <div class="text-2xl font-bold text-purple-600" x-text="countByStatus('Đã giao')"></div>
         </div>
         <div class="bg-white rounded-lg shadow p-4">
             <div class="text-gray-500 text-sm mb-1">Đơn hàng chờ xử lý</div>
@@ -66,6 +66,11 @@ $items = $items ?? [];
                         <th class="py-2 px-4 text-center" style="min-width: 100px;">Thao tác</th>
                         <?= textFilterPopover('code', 'Mã đơn hàng', minWidth: 130) ?>
                         <?= textFilterPopover('customer_name', 'Khách hàng', minWidth: 150) ?>
+                        <?= selectFilterPopover('order_type', 'Loại đơn', [
+                            '' => '-- Tất cả --',
+                            'Online' => 'Online',
+                            'Offline' => 'Offline',
+                        ], minWidth: 100) ?>
                         <th class="py-2 px-4 text-center align-top" style="min-width: 500px; width: 500px;">
                             <div class="mb-2 text-base font-bold">Chi tiết đơn hàng</div>
                             <div class="grid grid-cols-3 gap-3 border-t pt-2">
@@ -307,6 +312,16 @@ $items = $items ?? [];
                                 :class="(o.customer_name || 'Khách vãng lai') === 'Khách vãng lai' ? 'text-left' : 'text-left'"
                                 x-text="o.customer_name || 'Khách vãng lai'"></td>
 
+                            <!-- Cột Loại đơn -->
+                            <td class="px-3 py-2 text-center align-middle">
+                                <div class="flex justify-center items-center h-full">
+                                    <span class="px-2 py-[3px]rounded text-xs font-medium" :class="{
+                                        'bg-blue-100 text-blue-800': o.order_type === 'Online',
+                                        'bg-green-100 text-green-800': o.order_type === 'Offline',
+                                    }" x-text="o.order_type || 'Online'"></span>
+                                </div>
+                            </td>
+
                             <!-- Cột Chi tiết đơn hàng -->
                             <td class="px-3 py-2 align-top" style="min-width: 500px; width: 500px;">
                                 <div class="space-y-2">
@@ -386,7 +401,7 @@ $items = $items ?? [];
                         </tr>
                     </template>
                     <tr x-show="!loading && filtered().length===0">
-                        <td colspan="13" class="py-12 text-center text-slate-500">
+                        <td colspan="14" class="py-12 text-center text-slate-500">
                             <div class="flex flex-col items-center justify-center">
                                 <img src="/assets/images/Null.png" alt="Trống" class="w-40 h-24 mb-3 opacity-80">
                                 <div class="text-lg text-slate-300">Trống</div>
@@ -719,6 +734,7 @@ $items = $items ?? [];
                 id: false,
                 code: false,
                 customer_name: false,
+                order_type: false,
                 product_name: false,
                 qty: false,
                 unit_price: false,
@@ -737,6 +753,7 @@ $items = $items ?? [];
                 id: '',
                 code: '',
                 customer_name: '',
+                order_type: '',
                 product_name: '',
                 qty_type: '',
                 qty_value: '',
@@ -900,7 +917,7 @@ $items = $items ?? [];
                 });
 
                 // --- Lọc theo select ---
-                ['status', 'payment_method'].forEach(key => {
+                ['status', 'payment_method', 'order_type'].forEach(key => {
                     if (this.filters[key]) {
                         data = data.filter(o =>
                             this.applyFilter(o[key], 'eq', {
@@ -1015,10 +1032,10 @@ $items = $items ?? [];
             countByStatus(status) {
                 if (status === 'Hoàn thành') {
                     // Đếm các đơn hàng có trạng thái "Hoàn tất"
-                    return this.filtered().filter(o => o.status === 'Hoàn tất').length;
+                    return this.filtered().filter(o => o.status === 'Đã giao').length;
                 } else if (status === 'Chờ xử lý') {
-                    // Đếm tất cả các đơn hàng còn lại (không phải "Hoàn tất")
-                    return this.filtered().filter(o => o.status !== 'Hoàn tất').length;
+                    // Đếm tất cả các đơn hàng có trạng thái chờ xử lý
+                    return this.filtered().filter(o => o.status === 'Chờ xử lý').length;
                 }
                 return this.filtered().filter(o => o.status === status).length;
             },

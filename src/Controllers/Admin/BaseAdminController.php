@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controllers\Admin;
 
 use App\Core\Controller;
@@ -13,7 +14,7 @@ class BaseAdminController extends Controller
             // Nếu là API request, trả về JSON thay vì redirect
             $requestPath = $_SERVER['REQUEST_URI'];
             $requestPath = parse_url($requestPath, PHP_URL_PATH);
-            
+
             if (strpos($requestPath, '/admin/api/') === 0) {
                 http_response_code(401);
                 header('Content-Type: application/json; charset=utf-8');
@@ -23,20 +24,20 @@ class BaseAdminController extends Controller
                 ]);
                 exit;
             }
-            
+
             header('Location: /admin/login');
             exit;
         }
 
         // Kiểm tra quyền truy cập dựa trên staff_role
         $requestPath = $_SERVER['REQUEST_URI'];
-        
+
         // Loại bỏ query string nếu có
         $requestPath = parse_url($requestPath, PHP_URL_PATH);
-        
+
         // DEBUG
         $staffRole = $_SESSION['user']['staff_role'] ?? 'NONE';
-        
+
         // Bỏ qua kiểm tra cho các trang không cần quyền đặc biệt
         $publicAdminPaths = [
             '/admin/login',
@@ -49,7 +50,7 @@ class BaseAdminController extends Controller
             '/admin/api/attendance/check-in',
             '/admin/api/attendance/check-out',
         ];
-        
+
         // Kiểm tra nếu path là exact match hoặc bắt đầu bằng public path
         $isPublicPath = false;
         foreach ($publicAdminPaths as $publicPath) {
@@ -64,7 +65,7 @@ class BaseAdminController extends Controller
                 break;
             }
         }
-        
+
         // Nếu không phải public path thì kiểm tra quyền
         if (!$isPublicPath) {
             RoleMiddleware::authorize($requestPath);

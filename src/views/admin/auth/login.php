@@ -115,7 +115,7 @@ unset($_SESSION['errors'], $_SESSION['flash_error']);
           <input id="remember" name="remember" type="checkbox" class="rounded border-gray-300">
           <span>Ghi nhớ đăng nhập</span>
         </label>
-        <a href="/forgot-password" class="text-sky-600 hover:underline">Quên mật khẩu?</a>
+        <a href="#" onclick="openAdminForgotPasswordModal(); return false;" class="text-sky-600 hover:underline">Quên mật khẩu?</a>
       </div>
 
       <!-- Nút đăng nhập -->
@@ -134,7 +134,7 @@ unset($_SESSION['errors'], $_SESSION['flash_error']);
 
   <?php if (!empty($_SESSION['flash_error'])): ?>
     <script>
-      document.addEventListener('DOMContentLoaded', function () {
+      document.addEventListener('DOMContentLoaded', function() {
         const box = document.getElementById('toast-container');
         if (!box) return;
         box.innerHTML = '';
@@ -173,7 +173,7 @@ unset($_SESSION['errors'], $_SESSION['flash_error']);
 
   <?php if (!empty($_SESSION['change_password_success'])): ?>
     <script>
-      document.addEventListener('DOMContentLoaded', function () {
+      document.addEventListener('DOMContentLoaded', function() {
         const box = document.getElementById('toast-container');
         if (!box) return;
         box.innerHTML = '';
@@ -247,7 +247,10 @@ unset($_SESSION['errors'], $_SESSION['flash_error']);
         if (!toastContainer) return;
 
         toastContainer.innerHTML = '';
-        if (toastTimer) { clearTimeout(toastTimer); toastTimer = null; }
+        if (toastTimer) {
+          clearTimeout(toastTimer);
+          toastTimer = null;
+        }
 
         const toast = document.createElement('div');
 
@@ -344,11 +347,16 @@ unset($_SESSION['errors'], $_SESSION['flash_error']);
         try {
           const res = await fetch('/admin/login', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...(csrf ? { 'X-CSRF-Token': csrf } : {}) },
+            headers: {
+              'Content-Type': 'application/json',
+              ...(csrf ? {
+                'X-CSRF-Token': csrf
+              } : {})
+            },
             credentials: 'same-origin',
             body: JSON.stringify({
               username: username.value.trim(),
-              password: pwdInput.value,                 // <— dùng pwdInput
+              password: pwdInput.value, // <— dùng pwdInput
               remember: (document.getElementById('remember')?.checked ? 1 : 0)
             })
           });
@@ -367,7 +375,7 @@ unset($_SESSION['errors'], $_SESSION['flash_error']);
               window.location.href = '/admin';
               return;
             }
-            
+
             // Xử lý IP blocked
             if (data.ip_blocked) {
               showToast(data.message || 'IP không được phép đăng nhập', 'error');
@@ -375,7 +383,7 @@ unset($_SESSION['errors'], $_SESSION['flash_error']);
               setTimeout(() => formCard.classList.remove('shake'), 400);
               return;
             }
-            
+
             // Nếu server trả về force_change_password thì chuyển hướng
             if (data.force_change_password && data.redirect) {
               window.location.href = data.redirect;
@@ -396,6 +404,8 @@ unset($_SESSION['errors'], $_SESSION['flash_error']);
       });
     })();
   </script>
+
+  <?php require __DIR__ . '/forgot_password_modals.php'; ?>
 
 </body>
 

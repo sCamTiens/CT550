@@ -72,8 +72,8 @@ $products = $products ?? [];
                     <template x-for="b in paginated()" :key="b.id">
                         <tr class="border-t hover:bg-blue-50 transition-colors duration-150"
                             :class="{
-                                'bg-red-50': isExpiredOrExpiringSoon(b.exp_date),
-                                'hover:bg-red-100': isExpiredOrExpiringSoon(b.exp_date)
+                                'bg-red-50': isExpiredOrExpiringSoon(b.exp_date, b.current_qty),
+                                'hover:bg-red-100': isExpiredOrExpiringSoon(b.exp_date, b.current_qty)
                             }">
                             <!-- <td class="py-2 px-4 text-center">
                                 <button @click="openEdit(b)"
@@ -119,8 +119,8 @@ $products = $products ?? [];
                                 :class="(b.exp_date || '—') === '—' ? 'text-center' : 'text-center'">
                                 <div x-show="b.exp_date" class="flex flex-col items-center">
                                     <span x-text="b.exp_date"></span>
-                                    <span x-show="isExpired(b.exp_date)" class="text-red-600 font-bold text-xs mt-1">Đã hết hạn</span>
-                                    <span x-show="!isExpired(b.exp_date) && isExpiringSoon(b.exp_date)" class="text-red-600 font-bold text-xs mt-1">Sắp hết hạn</span>
+                                    <span x-show="b.current_qty > 0 && isExpired(b.exp_date, b.current_qty)" class="text-red-600 font-bold text-xs mt-1">Đã hết hạn</span>
+                                    <span x-show="b.current_qty > 0 && !isExpired(b.exp_date, b.current_qty) && isExpiringSoon(b.exp_date, b.current_qty)" class="text-red-600 font-bold text-xs mt-1">Sắp hết hạn</span>
                                 </div>
                                 <span x-show="!b.exp_date">—</span>
                             </td>
@@ -275,27 +275,53 @@ $products = $products ?? [];
 
             // ===== FILTERS =====
             openFilter: {
-                product_name: false, batch_code: false, mfg_date: false,
-                exp_date: false, current_qty: false,
-                unit_cost: false, note: false,
-                created_at: false, created_by: false,
+                product_name: false,
+                batch_code: false,
+                mfg_date: false,
+                exp_date: false,
+                current_qty: false,
+                unit_cost: false,
+                note: false,
+                created_at: false,
+                created_by: false,
             },
 
             filters: {
-                product_name: '', batch_code: '',
-                mfg_date_type: '', mfg_date_value: '', mfg_date_from: '', mfg_date_to: '',
-                exp_date_type: '', exp_date_value: '', exp_date_from: '', exp_date_to: '',
-                current_qty_type: '', current_qty_value: '', current_qty_from: '', current_qty_to: '',
-                unit_cost_type: '', unit_cost_value: '', unit_cost_from: '', unit_cost_to: '',
+                product_name: '',
+                batch_code: '',
+                mfg_date_type: '',
+                mfg_date_value: '',
+                mfg_date_from: '',
+                mfg_date_to: '',
+                exp_date_type: '',
+                exp_date_value: '',
+                exp_date_from: '',
+                exp_date_to: '',
+                current_qty_type: '',
+                current_qty_value: '',
+                current_qty_from: '',
+                current_qty_to: '',
+                unit_cost_type: '',
+                unit_cost_value: '',
+                unit_cost_from: '',
+                unit_cost_to: '',
                 note: '',
-                created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
+                created_at_type: '',
+                created_at_value: '',
+                created_at_from: '',
+                created_at_to: '',
                 created_by: '',
             },
 
             // ------------------------------------------------------------------
             // Hàm lọc tổng quát — hỗ trợ TEXT, NUMBER, DATE
             // ------------------------------------------------------------------
-            applyFilter(val, type, { value, from, to, dataType }) {
+            applyFilter(val, type, {
+                value,
+                from,
+                to,
+                dataType
+            }) {
                 if (val == null) return false;
 
                 // -------- TEXT --------
@@ -314,14 +340,14 @@ $products = $products ?? [];
 
                     if (!query) return true;
 
-                    if (type === 'eq') return hasAccent(query)
-                        ? raw === query
-                        : str === queryNoAccent;
+                    if (type === 'eq') return hasAccent(query) ?
+                        raw === query :
+                        str === queryNoAccent;
 
                     if (type === 'contains' || type === 'like') {
-                        return hasAccent(query)
-                            ? raw.includes(query)
-                            : str.includes(queryNoAccent);
+                        return hasAccent(query) ?
+                            raw.includes(query) :
+                            str.includes(queryNoAccent);
                     }
 
                     return true;
@@ -446,20 +472,20 @@ $products = $products ?? [];
                     }
                 });
 
-                // --- Sắp xếp: Đưa lô hết hạn/sắp hết hạn lên đầu ---
+                // --- Sắp xếp: Đưa lô hết hạn/sắp hết hạn (CÓ TỒN KHO > 0) lên đầu ---
                 data.sort((a, b) => {
-                    const aExpiring = this.isExpiredOrExpiringSoon(a.exp_date);
-                    const bExpiring = this.isExpiredOrExpiringSoon(b.exp_date);
-                    
-                    // Ưu tiên: hết hạn/sắp hết hạn lên đầu
+                    const aExpiring = this.isExpiredOrExpiringSoon(a.exp_date, a.current_qty);
+                    const bExpiring = this.isExpiredOrExpiringSoon(b.exp_date, b.current_qty);
+
+                    // Ưu tiên: hết hạn/sắp hết hạn (có tồn kho) lên đầu
                     if (aExpiring && !bExpiring) return -1;
                     if (!aExpiring && bExpiring) return 1;
-                    
+
                     // Nếu cả 2 đều sắp hết hạn, sắp xếp theo ngày hết hạn (gần nhất lên đầu)
                     if (aExpiring && bExpiring && a.exp_date && b.exp_date) {
                         return new Date(a.exp_date) - new Date(b.exp_date);
                     }
-                    
+
                     return 0;
                 });
 
@@ -473,7 +499,9 @@ $products = $products ?? [];
                 for (const k in this.openFilter) this.openFilter[k] = false;
                 this.openFilter[key] = true;
             },
-            closeFilter(key) { this.openFilter[key] = false; },
+            closeFilter(key) {
+                this.openFilter[key] = false;
+            },
             resetFilter(key) {
                 // --- Date type ---
                 if (['created_at', 'mfg_date', 'exp_date'].includes(key)) {
@@ -525,9 +553,10 @@ $products = $products ?? [];
                 const thirtyDaysLater = new Date();
                 thirtyDaysLater.setDate(today.getDate() + 30);
                 thirtyDaysLater.setHours(0, 0, 0, 0);
-                
+
                 return this.filtered().filter(batch => {
-                    if (!batch.exp_date) return false;
+                    // CHỈ đếm lô CÓ TỒN KHO > 0
+                    if (!batch.exp_date || !batch.current_qty || batch.current_qty <= 0) return false;
                     const expDate = new Date(batch.exp_date);
                     expDate.setHours(0, 0, 0, 0);
                     // Đếm cả lô đã hết hạn (< today) và lô sắp hết hạn (<= 30 ngày)
@@ -536,8 +565,12 @@ $products = $products ?? [];
             },
 
             // ===== KIỂM TRA HẠN SỬ DỤNG =====
-            isExpired(expDate) {
+            // CHỈ cảnh báo khi lô CÓ TỒN KHO > 0
+            isExpired(expDate, currentQty = null) {
+                // Nếu không truyền currentQty, lấy từ context (dùng khi call từ x-show)
+                // Cần check currentQty > 0 để tránh cảnh báo lô đã hết hàng
                 if (!expDate) return false;
+
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 const exp = new Date(expDate);
@@ -545,8 +578,9 @@ $products = $products ?? [];
                 return exp < today;
             },
 
-            isExpiringSoon(expDate) {
+            isExpiringSoon(expDate, currentQty = null) {
                 if (!expDate) return false;
+
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 const thirtyDaysLater = new Date();
@@ -557,8 +591,13 @@ $products = $products ?? [];
                 return exp >= today && exp <= thirtyDaysLater;
             },
 
-            isExpiredOrExpiringSoon(expDate) {
-                return this.isExpired(expDate) || this.isExpiringSoon(expDate);
+            // CHỈ highlight/cảnh báo khi có tồn kho > 0
+            isExpiredOrExpiringSoon(expDate, currentQty = null) {
+                // Nếu tồn kho = 0, KHÔNG cảnh báo
+                if (currentQty !== null && (!currentQty || currentQty <= 0)) {
+                    return false;
+                }
+                return this.isExpired(expDate, currentQty) || this.isExpiringSoon(expDate, currentQty);
             },
 
             // --- lifecycle ---
@@ -576,8 +615,9 @@ $products = $products ?? [];
                         const data = await r.json();
                         this.items = data.items || [];
                     }
-                } catch (e) { console.error(e); }
-                finally {
+                } catch (e) {
+                    console.error(e);
+                } finally {
                     this.loading = false;
                 }
             },
@@ -589,12 +629,24 @@ $products = $products ?? [];
                         const data = await r.json();
                         this.products = data.items || [];
                     }
-                } catch (e) { console.error(e); }
+                } catch (e) {
+                    console.error(e);
+                }
             },
 
             // --- form control ---
             openCreate() {
-                this.form = { id: null, product_id: '', batch_code: '', mfg_date: '', exp_date: '', initial_qty: 0, current_qty: 0, note: '', unit_cost: 0 };
+                this.form = {
+                    id: null,
+                    product_id: '',
+                    batch_code: '',
+                    mfg_date: '',
+                    exp_date: '',
+                    initial_qty: 0,
+                    current_qty: 0,
+                    note: '',
+                    unit_cost: 0
+                };
                 this.touched = {};
                 this.errors = {};
                 this.openForm = true;
@@ -688,7 +740,9 @@ $products = $products ?? [];
                     const url = this.form.id ? api.update(this.form.id) : api.create;
                     const r = await fetch(url, {
                         method,
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
                         body: JSON.stringify(this.form)
                     });
                     if (!r.ok) throw new Error('Lỗi server');
@@ -711,7 +765,9 @@ $products = $products ?? [];
                     `Bạn có chắc chắn muốn xóa lô "${code}"?`,
                     async () => {
                         try {
-                            const r = await fetch(api.remove(id), { method: 'DELETE' });
+                            const r = await fetch(api.remove(id), {
+                                method: 'DELETE'
+                            });
                             if (!r.ok) throw new Error('Lỗi server');
                             await this.fetchAll();
                             this.showToast('Xóa thành công!', 'success');
@@ -790,10 +846,14 @@ $products = $products ?? [];
                 const filename = `Lo_san_pham_${dateStr}_${timeStr}.xlsx`;
 
                 fetch('/admin/api/product-batches/export', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ items: data })
-                })
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            items: data
+                        })
+                    })
                     .then(res => {
                         if (!res.ok) throw new Error('Export failed');
                         return res.blob();

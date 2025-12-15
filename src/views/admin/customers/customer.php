@@ -122,7 +122,7 @@ $items = $items ?? [];
                       d="M16 10V7a4 4 0 00-8 0v3M5 10h14a1 1 0 011 1v8a1 1 0 01-1 1H5a1 1 0 01-1-1v-8a1 1 0 011-1z" />
                   </svg>
                 </button>
-                <button @click="openAddressModal(c.id, c.full_name)"
+                <!-- <button @click="openAddressModal(c.id, c.full_name)"
                   class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
                   title="Xem địa chỉ">
                   <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
@@ -131,7 +131,7 @@ $items = $items ?? [];
                       d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                </button>
+                </button> -->
                 <button @click="remove(c.id)" class="p-2 rounded hover:bg-gray-100 text-[#002975]" title="Xóa">
                   <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor" stroke-width="2">
@@ -558,27 +558,27 @@ $items = $items ?? [];
             <table class="w-full border-collapse border">
               <thead>
                 <tr class="bg-gray-50 text-slate-600">
-                  <th class="py-2 px-4 border text-center">Sản phẩm</th>
-                  <th class="py-2 px-4 border text-center">Số lượng</th>
-                  <th class="py-2 px-4 border text-center">Đơn giá</th>
-                  <th class="py-2 px-4 border text-center">Thành tiền</th>
+                  <th class="py-2 px-4 border text-center break-words whitespace-pre-line">Sản phẩm</th>
+                  <th class="py-2 px-4 border text-center break-words whitespace-pre-line">Số lượng</th>
+                  <th class="py-2 px-4 border text-center break-words whitespace-pre-line">Đơn giá</th>
+                  <th class="py-2 px-4 border text-center break-words whitespace-pre-line">Thành tiền</th>
                 </tr>
               </thead>
               <tbody>
                 <template x-for="item in orderDetailItems" :key="item.id">
                   <tr class="border-t">
-                    <td class="py-2 px-4 border">
+                    <td class="py-2 px-4 border break-words whitespace-normal">
                       <div class="flex items-center gap-3">
-                        <img :src="item.product_image || '/assets/images/products/default.png'" :alt="item.product_name"
-                          class="w-12 h-12 object-cover rounded">
-                        <div>
-                          <div class="font-medium" x-text="item.product_name"></div>
+                        <img :src="getProductImageUrl(item.product_images && item.product_images.length > 0 ? item.product_images[0] : null)" :alt="item.product_name"
+                          class="w-12 h-12 object-cover rounded flex-shrink-0">
+                        <div class="flex-1 min-w-0">
+                          <div class="font-medium break-words" x-text="item.product_name"></div>
                         </div>
                       </div>
                     </td>
-                    <td class="py-2 px-4 border text-center" x-text="item.quantity"></td>
-                    <td class="py-2 px-4 border text-right" x-text="formatMoney(item.unit_price)"></td>
-                    <td class="py-2 px-4 border text-right font-semibold text-green-600"
+                    <td class="py-2 px-4 border text-center break-words whitespace-pre-line" x-text="item.quantity"></td>
+                    <td class="py-2 px-4 border text-right break-words whitespace-pre-line" x-text="formatMoney(item.unit_price)"></td>
+                    <td class="py-2 px-4 border text-right font-semibold text-green-600 break-words whitespace-pre-line"
                       x-text="formatMoney(item.total)">
                     </td>
                   </tr>
@@ -930,6 +930,15 @@ $items = $items ?? [];
         return '/assets/images/avatar/' + url; // Local path
       },
 
+      // Helper to get correct product image URL
+      getProductImageUrl(url) {
+        if (!url) return '/assets/images/products/default.png';
+        if (url.indexOf('http://') === 0 || url.indexOf('https://') === 0) {
+          return url; // Already absolute URL (ImgBB)
+        }
+        return '/assets/images/products/' + url; // Local path
+      },
+
       async openAddressModal(customerId, customerName) {
         this.addressCustomerName = customerName;
         this.addresses = [];
@@ -945,7 +954,7 @@ $items = $items ?? [];
           this.addresses = data.addresses || [];
         } catch (err) {
           console.error(err);
-          showToast('Lỗi khi tải địa chỉ: ' + err.message, 'error');
+          this.showToast('Lỗi khi tải địa chỉ: ' + err.message);
           this.addresses = [];
         } finally {
           this.loadingAddress = false;
@@ -989,6 +998,12 @@ $items = $items ?? [];
           }
           const data = await res.json();
           this.orderDetailItems = data.items || [];
+
+          // DEBUG: Log để xem cấu trúc product_images
+          if (this.orderDetailItems.length > 0) {
+            console.log('First item:', this.orderDetailItems[0]);
+            console.log('product_images:', this.orderDetailItems[0].product_images);
+          }
         } catch (err) {
           console.error(err);
           this.showToast('Lỗi khi tải chi tiết đơn hàng: ' + err.message);

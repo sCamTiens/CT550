@@ -48,6 +48,7 @@ use App\Controllers\Admin\AuditLogController as AdminAuditLog;
 use App\Controllers\Admin\NotificationController as AdminNotification;
 use App\Controllers\Admin\StockAlertController as AdminStockAlert;
 use App\Controllers\Admin\PaymentDueAlertController as AdminPaymentDueAlert;
+use App\Controllers\Admin\AdminForgotPasswordController;
 use App\Controllers\Admin\ExpiryAlertController as AdminExpiryAlert;
 use App\Controllers\Admin\ReportsController as AdminReports;
 use App\Controllers\Admin\ImportHistoryController as AdminImportHistory;
@@ -84,6 +85,12 @@ $router->get('/register', [CustomerAuth::class, 'registerPage']);
 $router->post('/api/customer/register', [CustomerAuth::class, 'register']);
 $router->get('/logout', [CustomerAuth::class, 'logout']);
 $router->post('/api/customer/debug-user', [CustomerAuth::class, 'debugUser']); // Debug endpoint
+
+// Forgot Password Routes
+$router->post('/api/customer/forgot-password', [CustomerAuth::class, 'forgotPassword']);
+$router->post('/api/customer/verify-otp', [CustomerAuth::class, 'verifyOTP']);
+$router->post('/api/customer/reset-password', [CustomerAuth::class, 'resetPassword']);
+
 $router->get('/api/debug-session', function () {
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
@@ -200,6 +207,9 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/login', [AdminController::class, 'showLogin']);
     $r->post('/login', [AdminController::class, 'login']);
     $r->post('/api/refresh-token', [AdminController::class, 'refreshToken']);
+    $r->post('/api/auth/forgot-password', [AdminForgotPasswordController::class, 'sendOTP']);
+    $r->post('/api/auth/verify-otp', [AdminForgotPasswordController::class, 'verifyOTP']);
+    $r->post('/api/auth/reset-password', [AdminForgotPasswordController::class, 'resetPassword']);
     $r->get('/logout', [AdminController::class, 'logout']);
 
 
@@ -214,6 +224,7 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/api/products', [AdminProduct::class, 'apiIndex']);
     $r->get('/api/products/all-including-inactive', [AdminProduct::class, 'apiAllProducts']);
     $r->get('/api/products/stock-list', [AdminProduct::class, 'apiStockList']);
+    $r->get('/api/products/{id}/images', [AdminProduct::class, 'getImages']);
     $r->post('/api/products/upload-images', [AdminProduct::class, 'uploadImages']);
     $r->get('/api/products/template', [AdminProduct::class, 'downloadTemplate']);
     $r->post('/api/products/import', [AdminProduct::class, 'importExcel']);
@@ -271,6 +282,12 @@ $router->group('/admin', function (Router $r): void {
     $r->get('/api/stocktakes', [AdminStocktake::class, 'apiIndex']);
     $r->post('/api/stocktakes/create', [AdminStocktake::class, 'apiCreate']);
     $r->get('/api/stocktakes/{id}', [AdminStocktake::class, 'apiDetail']);
+
+    // Stock Movements (Lịch sử thay đổi tồn kho)
+    $r->get('/stock-movements', [\App\Controllers\Admin\StockMovementController::class, 'index']);
+    $r->get('/api/stock-movements', [\App\Controllers\Admin\StockMovementController::class, 'apiIndex']);
+    $r->get('/api/stock-movements/{id}', [\App\Controllers\Admin\StockMovementController::class, 'show']);
+
 
     // Product Batches (Inventory lots)
     $r->get('/product-batches', [AdminProductBatch::class, 'index']);

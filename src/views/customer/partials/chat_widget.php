@@ -967,9 +967,9 @@
             })
             .then(res => res.json())
             .then(data => {
-                if (data.success && data.history) {
+                if (data.success && data.messages) {
                     // Filter out messages we've already displayed
-                    const newMessages = data.history.filter(msg => {
+                    const newMessages = data.messages.filter(msg => {
                         const msgId = msg.id || 0;
                         return msgId > lastMessageId && msg.sender_type !== 'customer';
                     });

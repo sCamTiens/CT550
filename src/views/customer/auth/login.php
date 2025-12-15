@@ -77,9 +77,9 @@
                     <input type="checkbox" class="rounded border-gray-300 text-[#002975] focus:ring-[#002975]">
                     <span class="ml-2 text-sm text-gray-600">Ghi nhớ đăng nhập</span>
                 </label>
-                <a href="/forgot-password" class="text-sm text-[#002975] hover:underline">
+                <button type="button" onclick="openForgotPasswordModal()" class="text-sm text-[#002975] hover:underline">
                     Quên mật khẩu?
-                </a>
+                </button>
             </div>
 
             <!-- Submit button -->
@@ -278,9 +278,6 @@
                 if (!value) {
                     showToast('Vui lòng nhập mật khẩu', 'error');
                     this.focus();
-                } else if (value.length < 6) {
-                    showToast('Mật khẩu phải có ít nhất 6 ký tự', 'error');
-                    this.focus();
                 }
             });
         });
@@ -333,7 +330,7 @@
                 });
 
                 const result = await response.json();
-                
+
                 if (result.success) {
                     showToast('Đăng nhập thành công! Đang chuyển hướng...', 'success');
                     setTimeout(() => {
@@ -351,6 +348,9 @@
             }
         });
     </script>
+
+    <!-- Forgot Password Modals -->
+    <?php require __DIR__ . '/forgot_password_modals.php'; ?>
 </body>
 
 </html>
