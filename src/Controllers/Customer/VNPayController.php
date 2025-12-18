@@ -203,11 +203,11 @@ class VNPayController extends Controller
                         code, user_id, order_type, status, subtotal, grand_total, 
                         payment_method, payment_status, shipping_address_id,
                         delivery_name, delivery_phone, delivery_address,
-                        shipping_province, shipping_district, shipping_ward,
+                        shipping_province, shipping_ward,
                         shipping_province_id, shipping_district_id, shipping_ward_code,
                         created_at, updated_at
                     )
-                    VALUES (?, ?, 'Online', 'Chờ xử lý', ?, ?, 'VNPay', 'Đã thanh toán', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+                    VALUES (?, ?, 'Online', 'Chờ xử lý', ?, ?, 'VNPay', 'Đã thanh toán', ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
                 ");
                 $stmt->execute([
                     $orderCode,
@@ -219,7 +219,6 @@ class VNPayController extends Controller
                     $address['phone_number'] ?? $address['receiver_phone'] ?? '',
                     $address['address_line'] ?? $address['line1'] ?? '',
                     $address['province'] ?? $address['province_name'] ?? '',
-                    $address['district'] ?? $address['district_name'] ?? '',
                     $address['ward'] ?? $address['ward_name'] ?? '',
                     $address['province_code'] ?? null,
                     $districtId,

@@ -76,7 +76,7 @@ class DashboardController extends BaseAdminController
                    COALESCE(SUM(oi.qty * oi.unit_price), 0) as total_revenue
             FROM products p
             LEFT JOIN order_items oi ON oi.product_id = p.id
-            LEFT JOIN orders o ON o.id = oi.order_id AND o.status = 'Hoàn tất'
+            LEFT JOIN orders o ON o.id = oi.order_id AND o.status = 'Đã giao'
             GROUP BY p.id, p.name
             HAVING total_sold > 0
             ORDER BY total_sold DESC
@@ -107,7 +107,7 @@ class DashboardController extends BaseAdminController
             FROM categories c
             LEFT JOIN products p ON p.category_id = c.id
             LEFT JOIN order_items oi ON oi.product_id = p.id
-            LEFT JOIN orders o ON o.id = oi.order_id AND o.status = 'Hoàn tất'
+            LEFT JOIN orders o ON o.id = oi.order_id AND o.status = 'Đã giao'
             GROUP BY c.id, c.name
             HAVING revenue > 0
             ORDER BY revenue DESC
@@ -118,7 +118,7 @@ class DashboardController extends BaseAdminController
         // 10. Trạng thái đơn hàng
         $stmt = $pdo->query("
             SELECT 
-                SUM(CASE WHEN status = 'Hoàn tất' THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN status = 'Đã giao' THEN 1 ELSE 0 END) as completed,
                 SUM(CASE WHEN status = 'Chờ xử lý' THEN 1 ELSE 0 END) as pending,
                 SUM(CASE WHEN status = 'Đã hủy' THEN 1 ELSE 0 END) as cancelled
             FROM orders

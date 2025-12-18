@@ -115,11 +115,11 @@ unset($_SESSION['errors'], $_SESSION['flash_error']);
           <input id="remember" name="remember" type="checkbox" class="rounded border-gray-300">
           <span>Ghi nhớ đăng nhập</span>
         </label>
-        <a href="#" onclick="openAdminForgotPasswordModal(); return false;" class="text-sky-600 hover:underline">Quên mật khẩu?</a>
+        <a href="#" onclick="openAdminForgotPasswordModal(); return false;" class="text-[#002795] hover:underline font-bold">Quên mật khẩu?</a>
       </div>
 
       <!-- Nút đăng nhập -->
-      <button id="login-btn" class="w-full bg-sky-500 hover:bg-sky-600 text-white rounded-lg px-4 py-2 font-medium">
+      <button id="login-btn" class="w-full hover:bg-[#002975] border-[#002795] border border-solid text-[#002795] hover:text-white rounded-lg px-4 py-2 font-medium">
         Đăng nhập
       </button>
     </form>
@@ -243,63 +243,30 @@ unset($_SESSION['errors'], $_SESSION['flash_error']);
       let toastTimer = null;
 
       function showToast(msg, type = 'error') {
-        const toastContainer = document.getElementById('toast-container');
-        if (!toastContainer) return;
-
-        toastContainer.innerHTML = '';
-        if (toastTimer) {
-          clearTimeout(toastTimer);
-          toastTimer = null;
-        }
+        const box = document.getElementById('toast-container');
+        if (!box) return;
+        box.innerHTML = '';
 
         const toast = document.createElement('div');
-
-        // Mặc định màu và icon
-        let colorClasses = '';
-        let iconColor = '';
-        let iconSvg = '';
-
-        switch (type) {
-          case 'success':
-            colorClasses = 'text-green-700 border-green-400';
-            iconColor = 'text-green-600';
-            iconSvg = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />`;
-            break;
-          case 'warning':
-            colorClasses = 'text-yellow-700 border-yellow-400';
-            iconColor = 'text-yellow-500';
-            iconSvg = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`;
-            break;
-          case 'info':
-            colorClasses = 'text-blue-700 border-blue-400';
-            iconColor = 'text-blue-600';
-            iconSvg = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`;
-            break;
-          default: // error
-            colorClasses = 'text-red-700 border-red-400';
-            iconColor = 'text-red-600';
-            iconSvg = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`;
-        }
-
-        toast.className = `fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 mb-4 text-base font-semibold ${colorClasses} bg-white rounded-xl shadow-lg border-2 animate-slide-in`;
+        toast.className =
+          `fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 mb-4 text-base font-semibold
+          ${type === 'success'
+            ? 'text-green-700 border-green-400'
+            : 'text-red-700 border-red-400'}
+          bg-white rounded-xl shadow-lg border-2`;
 
         toast.innerHTML = `
-          <svg class="flex-shrink-0 w-6 h-6 ${iconColor} mr-3"
-            xmlns="http://www.w3.org/2000/svg" fill="none"
-            viewBox="0 0 24 24" stroke="currentColor">
-            ${iconSvg}
+          <svg class="flex-shrink-0 w-6 h-6 ${type === 'success' ? 'text-green-600' : 'text-red-600'} mr-3"
+            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            ${type === 'success'
+            ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />`
+            : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`}
           </svg>
           <div class="flex-1">${msg}</div>
         `;
 
-        toastContainer.appendChild(toast);
-
-        toastTimer = setTimeout(() => {
-          toast.style.opacity = '0';
-          toast.style.transform = 'translateX(100%)';
-          toast.style.transition = 'all 0.3s ease';
-          setTimeout(() => toast.remove(), 300);
-        }, 4000);
+        box.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
       }
 
       function validateInput(input, errorEl, message) {

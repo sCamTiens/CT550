@@ -599,7 +599,7 @@ CREATE TABLE receipt_vouchers (
   bank_time DATETIME NULL,
   method ENUM(
     'Tiền mặt','Chuyển khoản','Quẹt thẻ',
-    'PayPal','Thanh toán khi nhận hàng (COD)'
+    'VNPay','ZaloPay','Thanh toán khi nhận hàng (COD)'
   ) NOT NULL,
   amount DECIMAL(12,2) NOT NULL CHECK (amount >= 0),
   received_by BIGINT NULL,
@@ -680,26 +680,6 @@ CREATE TABLE supplier_bank_accounts (
   CONSTRAINT fk_sba_created_by FOREIGN KEY(created_by) REFERENCES users(id),
   CONSTRAINT fk_sba_updated_by FOREIGN KEY(updated_by) REFERENCES users(id),
   INDEX idx_sba_supplier (supplier_id)
-) ENGINE=InnoDB;
-
--- Liên kết Nhà cung cấp - Sản phẩm
-CREATE TABLE supplier_products (
-  supplier_id BIGINT NOT NULL,
-  product_id BIGINT NOT NULL,
-  supplier_sku VARCHAR(64) NULL,
-  default_cost DECIMAL(12,2) NULL,
-  moq INT NOT NULL DEFAULT 1,
-  lead_time_days INT NOT NULL DEFAULT 0,
-  preference_score INT NOT NULL DEFAULT 100,
-  is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  created_by BIGINT NULL,
-  CONSTRAINT fk_supplier_products_created_by FOREIGN KEY(created_by) REFERENCES users(id),
-  PRIMARY KEY (supplier_id, product_id),
-  CONSTRAINT fk_supplier_products_supplier FOREIGN KEY(supplier_id) REFERENCES suppliers(id) ON DELETE CASCADE,
-  CONSTRAINT fk_supplier_products_product FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE,
-  INDEX idx_sp_prod_pref (product_id, preference_score),
-  INDEX idx_sp_supplier (supplier_id)
 ) ENGINE=InnoDB;
 
 -- Phiếu nhập kho
@@ -970,17 +950,6 @@ CREATE TABLE events (
   KEY (user_id), KEY (session_id), KEY (product_id), KEY (ts),
   CONSTRAINT fk_evt_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL,
   CONSTRAINT fk_evt_prod FOREIGN KEY(product_id) REFERENCES products(id)
-) ENGINE=InnoDB;
-
--- Gợi ý
-CREATE TABLE recommendations (
-  user_id BIGINT NOT NULL,
-  product_id BIGINT NOT NULL,
-  score DOUBLE NOT NULL,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (user_id, product_id),
-  CONSTRAINT fk_rec_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-  CONSTRAINT fk_rec_prod FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- Sản phẩm tương tự
@@ -1542,16 +1511,3 @@ COMMENT = 'Lịch sử tìm kiếm của người dùng để cải thiện gợ
 -- Create index for better performance on recommendation queries
 CREATE INDEX idx_sh_recommendation 
 ON search_history (user_id, results_count, created_at);
-
--- Bảng lưu mã OTP cho reset password
-CREATE TABLE IF NOT EXISTS password_resets (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    email VARCHAR(250) NOT NULL,
-    otp_code VARCHAR(6) NOT NULL,
-    expires_at DATETIME NOT NULL,
-    is_used BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_email (email),
-    INDEX idx_otp_code (otp_code),
-    INDEX idx_expires_at (expires_at)
-) ENGINE=InnoDB COMMENT='Lưu mã OTP để reset mật khẩu';

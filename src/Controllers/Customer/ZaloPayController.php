@@ -131,23 +131,46 @@ class ZaloPayController extends Controller
      */
     public function callback(Request $req): mixed
     {
+        // Log raw callback data
+        $rawInput = file_get_contents('php://input');
+        error_log('=== ZALOPAY CALLBACK RECEIVED ===');
+        error_log('Raw input: ' . $rawInput);
+        error_log('GET params: ' . json_encode($_GET));
+        error_log('POST params: ' . json_encode($_POST));
+
         try {
             $result = [];
             $key2 = getenv('ZALOPAY_KEY2');
 
-            $postData = file_get_contents('php://input');
+            $postData = $rawInput;
             $postDataArr = json_decode($postData, true);
 
+            error_log('Decoded data: ' . json_encode($postDataArr));
+
+            if (!$postDataArr || !isset($postDataArr['data']) || !isset($postDataArr['mac'])) {
+                error_log('ERROR: Invalid callback data structure');
+                $result['return_code'] = -1;
+                $result['return_message'] = 'Invalid data structure';
+                echo json_encode($result);
+                exit;
+            }
+
             $mac = hash_hmac('sha256', $postDataArr['data'], $key2);
+            error_log('Calculated MAC: ' . $mac);
+            error_log('Received MAC: ' . $postDataArr['mac']);
 
             if (strcmp($mac, $postDataArr['mac']) != 0) {
+                error_log('ERROR: MAC verification failed');
                 $result['return_code'] = -1;
                 $result['return_message'] = 'mac not equal';
             } else {
+                error_log('MAC verified successfully');
                 $dataJson = json_decode($postDataArr['data'], true);
+                error_log('Payment data: ' . json_encode($dataJson));
 
                 // Payment successful
                 $appTransID = $dataJson['app_trans_id'];
+                error_log('Processing payment for app_trans_id: ' . $appTransID);
 
                 // Get pending order
                 $pdo = \App\Core\DB::pdo();
@@ -156,14 +179,17 @@ class ZaloPayController extends Controller
                 $pendingOrder = $stmt->fetch(\PDO::FETCH_ASSOC);
 
                 if (!$pendingOrder) {
+                    error_log('ERROR: Pending order not found for txn_ref: ' . $appTransID);
                     $result['return_code'] = 0;
                     $result['return_message'] = 'Order not found';
                     echo json_encode($result);
                     exit;
                 }
 
+                error_log('Pending order found: ' . json_encode($pendingOrder));
                 $orderData = json_decode($pendingOrder['order_data'], true);
                 $customerId = $orderData['customer_id'];
+                error_log('Customer ID: ' . $customerId);
 
                 // Create order
                 $pdo->beginTransaction();
@@ -187,11 +213,11 @@ class ZaloPayController extends Controller
                             code, user_id, order_type, status, subtotal, grand_total,
                             payment_method, payment_status, shipping_address_id,
                             delivery_name, delivery_phone, delivery_address,
-                            shipping_province, shipping_district, shipping_ward,
+                            shipping_province, shipping_ward,
                             shipping_province_id, shipping_district_id, shipping_ward_code,
                             created_at, updated_at
                         )
-                        VALUES (?, ?, 'Online', 'Chờ xử lý', ?, ?, 'ZaloPay', 'Đã thanh toán', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+                        VALUES (?, ?, 'Online', 'Chờ xử lý', ?, ?, 'ZaloPay', 'Đã thanh toán', ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
                     ");
                     $stmt->execute([
                         $orderCode,
@@ -203,7 +229,6 @@ class ZaloPayController extends Controller
                         $address['phone_number'] ?? '',
                         $address['address_line'] ?? '',
                         $address['province'] ?? '',
-                        $address['district'] ?? '',
                         $address['ward'] ?? '',
                         $address['province_code'] ?? null,
                         $districtId,
@@ -312,17 +337,33 @@ class ZaloPayController extends Controller
             try {
                 $pdo = \App\Core\DB::pdo();
 
-                // Try to get payment and order info from database
-                $stmt = $pdo->prepare("
-                    SELECT p.*, o.id as order_id, o.code as order_code, o.user_id
-                    FROM payments p
-                    INNER JOIN orders o ON o.payment_id = p.id
-                    WHERE p.txn_ref = ? AND p.method = 'ZaloPay'
-                    ORDER BY p.id DESC
-                    LIMIT 1
-                ");
-                $stmt->execute([$appTransId]);
-                $payment = $stmt->fetch(\PDO::FETCH_ASSOC);
+                // Retry logic: Chờ callback chạy xong (tối đa 10 lần, mỗi lần 1 giây)
+                $maxRetries = 10;
+                $payment = null;
+
+                for ($i = 0; $i < $maxRetries; $i++) {
+                    // Try to get payment and order info from database
+                    $stmt = $pdo->prepare("
+                        SELECT p.*, o.id as order_id, o.code as order_code, o.user_id
+                        FROM payments p
+                        INNER JOIN orders o ON o.payment_id = p.id
+                        WHERE p.txn_ref = ? AND p.method = 'ZaloPay'
+                        ORDER BY p.id DESC
+                        LIMIT 1
+                    ");
+                    $stmt->execute([$appTransId]);
+                    $payment = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+                    if ($payment) {
+                        // Payment found!
+                        break;
+                    }
+
+                    // Chờ 1 giây trước khi retry
+                    if ($i < $maxRetries - 1) {
+                        sleep(1);
+                    }
+                }
 
                 if ($payment) {
                     // Payment processed successfully via callback
@@ -378,22 +419,190 @@ class ZaloPayController extends Controller
                     ]);
                 }
 
-                // FALLBACK: Callback chưa chạy (localhost) - Lấy từ pending_orders
+                // FALLBACK: Callback vẫn chưa chạy sau 10 giây - Tạo order thủ công (cho localhost)
                 $stmt = $pdo->prepare("SELECT * FROM pending_orders WHERE txn_ref = ?");
                 $stmt->execute([$appTransId]);
                 $pending = $stmt->fetch(\PDO::FETCH_ASSOC);
 
                 if ($pending) {
-                    $orderData = json_decode($pending['order_data'], true);
-                    return $this->view('customer/payment/zalopay_success', [
-                        'order_id' => null,
-                        'order_code' => 'Đang xử lý',
-                        'amount' => $orderData['subtotal'] ?? 0,
-                        'transaction_no' => $appTransId,
-                        'app_trans_id' => $appTransId,
-                        'is_pending' => true,
-                        'pending_message' => 'Thanh toán thành công! Đơn hàng đang được xử lý. Bạn sẽ nhận được xác nhận qua email sớm.'
-                    ]);
+                    // Tạo order ngay (vì callback không được gọi trên localhost)
+                    try {
+                        $pdo->beginTransaction();
+
+                        $orderData = json_decode($pending['order_data'], true);
+                        $customerId = $orderData['customer_id'];
+
+                        // Generate order code
+                        $orderCode = 'ORD' . date('YmdHis') . rand(100, 999);
+
+                        // Fetch shipping address
+                        $addressRepo = new \App\Models\Customer\Repositories\AddressRepository();
+                        $address = $addressRepo->getAddressById($orderData['address_id'], $customerId);
+
+                        if (!$address) {
+                            throw new \Exception('Địa chỉ giao hàng không hợp lệ');
+                        }
+
+                        $districtId = $address['district_id'] ?? null;
+
+                        // Insert order
+                        $stmt = $pdo->prepare("
+                            INSERT INTO orders (
+                                code, user_id, order_type, status, subtotal, grand_total,
+                                payment_method, payment_status, shipping_address_id,
+                                delivery_name, delivery_phone, delivery_address,
+                                shipping_province, shipping_ward,
+                                shipping_province_id, shipping_district_id, shipping_ward_code,
+                                created_at, updated_at
+                            )
+                            VALUES (?, ?, 'Online', 'Chờ xử lý', ?, ?, 'ZaloPay', 'Đã thanh toán', ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+                        ");
+                        $stmt->execute([
+                            $orderCode,
+                            $customerId,
+                            $orderData['subtotal'],
+                            $orderData['subtotal'],
+                            $orderData['address_id'],
+                            $address['recipient_name'] ?? '',
+                            $address['phone_number'] ?? '',
+                            $address['address_line'] ?? '',
+                            $address['province'] ?? '',
+                            $address['ward'] ?? '',
+                            $address['province_code'] ?? null,
+                            $districtId,
+                            $address['commune_code'] ?? ''
+                        ]);
+
+                        $orderId = $pdo->lastInsertId();
+
+                        // Insert order items
+                        $stmtItem = $pdo->prepare("
+                            INSERT INTO order_items (order_id, product_id, qty, unit_price, line_total)
+                            VALUES (?, ?, ?, ?, ?)
+                        ");
+
+                        foreach ($orderData['cart_items'] as $item) {
+                            $stmtItem->execute([
+                                $orderId,
+                                $item['id'],
+                                $item['quantity'],
+                                $item['price'],
+                                $item['subtotal']
+                            ]);
+
+                            // Trừ kho
+                            $stmtStock = $pdo->prepare("
+                                UPDATE stocks 
+                                SET qty = qty - ?, updated_at = NOW() 
+                                WHERE product_id = ?
+                            ");
+                            $stmtStock->execute([$item['quantity'], $item['id']]);
+                        }
+
+                        // Tạo payment record
+                        $paymentMeta = json_encode([
+                            'app_trans_id' => $appTransId,
+                            'fallback_creation' => true,
+                            'created_at' => date('Y-m-d H:i:s')
+                        ]);
+
+                        $stmtPayment = $pdo->prepare("
+                            INSERT INTO payments (amount, method, txn_ref, paid_at, meta, created_at)
+                            VALUES (?, 'ZaloPay', ?, NOW(), ?, NOW())
+                        ");
+                        $stmtPayment->execute([
+                            $orderData['subtotal'],
+                            $appTransId,
+                            $paymentMeta
+                        ]);
+
+                        $paymentId = $pdo->lastInsertId();
+
+                        // Update order với payment_id
+                        $stmtUpdateOrder = $pdo->prepare("
+                            UPDATE orders SET payment_id = ? WHERE id = ?
+                        ");
+                        $stmtUpdateOrder->execute([$paymentId, $orderId]);
+
+                        // Clear cart
+                        $cartRepo = new \App\Models\Customer\Repositories\CartRepository();
+                        if (!empty($orderData['selected_item_ids'])) {
+                            foreach ($orderData['selected_item_ids'] as $productId) {
+                                $cartRepo->removeItemDB($customerId, $productId);
+                            }
+                        } else {
+                            $cartRepo->clearCartDB($customerId);
+                        }
+
+                        // Delete pending order
+                        $stmt = $pdo->prepare("DELETE FROM pending_orders WHERE txn_ref = ?");
+                        $stmt->execute([$appTransId]);
+
+                        $pdo->commit();
+
+                        // Restore user session
+                        $stmt = $pdo->prepare("
+                            SELECT u.* 
+                            FROM users u
+                            INNER JOIN roles r ON u.role_id = r.id
+                            WHERE u.id = ? AND r.name = 'Khách hàng'
+                        ");
+                        $stmt->execute([$customerId]);
+                        $customer = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+                        if ($customer) {
+                            $accessToken = JWTHelper::generateToken([
+                                'id' => $customer['id'],
+                                'username' => $customer['username'],
+                                'email' => $customer['email'],
+                                'role' => 'customer'
+                            ]);
+                            $refreshToken = JWTHelper::generateRefreshToken([
+                                'id' => $customer['id'],
+                                'username' => $customer['username'],
+                                'email' => $customer['email'],
+                                'role' => 'customer'
+                            ]);
+
+                            $_SESSION['customer'] = [
+                                'id' => $customer['id'],
+                                'username' => $customer['username'],
+                                'full_name' => $customer['full_name'],
+                                'email' => $customer['email'],
+                                'phone' => $customer['phone'],
+                                'gender' => $customer['gender'],
+                                'date_of_birth' => $customer['date_of_birth'],
+                                'avatar_url' => $customer['avatar_url'],
+                                'loyalty_points' => $customer['loyalty_points'],
+                                'access_token' => $accessToken,
+                                'refresh_token' => $refreshToken
+                            ];
+                        }
+
+                        // Hiển thị success với order code thực
+                        return $this->view('customer/payment/zalopay_success', [
+                            'order_id' => $orderId,
+                            'order_code' => $orderCode,
+                            'amount' => $orderData['subtotal'],
+                            'transaction_no' => $appTransId,
+                            'app_trans_id' => $appTransId,
+                            'fallback_message' => 'Đơn hàng đã được tạo thành công!'
+                        ]);
+                    } catch (\Exception $e) {
+                        $pdo->rollBack();
+                        error_log('ZaloPay fallback order creation failed: ' . $e->getMessage());
+
+                        // Vẫn hiển thị pending message nếu tạo order thất bại
+                        return $this->view('customer/payment/zalopay_success', [
+                            'order_id' => null,
+                            'order_code' => 'Đang xử lý',
+                            'amount' => $orderData['subtotal'] ?? 0,
+                            'transaction_no' => $appTransId,
+                            'app_trans_id' => $appTransId,
+                            'is_pending' => true,
+                            'pending_message' => 'Thanh toán thành công! Đơn hàng đang được xử lý. Vui lòng kiểm tra email để nhận mã đơn hàng.'
+                        ]);
+                    }
                 }
             } catch (\Exception $e) {
                 error_log('ZaloPay return error: ' . $e->getMessage());

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models\Repositories;
 
 use App\Core\DB;
@@ -105,7 +106,66 @@ class ExpenseVoucherRepository
             error_log("Original bank_time: " . ($data['bank_time'] ?? 'NULL'));
             error_log("Converted bank_time: " . ($bankTime ?? 'NULL'));
 
-            // 2. Tạo phiếu chi
+            // 2. Validate foreign keys BEFORE INSERT
+            // Check created_by exists
+            if ($currentUser) {
+                $checkUser = $pdo->prepare("SELECT id FROM users WHERE id = ?");
+                $checkUser->execute([$currentUser]);
+                if (!$checkUser->fetch()) {
+                    throw new \Exception("User ID #{$currentUser} không tồn tại. Vui lòng đăng nhập lại.");
+                }
+            } else {
+                throw new \Exception("Không xác định được người tạo phiếu. Vui lòng đăng nhập lại.");
+            }
+
+            // Check paid_by exists (if provided)
+            if (!empty($data['paid_by'])) {
+                $checkPaidBy = $pdo->prepare("SELECT id FROM users WHERE id = ?");
+                $checkPaidBy->execute([$data['paid_by']]);
+                if (!$checkPaidBy->fetch()) {
+                    throw new \Exception("Người chi tiền ID #{$data['paid_by']} không tồn tại.");
+                }
+            }
+
+            // Check supplier_id exists (if provided)
+            if (!empty($data['supplier_id'])) {
+                $checkSupplier = $pdo->prepare("SELECT id FROM suppliers WHERE id = ?");
+                $checkSupplier->execute([$data['supplier_id']]);
+                if (!$checkSupplier->fetch()) {
+                    throw new \Exception("Nhà cung cấp ID #{$data['supplier_id']} không tồn tại.");
+                }
+            }
+
+            // Check purchase_order_id exists (if provided)
+            if (!empty($data['purchase_order_id'])) {
+                $checkPO = $pdo->prepare("SELECT id FROM purchase_orders WHERE id = ?");
+                $checkPO->execute([$data['purchase_order_id']]);
+                if (!$checkPO->fetch()) {
+                    throw new \Exception("Phiếu nhập kho ID #{$data['purchase_order_id']} không tồn tại.");
+                }
+            }
+
+            // Check staff_user_id exists (if provided)
+            if (!empty($data['staff_user_id'])) {
+                $checkStaff = $pdo->prepare("SELECT id FROM users WHERE id = ?");
+                $checkStaff->execute([$data['staff_user_id']]);
+                if (!$checkStaff->fetch()) {
+                    throw new \Exception("Nhân viên ID #{$data['staff_user_id']} không tồn tại.");
+                }
+            }
+
+            // Check payroll_id exists (if provided)
+            if (!empty($data['payroll_id'])) {
+                $checkPayroll = $pdo->prepare("SELECT id FROM payrolls WHERE id = ?");
+                $checkPayroll->execute([$data['payroll_id']]);
+                if (!$checkPayroll->fetch()) {
+                    throw new \Exception("Bảng lương ID #{$data['payroll_id']} không tồn tại.");
+                }
+            }
+
+            error_log("All foreign key validations passed");
+
+            // 3. Tạo phiếu chi
             $stmt = $pdo->prepare("
                 INSERT INTO expense_vouchers
                 (code, type, purchase_order_id, supplier_id, payroll_id, staff_user_id, method, txn_ref, amount, paid_by, paid_at, bank_time, note, created_by, created_at)
@@ -115,14 +175,14 @@ class ExpenseVoucherRepository
             $stmt->execute([
                 ':code' => $data['code'] ?? null,
                 ':type' => $data['type'] ?? 'Nhà cung cấp',
-                ':purchase_order_id' => $data['purchase_order_id'] ?? null,
-                ':supplier_id' => $data['supplier_id'] ?? null,
-                ':payroll_id' => $data['payroll_id'] ?? null,
-                ':staff_user_id' => $data['staff_user_id'] ?? null,
+                ':purchase_order_id' => !empty($data['purchase_order_id']) ? $data['purchase_order_id'] : null,
+                ':supplier_id' => !empty($data['supplier_id']) ? $data['supplier_id'] : null,
+                ':payroll_id' => !empty($data['payroll_id']) ? $data['payroll_id'] : null,
+                ':staff_user_id' => !empty($data['staff_user_id']) ? $data['staff_user_id'] : null,
                 ':method' => $data['method'] ?? null,
                 ':txn_ref' => $data['txn_ref'] ?? null,
                 ':amount' => $data['amount'] ?? 0,
-                ':paid_by' => $data['paid_by'] ?? null,
+                ':paid_by' => !empty($data['paid_by']) ? $data['paid_by'] : null,
                 ':paid_at' => $paidAt,
                 ':bank_time' => $bankTime,
                 ':note' => $data['note'] ?? null,
@@ -206,7 +266,6 @@ class ExpenseVoucherRepository
             $pdo->commit();
             error_log("Transaction committed successfully. Expense ID: " . $expenseId);
             return $expenseId;
-
         } catch (\Exception $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
@@ -247,7 +306,7 @@ class ExpenseVoucherRepository
                 $poStmt = $pdo->prepare("SELECT payment_status FROM purchase_orders WHERE id = ?");
                 $poStmt->execute([$purchaseOrderId]);
                 $po = $poStmt->fetch(\PDO::FETCH_ASSOC);
-                
+
                 if ($po && $po['payment_status'] === '2') {
                     throw new \Exception("Không thể xóa phiếu chi vì phiếu nhập kho đã thanh toán hết");
                 }
@@ -297,7 +356,6 @@ class ExpenseVoucherRepository
             }
 
             $pdo->commit();
-
         } catch (\Exception $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();

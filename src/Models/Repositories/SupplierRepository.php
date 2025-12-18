@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models\Repositories;
 
 use App\Core\DB;
@@ -9,11 +10,13 @@ class SupplierRepository
 {
     use Auditable;
 
-    // Kiểm tra có thể xóa không: nếu còn sản phẩm liên kết qua supplier_products thì không cho xóa
+    // Kiểm tra có thể xóa không: nếu còn đơn hàng nhập liên kết thì không cho xóa
     public function canDelete($id): bool
     {
         $pdo = DB::pdo();
-        $st = $pdo->prepare("SELECT COUNT(*) FROM supplier_products WHERE supplier_id = ?");
+
+        // Check if supplier has any purchase orders
+        $st = $pdo->prepare("SELECT COUNT(*) FROM purchase_orders WHERE supplier_id = ?");
         $st->execute([$id]);
         return $st->fetchColumn() == 0;
     }
@@ -56,7 +59,7 @@ class SupplierRepository
             $currentUser
         ]);
         $id = $pdo->lastInsertId();
-        
+
         // Log audit
         $this->logCreate('suppliers', (int)$id, [
             'name' => $data['name'],
@@ -64,7 +67,7 @@ class SupplierRepository
             'email' => $data['email'] ?? null,
             'address' => $data['address'] ?? null
         ]);
-        
+
         return $id;
     }
 
@@ -81,7 +84,7 @@ class SupplierRepository
                 'address' => $beforeSupplier->address
             ];
         }
-        
+
         $pdo = DB::pdo();
         $stmt = $pdo->prepare("UPDATE suppliers SET name=?, phone=?, email=?, address=?, updated_at=NOW(), updated_by=? WHERE id=?");
         $stmt->execute([
@@ -92,7 +95,7 @@ class SupplierRepository
             $currentUser,
             $id
         ]);
-        
+
         // Log audit
         if ($beforeArray) {
             $afterArray = [
@@ -108,9 +111,9 @@ class SupplierRepository
     public function delete($id)
     {
         if (!$this->canDelete($id)) {
-            throw new \RuntimeException('Không thể xoá: nhà cung cấp này đang được sử dụng bởi sản phẩm.');
+            throw new \RuntimeException('Không thể xóa: nhà cung cấp này đang có đơn hàng nhập.');
         }
-        
+
         // Get before data
         $beforeSupplier = $this->findOne($id);
         $beforeArray = null;
@@ -122,10 +125,10 @@ class SupplierRepository
                 'address' => $beforeSupplier->address
             ];
         }
-        
+
         $pdo = DB::pdo();
         $pdo->prepare("DELETE FROM suppliers WHERE id=?")->execute([$id]);
-        
+
         // Log audit
         if ($beforeArray) {
             $this->logDelete('suppliers', (int)$id, $beforeArray);

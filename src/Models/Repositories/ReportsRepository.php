@@ -29,7 +29,7 @@ class ReportsRepository
 
     public function getTotalRevenue($fromDate, $toDate)
     {
-        $sql = "SELECT SUM(grand_total) as total FROM orders WHERE status = 'Hoàn tất'";
+        $sql = "SELECT SUM(grand_total) as total FROM orders WHERE status = 'Đã giao'";
         if ($fromDate) $sql .= " AND DATE(created_at) >= '$fromDate'";
         if ($toDate) $sql .= " AND DATE(created_at) <= '$toDate'";
 
@@ -40,7 +40,7 @@ class ReportsRepository
 
     public function getTotalOrders($fromDate, $toDate)
     {
-        $sql = "SELECT COUNT(*) as count FROM orders WHERE status = 'Hoàn tất'";
+        $sql = "SELECT COUNT(*) as count FROM orders WHERE status = 'Đã giao'";
         if ($fromDate) $sql .= " AND DATE(created_at) >= '$fromDate'";
         if ($toDate) $sql .= " AND DATE(created_at) <= '$toDate'";
 
@@ -76,7 +76,7 @@ class ReportsRepository
         $sql = "SELECT SUM(oi.qty) as total 
                 FROM order_items oi
                 JOIN orders o ON oi.order_id = o.id
-                WHERE o.status = 'Hoàn tất'";
+                WHERE o.status = 'Đã giao'";
         if ($fromDate) $sql .= " AND DATE(o.created_at) >= '$fromDate'";
         if ($toDate) $sql .= " AND DATE(o.created_at) <= '$toDate'";
 
@@ -98,7 +98,7 @@ class ReportsRepository
                 FROM orders o
                 JOIN users u ON o.created_by = u.id
                 LEFT JOIN staff_profiles sp ON u.id = sp.user_id
-                WHERE o.status = 'Hoàn tất'";
+                WHERE o.status = 'Đã giao'";
 
         if ($fromDate) $sql .= " AND DATE(o.created_at) >= '$fromDate'";
         if ($toDate) $sql .= " AND DATE(o.created_at) <= '$toDate'";
@@ -122,7 +122,7 @@ class ReportsRepository
                 FROM orders o
                 JOIN users u ON o.created_by = u.id
                 LEFT JOIN staff_profiles sp ON u.id = sp.user_id
-                WHERE o.status = 'Hoàn tất'";
+                WHERE o.status = 'Đã giao'";
 
         if ($fromDate) $sql .= " AND DATE(o.created_at) >= '$fromDate'";
         if ($toDate) $sql .= " AND DATE(o.created_at) <= '$toDate'";
@@ -165,7 +165,7 @@ class ReportsRepository
                 LEFT JOIN order_items oi ON o.id = oi.order_id
                 LEFT JOIN products p ON oi.product_id = p.id
                 LEFT JOIN users u_customer ON o.user_id = u_customer.id
-                WHERE o.status = 'Hoàn tất'";
+                WHERE o.status = 'Đã giao'";
 
         if ($fromDate) $sql .= " AND DATE(o.created_at) >= '$fromDate'";
         if ($toDate) $sql .= " AND DATE(o.created_at) <= '$toDate'";
@@ -194,8 +194,7 @@ class ReportsRepository
 
         // Filter by value range
         if ($valueFrom !== null || $valueTo !== null) {
-            $valueColumn = $criteria === 'revenue' ? 'total_revenue' :
-                ($criteria === 'orders' ? 'total_orders' : 'avg_order_value');
+            $valueColumn = $criteria === 'revenue' ? 'total_revenue' : ($criteria === 'orders' ? 'total_orders' : 'avg_order_value');
 
             if ($valueFrom !== null) {
                 $sql .= (!empty($search) ? " AND" : " HAVING") . " $valueColumn >= $valueFrom";
@@ -206,8 +205,7 @@ class ReportsRepository
         }
 
         // Sort
-        $orderColumn = $criteria === 'revenue' ? 'total_revenue' :
-            ($criteria === 'orders' ? 'total_orders' : 'avg_order_value');
+        $orderColumn = $criteria === 'revenue' ? 'total_revenue' : ($criteria === 'orders' ? 'total_orders' : 'avg_order_value');
         $sql .= " ORDER BY $orderColumn " . strtoupper($sortOrder);
 
         $stmt = $this->db->query($sql);
@@ -229,7 +227,7 @@ class ReportsRepository
                 JOIN orders o ON oi.order_id = o.id
                 JOIN products p ON oi.product_id = p.id
                 LEFT JOIN units u ON p.unit_id = u.id
-                WHERE o.status = 'Hoàn tất'";
+                WHERE o.status = 'Đã giao'";
 
         if ($fromDate) $sql .= " AND DATE(o.created_at) >= '$fromDate'";
         if ($toDate) $sql .= " AND DATE(o.created_at) <= '$toDate'";
@@ -255,7 +253,7 @@ class ReportsRepository
                 JOIN orders o ON oi.order_id = o.id
                 JOIN products p ON oi.product_id = p.id
                 LEFT JOIN units u ON p.unit_id = u.id
-                WHERE o.status = 'Hoàn tất'";
+                WHERE o.status = 'Đã giao'";
 
         if ($fromDate) $sql .= " AND DATE(o.created_at) >= '$fromDate'";
         if ($toDate) $sql .= " AND DATE(o.created_at) <= '$toDate'";
@@ -315,7 +313,7 @@ class ReportsRepository
                 LEFT JOIN units u ON p.unit_id = u.id
                 LEFT JOIN users u_staff ON o.created_by = u_staff.id
                 LEFT JOIN users u_customer ON o.user_id = u_customer.id
-                WHERE o.status = 'Hoàn tất'";
+                WHERE o.status = 'Đã giao'";
 
         if ($fromDate) $sql .= " AND DATE(o.created_at) >= '$fromDate'";
         if ($toDate) $sql .= " AND DATE(o.created_at) <= '$toDate'";
@@ -354,8 +352,7 @@ class ReportsRepository
 
         // Filter by value range
         if ($valueFrom !== null || $valueTo !== null) {
-            $valueColumn = $criteria === 'revenue' ? 'total_revenue' :
-                ($criteria === 'quantity' ? 'total_quantity' : 'total_orders');
+            $valueColumn = $criteria === 'revenue' ? 'total_revenue' : ($criteria === 'quantity' ? 'total_quantity' : 'total_orders');
 
             if ($valueFrom !== null) {
                 $sql .= (!empty($search) ? " AND" : " HAVING") . " $valueColumn >= $valueFrom";
@@ -366,8 +363,7 @@ class ReportsRepository
         }
 
         // Sort
-        $orderColumn = $criteria === 'revenue' ? 'total_revenue' :
-            ($criteria === 'quantity' ? 'total_quantity' : 'total_orders');
+        $orderColumn = $criteria === 'revenue' ? 'total_revenue' : ($criteria === 'quantity' ? 'total_quantity' : 'total_orders');
         $sql .= " ORDER BY $orderColumn " . strtoupper($sortOrder);
 
         $stmt = $this->db->query($sql);
@@ -386,7 +382,7 @@ class ReportsRepository
                     SUM(o.grand_total) as total_spent
                 FROM users u
                 JOIN orders o ON u.id = o.user_id
-                WHERE o.status = 'Hoàn tất'";
+                WHERE o.status = 'Đã giao'";
 
         if ($fromDate) $sql .= " AND DATE(o.created_at) >= '$fromDate'";
         if ($toDate) $sql .= " AND DATE(o.created_at) <= '$toDate'";
@@ -409,7 +405,7 @@ class ReportsRepository
                     SUM(o.grand_total) as total_spent
                 FROM users u
                 JOIN orders o ON u.id = o.user_id
-                WHERE o.status = 'Hoàn tất'";
+                WHERE o.status = 'Đã giao'";
 
         if ($fromDate) $sql .= " AND DATE(o.created_at) >= '$fromDate'";
         if ($toDate) $sql .= " AND DATE(o.created_at) <= '$toDate'";
@@ -451,7 +447,7 @@ class ReportsRepository
                 LEFT JOIN order_items oi ON o.id = oi.order_id
                 LEFT JOIN products p ON oi.product_id = p.id
                 LEFT JOIN users u_staff ON o.created_by = u_staff.id
-                WHERE o.status = 'Hoàn tất'";
+                WHERE o.status = 'Đã giao'";
 
         if ($fromDate) $sql .= " AND DATE(o.created_at) >= '$fromDate'";
         if ($toDate) $sql .= " AND DATE(o.created_at) <= '$toDate'";
@@ -480,8 +476,7 @@ class ReportsRepository
 
         // Filter by value range
         if ($valueFrom !== null || $valueTo !== null) {
-            $valueColumn = $criteria === 'total_spent' ? 'total_spent' :
-                ($criteria === 'orders' ? 'total_orders' : 'avg_order_value');
+            $valueColumn = $criteria === 'total_spent' ? 'total_spent' : ($criteria === 'orders' ? 'total_orders' : 'avg_order_value');
 
             if ($valueFrom !== null) {
                 $sql .= (!empty($search) ? " AND" : " HAVING") . " $valueColumn >= $valueFrom";
@@ -492,8 +487,7 @@ class ReportsRepository
         }
 
         // Sort
-        $orderColumn = $criteria === 'total_spent' ? 'total_spent' :
-            ($criteria === 'orders' ? 'total_orders' : 'avg_order_value');
+        $orderColumn = $criteria === 'total_spent' ? 'total_spent' : ($criteria === 'orders' ? 'total_orders' : 'avg_order_value');
         $sql .= " ORDER BY $orderColumn " . strtoupper($sortOrder);
 
         $stmt = $this->db->query($sql);
@@ -550,7 +544,7 @@ class ReportsRepository
                             AND soi.product_id = oi.product_id
                         LEFT JOIN product_batches pb ON soi.batch_id = pb.id
                         LEFT JOIN purchase_orders po_inner ON pb.purchase_order_id = po_inner.id
-                        WHERE o.status = 'Hoàn tất'
+                        WHERE o.status = 'Đã giao'
                         AND so.type = 'sale'
                         AND so.status IN ('approved', 'completed')"
             . $orderDateCondition . "
@@ -622,7 +616,7 @@ class ReportsRepository
                             AND soi.product_id = oi.product_id
                         LEFT JOIN product_batches pb ON soi.batch_id = pb.id
                         LEFT JOIN purchase_orders po_inner ON pb.purchase_order_id = po_inner.id
-                        WHERE o.status = 'Hoàn tất'
+                        WHERE o.status = 'Đã giao'
                         AND so.type = 'sale'
                         AND so.status IN ('approved', 'completed')"
             . $orderDateCondition;
@@ -646,8 +640,7 @@ class ReportsRepository
 
         // Filter by value range
         if ($valueFrom !== null || $valueTo !== null) {
-            $valueColumn = $criteria === 'sales_value' ? 'total_sales_value' :
-                ($criteria === 'purchase_value' ? 'total_purchase_value' : 'total_purchases');
+            $valueColumn = $criteria === 'sales_value' ? 'total_sales_value' : ($criteria === 'purchase_value' ? 'total_purchase_value' : 'total_purchases');
 
             if ($valueFrom !== null) {
                 $sql .= " AND $valueColumn >= $valueFrom";
@@ -658,8 +651,7 @@ class ReportsRepository
         }
 
         // Sort
-        $orderColumn = $criteria === 'sales_value' ? 'total_sales_value' :
-            ($criteria === 'purchase_value' ? 'total_purchase_value' : 'total_purchases');
+        $orderColumn = $criteria === 'sales_value' ? 'total_sales_value' : ($criteria === 'purchase_value' ? 'total_purchase_value' : 'total_purchases');
         $sql .= " ORDER BY $orderColumn " . strtoupper($sortOrder);
 
         $stmt = $this->db->query($sql);
@@ -830,7 +822,7 @@ class ReportsRepository
                     DATE(created_at) as date,
                     SUM(grand_total) as revenue
                 FROM orders
-                WHERE status = 'Hoàn tất'";
+                WHERE status = 'Đã giao'";
 
         if ($fromDate) $sql .= " AND DATE(created_at) >= '$fromDate'";
         if ($toDate) $sql .= " AND DATE(created_at) <= '$toDate'";
@@ -870,7 +862,7 @@ class ReportsRepository
                 FROM orders o
                 JOIN users u ON o.created_by = u.id
                 LEFT JOIN staff_profiles sp ON u.id = sp.user_id
-                WHERE o.status = 'Hoàn tất'
+                WHERE o.status = 'Đã giao'
                 ORDER BY u.full_name ASC";
 
         $stmt = $this->db->query($sql);
@@ -899,7 +891,7 @@ class ReportsRepository
                     u.email
                 FROM orders o
                 JOIN users u ON o.user_id = u.id
-                WHERE o.status = 'Hoàn tất'
+                WHERE o.status = 'Đã giao'
                 ORDER BY u.full_name ASC";
 
         $stmt = $this->db->query($sql);

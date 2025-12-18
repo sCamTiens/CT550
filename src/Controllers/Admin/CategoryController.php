@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controllers\Admin;
 
 use App\Models\Repositories\CategoryRepository;
@@ -33,6 +34,10 @@ class CategoryController extends BaseAdminController
     /** POST /admin/categories (create) */
     public function store()
     {
+        @ini_set('display_errors', '0');
+        error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING);
+        if (ob_get_level()) ob_clean();
+
         header('Content-Type: application/json; charset=utf-8');
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
         $name = trim($data['name'] ?? '');
@@ -87,6 +92,10 @@ class CategoryController extends BaseAdminController
     /** PUT /admin/categories/{id} (update) */
     public function update($id)
     {
+        @ini_set('display_errors', '0');
+        error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING);
+        if (ob_get_level()) ob_clean();
+
         header('Content-Type: application/json; charset=utf-8');
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
         $name = trim($data['name'] ?? '');
@@ -139,6 +148,15 @@ class CategoryController extends BaseAdminController
     /** DELETE /admin/categories/{id} */
     public function destroy($id)
     {
+        // Disable error display to prevent HTML output before JSON
+        @ini_set('display_errors', '0');
+        error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING);
+
+        // Clean any output buffer
+        if (ob_get_level()) {
+            ob_clean();
+        }
+
         header('Content-Type: application/json; charset=utf-8');
         $canDelete = $this->categoryRepo->canDelete($id);
         if ($canDelete === 'parent') {
@@ -358,7 +376,19 @@ class CategoryController extends BaseAdminController
     /** POST /admin/api/categories/import - Nhập dữ liệu từ Excel */
     public function importExcel()
     {
+        // Disable error display to prevent HTML output before JSON
+        @ini_set('display_errors', '0');
+        error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING);
+
+        // Clean any output buffer
+        if (ob_get_level()) {
+            ob_clean();
+        }
+
         header('Content-Type: application/json; charset=utf-8');
+
+        // Debug: Log that function was called
+        error_log("CategoryController::importExcel() called at " . date('Y-m-d H:i:s'));
 
         $currentUserId = $this->currentUserId();
         $currentUserName = $this->currentUserName();
@@ -366,6 +396,12 @@ class CategoryController extends BaseAdminController
         $success = 0;
         $errors = [];
         $fileData = [];
+
+        // Debug: Check if file was uploaded
+        error_log("File upload status: " . (isset($_FILES['file']) ? 'YES' : 'NO'));
+        if (isset($_FILES['file'])) {
+            error_log("File error code: " . $_FILES['file']['error']);
+        }
 
         try {
             // 1. Kiểm tra file có được upload không
@@ -500,9 +536,48 @@ class CategoryController extends BaseAdminController
                 exit;
             }
 
-            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file);
-            $sheet = $spreadsheet->getActiveSheet();
-            $highestRow = $sheet->getHighestRow();
+            // Load PhpSpreadsheet
+            try {
+                // Check if autoload is already loaded (likely loaded by index.php)
+                if (!class_exists('\PhpOffice\PhpSpreadsheet\IOFactory')) {
+                    $autoloadPath = __DIR__ . '/../../../vendor/autoload.php';
+
+                    if (!file_exists($autoloadPath)) {
+                        throw new \Exception('Vendor autoload not found at: ' . $autoloadPath . '. Please run: composer install');
+                    }
+
+                    require_once $autoloadPath;
+                }
+
+                // Double-check after loading
+                if (!class_exists('\PhpOffice\PhpSpreadsheet\IOFactory')) {
+                    throw new \Exception('PhpSpreadsheet library not available. Please run: composer require phpoffice/phpspreadsheet');
+                }
+
+                $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file);
+                $sheet = $spreadsheet->getActiveSheet();
+                $highestRow = $sheet->getHighestRow();
+            } catch (\Exception $e) {
+                $errorMsg = 'Lỗi đọc file Excel: ' . $e->getMessage();
+                error_log("CategoryController import error: " . $errorMsg);
+
+                $this->importHistoryRepo->create([
+                    'table_name' => 'categories',
+                    'file_name' => $fileName,
+                    'total_rows' => 0,
+                    'success_rows' => 0,
+                    'failed_rows' => 0,
+                    'status' => 'failed',
+                    'error_details' => json_encode([$errorMsg], JSON_UNESCAPED_UNICODE),
+                    'file_content' => null,
+                    'imported_by' => $currentUserId,
+                    'imported_by_name' => $currentUserName,
+                ]);
+
+                http_response_code(500);
+                echo json_encode(['error' => $errorMsg], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
 
             // 6. Kiểm tra số lượng dòng (giới hạn để tránh file quá lớn)
             $maxRows = 10000; // Tối đa 10,000 dòng
@@ -702,7 +777,6 @@ class CategoryController extends BaseAdminController
                 'message' => $message
             ], JSON_UNESCAPED_UNICODE);
             exit;
-
         } catch (\Exception $e) {
             // Lưu lỗi hệ thống vào database
             try {
@@ -730,5 +804,4 @@ class CategoryController extends BaseAdminController
             exit;
         }
     }
-
 }

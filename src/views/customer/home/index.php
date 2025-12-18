@@ -569,7 +569,7 @@
 
                                             <!-- Nút Thêm vào giỏ -->
                                             <button
-                                                @click="addProductToCart(<?= (int) $rec['id'] ?>, qty, <?= (int) ($rec['stock_qty'] ?? 0) ?>)"
+                                                @click="addProductToCart(<?= (int) $rec['id'] ?>, qty, <?= (int) ($rec['stock_quantity'] ?? 0) ?>)"
                                                 class="w-full px-2 py-2 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-600 hover:text-white transition-all text-xs font-semibold mb-1">
                                                 <i class="fa-solid fa-cart-plus mr-1"></i>
                                                 Thêm
@@ -577,7 +577,7 @@
 
                                             <!-- Nút Mua ngay -->
                                             <button
-                                                @click="buyProductNow(<?= (int) $rec['id'] ?>, <?= (int) ($rec['stock_qty'] ?? 0) ?>)"
+                                                @click="buyProductNow(<?= (int) $rec['id'] ?>, <?= (int) ($rec['stock_quantity'] ?? 0) ?>)"
                                                 class="w-full px-2 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all text-xs font-semibold">
                                                 <i class="fa-solid fa-shopping-bag mr-1"></i>
                                                 Mua ngay

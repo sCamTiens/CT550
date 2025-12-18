@@ -4,10 +4,15 @@ $pageTitle = 'Lịch Sử Thao Tác';
 
 <?php require __DIR__ . '/../partials/layout-start.php'; ?>
 
-<div x-data="auditLogPage()" x-init="init()" class="container mx-auto px-4 py-6">
+<!-- Breadcrumb + Title -->
+<nav class="text-sm text-slate-500 mb-4">
+    Admin / <span class="text-slate-800 font-medium">Lịch Sử Thao Tác</span>
+</nav>
+
+<div x-data="auditLogPage()" x-init="init()">
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-bold text-gray-800">Lịch Sử Thao Tác</h1>
+        <h1 class="text-3xl font-bold text-[#002975]">Lịch Sử Thao Tác</h1>
 
         <div class="flex gap-3">
             <button @click="showStats = true"
@@ -347,7 +352,7 @@ $pageTitle = 'Lịch Sử Thao Tác';
                 </button>
             </div>
 
-                        <div class="p-6 overflow-y-auto">
+            <div class="p-6 overflow-y-auto">
                 <div class="grid grid-cols-3 gap-6">
                     <!-- Stats by Action -->
                     <div class="bg-blue-50 p-4 rounded-lg">
@@ -445,7 +450,7 @@ $pageTitle = 'Lịch Sử Thao Tác';
                     flatpickr(this.$refs.fromDate, {
                         dateFormat: 'd/m/Y',
                         locale: 'vn',
-                        onChange: function (selectedDates, dateStr) {
+                        onChange: function(selectedDates, dateStr) {
                             self.filters.from_date = dateStr;
 
                             // Nếu từ ngày > đến ngày, tự động điều chỉnh đến ngày
@@ -466,7 +471,7 @@ $pageTitle = 'Lịch Sử Thao Tác';
                     flatpickr(this.$refs.toDate, {
                         dateFormat: 'd/m/Y',
                         locale: 'vn',
-                        onChange: function (selectedDates, dateStr) {
+                        onChange: function(selectedDates, dateStr) {
                             self.filters.to_date = dateStr;
 
                             // Nếu đến ngày < từ ngày, tự động điều chỉnh từ ngày
@@ -548,8 +553,7 @@ $pageTitle = 'Lịch Sử Thao Tác';
 
                     this.logs = data.items || [];
                     this.currentPage = 1;
-                }
-                catch (err) {
+                } catch (err) {
                     console.error('Lỗi tải dữ liệu:', err);
                     alert('Lỗi tải dữ liệu: ' + err.message);
                 } finally {

@@ -171,7 +171,7 @@ class HomeController extends Controller
                 error_log("✓ Search history saved successfully!");
             } catch (\Exception $e) {
                 // Log error nhưng không làm crash app
-                error_log("Lưu lịch sủ tìm kiếm thất bại: " . $e->getMessage());
+                error_log("Lưu lịch sử tìm kiếm thất bại: " . $e->getMessage());
                 error_log("Stack trace: " . $e->getTraceAsString());
             }
         }

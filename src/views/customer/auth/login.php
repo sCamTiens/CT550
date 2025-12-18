@@ -220,22 +220,22 @@
             const toast = document.createElement('div');
             toast.className =
                 `fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 mb-4 text-base font-semibold
-    ${type === 'success'
-    ? 'text-green-700 border-green-400'
-    : 'text-red-700 border-red-400'}
-    bg-white rounded-xl shadow-lg border-2`;
+                    ${type === 'success'
+                    ? 'text-green-700 border-green-400'
+                    : 'text-red-700 border-red-400'}
+                    bg-white rounded-xl shadow-lg border-2`;
 
             toast.innerHTML = `
-    <svg class="flex-shrink-0 w-6 h-6 ${type === 'success' ? 'text-green-600' : 'text-red-600'} mr-3"
-        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        ${type === 'success'
-        ? `
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />`
-        : `
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`}
-    </svg>
-    <div class="flex-1">${msg}</div>
-    `;
+                    <svg class="flex-shrink-0 w-6 h-6 ${type === 'success' ? 'text-green-600' : 'text-red-600'} mr-3"
+                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        ${type === 'success'
+                        ? `
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />`
+                        : `
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`}
+                    </svg>
+                    <div class="flex-1">${msg}</div>
+                    `;
 
             box.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);

@@ -50,6 +50,7 @@ install_python310.md
 **/insert*.sql
 **/insert_*.sql
 **/full.sql
+**/import
 
 # Batch scripts
 *.bat

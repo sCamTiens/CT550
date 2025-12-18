@@ -357,11 +357,11 @@ $items = $items ?? [];
           show: false,
           title: '',
           message: '',
-          onConfirm: () => { },
-          onCancel: () => { }
+          onConfirm: () => {},
+          onCancel: () => {}
         },
 
-        showConfirm(title, message, onConfirm, onCancel = () => { }) {
+        showConfirm(title, message, onConfirm, onCancel = () => {}) {
           this.confirmDialog = {
             show: true,
             title,
@@ -387,15 +387,32 @@ $items = $items ?? [];
         },
 
         // form
-        form: { id: null, name: '', slug: '', parent_id: '', sort_order: 0, is_active: 1 },
+        form: {
+          id: null,
+          name: '',
+          slug: '',
+          parent_id: '',
+          sort_order: 0,
+          is_active: 1
+        },
 
         // validate (cho form thêm/sửa)
-        errors: { name: '', slug: '' },
-        touched: { name: false, slug: false },
+        errors: {
+          name: '',
+          slug: ''
+        },
+        touched: {
+          name: false,
+          slug: false
+        },
 
-        clearError(field) { this.errors[field] = ''; },
+        clearError(field) {
+          this.errors[field] = '';
+        },
 
-        async init() { await this.fetchAll(); },
+        async init() {
+          await this.fetchAll();
+        },
 
         // ===== FILTERS =====
         openFilter: {
@@ -416,16 +433,27 @@ $items = $items ?? [];
           parent: '',
           // sort_type: '', sort_value: '', sort_from: '', sort_to: '',
           status: '',
-          created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
+          created_at_type: '',
+          created_at_value: '',
+          created_at_from: '',
+          created_at_to: '',
           created_by: '',
-          updated_at_type: '', updated_at_value: '', updated_at_from: '', updated_at_to: '',
+          updated_at_type: '',
+          updated_at_value: '',
+          updated_at_from: '',
+          updated_at_to: '',
           updated_by: ''
         },
 
         // -------------------------------------------
         // Hàm lọc tổng quát, hỗ trợ text / number / date
         // -------------------------------------------
-        applyFilter(val, type, { value, from, to, dataType }) {
+        applyFilter(val, type, {
+          value,
+          from,
+          to,
+          dataType
+        }) {
           if (val == null) return false;
 
           // ---------------- TEXT ----------------
@@ -445,9 +473,10 @@ $items = $items ?? [];
 
             if (!query) return true;
 
-            if (type === 'eq') return hasAccent(query)
-              ? raw === query  // có dấu → so đúng dấu
-              : str === queryNoAccent; // không dấu → so không dấu
+            if (type === 'eq') return hasAccent(query) ?
+              raw === query // có dấu → so đúng dấu
+              :
+              str === queryNoAccent; // không dấu → so không dấu
 
             if (type === 'contains' || type === 'like') {
               if (hasAccent(query)) {
@@ -534,8 +563,8 @@ $items = $items ?? [];
             if (this.filters[key]) {
               const field =
                 key === 'created_by' ? 'created_by_name' :
-                  key === 'updated_by' ? 'updated_by_name' :
-                    key === 'parent' ? 'parent_name' : key;
+                key === 'updated_by' ? 'updated_by_name' :
+                key === 'parent' ? 'parent_name' : key;
 
               data = data.filter(o =>
                 this.applyFilter(o[field], 'contains', {
@@ -551,8 +580,10 @@ $items = $items ?? [];
             data = data.filter(o =>
               this.applyFilter(
                 o.is_active ? '1' : '0',
-                'eq',
-                { value: this.filters.status, dataType: 'text' }
+                'eq', {
+                  value: this.filters.status,
+                  dataType: 'text'
+                }
               )
             );
           }
@@ -578,7 +609,9 @@ $items = $items ?? [];
           for (const k in this.openFilter) this.openFilter[k] = false;
           this.openFilter[key] = true;
         },
-        closeFilter(key) { this.openFilter[key] = false; },
+        closeFilter(key) {
+          this.openFilter[key] = false;
+        },
         resetFilter(key) {
           if (['created_at', 'updated_at'].includes(key)) {
             this.filters[`${key}_type`] = '';
@@ -664,9 +697,22 @@ $items = $items ?? [];
         },
 
         resetForm() {
-          this.form = { id: null, name: '', slug: '', parent_id: '', sort_order: 0, is_active: 1 };
-          this.errors = { name: '', slug: '' };
-          this.touched = { name: false, slug: false };
+          this.form = {
+            id: null,
+            name: '',
+            slug: '',
+            parent_id: '',
+            sort_order: 0,
+            is_active: 1
+          };
+          this.errors = {
+            name: '',
+            slug: ''
+          };
+          this.touched = {
+            name: false,
+            slug: false
+          };
         },
 
         // ===== data =====
@@ -678,26 +724,37 @@ $items = $items ?? [];
               const data = await r.json();
               this.items = Array.isArray(data) ? data : (data.items || []);
             }
-          } finally { this.loading = false; }
+          } finally {
+            this.loading = false;
+          }
         },
 
         // ===== ui =====
-        openCreate() { this.resetForm(); this.openAdd = true; },
+        openCreate() {
+          this.resetForm();
+          this.openAdd = true;
+        },
         openEditModal(c) {
           this.resetForm();
-          this.form = { ...c, parent_id: c.parent_id || '' };
+          this.form = {
+            ...c,
+            parent_id: c.parent_id || ''
+          };
           this.openEdit = true;
         },
 
         // ===== CRUD =====
         async submitCreate() {
-          this.touched.name = true; this.touched.slug = true;
+          this.touched.name = true;
+          this.touched.slug = true;
           if (!this.validateForm()) return;
           this.submitting = true;
           try {
             const r = await fetch(api.create, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json'
+              },
               body: JSON.stringify(this.form)
             });
             const res = await r.json();
@@ -707,17 +764,22 @@ $items = $items ?? [];
             this.showToast('Thêm loại sản phẩm thành công!', 'success');
           } catch (e) {
             this.showToast(e.message || 'Không thể thêm loại');
-          } finally { this.submitting = false; }
+          } finally {
+            this.submitting = false;
+          }
         },
 
         async submitUpdate() {
-          this.touched.name = true; this.touched.slug = true;
+          this.touched.name = true;
+          this.touched.slug = true;
           if (!this.form.id || !this.validateForm()) return;
           this.submitting = true;
           try {
             const r = await fetch(api.update(this.form.id), {
               method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json'
+              },
               body: JSON.stringify(this.form)
             });
             const res = await r.json();
@@ -731,7 +793,9 @@ $items = $items ?? [];
             this.showToast('Cập nhật loại sản phẩm thành công!', 'success');
           } catch (e) {
             this.showToast(e.message || 'Không thể cập nhật loại');
-          } finally { this.submitting = false; }
+          } finally {
+            this.submitting = false;
+          }
         },
 
         async remove(id) {
@@ -743,7 +807,9 @@ $items = $items ?? [];
             `Bạn có chắc chắn muốn xóa loại "${name}"?`,
             async () => {
               try {
-                const r = await fetch(`/admin/categories/${id}`, { method: 'DELETE' });
+                const r = await fetch(api.remove(id), {
+                  method: 'DELETE'
+                });
                 const res = await r.json();
                 if (!r.ok) throw new Error(res.error || 'Lỗi máy chủ khi xóa');
                 this.items = this.items.filter(x => x.id != id);
@@ -935,10 +1001,14 @@ $items = $items ?? [];
           const filename = `Loai_san_pham_${dateStr}_${timeStr}.xlsx`;
 
           fetch('/admin/api/categories/export', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ items: data })
-          })
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                items: data
+              })
+            })
             .then(res => {
               if (!res.ok) throw new Error('Export failed');
               return res.blob();

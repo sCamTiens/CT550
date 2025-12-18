@@ -548,35 +548,83 @@ $pageTitle = 'Thống Kê & Báo Cáo';
 
             get criteriaOptions() {
                 const options = {
-                    staff: [
-                        { value: 'revenue', label: 'Doanh thu' },
-                        { value: 'orders', label: 'Số đơn hàng' },
-                        { value: 'avg_order_value', label: 'Giá trị đơn TB' }
+                    staff: [{
+                            value: 'revenue',
+                            label: 'Doanh thu'
+                        },
+                        {
+                            value: 'orders',
+                            label: 'Số đơn hàng'
+                        },
+                        {
+                            value: 'avg_order_value',
+                            label: 'Giá trị đơn TB'
+                        }
                     ],
-                    products: [
-                        { value: 'revenue', label: 'Doanh thu' },
-                        { value: 'quantity', label: 'Số lượng bán' },
-                        { value: 'orders', label: 'Số đơn hàng' }
+                    products: [{
+                            value: 'revenue',
+                            label: 'Doanh thu'
+                        },
+                        {
+                            value: 'quantity',
+                            label: 'Số lượng bán'
+                        },
+                        {
+                            value: 'orders',
+                            label: 'Số đơn hàng'
+                        }
                     ],
-                    customers: [
-                        { value: 'total_spent', label: 'Tổng chi tiêu' },
-                        { value: 'orders', label: 'Số đơn hàng' },
-                        { value: 'avg_order_value', label: 'Giá trị đơn TB' }
+                    customers: [{
+                            value: 'total_spent',
+                            label: 'Tổng chi tiêu'
+                        },
+                        {
+                            value: 'orders',
+                            label: 'Số đơn hàng'
+                        },
+                        {
+                            value: 'avg_order_value',
+                            label: 'Giá trị đơn TB'
+                        }
                     ],
-                    suppliers: [
-                        { value: 'sales_value', label: 'Doanh thu bán' },
-                        { value: 'purchase_value', label: 'Giá trị nhập' },
-                        { value: 'purchases', label: 'Số lần nhập' }
+                    suppliers: [{
+                            value: 'sales_value',
+                            label: 'Doanh thu bán'
+                        },
+                        {
+                            value: 'purchase_value',
+                            label: 'Giá trị nhập'
+                        },
+                        {
+                            value: 'purchases',
+                            label: 'Số lần nhập'
+                        }
                     ],
-                    orders: [
-                        { value: 'total', label: 'Tổng giá trị' },
-                        { value: 'count', label: 'Số lượng đơn' },
-                        { value: 'status', label: 'Theo trạng thái' }
+                    orders: [{
+                            value: 'total',
+                            label: 'Tổng giá trị'
+                        },
+                        {
+                            value: 'count',
+                            label: 'Số lượng đơn'
+                        },
+                        {
+                            value: 'status',
+                            label: 'Theo trạng thái'
+                        }
                     ],
-                    inventory: [
-                        { value: 'low_stock', label: 'Sắp hết hàng' },
-                        { value: 'high_stock', label: 'Tồn kho cao' },
-                        { value: 'out_of_stock', label: 'Hết hàng' }
+                    inventory: [{
+                            value: 'low_stock',
+                            label: 'Sắp hết hàng'
+                        },
+                        {
+                            value: 'high_stock',
+                            label: 'Tồn kho cao'
+                        },
+                        {
+                            value: 'out_of_stock',
+                            label: 'Hết hàng'
+                        }
                     ]
                 };
                 return options[this.filters.reportType] || [];
@@ -586,35 +634,83 @@ $pageTitle = 'Thống Kê & Báo Cáo';
             // aggregated data for a different entity than the current main reportType).
             getCriteriaOptionsForType(reportType) {
                 const options = {
-                    staff: [
-                        { value: 'revenue', label: 'Doanh thu' },
-                        { value: 'orders', label: 'Số đơn hàng' },
-                        { value: 'avg_order_value', label: 'Giá trị đơn TB' }
+                    staff: [{
+                            value: 'revenue',
+                            label: 'Doanh thu'
+                        },
+                        {
+                            value: 'orders',
+                            label: 'Số đơn hàng'
+                        },
+                        {
+                            value: 'avg_order_value',
+                            label: 'Giá trị đơn TB'
+                        }
                     ],
-                    products: [
-                        { value: 'revenue', label: 'Doanh thu' },
-                        { value: 'quantity', label: 'Số lượng bán' },
-                        { value: 'orders', label: 'Số đơn hàng' }
+                    products: [{
+                            value: 'revenue',
+                            label: 'Doanh thu'
+                        },
+                        {
+                            value: 'quantity',
+                            label: 'Số lượng bán'
+                        },
+                        {
+                            value: 'orders',
+                            label: 'Số đơn hàng'
+                        }
                     ],
-                    customers: [
-                        { value: 'total_spent', label: 'Tổng chi tiêu' },
-                        { value: 'orders', label: 'Số đơn hàng' },
-                        { value: 'avg_order_value', label: 'Giá trị đơn TB' }
+                    customers: [{
+                            value: 'total_spent',
+                            label: 'Tổng chi tiêu'
+                        },
+                        {
+                            value: 'orders',
+                            label: 'Số đơn hàng'
+                        },
+                        {
+                            value: 'avg_order_value',
+                            label: 'Giá trị đơn TB'
+                        }
                     ],
-                    suppliers: [
-                        { value: 'sales_value', label: 'Doanh thu bán' },
-                        { value: 'purchase_value', label: 'Giá trị nhập' },
-                        { value: 'purchases', label: 'Số lần nhập' }
+                    suppliers: [{
+                            value: 'sales_value',
+                            label: 'Doanh thu bán'
+                        },
+                        {
+                            value: 'purchase_value',
+                            label: 'Giá trị nhập'
+                        },
+                        {
+                            value: 'purchases',
+                            label: 'Số lần nhập'
+                        }
                     ],
-                    orders: [
-                        { value: 'total', label: 'Tổng giá trị' },
-                        { value: 'count', label: 'Số lượng đơn' },
-                        { value: 'status', label: 'Theo trạng thái' }
+                    orders: [{
+                            value: 'total',
+                            label: 'Tổng giá trị'
+                        },
+                        {
+                            value: 'count',
+                            label: 'Số lượng đơn'
+                        },
+                        {
+                            value: 'status',
+                            label: 'Theo trạng thái'
+                        }
                     ],
-                    inventory: [
-                        { value: 'low_stock', label: 'Sắp hết hàng' },
-                        { value: 'high_stock', label: 'Tồn kho cao' },
-                        { value: 'out_of_stock', label: 'Hết hàng' }
+                    inventory: [{
+                            value: 'low_stock',
+                            label: 'Sắp hết hàng'
+                        },
+                        {
+                            value: 'high_stock',
+                            label: 'Tồn kho cao'
+                        },
+                        {
+                            value: 'out_of_stock',
+                            label: 'Hết hàng'
+                        }
                     ]
                 };
                 return options[reportType] || [];
@@ -690,7 +786,9 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         Chart.defaults.elements.bar.hoverBorderColor = '#000';
                         Chart.defaults.elements.bar.hoverBorderWidth = 2;
                     }
-                } catch (e) { /* ignore */ }
+                } catch (e) {
+                    /* ignore */
+                }
 
                 const checkLibraries = setInterval(() => {
                     if (typeof Chart !== 'undefined' && typeof flatpickr !== 'undefined') {
@@ -722,7 +820,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     locale: 'vn',
                     defaultDate: lastMonth,
                     maxDate: today,
-                    onChange: function (selectedDates, dateStr) {
+                    onChange: function(selectedDates, dateStr) {
                         self.filters.fromDate = dateStr;
                         if (self.$refs.toDate._flatpickr && selectedDates[0]) {
                             self.$refs.toDate._flatpickr.set('minDate', selectedDates[0]);
@@ -736,7 +834,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     defaultDate: today,
                     minDate: lastMonth,
                     maxDate: today,
-                    onChange: function (selectedDates, dateStr) {
+                    onChange: function(selectedDates, dateStr) {
                         self.filters.toDate = dateStr;
                         if (self.$refs.fromDate._flatpickr && selectedDates[0]) {
                             self.$refs.fromDate._flatpickr.set('maxDate', selectedDates[0]);
@@ -910,11 +1008,11 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 try {
                     const response = await fetch(url);
                     console.log('Response status:', response.status, response.statusText);
-                    
+
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
-                    
+
                     const result = await response.json();
                     console.log('API Response:', result);
 
@@ -949,7 +1047,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         this.totalResults = possibleData.length;
                         this.hasData = true;
                         this.resultTitle = this.getResultTitle();
-                        
+
                         console.log('Setting up table and charts...');
                         this.setupTableColumns();
                         this.calculateSummary();
@@ -960,27 +1058,27 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         });
                     } else {
                         console.warn('No data returned from API');
-                        
+
                         // Vẫn hiển thị khu vực kết quả nhưng với dữ liệu trống
                         this.tableData = [];
                         this.currentPage = 1;
                         this.totalResults = 0;
                         this.hasData = true; // Vẫn set true để hiển thị UI
                         this.resultTitle = this.getResultTitle();
-                        
+
                         // Setup columns nhưng không có data
                         this.setupTableColumns();
-                        
+
                         // Clear summary cards
                         this.summaryCards = [];
-                        
+
                         // Destroy any existing charts
                         this.destroyCharts();
-                        
+
                         // Show user-friendly message
                         const typeLabels = {
                             staff: 'nhân viên',
-                            products: 'sản phẩm', 
+                            products: 'sản phẩm',
                             customers: 'khách hàng',
                             suppliers: 'nhà cung cấp',
                             orders: 'đơn hàng',
@@ -1012,45 +1110,151 @@ $pageTitle = 'Thống Kê & Báo Cáo';
 
             setupTableColumns() {
                 const columnConfigs = {
-                    staff: [
-                        { key: 'full_name', label: 'Tên nhân viên', type: 'text' },
-                        { key: 'staff_role', label: 'Chức vụ', type: 'text' },
-                        { key: 'total_revenue', label: 'Doanh thu', type: 'money' },
-                        { key: 'total_orders', label: 'Số đơn', type: 'number' },
-                        { key: 'avg_order_value', label: 'Giá trị TB', type: 'money' }
+                    staff: [{
+                            key: 'full_name',
+                            label: 'Tên nhân viên',
+                            type: 'text'
+                        },
+                        {
+                            key: 'staff_role',
+                            label: 'Chức vụ',
+                            type: 'text'
+                        },
+                        {
+                            key: 'total_revenue',
+                            label: 'Doanh thu',
+                            type: 'money'
+                        },
+                        {
+                            key: 'total_orders',
+                            label: 'Số đơn',
+                            type: 'number'
+                        },
+                        {
+                            key: 'avg_order_value',
+                            label: 'Giá trị TB',
+                            type: 'money'
+                        }
                     ],
-                    products: [
-                        { key: 'name', label: 'Tên sản phẩm', type: 'text' },
-                        { key: 'sku', label: 'SKU', type: 'text' },
-                        { key: 'total_revenue', label: 'Doanh thu', type: 'money' },
-                        { key: 'total_quantity', label: 'Số lượng', type: 'number' },
-                        { key: 'unit_name', label: 'Đơn vị', type: 'text' }
+                    products: [{
+                            key: 'name',
+                            label: 'Tên sản phẩm',
+                            type: 'text'
+                        },
+                        {
+                            key: 'sku',
+                            label: 'SKU',
+                            type: 'text'
+                        },
+                        {
+                            key: 'total_revenue',
+                            label: 'Doanh thu',
+                            type: 'money'
+                        },
+                        {
+                            key: 'total_quantity',
+                            label: 'Số lượng',
+                            type: 'number'
+                        },
+                        {
+                            key: 'unit_name',
+                            label: 'Đơn vị',
+                            type: 'text'
+                        }
                     ],
-                    customers: [
-                        { key: 'full_name', label: 'Tên khách hàng', type: 'text' },
-                        { key: 'email', label: 'Email', type: 'text' },
-                        { key: 'total_spent', label: 'Tổng chi tiêu', type: 'money' },
-                        { key: 'total_orders', label: 'Số đơn', type: 'number' },
-                        { key: 'avg_order_value', label: 'Giá trị TB', type: 'money' }
+                    customers: [{
+                            key: 'full_name',
+                            label: 'Tên khách hàng',
+                            type: 'text'
+                        },
+                        {
+                            key: 'email',
+                            label: 'Email',
+                            type: 'text'
+                        },
+                        {
+                            key: 'total_spent',
+                            label: 'Tổng chi tiêu',
+                            type: 'money'
+                        },
+                        {
+                            key: 'total_orders',
+                            label: 'Số đơn',
+                            type: 'number'
+                        },
+                        {
+                            key: 'avg_order_value',
+                            label: 'Giá trị TB',
+                            type: 'money'
+                        }
                     ],
-                    suppliers: [
-                        { key: 'supplier_name', label: 'Tên nhà cung cấp', type: 'text' },
-                        { key: 'total_sales_value', label: 'Doanh thu bán', type: 'money' },
-                        { key: 'total_purchase_value', label: 'Giá trị nhập', type: 'money' },
-                        { key: 'total_purchases', label: 'Số lần nhập', type: 'number' }
+                    suppliers: [{
+                            key: 'supplier_name',
+                            label: 'Tên nhà cung cấp',
+                            type: 'text'
+                        },
+                        {
+                            key: 'total_sales_value',
+                            label: 'Doanh thu bán',
+                            type: 'money'
+                        },
+                        {
+                            key: 'total_purchase_value',
+                            label: 'Giá trị nhập',
+                            type: 'money'
+                        },
+                        {
+                            key: 'total_purchases',
+                            label: 'Số lần nhập',
+                            type: 'number'
+                        }
                     ],
-                    orders: [
-                        { key: 'order_id', label: 'Mã đơn', type: 'text' },
-                        { key: 'customer_name', label: 'Khách hàng', type: 'text' },
-                        { key: 'total_amount', label: 'Tổng tiền', type: 'money' },
-                        { key: 'status', label: 'Trạng thái', type: 'text' },
-                        { key: 'created_at', label: 'Ngày tạo', type: 'date' }
+                    orders: [{
+                            key: 'order_id',
+                            label: 'Mã đơn',
+                            type: 'text'
+                        },
+                        {
+                            key: 'customer_name',
+                            label: 'Khách hàng',
+                            type: 'text'
+                        },
+                        {
+                            key: 'total_amount',
+                            label: 'Tổng tiền',
+                            type: 'money'
+                        },
+                        {
+                            key: 'status',
+                            label: 'Trạng thái',
+                            type: 'text'
+                        },
+                        {
+                            key: 'created_at',
+                            label: 'Ngày tạo',
+                            type: 'date'
+                        }
                     ],
-                    inventory: [
-                        { key: 'name', label: 'Tên sản phẩm', type: 'text' },
-                        { key: 'sku', label: 'SKU', type: 'text' },
-                        { key: 'current_stock', label: 'Tồn kho', type: 'number' },
-                        { key: 'unit_name', label: 'Đơn vị', type: 'text' }
+                    inventory: [{
+                            key: 'name',
+                            label: 'Tên sản phẩm',
+                            type: 'text'
+                        },
+                        {
+                            key: 'sku',
+                            label: 'SKU',
+                            type: 'text'
+                        },
+                        {
+                            key: 'current_stock',
+                            label: 'Tồn kho',
+                            type: 'number'
+                        },
+                        {
+                            key: 'unit_name',
+                            label: 'Đơn vị',
+                            type: 'text'
+                        }
                     ]
                 };
 
@@ -1058,14 +1262,22 @@ $pageTitle = 'Thống Kê & Báo Cáo';
 
                 // Thêm cột sản phẩm nếu có lọc theo sản phẩm cụ thể
                 if (this.filters.productId && this.filters.reportType !== 'products') {
-                    const productCol = { key: 'product_name', label: 'Sản phẩm', type: 'text' };
+                    const productCol = {
+                        key: 'product_name',
+                        label: 'Sản phẩm',
+                        type: 'text'
+                    };
                     // Chèn sau cột đầu tiên (tên đối tượng)
                     columns.splice(1, 0, productCol);
                 }
 
                 // Thêm cột khách hàng nếu có lọc theo khách hàng cụ thể
                 if (this.filters.customerId && this.filters.reportType !== 'customers') {
-                    const customerCol = { key: 'customer_name', label: 'Khách hàng', type: 'text' };
+                    const customerCol = {
+                        key: 'customer_name',
+                        label: 'Khách hàng',
+                        type: 'text'
+                    };
                     // Chèn sau cột sản phẩm (nếu có) hoặc sau cột đầu tiên
                     const insertIndex = this.filters.productId ? 2 : 1;
                     columns.splice(insertIndex, 0, customerCol);
@@ -1073,7 +1285,11 @@ $pageTitle = 'Thống Kê & Báo Cáo';
 
                 // Thêm cột nhân viên nếu có lọc theo nhân viên cụ thể
                 if (this.filters.staffId && this.filters.reportType !== 'staff') {
-                    const staffCol = { key: 'staff_name', label: 'Nhân viên', type: 'text' };
+                    const staffCol = {
+                        key: 'staff_name',
+                        label: 'Nhân viên',
+                        type: 'text'
+                    };
                     // Chèn sau các cột filter khác
                     let insertIndex = 1;
                     if (this.filters.productId) insertIndex++;
@@ -1083,7 +1299,11 @@ $pageTitle = 'Thống Kê & Báo Cáo';
 
                 // Thêm cột nhà cung cấp nếu có lọc theo nhà cung cấp cụ thể
                 if (this.filters.supplierId && this.filters.reportType !== 'suppliers') {
-                    const supplierCol = { key: 'supplier_name', label: 'Nhà cung cấp', type: 'text' };
+                    const supplierCol = {
+                        key: 'supplier_name',
+                        label: 'Nhà cung cấp',
+                        type: 'text'
+                    };
                     // Chèn sau các cột filter khác
                     let insertIndex = 1;
                     if (this.filters.productId) insertIndex++;
@@ -1131,7 +1351,9 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     // When applying table filters, return to first page
                     this.currentPage = 1;
                     // diagnostic log to help trace filter -> chart flow
-                    try { console.debug('applyTableFilter -> filtered length:', this.filtered().length, 'currentPage:', this.currentPage); } catch (e) { }
+                    try {
+                        console.debug('applyTableFilter -> filtered length:', this.filtered().length, 'currentPage:', this.currentPage);
+                    } catch (e) {}
                     this.calculateSummary();
                     this.renderCharts();
                 }, 300);
@@ -1145,7 +1367,9 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 this.chartRenderTimeout = setTimeout(() => {
                     // Reset to first page after clearing a table filter
                     this.currentPage = 1;
-                    try { console.debug('resetTableFilter -> filtered length:', this.filtered().length, 'currentPage:', this.currentPage); } catch (e) { }
+                    try {
+                        console.debug('resetTableFilter -> filtered length:', this.filtered().length, 'currentPage:', this.currentPage);
+                    } catch (e) {}
                     this.calculateSummary();
                     this.renderCharts();
                 }, 300);
@@ -1183,19 +1407,71 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 if (!dataToUse.length) return;
 
                 const criteriaConfig = {
-                    revenue: { key: 'total_revenue', label: 'Tổng Doanh Thu', isMoney: true },
-                    orders: { key: 'total_orders', label: 'Tổng Số Đơn', isMoney: false },
-                    quantity: { key: 'total_quantity', label: 'Tổng Số Lượng', isMoney: false },
-                    total_spent: { key: 'total_spent', label: 'Tổng Chi Tiêu', isMoney: true },
-                    sales_value: { key: 'total_sales_value', label: 'Tổng Doanh Thu Bán', isMoney: true },
-                    purchase_value: { key: 'total_purchase_value', label: 'Tổng Giá Trị Nhập', isMoney: true },
-                    purchases: { key: 'total_purchases', label: 'Tổng Số Lần Nhập', isMoney: false },
-                    avg_order_value: { key: 'avg_order_value', label: 'Giá Trị TB', isMoney: true },
-                    total: { key: 'total_amount', label: 'Tổng Giá Trị Đơn', isMoney: true },
-                    count: { key: 'order_count', label: 'Tổng Số Đơn', isMoney: false },
-                    low_stock: { key: 'current_stock', label: 'Tổng Tồn Kho', isMoney: false },
-                    high_stock: { key: 'current_stock', label: 'Tổng Tồn Kho', isMoney: false },
-                    out_of_stock: { key: 'current_stock', label: 'Tổng Tồn Kho', isMoney: false }
+                    revenue: {
+                        key: 'total_revenue',
+                        label: 'Tổng Doanh Thu',
+                        isMoney: true
+                    },
+                    orders: {
+                        key: 'total_orders',
+                        label: 'Tổng Số Đơn',
+                        isMoney: false
+                    },
+                    quantity: {
+                        key: 'total_quantity',
+                        label: 'Tổng Số Lượng',
+                        isMoney: false
+                    },
+                    total_spent: {
+                        key: 'total_spent',
+                        label: 'Tổng Chi Tiêu',
+                        isMoney: true
+                    },
+                    sales_value: {
+                        key: 'total_sales_value',
+                        label: 'Tổng Doanh Thu Bán',
+                        isMoney: true
+                    },
+                    purchase_value: {
+                        key: 'total_purchase_value',
+                        label: 'Tổng Giá Trị Nhập',
+                        isMoney: true
+                    },
+                    purchases: {
+                        key: 'total_purchases',
+                        label: 'Tổng Số Lần Nhập',
+                        isMoney: false
+                    },
+                    avg_order_value: {
+                        key: 'avg_order_value',
+                        label: 'Giá Trị TB',
+                        isMoney: true
+                    },
+                    total: {
+                        key: 'total_amount',
+                        label: 'Tổng Giá Trị Đơn',
+                        isMoney: true
+                    },
+                    count: {
+                        key: 'order_count',
+                        label: 'Tổng Số Đơn',
+                        isMoney: false
+                    },
+                    low_stock: {
+                        key: 'current_stock',
+                        label: 'Tổng Tồn Kho',
+                        isMoney: false
+                    },
+                    high_stock: {
+                        key: 'current_stock',
+                        label: 'Tổng Tồn Kho',
+                        isMoney: false
+                    },
+                    out_of_stock: {
+                        key: 'current_stock',
+                        label: 'Tổng Tồn Kho',
+                        isMoney: false
+                    }
                 };
 
                 const config = criteriaConfig[this.filters.criteria];
@@ -1239,13 +1515,17 @@ $pageTitle = 'Thống Kê & Báo Cáo';
 
             renderCharts() {
                 // Diagnostic: log invocation and sizes to help debugging filter issues
-                try { console.debug('renderCharts - reportType:', this.filters.reportType, 'filtered:', this.getFilteredTableData().length, 'tableData:', (this.tableData || []).length, 'currentPage:', this.currentPage); } catch (e) { }
+                try {
+                    console.debug('renderCharts - reportType:', this.filters.reportType, 'filtered:', this.getFilteredTableData().length, 'tableData:', (this.tableData || []).length, 'currentPage:', this.currentPage);
+                } catch (e) {}
 
                 this.destroyCharts();
 
                 const dataToUse = this.getFilteredTableData().length > 0 ? this.getFilteredTableData() : this.tableData;
                 if (!dataToUse.length) {
-                    try { console.debug('renderCharts aborted: no dataToUse'); } catch (e) { }
+                    try {
+                        console.debug('renderCharts aborted: no dataToUse');
+                    } catch (e) {}
                     return;
                 }
 
@@ -1265,7 +1545,9 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     } else {
                         this.renderAreaChart();
                     }
-                } catch (e) { console.error('Chart render error', e); }
+                } catch (e) {
+                    console.error('Chart render error', e);
+                }
 
                 // Biểu đồ tròn: Tạo tất cả các biểu đồ cho các filter "Tất cả" - sử dụng filtered data
                 this.$nextTick(async () => {
@@ -1367,9 +1649,9 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         type: 'product',
                         title: 'Phân Bổ Theo Sản Phẩm (%)',
                         key: 'product_name',
-                        actualKey: 'name',  // Tên trường thực tế trả về từ backend khi fetch báo cáo 'products'
+                        actualKey: 'name', // Tên trường thực tế trả về từ backend khi fetch báo cáo 'products'
                         idKey: 'product_id', // Tên trường id mong đợi cho hàng sản phẩm
-                        reportTypeForAgg: 'products'  // Loại báo cáo dùng để tổng hợp
+                        reportTypeForAgg: 'products' // Loại báo cáo dùng để tổng hợp
                     });
                 }
 
@@ -1378,9 +1660,9 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         type: 'customer',
                         title: 'Phân Bổ Theo Khách Hàng (%)',
                         key: 'customer_name',
-                        actualKey: 'customer_name',  // Prefer explicit customer_name on order rows
+                        actualKey: 'customer_name', // Prefer explicit customer_name on order rows
                         idKey: 'customer_id', // Tên trường id mong đợi cho hàng khách hàng
-                        reportTypeForAgg: 'customers'  // Loại báo cáo dùng để tổng hợp
+                        reportTypeForAgg: 'customers' // Loại báo cáo dùng để tổng hợp
                     });
                 }
 
@@ -1389,9 +1671,9 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         type: 'staff',
                         title: 'Phân Bổ Theo Nhân Viên (%)',
                         key: 'staff_name',
-                        actualKey: 'full_name',  // Staff data trả về field 'full_name', không phải 'staff_name'
+                        actualKey: 'full_name', // Staff data trả về field 'full_name', không phải 'staff_name'
                         idKey: 'staff_id', // Tên trường id mong đợi cho hàng nhân viên
-                        reportTypeForAgg: 'staff'  // Loại báo cáo dùng để tổng hợp
+                        reportTypeForAgg: 'staff' // Loại báo cáo dùng để tổng hợp
                     });
                 }
 
@@ -1400,9 +1682,9 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         type: 'supplier',
                         title: 'Phán Bổ Theo Nhà Cung Cấp (%)',
                         key: 'supplier_name',
-                        actualKey: 'supplier_name',  // Tên trường thực tế trả về từ backend
+                        actualKey: 'supplier_name', // Tên trường thực tế trả về từ backend
                         idKey: 'supplier_id', // Tên trường id mong đợi cho hàng nhà cung cấp
-                        reportTypeForAgg: 'suppliers'  // Loại báo cáo dùng để tổng hợp
+                        reportTypeForAgg: 'suppliers' // Loại báo cáo dùng để tổng hợp
                     });
                 }
 
@@ -1453,12 +1735,21 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                                                     const lbl = pname || `#${pid}`;
                                                     aggMap[lbl] = (aggMap[lbl] || 0) + val;
                                                 });
-                                                const arr = Object.entries(aggMap).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 10);
-                                                this.pieCharts.push({ title: config.title, data: arr });
+                                                const arr = Object.entries(aggMap).map(([label, value]) => ({
+                                                    label,
+                                                    value
+                                                })).sort((a, b) => b.value - a.value).slice(0, 10);
+                                                this.pieCharts.push({
+                                                    title: config.title,
+                                                    data: arr
+                                                });
                                                 continue; // next config
                                             } else {
                                                 // No items found for the selected orders — show empty
-                                                this.pieCharts.push({ title: config.title, data: [] });
+                                                this.pieCharts.push({
+                                                    title: config.title,
+                                                    data: []
+                                                });
                                                 continue;
                                             }
                                         }
@@ -1468,7 +1759,11 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                                     if (config.type === 'staff') {
                                         const valueKey = this.getValueKeyForReportType('staff') || this.getValueKeyForCriteria();
                                         // Ensure staff lookup list is loaded so we can resolve ids -> names
-                                        try { await this.loadStaffList(); } catch (e) { /* ignore */ }
+                                        try {
+                                            await this.loadStaffList();
+                                        } catch (e) {
+                                            /* ignore */
+                                        }
 
                                         // Detect whether local rows contain staff identifiers/names
                                         const hasStaffIdOrName = dataSource.some(r => {
@@ -1485,7 +1780,10 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                                             try {
                                                 console.debug('staff aggregation: local rows lack staff id/name — fetching aggregated staff data from API');
                                                 const apiData = await this.fetchPieChartData('staff', config.actualKey);
-                                                this.pieCharts.push({ title: config.title, data: apiData });
+                                                this.pieCharts.push({
+                                                    title: config.title,
+                                                    data: apiData
+                                                });
                                                 continue;
                                             } catch (e) {
                                                 console.warn('staff aggregation fallback fetch failed', e);
@@ -1513,11 +1811,24 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                                             const name = resolvedName || labelFromRow || (sid ? `#${sid}` : 'Khác');
                                             const val = parseFloat(row[valueKey]) || parseFloat(row.total_amount) || parseFloat(row.total_revenue) || 0;
                                             // Debug: show per-row resolution when ambiguous
-                                            try { console.debug('staff-agg row:', { sid, name, value: val, sampleRow: row }); } catch (e) { }
+                                            try {
+                                                console.debug('staff-agg row:', {
+                                                    sid,
+                                                    name,
+                                                    value: val,
+                                                    sampleRow: row
+                                                });
+                                            } catch (e) {}
                                             agg[name] = (agg[name] || 0) + val;
                                         });
-                                        const arr = Object.entries(agg).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 10);
-                                        this.pieCharts.push({ title: config.title, data: arr });
+                                        const arr = Object.entries(agg).map(([label, value]) => ({
+                                            label,
+                                            value
+                                        })).sort((a, b) => b.value - a.value).slice(0, 10);
+                                        this.pieCharts.push({
+                                            title: config.title,
+                                            data: arr
+                                        });
                                         continue;
                                     }
                                 }
@@ -1547,8 +1858,8 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                                 // sự tồn tại của `actualKey` và một trường giá trị số dành cho sản phẩm.
                                 if (config.type === 'product') {
                                     const valueKeyForProducts = this.getValueKeyForReportType('products');
-                                    if ((row[config.actualKey] !== undefined && row[config.actualKey] !== null && row[config.actualKey] !== '')
-                                        && (row[valueKeyForProducts] !== undefined && row[valueKeyForProducts] !== null && row[valueKeyForProducts] !== '')) {
+                                    if ((row[config.actualKey] !== undefined && row[config.actualKey] !== null && row[config.actualKey] !== '') &&
+                                        (row[valueKeyForProducts] !== undefined && row[valueKeyForProducts] !== null && row[valueKeyForProducts] !== '')) {
                                         return true;
                                     }
                                 }
@@ -1557,7 +1868,9 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                             });
 
                             // Debug: in ra mẫu dữ liệu dùng để quyết định tổng hợp cục bộ hay gọi API
-                            try { console.log(`renderAllPieCharts - sample dataSource for ${config.type}:`, dataSource.slice(0, 8)); } catch (e) { }
+                            try {
+                                console.log(`renderAllPieCharts - sample dataSource for ${config.type}:`, dataSource.slice(0, 8));
+                            } catch (e) {}
 
                             if (!labelPresent) {
                                 // Khi không có label field trong dataSource (ví dụ: đang xem báo cáo Staff
@@ -1565,30 +1878,42 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                                 // PHẢI gọi API để lấy dữ liệu đúng (orders data chứa cả staff và customer info)
                                 console.log(`Label not present for ${config.type}, calling API to fetch proper data`);
                                 const apiData = await this.fetchPieChartData(config.type, config.actualKey);
-                                
+
                                 // SPECIAL CASE: Nếu API không trả về data (ví dụ: suppliers không hỗ trợ filter by product_id)
                                 // thì thử aggregate local từ dataSource nếu có supplier info
                                 if (!apiData || apiData.length === 0) {
                                     if (config.type === 'supplier' && dataSource.some(r => r && r.supplier_name)) {
                                         console.log(`API returned no data for ${config.type}, trying local aggregation from dataSource`);
                                         const data = this.aggregateByKey(dataSource, 'supplier_name', config.reportTypeForAgg);
-                                        this.pieCharts.push({ title: config.title, data: data });
+                                        this.pieCharts.push({
+                                            title: config.title,
+                                            data: data
+                                        });
                                     } else {
-                                        this.pieCharts.push({ title: config.title, data: apiData });
+                                        this.pieCharts.push({
+                                            title: config.title,
+                                            data: apiData
+                                        });
                                     }
                                 } else {
-                                    this.pieCharts.push({ title: config.title, data: apiData });
+                                    this.pieCharts.push({
+                                        title: config.title,
+                                        data: apiData
+                                    });
                                 }
                             } else {
                                 const data = this.aggregateByKey(dataSource, config.actualKey, config.reportTypeForAgg);
-                                this.pieCharts.push({ title: config.title, data: data });
+                                this.pieCharts.push({
+                                    title: config.title,
+                                    data: data
+                                });
                             }
                         }
                     } else {
                         // Fetch data từ API cho từng loại biểu đồ tròn (lần đầu tiên hoặc không có filters)
                         for (let config of pieChartsToRender) {
                             const data = await this.fetchPieChartData(config.type, config.actualKey);
-                            
+
                             // SPECIAL CASE: Nếu API trả về empty (ví dụ: suppliers không có data hoặc không hỗ trợ filter)
                             // thử aggregate local từ tableData nếu có thông tin entity đó
                             if ((!data || data.length === 0) && config.type === 'supplier') {
@@ -1596,12 +1921,21 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                                 const localData = this.tableData || [];
                                 if (localData.some(r => r && r.supplier_name)) {
                                     const aggregated = this.aggregateByKey(localData, 'supplier_name', config.reportTypeForAgg);
-                                    this.pieCharts.push({ title: config.title, data: aggregated });
+                                    this.pieCharts.push({
+                                        title: config.title,
+                                        data: aggregated
+                                    });
                                 } else {
-                                    this.pieCharts.push({ title: config.title, data: data });
+                                    this.pieCharts.push({
+                                        title: config.title,
+                                        data: data
+                                    });
                                 }
                             } else {
-                                this.pieCharts.push({ title: config.title, data: data });
+                                this.pieCharts.push({
+                                    title: config.title,
+                                    data: data
+                                });
                             }
                         }
                     }
@@ -1629,7 +1963,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                                         maintainAspectRatio: true,
                                         plugins: {
                                             legend: {
-                                                display: false  // Tắt legend mặc định
+                                                display: false // Tắt legend mặc định
                                             },
                                             tooltip: {
                                                 callbacks: {
@@ -1677,13 +2011,20 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                                     try {
                                         // Destroy any previous instance bound to this index
                                         if (this.pieChartInstances[index]) {
-                                            try { this.pieChartInstances[index].destroy(); } catch (err) { /* ignore */ }
+                                            try {
+                                                this.pieChartInstances[index].destroy();
+                                            } catch (err) {
+                                                /* ignore */
+                                            }
                                             this.pieChartInstances[index] = null;
                                         }
 
                                         const ctx = (canvas && canvas.getContext) ? canvas.getContext('2d') : null;
                                         if (!ctx) {
-                                            console.error(`Cannot get 2D context for pieChartCanvas${index}`, { index, canvas });
+                                            console.error(`Cannot get 2D context for pieChartCanvas${index}`, {
+                                                index,
+                                                canvas
+                                            });
                                             return;
                                         }
 
@@ -1746,12 +2087,12 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     // thì GỌI API với report_type='orders' để lấy danh sách đơn hàng,
                     // rồi aggregate theo entity mong muốn ở frontend.
                     // Điều này đảm bảo các filter (staff_id, product_id, customer_id) được áp dụng đúng.
-                    
+
                     let reportTypeForPie = this.filters.reportType;
-                    
+
                     // Quyết định report_type nào sẽ được gọi để lấy dữ liệu biểu đồ tròn
                     // Khi đang xem báo cáo của một entity nhưng cần biểu đồ của entity khác:
-                    
+
                     // TH1: Đang xem Staff, cần biểu đồ Customer
                     // → Gọi report_type=orders với staff_id filter (orders có customer info)
                     if (this.filters.reportType === 'staff' && fetchType === 'customer') {
@@ -1776,8 +2117,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     // → Gọi report_type tương ứng với customer_id filter
                     else if (this.filters.reportType === 'customers' && fetchType === 'product') {
                         reportTypeForPie = 'products';
-                    }
-                    else if (this.filters.reportType === 'customers' && fetchType === 'staff') {
+                    } else if (this.filters.reportType === 'customers' && fetchType === 'staff') {
                         reportTypeForPie = 'staff';
                     }
                     // TH6: Đang xem Products, cần biểu đồ Supplier
@@ -1804,15 +2144,83 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     // The current `this.filters.criteria` may not be valid for the
                     // aggregated report type (e.g. suppliers expect 'sales_value' or
                     // 'purchase_value' while the main page may still have 'revenue').
+                    // Map criteria between report types intelligently:
                     let criteriaToSend = this.filters.criteria;
                     try {
                         const allowed = this.getCriteriaOptionsForType(reportTypeForPie).map(o => o.value);
+
+                        // Smart mapping: if current criteria is not allowed, try to find equivalent
                         if (!allowed.includes(criteriaToSend)) {
-                            // fall back to the first allowed criteria for that report type
-                            criteriaToSend = allowed[0] || this.filters.criteria || 'revenue';
+                            // Map 'revenue' to appropriate equivalent for each report type
+                            if (criteriaToSend === 'revenue') {
+                                if (reportTypeForPie === 'customers') {
+                                    criteriaToSend = 'total_spent'; // revenue equivalent for customers
+                                } else if (reportTypeForPie === 'suppliers') {
+                                    criteriaToSend = 'sales_value'; // revenue equivalent for suppliers
+                                } else if (reportTypeForPie === 'orders') {
+                                    criteriaToSend = 'total'; // revenue equivalent for orders
+                                } else {
+                                    criteriaToSend = 'revenue'; // keep for staff/products
+                                }
+                            }
+                            // Map 'total_spent' to appropriate equivalent
+                            else if (criteriaToSend === 'total_spent') {
+                                if (reportTypeForPie === 'staff' || reportTypeForPie === 'products') {
+                                    criteriaToSend = 'revenue'; // total_spent equivalent for staff/products
+                                } else if (reportTypeForPie === 'suppliers') {
+                                    criteriaToSend = 'sales_value'; // total_spent equivalent for suppliers
+                                } else if (reportTypeForPie === 'orders') {
+                                    criteriaToSend = 'total'; // total_spent equivalent for orders
+                                }
+                            }
+                            // Map 'sales_value' or 'purchase_value' to appropriate equivalent
+                            else if (criteriaToSend === 'sales_value' || criteriaToSend === 'purchase_value') {
+                                if (reportTypeForPie === 'staff' || reportTypeForPie === 'products') {
+                                    criteriaToSend = 'revenue';
+                                } else if (reportTypeForPie === 'customers') {
+                                    criteriaToSend = 'total_spent';
+                                } else if (reportTypeForPie === 'orders') {
+                                    criteriaToSend = 'total';
+                                }
+                            }
+                            // Map 'total' to appropriate equivalent (from orders)
+                            else if (criteriaToSend === 'total') {
+                                if (reportTypeForPie === 'staff' || reportTypeForPie === 'products') {
+                                    criteriaToSend = 'revenue';
+                                } else if (reportTypeForPie === 'customers') {
+                                    criteriaToSend = 'total_spent';
+                                } else if (reportTypeForPie === 'suppliers') {
+                                    criteriaToSend = 'sales_value';
+                                }
+                            }
+                            // Map 'quantity' to appropriate equivalent (from products)
+                            else if (criteriaToSend === 'quantity') {
+                                // Quantity is product-specific, fallback to count-based criteria
+                                if (reportTypeForPie === 'staff' || reportTypeForPie === 'customers') {
+                                    criteriaToSend = 'orders'; // quantity equivalent for staff/customers
+                                } else if (reportTypeForPie === 'suppliers') {
+                                    criteriaToSend = 'purchases'; //quantity equivalent for suppliers
+                                } else if (reportTypeForPie === 'orders') {
+                                    criteriaToSend = 'count';
+                                }
+                            }
+                            // Map 'purchases' to appropriate equivalent (from suppliers)
+                            else if (criteriaToSend === 'purchases') {
+                                if (reportTypeForPie === 'staff' || reportTypeForPie === 'customers' || reportTypeForPie === 'products') {
+                                    criteriaToSend = 'orders';
+                                } else if (reportTypeForPie === 'orders') {
+                                    criteriaToSend = 'count';
+                                }
+                            }
+
+                            // Final validation: if still not allowed after mapping, use first allowed
+                            if (!allowed.includes(criteriaToSend)) {
+                                criteriaToSend = allowed[0] || 'revenue';
+                            }
                         }
                     } catch (e) {
                         // conservative fallback
+                        console.warn('Criteria mapping failed, using default', e);
                         criteriaToSend = this.filters.criteria;
                     }
                     params.append('criteria', criteriaToSend);
@@ -1906,7 +2314,9 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                                 }
                             } else {
                                 // Thêm các tham số duy nhất cho trường hợp tổng quát
-                                tableFilterParams.forEach(([k, v]) => { if (!params.has(k)) params.append(k, v); });
+                                tableFilterParams.forEach(([k, v]) => {
+                                    if (!params.has(k)) params.append(k, v);
+                                });
                             }
                             console.debug('fetchPieChartData - appended params from tableFilters:', Array.from(params.entries()));
                         }
@@ -1927,7 +2337,8 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     let lastRawResult = null; // keep last raw API response for diagnostics
                     for (let c of tryOrder) {
                         // update params for this attempt
-                        if (params.has('criteria')) params.set('criteria', c); else params.append('criteria', c);
+                        if (params.has('criteria')) params.set('criteria', c);
+                        else params.append('criteria', c);
                         const url = `/admin/api/reports/filter?${params}`;
                         console.debug(`fetchPieChartData - request for ${fetchType} (criteria=${c}):`, url, Array.from(params.entries()));
                         try {
@@ -1944,7 +2355,11 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                             lastRawResult = result;
                             if (result && result.success && Array.isArray(responseArray) && responseArray.length > 0) {
                                 // attach the resolved data array so caller can aggregate reliably
-                                finalResult = { result, criteriaUsed: c, dataArray: responseArray };
+                                finalResult = {
+                                    result,
+                                    criteriaUsed: c,
+                                    dataArray: responseArray
+                                };
                                 break;
                             }
                         } catch (e) {
@@ -1966,9 +2381,13 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     }
 
                     if (finalResult) {
-                        const { result, criteriaUsed, dataArray } = finalResult;
+                        const {
+                            result,
+                            criteriaUsed,
+                            dataArray
+                        } = finalResult;
                         const dataForAgg = dataArray || result.data || result.rows || result.items || [];
-                        
+
                         // DEBUG: Log để kiểm tra dữ liệu trả về
                         console.log(`fetchPieChartData - Got ${dataForAgg.length} rows for ${fetchType}, reportType=${reportTypeForPie}`);
                         if (dataForAgg.length > 0) {
@@ -1976,7 +2395,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                             console.log(`Available fields:`, Object.keys(dataForAgg[0]));
                             console.log(`groupByKey=${groupByKey}, sample values:`, dataForAgg.slice(0, 5).map(r => r[groupByKey] || r['customer_name'] || r['full_name'] || 'N/A'));
                         }
-                        
+
                         const aggregated = this.aggregateByKey(dataForAgg, groupByKey, reportTypeForPie);
                         return aggregated;
                     } else {
@@ -2004,7 +2423,8 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                                 const paramsNoProduct = new URLSearchParams(Array.from(params.entries()).filter(([k]) => k !== 'product_id'));
                                 let finalResultNoProduct = null;
                                 for (let c of tryOrder) {
-                                    if (paramsNoProduct.has('criteria')) paramsNoProduct.set('criteria', c); else paramsNoProduct.append('criteria', c);
+                                    if (paramsNoProduct.has('criteria')) paramsNoProduct.set('criteria', c);
+                                    else paramsNoProduct.append('criteria', c);
                                     const urlNoProduct = `/admin/api/reports/filter?${paramsNoProduct}`;
                                     console.debug(`fetchPieChartData - retry request without product (criteria=${c}):`, urlNoProduct);
                                     try {
@@ -2017,7 +2437,11 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                                         else if (res2 && Array.isArray(res2.items) && res2.items.length > 0) responseArray2 = res2.items;
 
                                         if (res2 && res2.success && Array.isArray(responseArray2) && responseArray2.length > 0) {
-                                            finalResultNoProduct = { result: res2, criteriaUsed: c, dataArray: responseArray2 };
+                                            finalResultNoProduct = {
+                                                result: res2,
+                                                criteriaUsed: c,
+                                                dataArray: responseArray2
+                                            };
                                             break;
                                         }
                                     } catch (e) {
@@ -2026,7 +2450,11 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                                 }
 
                                 if (finalResultNoProduct) {
-                                    const { result: resOk, criteriaUsed: cUsed, dataArray: dataArray2 } = finalResultNoProduct;
+                                    const {
+                                        result: resOk,
+                                        criteriaUsed: cUsed,
+                                        dataArray: dataArray2
+                                    } = finalResultNoProduct;
                                     const dataForAgg2 = dataArray2 || resOk.data || resOk.rows || resOk.items || [];
                                     const aggregated2 = this.aggregateByKey(dataForAgg2, groupByKey, reportTypeForPie);
                                     return aggregated2;
@@ -2133,7 +2561,10 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 if (sampleRow) {
                     // Prefer first key that exists on sampleRow
                     for (let k of keysToTest) {
-                        if (sampleRow.hasOwnProperty(k)) { chosenKey = k; break; }
+                        if (sampleRow.hasOwnProperty(k)) {
+                            chosenKey = k;
+                            break;
+                        }
                     }
                 }
 
@@ -2142,7 +2573,10 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 if (sampleRow && (sampleRow[chosenKey] === undefined || sumForKey(chosenKey) === 0)) {
                     for (let k of keysToTest) {
                         const s = sumForKey(k);
-                        if (!isNaN(s) && s > 0) { chosenKey = k; break; }
+                        if (!isNaN(s) && s > 0) {
+                            chosenKey = k;
+                            break;
+                        }
                     }
                 }
 
@@ -2152,7 +2586,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     // Giải quyết tên nhãn với phương án dự phòng: backend có thể trả tên trường khác nhau
                     // tùy theo `report_type`.
                     let labels = row[key];
-                    
+
                     // SPECIAL CASE: Khi fetch orders data để aggregate theo entity khác
                     // Dựa vào `key` (groupByKey) để xác định entity type cần aggregate
                     if (labels === undefined || labels === null || labels === '') {
@@ -2173,7 +2607,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                             labels = row['supplier_name'] || row['supplier'];
                         }
                     }
-                    
+
                     if (labels === undefined || labels === null || labels === '') {
                         // Thử các khóa thay thế thông dụng — nhưng ưu tiên các khóa liên quan
                         // đến loại thực thể đang được tổng hợp (`reportTypeForAgg`) để tránh
@@ -2231,7 +2665,10 @@ $pageTitle = 'Thống Kê & Báo Cáo';
 
                 // Convert to array and sort
                 const result = Object.entries(grouped)
-                    .map(([label, value]) => ({ label, value }))
+                    .map(([label, value]) => ({
+                        label,
+                        value
+                    }))
                     .sort((a, b) => b.value - a.value)
                     .slice(0, 10); // Top 10
 
@@ -2311,7 +2748,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     inventory: 'name'
                 };
                 let key = labelKeys[this.filters.reportType];
-                
+
                 // Fallback: nếu key không tồn tại trong data, tự động tìm trường phù hợp
                 if (data && data.length > 0) {
                     const sample = data[0];
@@ -2321,14 +2758,14 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         key = candidates.find(k => sample[k] !== undefined && sample[k] !== null) || key;
                     }
                 }
-                
+
                 return data.map(item => item[key] || 'N/A');
             },
 
             getChartValues(data) {
                 // Sử dụng hàm getValueKeyForReportType để lấy key phù hợp với report type
                 let key = this.getValueKeyForReportType(this.filters.reportType);
-                
+
                 // Fallback: nếu key không có trong data, thử tìm key phù hợp
                 if (data && data.length > 0) {
                     const sample = data[0];
@@ -2346,7 +2783,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         }
                     }
                 }
-                
+
                 return data.map(item => parseFloat(item[key]) || 0);
             },
 
@@ -2370,7 +2807,11 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 if (!hexOrHsl) return `rgba(0,0,0,${alpha})`;
                 if (hexOrHsl.startsWith('hsl')) {
                     // Chart.js accepts hsla as background when CSS color string with slash notation
-                    try { return hexOrHsl.replace('hsl(', 'hsla(').replace(')', ` / ${alpha})`); } catch { return `rgba(0,0,0,${alpha})`; }
+                    try {
+                        return hexOrHsl.replace('hsl(', 'hsla(').replace(')', ` / ${alpha})`);
+                    } catch {
+                        return `rgba(0,0,0,${alpha})`;
+                    }
                 }
                 const hex = hexOrHsl.replace('#', '');
                 if (hex.length === 3) {
@@ -2405,19 +2846,27 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     // Tiếp tục sang phần xử lý dự phòng bên dưới
                 }
                 // Phương án dự phòng: thử dùng hàm hexToRgba hiện có
-                try { return this.hexToRgba(color, alpha); } catch (e) { return `rgba(0,0,0,${alpha})`; }
+                try {
+                    return this.hexToRgba(color, alpha);
+                } catch (e) {
+                    return `rgba(0,0,0,${alpha})`;
+                }
             },
 
             renderAreaChart() {
                 // Hủy (destroy) bất kỳ instance biểu đồ cũ đang tồn tại
                 if (this.areaChart) {
-                    try { this.areaChart.destroy(); } catch (e) { /* ignore */ }
+                    try {
+                        this.areaChart.destroy();
+                    } catch (e) {
+                        /* ignore */
+                    }
                     this.areaChart = null;
                 }
 
                 const dataToUse = this.getFilteredTableData().length > 0 ? this.getFilteredTableData() : this.tableData;
                 console.debug('renderAreaChart - reportType:', this.filters.reportType, 'dataToUse length:', dataToUse ? dataToUse.length : 0);
-                
+
                 if (!dataToUse || dataToUse.length === 0) {
                     console.warn('renderAreaChart aborted: no data');
                     return;
@@ -2436,7 +2885,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 };
                 const candidates = labelCandidatesMap[entityType] || ['name', 'full_name'];
                 let labelKey = candidates.find(k => dataToUse.some(r => r && (r[k] !== undefined && r[k] !== null && r[k] !== '')));
-                
+
                 // Fallback: nếu không tìm thấy labelKey, dùng khóa đầu tiên có giá trị
                 if (!labelKey) {
                     const sample = dataToUse.find(r => r && typeof r === 'object');
@@ -2448,7 +2897,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         }) || 'id';
                     }
                 }
-                
+
                 console.debug('renderAreaChart - entityType:', entityType, 'labelKey:', labelKey, 'valueKey will be:', this.getValueKeyForReportType(entityType));
 
                 // If viewing orders, prefer using the unique order identifier so
@@ -2513,11 +2962,15 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     const sample = dataToUse.find(r => r && typeof r === 'object');
                     if (sample) {
                         for (const k of Object.keys(sample)) {
-                            if (parseDate(sample[k])) { dateKey = k; console.log('renderAreaChart auto-detected dateKey:', dateKey); break; }
+                            if (parseDate(sample[k])) {
+                                dateKey = k;
+                                console.log('renderAreaChart auto-detected dateKey:', dateKey);
+                                break;
+                            }
                         }
                     }
                 }
-                
+
                 console.debug('renderAreaChart - dateKey:', dateKey, 'will render', dateKey ? 'multi-date' : 'single-label', 'chart');
 
                 // Tổng hợp các giá trị theo đối tượng
@@ -2548,7 +3001,8 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 const entitiesSorted = Object.keys(entityTotals).sort((a, b) => entityTotals[b] - entityTotals[a]);
                 const topEntities = entitiesSorted.slice(0, TOP_N);
                 const otherEntities = entitiesSorted.slice(TOP_N);
-                const finalEntities = [...topEntities]; if (otherEntities.length) finalEntities.push('Khác');
+                const finalEntities = [...topEntities];
+                if (otherEntities.length) finalEntities.push('Khác');
 
                 let labels = [];
                 let datasets = [];
@@ -2579,7 +3033,10 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         };
                     });
                 } else {
-                    labels = dates.map(d => { const [y, m, day] = d.split('-'); return `${day}/${m}`; });
+                    labels = dates.map(d => {
+                        const [y, m, day] = d.split('-');
+                        return `${day}/${m}`;
+                    });
                     // Create stacked bar datasets: one dataset per entity, values per date
                     datasets = finalEntities.map((e, idx) => {
                         const color = this.generateDistinctColor(idx, finalEntities.length);
@@ -2608,7 +3065,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     console.error('renderAreaChart aborted: cannot get 2d context');
                     return;
                 }
-                
+
                 console.debug('renderAreaChart - creating chart with', datasets.length, 'datasets,', labels.length, 'labels');
 
 
@@ -2622,7 +3079,10 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     let activeDatasetIdx = null;
                     let legendHighlightDataset = null; // dataset index when hovering legend
 
-                    function clearActive() { activeDataIdx = null; activeDatasetIdx = null; }
+                    function clearActive() {
+                        activeDataIdx = null;
+                        activeDatasetIdx = null;
+                    }
 
                     return {
                         id: 'areaChartHighlight',
@@ -2631,12 +3091,20 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         applyHighlightDataset(chart, datasetIdx) {
                             legendHighlightDataset = datasetIdx;
                             // trigger a redraw to show outlines for whole dataset
-                            try { chart.draw(); } catch (e) { /* ignore */ }
+                            try {
+                                chart.draw();
+                            } catch (e) {
+                                /* ignore */
+                            }
                         },
                         restoreHighlights(chart) {
                             legendHighlightDataset = null;
                             clearActive();
-                            try { chart.draw(); } catch (e) { /* ignore */ }
+                            try {
+                                chart.draw();
+                            } catch (e) {
+                                /* ignore */
+                            }
                         },
 
                         afterEvent(chart, args) {
@@ -2652,14 +3120,22 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                                 } else if (ex < ca.left || ex > ca.right || ey < ca.top || ey > ca.bottom) {
                                     if (activeDataIdx !== null || activeDatasetIdx !== null) {
                                         clearActive();
-                                        try { chart.draw(); } catch (e) { /* ignore */ }
+                                        try {
+                                            chart.draw();
+                                        } catch (e) {
+                                            /* ignore */
+                                        }
                                     }
                                     return;
                                 }
-                            } catch (e) { /* ignore */ }
+                            } catch (e) {
+                                /* ignore */
+                            }
 
                             // Use nearest+intersect to pick the exact element under cursor
-                            const elems = chart.getElementsAtEventForMode(nativeEvt, 'nearest', { intersect: true }, false);
+                            const elems = chart.getElementsAtEventForMode(nativeEvt, 'nearest', {
+                                intersect: true
+                            }, false);
                             const elem = (elems && elems.length) ? elems[0] : null;
                             const newDataIdx = elem ? elem.index : null;
                             const newDatasetIdx = elem ? elem.datasetIndex : null;
@@ -2668,7 +3144,11 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                             activeDataIdx = newDataIdx;
                             activeDatasetIdx = newDatasetIdx;
                             // redraw so afterDraw will render the outline
-                            try { chart.draw(); } catch (e) { /* ignore */ }
+                            try {
+                                chart.draw();
+                            } catch (e) {
+                                /* ignore */
+                            }
                         },
 
                         // Draw outlines for active element or for legend-highlighted dataset
@@ -2730,41 +3210,78 @@ $pageTitle = 'Thống Kê & Báo Cáo';
 
                 this.areaChart = new Chart(ctx, {
                     type: 'bar',
-                    data: { labels, datasets },
+                    data: {
+                        labels,
+                        datasets
+                    },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         // Force non-stacked scales so datasets render as grouped (side-by-side) bars
-                        scales: { x: { stacked: false }, y: { stacked: false, beginAtZero: true } },
+                        scales: {
+                            x: {
+                                stacked: false
+                            },
+                            y: {
+                                stacked: false,
+                                beginAtZero: true
+                            }
+                        },
                         // Use nearest+intersect so interactions target the single hovered bar
-                        interaction: { mode: 'nearest', intersect: true },
+                        interaction: {
+                            mode: 'nearest',
+                            intersect: true
+                        },
                         plugins: {
                             legend: {
                                 position: 'top',
                                 display: datasets.length <= LEGEND_THRESHOLD,
-                                labels: { boxWidth: 12, font: { size: 11 } },
-                                onHover: function (event, legendItem, legend) {
+                                labels: {
+                                    boxWidth: 12,
+                                    font: {
+                                        size: 11
+                                    }
+                                },
+                                onHover: function(event, legendItem, legend) {
                                     try {
                                         const chart = legend.chart;
                                         const idx = legendItem.datasetIndex;
                                         if (highlightPlugin && typeof highlightPlugin.applyHighlightDataset === 'function') {
                                             highlightPlugin.applyHighlightDataset(chart, idx);
                                         }
-                                    } catch (e) { /* ignore */ }
+                                    } catch (e) {
+                                        /* ignore */
+                                    }
                                 },
-                                onLeave: function (event, legendItem, legend) {
+                                onLeave: function(event, legendItem, legend) {
                                     try {
                                         if (highlightPlugin && typeof highlightPlugin.restoreHighlights === 'function') {
                                             const chart = legend && legend.chart ? legend.chart : null;
                                             if (chart) highlightPlugin.restoreHighlights(chart);
                                         }
-                                    } catch (e) { /* ignore */ }
+                                    } catch (e) {
+                                        /* ignore */
+                                    }
                                 }
                             },
                             tooltip: {
                                 enabled: true,
                                 mode: 'nearest',
-                                intersect: true
+                                intersect: true,
+                                callbacks: {
+                                    label: (context) => {
+                                        const isMoney = ['revenue', 'total_spent', 'sales_value', 'purchase_value', 'avg_order_value', 'total'].includes(this.filters.criteria);
+                                        const value = context.parsed.y || context.raw || 0;
+                                        const formattedValue = isMoney ? this.formatMoney(value) : new Intl.NumberFormat('vi-VN').format(value);
+                                        return `${context.dataset.label}: ${formattedValue}`;
+                                    },
+                                    title: (items) => {
+                                        if (items && items[0]) {
+                                            return `Ngày: ${items[0].label}`;
+                                        }
+                                        return '';
+                                    }
+                                }
                             }
                         }
                     },
@@ -2776,13 +3293,21 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     const wrapper = canvas && canvas.parentElement;
                     if (wrapper && datasets.length > LEGEND_THRESHOLD) {
                         wrapper.addEventListener('mouseenter', () => {
-                            try { this.areaChart.options.plugins.legend.display = true; this.areaChart.update(); } catch (e) { }
+                            try {
+                                this.areaChart.options.plugins.legend.display = true;
+                                this.areaChart.update();
+                            } catch (e) {}
                         });
                         wrapper.addEventListener('mouseleave', () => {
-                            try { this.areaChart.options.plugins.legend.display = false; this.areaChart.update(); } catch (e) { }
+                            try {
+                                this.areaChart.options.plugins.legend.display = false;
+                                this.areaChart.update();
+                            } catch (e) {}
                         });
                     }
-                } catch (e) { /* ignore */ }
+                } catch (e) {
+                    /* ignore */
+                }
             },
 
             renderBarChart(labels, values, colors) {
@@ -2813,7 +3338,9 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         responsive: true,
                         maintainAspectRatio: true,
                         plugins: {
-                            legend: { display: false },
+                            legend: {
+                                display: false
+                            },
                             tooltip: {
                                 callbacks: {
                                     label: (context) => {
@@ -2841,17 +3368,25 @@ $pageTitle = 'Thống Kê & Báo Cáo';
             renderOrdersStackedBar() {
                 // destroy existing
                 if (this.ordersStackedBar) {
-                    try { this.ordersStackedBar.destroy(); } catch (e) { /* ignore */ }
+                    try {
+                        this.ordersStackedBar.destroy();
+                    } catch (e) {
+                        /* ignore */
+                    }
                     this.ordersStackedBar = null;
                 }
 
                 const filteredLen = this.getFilteredTableData().length;
                 const totalLen = (this.tableData || []).length;
-                try { console.debug('renderOrdersStackedBar - filteredLen:', filteredLen, 'totalLen:', totalLen); } catch (e) { }
+                try {
+                    console.debug('renderOrdersStackedBar - filteredLen:', filteredLen, 'totalLen:', totalLen);
+                } catch (e) {}
 
                 const dataToUse = filteredLen > 0 ? this.getFilteredTableData() : this.tableData;
                 if (!dataToUse || dataToUse.length === 0) {
-                    try { console.debug('renderOrdersStackedBar aborted: no dataToUse'); } catch (e) { }
+                    try {
+                        console.debug('renderOrdersStackedBar aborted: no dataToUse');
+                    } catch (e) {}
                     return;
                 }
 
@@ -2866,20 +3401,26 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     console.error('renderOrdersStackedBar: no valid sample data found');
                     return;
                 }
-                
+
                 let dateKey = dateCandidates.find(k => sample && Object.prototype.hasOwnProperty.call(sample, k));
                 if (!dateKey) {
                     for (const k of Object.keys(sample || {})) {
                         const v = sample[k];
-                        if (typeof v === 'string' && /\d{4}-\d{2}-\d{2}/.test(v)) { dateKey = k; break; }
-                        if (typeof v === 'string' && /\d{1,2}\/\d{1,2}\/\d{4}/.test(v)) { dateKey = k; break; }
+                        if (typeof v === 'string' && /\d{4}-\d{2}-\d{2}/.test(v)) {
+                            dateKey = k;
+                            break;
+                        }
+                        if (typeof v === 'string' && /\d{1,2}\/\d{1,2}\/\d{4}/.test(v)) {
+                            dateKey = k;
+                            break;
+                        }
                     }
                 }
-                
+
                 if (!dateKey) {
                     dateKey = Object.keys(sample).find(k => k.toLowerCase().includes('date') || k.toLowerCase().includes('time'));
                 }
-                
+
                 if (!dateKey) {
                     console.warn('renderOrdersStackedBar: no date field found, using fallback');
                     dateKey = 'created_at';
@@ -2896,21 +3437,34 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 }
 
                 let valueKey = valueCandidates.find(k => sample && Object.prototype.hasOwnProperty.call(sample, k)) || this.getValueKeyForReportType('orders') || 'total_amount';
-                
-                console.debug('renderOrdersStackedBar keys detected:', { dateKey, statusKey, orderIdKey, valueKey });
+
+                console.debug('renderOrdersStackedBar keys detected:', {
+                    dateKey,
+                    statusKey,
+                    orderIdKey,
+                    valueKey
+                });
 
                 // Parse date helper
                 const parseDate = raw => {
                     if (!raw && raw !== 0) return null;
                     if (raw instanceof Date && !isNaN(raw)) return raw;
-                    if (typeof raw === 'number') { const d = new Date(raw); if (!isNaN(d) && d.getFullYear() > 1970) return d; return null; }
+                    if (typeof raw === 'number') {
+                        const d = new Date(raw);
+                        if (!isNaN(d) && d.getFullYear() > 1970) return d;
+                        return null;
+                    }
                     if (typeof raw === 'string') {
                         const s = raw.trim();
                         const iso = /^\d{4}-\d{2}-\d{2}/;
                         const dmy = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
                         if (iso.test(s)) return new Date(s);
-                        if (dmy.test(s)) { const [dd, mm, yy] = s.split('/'); return new Date(Number(yy), Number(mm) - 1, Number(dd)); }
-                        const tryD = new Date(s); if (!isNaN(tryD) && tryD.getFullYear() > 1970) return tryD;
+                        if (dmy.test(s)) {
+                            const [dd, mm, yy] = s.split('/');
+                            return new Date(Number(yy), Number(mm) - 1, Number(dd));
+                        }
+                        const tryD = new Date(s);
+                        if (!isNaN(tryD) && tryD.getFullYear() > 1970) return tryD;
                     }
                     return null;
                 };
@@ -2924,13 +3478,16 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                         const d = parseDate(dateKey ? row[dateKey] : row.created_at || row.date || row.order_date);
                         const day = d ? d.toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
                         dateSet.add(day);
-                        
+
                         const status = (statusKey && row[statusKey]) ? String(row[statusKey]) : 'Không rõ';
                         const orderId = (orderIdKey && row[orderIdKey]) ? String(row[orderIdKey]) : `#${idx + 1}`;
                         const val = parseFloat(row[valueKey]) || 0;
-                        
+
                         if (!ordersMap.has(orderId)) {
-                            ordersMap.set(orderId, { status, dates: {} });
+                            ordersMap.set(orderId, {
+                                status,
+                                dates: {}
+                            });
                         }
                         ordersMap.get(orderId).dates[day] = val;
                     } catch (e) {
@@ -2939,7 +3496,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 });
 
                 const dates = Array.from(dateSet).sort();
-                
+
                 // Status colors
                 const statusColors = {
                     'Chờ xử lý': '#FFA500',
@@ -2961,7 +3518,7 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 limitedOrders.forEach(([orderId, orderInfo], idx) => {
                     const color = statusColors[orderInfo.status] || this.generateDistinctColor(idx, limitedOrders.length);
                     const data = dates.map(d => orderInfo.dates[d] || 0);
-                    
+
                     datasets.push({
                         label: `Đơn ${orderId}`,
                         data,
@@ -2996,7 +3553,10 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                     });
                 }
 
-                const labels = dates.map(d => { const [y, m, day] = d.split('-'); return `${day}/${m}`; });
+                const labels = dates.map(d => {
+                    const [y, m, day] = d.split('-');
+                    return `${day}/${m}`;
+                });
 
                 const canvas = this.$refs.ordersStackedBarCanvas;
                 if (!canvas) return;
@@ -3005,38 +3565,51 @@ $pageTitle = 'Thống Kê & Báo Cáo';
 
                 this.ordersStackedBar = new Chart(ctx, {
                     type: 'bar',
-                    data: { labels, datasets },
+                    data: {
+                        labels,
+                        datasets
+                    },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        interaction: { 
+                        interaction: {
                             mode: 'nearest',
                             intersect: true
                         },
                         scales: {
-                            x: { 
+                            x: {
                                 stacked: true,
-                                grid: { display: false },
-                                ticks: { font: { size: 11 } }
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    font: {
+                                        size: 11
+                                    }
+                                }
                             },
-                            y: { 
-                                stacked: true, 
-                                beginAtZero: true, 
-                                ticks: { 
+                            y: {
+                                stacked: true,
+                                beginAtZero: true,
+                                ticks: {
                                     callback: (v) => this.formatMoney(v),
-                                    font: { size: 11 }
+                                    font: {
+                                        size: 11
+                                    }
                                 }
                             }
                         },
                         plugins: {
-                            legend: { 
+                            legend: {
                                 position: 'top',
                                 display: false, // Ẩn legend vì có quá nhiều đơn
-                                labels: { 
-                                    boxWidth: 12, 
+                                labels: {
+                                    boxWidth: 12,
                                     padding: 8,
-                                    font: { size: 10 }
-                                } 
+                                    font: {
+                                        size: 10
+                                    }
+                                }
                             },
                             tooltip: {
                                 enabled: true,
@@ -3078,9 +3651,14 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                                 },
                                 backgroundColor: 'rgba(0, 0, 0, 0.9)',
                                 titleColor: '#FFFFFF',
-                                titleFont: { size: 13, weight: 'bold' },
+                                titleFont: {
+                                    size: 13,
+                                    weight: 'bold'
+                                },
                                 bodyColor: '#FFFFFF',
-                                bodyFont: { size: 12 },
+                                bodyFont: {
+                                    size: 12
+                                },
                                 borderColor: '#FFFFFF',
                                 borderWidth: 1,
                                 padding: 12,
@@ -3094,7 +3672,9 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                                 if (event && event.native && event.native.target) {
                                     event.native.target.style.cursor = activeElements && activeElements.length > 0 ? 'pointer' : 'default';
                                 }
-                            } catch (e) { /* ignore */ }
+                            } catch (e) {
+                                /* ignore */
+                            }
                         }
                     }
                 });
@@ -3107,12 +3687,20 @@ $pageTitle = 'Thống Kê & Báo Cáo';
                 }
 
                 if (this.areaChart) {
-                    try { this.areaChart.destroy(); } catch (e) { /* ignore */ }
+                    try {
+                        this.areaChart.destroy();
+                    } catch (e) {
+                        /* ignore */
+                    }
                     this.areaChart = null;
                 }
 
                 if (this.ordersStackedBar) {
-                    try { this.ordersStackedBar.destroy(); } catch (e) { /* ignore */ }
+                    try {
+                        this.ordersStackedBar.destroy();
+                    } catch (e) {
+                        /* ignore */
+                    }
                     this.ordersStackedBar = null;
                 }
 

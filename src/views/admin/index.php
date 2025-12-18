@@ -403,7 +403,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <?php else: ?>
                 <?php foreach ($recent_orders as $order): ?>
                     <div class="border-l-4 pl-3 py-2 hover:bg-gray-50 transition-colors
-                            <?= $order['status'] === 'Hoàn tất' ? 'border-green-500' :
+                            <?= $order['status'] === 'Đã giao' ? 'border-green-500' :
                                 ($order['status'] === 'Chờ xử lý' ? 'border-orange-500' : 'border-red-500') ?>">
                         <div class="flex items-start justify-between">
                             <div>
@@ -417,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <span
                                 class="text-xs px-2 py-1 rounded-full
-                                    <?= $order['status'] === 'Hoàn tất' ? 'bg-green-100 text-green-700' :
+                                    <?= $order['status'] === 'Đã giao' ? 'bg-green-100 text-green-700' :
                                         ($order['status'] === 'Chờ xử lý' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700') ?>">
                                 <?= htmlspecialchars($order['status']) ?>
                             </span>
@@ -948,7 +948,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.orderStatusChart = new Chart(ctx, {
                     type: 'pie',
                     data: {
-                        labels: ['Hoàn tất', 'Chờ xử lý', 'Đã hủy'],
+                        labels: ['Đã giao', 'Chờ xử lý', 'Đã hủy'],
                         datasets: [{
                             data: data,
                             backgroundColor: [

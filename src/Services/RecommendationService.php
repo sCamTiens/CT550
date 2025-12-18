@@ -170,7 +170,7 @@ class RecommendationService
         }
 
         $sql = "
-            SELECT p.*, pi.image_url,
+            SELECT p.*, pi.image_url, s.qty as stock_quantity,
                    p.sale_price as final_price
             FROM products p
             LEFT JOIN (
@@ -179,6 +179,7 @@ class RecommendationService
                 WHERE is_primary = 1
                 GROUP BY product_id
             ) pi ON p.id = pi.product_id
+            LEFT JOIN stocks s ON p.id = s.product_id
             WHERE p.category_id IN ($categoryIn)
                 AND p.is_active = 1
                 $excludeClause
@@ -225,7 +226,7 @@ class RecommendationService
         }
 
         $sql = "
-            SELECT p.*, pi.image_url,
+            SELECT p.*, pi.image_url, s.qty as stock_quantity,
                    p.sale_price as final_price
             FROM products p
             LEFT JOIN (
@@ -234,6 +235,7 @@ class RecommendationService
                 WHERE is_primary = 1
                 GROUP BY product_id
             ) pi ON p.id = pi.product_id
+            LEFT JOIN stocks s ON p.id = s.product_id
             WHERE (" . implode(' OR ', $searchConditions) . ")
                 AND p.is_active = 1
                 $excludeClause
@@ -269,7 +271,7 @@ class RecommendationService
         }
 
         $sql = "
-            SELECT p.*, pi.image_url,
+            SELECT p.*, pi.image_url, s.qty as stock_quantity,
                    p.sale_price as final_price,
                    COALESCE(SUM(oi.qty), 0) as total_sold
             FROM products p
@@ -279,6 +281,7 @@ class RecommendationService
                 WHERE is_primary = 1
                 GROUP BY product_id
             ) pi ON p.id = pi.product_id
+            LEFT JOIN stocks s ON p.id = s.product_id
             LEFT JOIN order_items oi ON p.id = oi.product_id
             LEFT JOIN orders o ON oi.order_id = o.id AND o.status NOT IN ('Đã hủy')
             WHERE p.is_active = 1
