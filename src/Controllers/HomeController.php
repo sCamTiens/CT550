@@ -13,39 +13,20 @@ class HomeController extends Controller
 {
     public function index(Request $req)
     {
-        // Kiểm tra phiên đăng nhập (validate JWT token)
+        // ❌ KHÔNG validate token trong HomeController nữa!
+        // Lý do: Cookies có thể chưa kịp đến trong request đầu tiên sau login
+        // Middleware sẽ handle validation cho các protected routes
+
+        // Chỉ log để debug
         if (!empty($_SESSION['customer'])) {
-            try {
-                // Lấy token từ cookie hoặc session
-                $token = $_SESSION['customer']['access_token'] ?? $_COOKIE['jwt_token'] ?? null;
+            $hasSessionToken = !empty($_SESSION['customer']['access_token']);
+            $hasCookieToken = !empty($_COOKIE['jwt_token']);
 
-                if (!$token) {
-                    // Không có token, xóa session
-                    unset($_SESSION['customer']);
-                } else {
-                    // Validate token bằng JWTHelper
-                    $userData = \App\Support\JWTHelper::getUserFromToken($token);
-
-                    if (!$userData) {
-                        // Token không hợp lệ, xóa session và cookie
-                        unset($_SESSION['customer']);
-                        if (isset($_COOKIE['jwt_token'])) {
-                            setcookie('jwt_token', '', time() - 3600, '/', '', false, true);
-                        }
-                    } else {
-                        // Token hợp lệ, cập nhật thông tin session nếu cần
-                        $_SESSION['customer']['id'] = $userData['id'] ?? $_SESSION['customer']['id'];
-                        $_SESSION['customer']['email'] = $userData['email'] ?? $_SESSION['customer']['email'];
-                    }
-                }
-            } catch (\Exception $e) {
-                // Lỗi khi validate, xóa session
-                unset($_SESSION['customer']);
-                if (isset($_COOKIE['jwt_token'])) {
-                    setcookie('jwt_token', '', time() - 3600, '/', '', false, true);
-                }
-            }
+            error_log('[HomeController] Customer session exists');
+            error_log('[HomeController] Has session token: ' . ($hasSessionToken ? 'YES' : 'NO'));
+            error_log('[HomeController] Has cookie token: ' . ($hasCookieToken ? 'YES' : 'NO'));
         }
+
 
         $categoryRepo = new CategoryRepository();
         $productRepo = new ProductRepository();

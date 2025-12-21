@@ -18,9 +18,9 @@ $items = $items ?? [];
                 @click="exportExcel()">
                 <i class="fa-solid fa-file-excel"></i> Xuất Excel
             </button>
-            <button
+            <!-- <button
                 class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
-                @click="openCreate()">+ Thêm phiếu thu</button>
+                @click="openCreate()">+ Thêm phiếu thu</button> -->
         </div>
     </div>
 
@@ -56,11 +56,15 @@ $items = $items ?? [];
                         <th class="py-2 px-4 text-center">Thao tác</th>
                         <?= textFilterPopover('code', 'Mã phiếu thu') ?>
                         <?= textFilterPopover('payer_user_name', 'Khách hàng') ?>
-                        <?= textFilterPopover('order_id', 'Mã đơn hàng') ?>
+                        <?= textFilterPopover('order_code', 'Mã đơn hàng') ?>
                         <?= selectFilterPopover('method', 'PT thanh toán', [
                             '' => '-- Tất cả --',
                             'Tiền mặt' => 'Tiền mặt',
                             'Chuyển khoản' => 'Chuyển khoản',
+                            'ZaloPay' => 'ZaloPay',
+                            'VNPay' => 'VNPay',
+                            'Quẹt thẻ' => 'Quẹt thẻ',
+                            'Thanh toán khi nhận hàng (COD)' => 'COD',
                         ]) ?>
                         <?= numberFilterPopover('amount', 'Số tiền') ?>
                         <?= textFilterPopover('payment_id', 'Bản ghi TT') ?>
@@ -77,13 +81,13 @@ $items = $items ?? [];
                     <template x-for="(r, idx) in paginated()" :key="r.id">
                         <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
                             <td class="py-2 px-4 text-center space-x-2">
-                                <?php if (($_SESSION['user']['staff_role'] ?? '') === 'Admin'): ?>
+                                <!-- <?php if (($_SESSION['user']['staff_role'] ?? '') === 'Admin'): ?>
                                     <button @click="openEditModal(r)"
                                         class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
                                         title="Sửa">
                                         <i class="fa-solid fa-pen"></i>
                                     </button>
-                                <?php endif; ?>
+                                <?php endif; ?> -->
 
                                 <button @click="openViewModal(r)"
                                     class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
@@ -91,13 +95,13 @@ $items = $items ?? [];
                                     <i class="fa-solid fa-eye"></i>
                                 </button>
 
-                                <?php if (($_SESSION['user']['staff_role'] ?? '') === 'Admin'): ?>
+                                <!-- <?php if (($_SESSION['user']['staff_role'] ?? '') === 'Admin'): ?>
                                     <button @click="remove(r.id)"
                                         class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
                                         title="Xóa">
                                         <i class="fa-solid fa-trash"></i>
                                     </button>
-                                <?php endif; ?>
+                                <?php endif; ?> -->
                             </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
                                 :class="(r.code || '—') === '—' ? 'text-center' : 'text-left'" x-text="r.code || '—'">
@@ -106,13 +110,17 @@ $items = $items ?? [];
                                 :class="(r.payer_user_name || 'Khách vãng lai') === 'Khách vãng lai' ? 'text-left' : 'text-left'"
                                 x-text="r.payer_user_name || 'Khách vãng lai'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
-                                :class="(r.order_id || '—') === '—' ? 'text-center' : 'text-center'"
-                                x-text="r.order_id || '—'"></td>
+                                :class="(r.order_code || '—') === '—' ? 'text-center' : 'text-center'"
+                                x-text="r.order_code || '—'"></td>
                             <td class="px-3 py-2 text-center align-middle">
                                 <div class="flex justify-center items-center h-full">
                                     <span class="px-2 py-[3px] rounded text-xs font-medium" :class="{
                                         'bg-green-100 text-green-800': r.method === 'Tiền mặt',
                                         'bg-red-100 text-orange-800': r.method === 'Chuyển khoản',
+                                        'bg-blue-100 text-blue-800': r.method === 'ZaloPay',
+                                        'bg-yellow-100 text-yellow-800': r.method === 'VNPay',
+                                        'bg-teal-100 text-teal-800': r.method === 'Quẹt thẻ',
+                                        'bg-purple-100 text-purple-800': r.method === 'Thanh toán khi nhận hàng (COD)',
                                     }" x-text="getPaymentMethodText(r.method)"></span>
                                 </div>
                             </td>
@@ -120,7 +128,7 @@ $items = $items ?? [];
                                 x-text="formatCurrency(r.amount)">
                             </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
-                                :class="(r.payment_id || '—') === '—' ? 'text-center' : 'text-right'"
+                                :class="(r.payment_id || '—') === '—' ? 'text-center' : 'text-center'"
                                 x-text="r.payment_id || '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
                                 :class="(r.created_by_name || '—') === '—' ? 'text-center' : 'text-left'"
@@ -129,10 +137,10 @@ $items = $items ?? [];
                                 :class="(r.received_at || '—') === '—' ? 'text-center' : 'text-right'"
                                 x-text="r.received_at ? r.received_at : '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
-                                :class="(r.txn_ref || '—') === '—' ? 'text-center' : 'text-left'"
+                                :class="(r.txn_ref || '—') === '—' ? 'text-center' : 'text-center'"
                                 x-text="r.txn_ref || '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
-                                :class="(r.bank_time || '—') === '—' ? 'text-center' : 'text-right'"
+                                :class="(r.bank_time || '—') === '—' ? 'text-center' : 'text-center'"
                                 x-text="r.bank_time ? r.bank_time : '—'"></td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
                                 :class="(r.note || '—') === '—' ? 'text-center' : 'text-left'" x-text="r.note || '—'">
@@ -193,7 +201,7 @@ $items = $items ?? [];
                                 <div>
                                     <div class="border-t pt-4">
                                         <div class="text-sm text-gray-500 mb-1">Mã đơn hàng</div>
-                                        <div class="font-medium" x-text="viewItem.order_id || '—'"></div>
+                                        <div class="font-medium" x-text="viewItem.order_code || '—'"></div>
                                     </div>
                                 </div>
                             </template>
@@ -411,6 +419,7 @@ $items = $items ?? [];
             customers: [],
             staffs: [],
             order_id: null,
+            order_code: null,
             orders: [],
 
             confirmDialog: {
@@ -447,6 +456,7 @@ $items = $items ?? [];
                 code: '',
                 customer_id: '',
                 order_id: '',
+                order_code: '',
                 method: '',
                 txn_ref: '',
                 amount: 0,
@@ -483,36 +493,69 @@ $items = $items ?? [];
                 const map = {
                     'Tiền mặt': 'Tiền mặt',
                     'Chuyển khoản': 'Chuyển khoản',
+                    'ZaloPay': 'ZaloPay',
+                    'VNPay': 'VNPay',
+                    'Quẹt thẻ': 'Quẹt thẻ',
+                    'Thanh toán khi nhận hàng COD': 'COD',
                 };
                 return map[payment_method] || payment_method;
             },
 
             // ===== FILTERS =====
             openFilter: {
-                code: false, payer_user_name: false, order_id: false, method: false,
-                amount: false, payment_id: false, received_by: false, received_at: false,
-                txn_ref: false, bank_time: false, note: false, created_at: false, created_by: false
+                code: false,
+                payer_user_name: false,
+                order_id: false,
+                order_code: false,
+                method: false,
+                amount: false,
+                payment_id: false,
+                received_by: false,
+                received_at: false,
+                txn_ref: false,
+                bank_time: false,
+                note: false,
+                created_at: false,
+                created_by: false
             },
             filters: {
                 code: '',
                 payer_user_name: '',
                 order_id: '',
+                order_code: '',
                 method: '',
-                amount_type: '', amount_value: '', amount_from: '', amount_to: '',
+                amount_type: '',
+                amount_value: '',
+                amount_from: '',
+                amount_to: '',
                 payment_id: '',
                 received_by: '',
-                received_at_type: '', received_at_value: '', received_at_from: '', received_at_to: '',
+                received_at_type: '',
+                received_at_value: '',
+                received_at_from: '',
+                received_at_to: '',
                 txn_ref: '',
-                bank_time_type: '', bank_time_value: '', bank_time_from: '', bank_time_to: '',
+                bank_time_type: '',
+                bank_time_value: '',
+                bank_time_from: '',
+                bank_time_to: '',
                 note: '',
-                created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
+                created_at_type: '',
+                created_at_value: '',
+                created_at_from: '',
+                created_at_to: '',
                 created_by: ''
             },
 
             // -------------------------------------------
             // Hàm lọc tổng quát, hỗ trợ text / number / date
             // -------------------------------------------
-            applyFilter(val, type, { value, from, to, dataType }) {
+            applyFilter(val, type, {
+                value,
+                from,
+                to,
+                dataType
+            }) {
                 if (val == null) return false;
 
                 // ---------------- TEXT ----------------
@@ -532,9 +575,10 @@ $items = $items ?? [];
 
                     if (!query) return true;
 
-                    if (type === 'eq') return hasAccent(query)
-                        ? raw === query  // có dấu → so đúng dấu
-                        : str === queryNoAccent; // không dấu → so không dấu
+                    if (type === 'eq') return hasAccent(query) ?
+                        raw === query // có dấu → so đúng dấu
+                        :
+                        str === queryNoAccent; // không dấu → so không dấu
 
                     if (type === 'contains' || type === 'like') {
                         if (hasAccent(query)) {
@@ -617,7 +661,7 @@ $items = $items ?? [];
                 let data = this.items;
 
                 // --- Lọc theo chuỗi ---
-                ['code', 'payer_user_name', 'order_id', 'payment_id', 'received_by', 'txn_ref', 'note', 'created_by'].forEach(key => {
+                ['code', 'payer_user_name', 'order_code', 'payment_id', 'received_by', 'txn_ref', 'note', 'created_by'].forEach(key => {
                     if (this.filters[key]) {
                         const field = key === 'created_by' ? 'created_by_name' : key;
                         data = data.filter(o =>
@@ -696,7 +740,9 @@ $items = $items ?? [];
                 for (const k in this.openFilter) this.openFilter[k] = false;
                 this.openFilter[key] = true;
             },
-            closeFilter(key) { this.openFilter[key] = false; },
+            closeFilter(key) {
+                this.openFilter[key] = false;
+            },
             resetFilter(key) {
                 if (['created_at', 'bank_time', 'received_at'].includes(key)) {
                     this.filters[`${key}_type`] = '';
@@ -920,7 +966,9 @@ $items = $items ?? [];
                 try {
                     const res = await fetch(api.create, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
                         body: JSON.stringify(this.form)
                     });
                     if (res.ok) {
@@ -946,7 +994,9 @@ $items = $items ?? [];
                 try {
                     const res = await fetch(api.update(this.form.id), {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
                         body: JSON.stringify(this.form)
                     });
                     if (res.ok) {
@@ -966,16 +1016,18 @@ $items = $items ?? [];
             async remove(id) {
                 const item = this.items.find(r => r.id === id);
                 const code = item ? item.code : 'phiếu thu này';
-                const details = item
-                    ? `\n\nKhách hàng: ${item.payer_user_name || 'Khách vãng lai'}\nSố tiền: ${this.formatCurrency(item.amount)}\n\nLưu ý: Nếu đơn hàng đã thanh toán hết, bạn không thể xóa phiếu thu này.`
-                    : '';
+                const details = item ?
+                    `\n\nKhách hàng: ${item.payer_user_name || 'Khách vãng lai'}\nSố tiền: ${this.formatCurrency(item.amount)}\n\nLưu ý: Nếu đơn hàng đã thanh toán hết, bạn không thể xóa phiếu thu này.` :
+                    '';
 
                 this.showConfirm(
                     'Xác nhận xóa',
                     `Bạn có chắc chắn muốn xóa phiếu thu "${code}"?${details}`,
                     async () => {
                         try {
-                            const res = await fetch(api.remove(id), { method: 'DELETE' });
+                            const res = await fetch(api.remove(id), {
+                                method: 'DELETE'
+                            });
                             if (res.ok) {
                                 this.items = this.items.filter(r => r.id !== id);
                                 this.showToast('Xóa phiếu thu thành công!', 'success');
@@ -1012,10 +1064,14 @@ $items = $items ?? [];
                 const filename = `Phieu_thu_${dateStr}_${timeStr}.xlsx`;
 
                 fetch('/admin/api/receipt_vouchers/export', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ items: data })
-                })
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            items: data
+                        })
+                    })
                     .then(res => {
                         if (!res.ok) throw new Error('Export failed');
                         return res.blob();

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controllers\Admin;
 
 use App\Models\Repositories\BrandRepository;
@@ -109,9 +110,13 @@ class BrandController extends BaseAdminController
     public function destroy($id)
     {
         // Kiểm tra ràng buộc: nếu thương hiệu đã có sản phẩm thì không cho xóa
-        if ($this->brandHasProducts($id)) {
+        $productCount = $this->getProductCountByBrand($id);
+        if ($productCount > 0) {
             http_response_code(409);
-            echo json_encode(['error' => 'Không thể xóa, thương hiệu đang bị ràng buộc với sản phẩm.']);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'error' => "Không thể xóa thương hiệu này vì đang có $productCount sản phẩm sử dụng."
+            ], JSON_UNESCAPED_UNICODE);
             exit;
         }
         try {
@@ -125,13 +130,13 @@ class BrandController extends BaseAdminController
         exit;
     }
 
-    // Helper: fallback nếu chưa có canDelete trong BrandRepository
-    private function brandHasProducts($id)
+    // Helper: Đếm số lượng sản phẩm đang sử dụng thương hiệu
+    private function getProductCountByBrand($id)
     {
         $pdo = \App\Core\DB::pdo();
-        $count = $pdo->prepare("SELECT COUNT(*) FROM products WHERE brand_id = ?");
-        $count->execute([$id]);
-        return $count->fetchColumn() > 0;
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM products WHERE brand_id = ?");
+        $stmt->execute([$id]);
+        return (int) $stmt->fetchColumn();
     }
 
     // ====== Helper Methods ======
@@ -310,7 +315,7 @@ class BrandController extends BaseAdminController
     public function importExcel()
     {
         header('Content-Type: application/json; charset=utf-8');
-        
+
         $currentUserId = $this->currentUserId();
         $currentUserName = $this->currentUserName();
         $fileName = '';
@@ -322,7 +327,7 @@ class BrandController extends BaseAdminController
             // 1. Kiểm tra file có được upload không
             if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
                 $errorMsg = 'Không có file được tải lên';
-                
+
                 if (isset($_FILES['file']['error'])) {
                     switch ($_FILES['file']['error']) {
                         case UPLOAD_ERR_INI_SIZE:
@@ -337,9 +342,9 @@ class BrandController extends BaseAdminController
                             break;
                     }
                 }
-                
+
                 $this->saveImportHistory('brands', 'unknown', 0, 0, 0, 'failed', [$errorMsg], null);
-                
+
                 http_response_code(400);
                 echo json_encode(['error' => $errorMsg], JSON_UNESCAPED_UNICODE);
                 exit;
@@ -348,45 +353,77 @@ class BrandController extends BaseAdminController
             $fileName = $_FILES['file']['name'];
             $fileSize = $_FILES['file']['size'];
             $file = $_FILES['file']['tmp_name'];
-            
+
             // 2. Kiểm tra kích thước file (10MB)
             $maxSize = 10 * 1024 * 1024;
             if ($fileSize > $maxSize) {
-                $this->saveImportHistory('brands', $fileName, 0, 0, 0, 'failed', 
-                    ['File vượt quá kích thước cho phép (tối đa 10MB). Kích thước: ' . round($fileSize / 1024 / 1024, 2) . 'MB'], null);
-                
+                $this->saveImportHistory(
+                    'brands',
+                    $fileName,
+                    0,
+                    0,
+                    0,
+                    'failed',
+                    ['File vượt quá kích thước cho phép (tối đa 10MB). Kích thước: ' . round($fileSize / 1024 / 1024, 2) . 'MB'],
+                    null
+                );
+
                 http_response_code(400);
                 echo json_encode(['error' => 'File vượt quá kích thước cho phép (tối đa 10MB)'], JSON_UNESCAPED_UNICODE);
                 exit;
             }
-            
+
             // 3. Kiểm tra độ dài tên file
             if (mb_strlen($fileName) > 255) {
-                $this->saveImportHistory('brands', mb_substr($fileName, 0, 255), 0, 0, 0, 'failed',
-                    ['Tên file quá dài (tối đa 255 ký tự)'], null);
-                
+                $this->saveImportHistory(
+                    'brands',
+                    mb_substr($fileName, 0, 255),
+                    0,
+                    0,
+                    0,
+                    'failed',
+                    ['Tên file quá dài (tối đa 255 ký tự)'],
+                    null
+                );
+
                 http_response_code(400);
                 echo json_encode(['error' => 'Tên file quá dài (tối đa 255 ký tự)'], JSON_UNESCAPED_UNICODE);
                 exit;
             }
-            
+
             // 4. Kiểm tra ký tự đặc biệt
             $cleanFileName = preg_replace('/[^a-zA-Z0-9._\-\s()\[\]]/u', '', pathinfo($fileName, PATHINFO_FILENAME));
             if ($cleanFileName !== pathinfo($fileName, PATHINFO_FILENAME)) {
-                $this->saveImportHistory('brands', $fileName, 0, 0, 0, 'failed',
-                    ['Tên file chứa ký tự đặc biệt không hợp lệ'], null);
-                
+                $this->saveImportHistory(
+                    'brands',
+                    $fileName,
+                    0,
+                    0,
+                    0,
+                    'failed',
+                    ['Tên file chứa ký tự đặc biệt không hợp lệ'],
+                    null
+                );
+
                 http_response_code(400);
                 echo json_encode(['error' => 'Tên file chứa ký tự đặc biệt không hợp lệ'], JSON_UNESCAPED_UNICODE);
                 exit;
             }
-            
+
             // 5. Kiểm tra định dạng file
             $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
             if (!in_array($ext, ['xls', 'xlsx'])) {
-                $this->saveImportHistory('brands', $fileName, 0, 0, 0, 'failed',
-                    ['File không đúng định dạng. Chỉ chấp nhận .xls hoặc .xlsx'], null);
-                
+                $this->saveImportHistory(
+                    'brands',
+                    $fileName,
+                    0,
+                    0,
+                    0,
+                    'failed',
+                    ['File không đúng định dạng. Chỉ chấp nhận .xls hoặc .xlsx'],
+                    null
+                );
+
                 http_response_code(400);
                 echo json_encode(['error' => 'File không đúng định dạng. Chỉ chấp nhận .xls hoặc .xlsx'], JSON_UNESCAPED_UNICODE);
                 exit;
@@ -395,13 +432,21 @@ class BrandController extends BaseAdminController
             $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file);
             $sheet = $spreadsheet->getActiveSheet();
             $highestRow = $sheet->getHighestRow();
-            
+
             // 6. Kiểm tra số lượng dòng
             $maxRows = 10000;
             if ($highestRow > $maxRows + 1) { // +1 vì header ở dòng 1
-                $this->saveImportHistory('brands', $fileName, 0, 0, 0, 'failed',
-                    ['File có quá nhiều dòng (tối đa ' . number_format($maxRows) . ' dòng)'], null);
-                
+                $this->saveImportHistory(
+                    'brands',
+                    $fileName,
+                    0,
+                    0,
+                    0,
+                    'failed',
+                    ['File có quá nhiều dòng (tối đa ' . number_format($maxRows) . ' dòng)'],
+                    null
+                );
+
                 http_response_code(400);
                 echo json_encode(['error' => 'File có quá nhiều dòng (tối đa ' . number_format($maxRows) . ' dòng)'], JSON_UNESCAPED_UNICODE);
                 exit;
@@ -410,7 +455,7 @@ class BrandController extends BaseAdminController
             // Bắt đầu từ dòng 2 (sau header dòng 1)
             for ($row = 2; $row <= $highestRow; $row++) {
                 $name = trim($sheet->getCell('B' . $row)->getValue() ?? '');
-                
+
                 // Skip hàng trống
                 if ($name === '') continue;
 
@@ -426,17 +471,17 @@ class BrandController extends BaseAdminController
 
                 // ===== VALIDATE =====
                 $rowErrors = [];
-                
+
                 // 1. Tên bắt buộc
                 if ($name === '') {
                     $rowErrors[] = 'Tên thương hiệu không được bỏ trống';
                 }
-                
+
                 // 2. Độ dài tên
                 if (mb_strlen($name) > 250) {
                     $rowErrors[] = 'Tên không được vượt quá 250 ký tự';
                 }
-                
+
                 // 3. Ký tự đặc biệt trong tên
                 if (preg_match('/[<>\"\'\\\\]/', $name)) {
                     $rowErrors[] = 'Tên chứa ký tự không hợp lệ (< > " \' \\)';
@@ -447,12 +492,12 @@ class BrandController extends BaseAdminController
                     $slug = $this->slugify($name);
                     $rowData['slug'] = $slug;
                 }
-                
+
                 // 4. Độ dài slug
                 if (mb_strlen($slug) > 250) {
                     $rowErrors[] = 'Slug không được vượt quá 250 ký tự';
                 }
-                
+
                 // 5. Slug trùng lặp
                 $existingSlug = $this->brandRepo->findBySlug($slug);
                 if ($existingSlug) {
@@ -486,13 +531,13 @@ class BrandController extends BaseAdminController
                     $rowData['error'] = 'Lỗi database: ' . $e->getMessage();
                     $errors[] = "Dòng $row: " . $e->getMessage();
                 }
-                
+
                 $fileData[] = $rowData;
             }
 
             $totalRows = count($fileData);
             $failedRows = count($errors);
-            
+
             // Xác định status
             $importStatus = 'success';
             if ($success === 0 && $totalRows > 0) {
@@ -537,16 +582,23 @@ class BrandController extends BaseAdminController
                 'message' => $message
             ], JSON_UNESCAPED_UNICODE);
             exit;
-
         } catch (\Exception $e) {
             // Lưu lỗi hệ thống
             try {
-                $this->saveImportHistory('brands', $fileName ?: 'unknown', 0, 0, 0, 'failed',
-                    ['Lỗi hệ thống: ' . $e->getMessage()], !empty($fileData) ? $fileData : null);
+                $this->saveImportHistory(
+                    'brands',
+                    $fileName ?: 'unknown',
+                    0,
+                    0,
+                    0,
+                    'failed',
+                    ['Lỗi hệ thống: ' . $e->getMessage()],
+                    !empty($fileData) ? $fileData : null
+                );
             } catch (\Exception $saveError) {
                 // Ignore
             }
-            
+
             http_response_code(500);
             echo json_encode([
                 'error' => 'Lỗi hệ thống: ' . $e->getMessage(),

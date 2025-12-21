@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controllers\Admin;
 
 use App\Models\Repositories\PromotionRepository;
@@ -34,7 +35,7 @@ class PromotionController extends BaseAdminController
     {
         // Chỉ Admin mới được tạo mới
         $this->requireAdmin();
-        
+
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
         $currentUser = $this->currentUserId();
 
@@ -59,7 +60,7 @@ class PromotionController extends BaseAdminController
         $stmt = $pdo->prepare("SELECT id, full_name FROM users WHERE id = ?");
         $stmt->execute([$currentUser]);
         $user = $stmt->fetch(\PDO::FETCH_ASSOC);
-        
+
         if (!$user) {
             http_response_code(401);
             header('Content-Type: application/json; charset=utf-8');
@@ -145,7 +146,7 @@ class PromotionController extends BaseAdminController
     {
         // Chỉ Admin mới được cập nhật
         $this->requireAdmin();
-        
+
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
         $currentUser = $this->currentUserId();
 
@@ -206,9 +207,21 @@ class PromotionController extends BaseAdminController
     {
         // Chỉ Admin mới được xóa
         $this->requireAdmin();
-        
+
         header('Content-Type: application/json; charset=utf-8');
         try {
+            // Kiểm tra xem promotion có được sử dụng trong đơn hàng không
+            $orderCount = $this->getOrderCountByPromotion($id);
+
+            if ($orderCount > 0) {
+                http_response_code(409); // Conflict
+                echo json_encode([
+                    'error' => "Không thể xóa chương trình khuyến mãi này vì đã có {$orderCount} đơn hàng sử dụng."
+                ]);
+                exit;
+            }
+
+            // Nếu pass kiểm tra, cho phép xóa
             $this->promotionRepo->delete($id);
             echo json_encode(['ok' => true, 'id' => $id]);
         } catch (\Throwable $e) {
@@ -216,6 +229,17 @@ class PromotionController extends BaseAdminController
             echo json_encode(['error' => $e->getMessage()]);
         }
         exit;
+    }
+
+    /**
+     * Đếm số đơn hàng sử dụng promotion này
+     */
+    private function getOrderCountByPromotion($promotionId)
+    {
+        $pdo = \App\Core\DB::pdo();
+        $stmt = $pdo->prepare("SELECT COUNT(DISTINCT order_id) FROM order_items WHERE promotion_id = ?");
+        $stmt->execute([$promotionId]);
+        return (int) $stmt->fetchColumn();
     }
 
     /**
@@ -227,7 +251,7 @@ class PromotionController extends BaseAdminController
     {
         // Đảm bảo response luôn là JSON
         header('Content-Type: application/json');
-        
+
         try {
             $data = json_decode(file_get_contents('php://input'), true);
             $items = $data['items'] ?? [];
@@ -246,7 +270,7 @@ class PromotionController extends BaseAdminController
 
             foreach ($activePromotions as $promo) {
                 $result = $this->applyPromotion($promo, $updatedItems);
-                
+
                 if ($result['applied']) {
                     $appliedPromotions[] = [
                         'id' => $promo->id,
@@ -274,7 +298,6 @@ class PromotionController extends BaseAdminController
                 'gift_items' => $giftItems,
             ]);
             exit;
-
         } catch (\Exception $e) {
             error_log("Error in promotion check: " . $e->getMessage());
             header('Content-Type: application/json');
@@ -292,9 +315,9 @@ class PromotionController extends BaseAdminController
         $all = $this->promotionRepo->all();
         $now = date('Y-m-d H:i:s');
 
-        return array_filter($all, function($promo) use ($now) {
-            return $promo->is_active 
-                && $promo->starts_at <= $now 
+        return array_filter($all, function ($promo) use ($now) {
+            return $promo->is_active
+                && $promo->starts_at <= $now
                 && $promo->ends_at >= $now;
         });
     }
@@ -307,16 +330,16 @@ class PromotionController extends BaseAdminController
         switch ($promo->promo_type) {
             case 'discount':
                 return $this->applyDiscount($promo, $items);
-            
+
             case 'bundle':
                 return $this->applyBundle($promo, $items);
-            
+
             case 'gift':
                 return $this->applyGift($promo, $items);
-            
+
             case 'combo':
                 return $this->applyCombo($promo, $items);
-            
+
             default:
                 return ['applied' => false];
         }
@@ -333,13 +356,13 @@ class PromotionController extends BaseAdminController
 
         foreach ($items as &$item) {
             // Kiểm tra áp dụng cho sản phẩm
-            $applicable = ($promo->apply_to === 'all') 
+            $applicable = ($promo->apply_to === 'all')
                 || ($promo->apply_to === 'product' && in_array($item['product_id'], $productIds));
 
             if (!$applicable) continue;
 
             $itemTotal = $item['quantity'] * $item['unit_price'];
-            
+
             if ($promo->discount_type === 'percentage') {
                 $discount = $itemTotal * ($promo->discount_value / 100);
             } else {
@@ -353,8 +376,8 @@ class PromotionController extends BaseAdminController
         if ($discountAmount > 0) {
             return [
                 'applied' => true,
-                'description' => $promo->discount_type === 'percentage' 
-                    ? "Giảm {$promo->discount_value}%" 
+                'description' => $promo->discount_type === 'percentage'
+                    ? "Giảm {$promo->discount_value}%"
                     : "Giảm " . number_format($promo->discount_value) . "đ",
                 'discount_amount' => $discountAmount,
                 'items_affected' => $itemsAffected,
@@ -385,12 +408,12 @@ class PromotionController extends BaseAdminController
                     $bundleTotal = $bundles * $rule['price'];
                     // Giá gốc cho số lượng lẻ
                     $remainingTotal = $remainingQty * $item['unit_price'];
-                    
+
                     $oldTotal = $item['quantity'] * $item['unit_price'];
                     $newTotal = $bundleTotal + $remainingTotal;
-                    
+
                     $discount = $oldTotal - $newTotal;
-                    
+
                     if ($discount > 0) {
                         // Cập nhật đơn giá trung bình
                         $item['unit_price'] = round($newTotal / $item['quantity'], 0);
@@ -426,9 +449,11 @@ class PromotionController extends BaseAdminController
 
         foreach ($rules as $rule) {
             foreach ($items as $item) {
-                if ($item['product_id'] == $rule['trigger_product_id'] 
-                    && $item['quantity'] >= $rule['trigger_qty']) {
-                    
+                if (
+                    $item['product_id'] == $rule['trigger_product_id']
+                    && $item['quantity'] >= $rule['trigger_qty']
+                ) {
+
                     // Tính số lượng quà được tặng
                     $sets = floor($item['quantity'] / $rule['trigger_qty']);
                     $giftQty = $sets * $rule['gift_qty'];
@@ -439,7 +464,7 @@ class PromotionController extends BaseAdminController
                         'unit_price' => 0, // Quà tặng = 0đ
                         'is_gift' => true,
                     ];
-                    
+
                     $itemsAffected[] = $item['product_id'];
                 }
             }
@@ -540,9 +565,9 @@ class PromotionController extends BaseAdminController
     {
         // Debug session
         error_log("Session data: " . json_encode($_SESSION));
-        
+
         $userId = $_SESSION['user']['id'] ?? null;
-        
+
         if ($userId === null) {
             error_log("User ID is null - Session user: " . json_encode($_SESSION['user'] ?? 'not set'));
             // Nếu không có user trong session, thử lấy từ admin_user
@@ -551,7 +576,7 @@ class PromotionController extends BaseAdminController
                 error_log("Admin user ID also null - Session admin_user: " . json_encode($_SESSION['admin_user'] ?? 'not set'));
             }
         }
-        
+
         return $userId;
     }
 
@@ -573,12 +598,12 @@ class PromotionController extends BaseAdminController
         $sheet = $spreadsheet->getActiveSheet();
 
         // Tự động tính từ ngày - đến ngày từ dữ liệu
-        $dates = array_filter(array_map(function($item) {
+        $dates = array_filter(array_map(function ($item) {
             return $item['starts_at'] ?? null;
         }, $items));
 
         // Loại bỏ phần thời gian, chỉ giữ ngày
-        $dates = array_map(function($date) {
+        $dates = array_map(function ($date) {
             return strpos($date, ' ') !== false ? explode(' ', $date)[0] : $date;
         }, $dates);
 
@@ -644,7 +669,7 @@ class PromotionController extends BaseAdminController
                 'gift' => 'Tặng quà',
                 'combo' => 'Combo'
             ];
-            
+
             $discountTypeMap = [
                 'percentage' => 'Phần trăm',
                 'fixed' => 'Số tiền cố định'
@@ -654,11 +679,11 @@ class PromotionController extends BaseAdminController
             $sheet->setCellValue('B' . $row, $item['name'] ?? '');
             $sheet->setCellValue('C' . $row, $item['description'] ?? '');
             $sheet->setCellValue('D' . $row, $promoTypeMap[$item['promo_type'] ?? ''] ?? $item['promo_type'] ?? '');
-            
+
             // Loại giảm giá & giá trị chỉ hiển thị với discount type
             if (($item['promo_type'] ?? '') === 'discount') {
                 $sheet->setCellValue('E' . $row, $discountTypeMap[$item['discount_type'] ?? ''] ?? '');
-                
+
                 if (($item['discount_type'] ?? '') === 'percentage') {
                     $sheet->setCellValue('F' . $row, ($item['discount_value'] ?? 0) . '%');
                 } else {

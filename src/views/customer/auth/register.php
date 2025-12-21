@@ -99,9 +99,9 @@
                             name="password"
                             id="password"
                             required
-                            minlength="6"
+                            minlength="8"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#002975] focus:border-transparent transition-all pr-12"
-                            placeholder="Ít nhất 6 ký tự">
+                            placeholder="Ít nhất 8 ký tự">
                         <button
                             type="button"
                             onclick="togglePassword('password', 'toggleIcon1')"
@@ -123,7 +123,7 @@
                             name="confirm_password"
                             id="confirm_password"
                             required
-                            minlength="6"
+                            minlength="8"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#002975] focus:border-transparent transition-all pr-12"
                             placeholder="Nhập lại mật khẩu">
                         <button
@@ -145,9 +145,9 @@
                     class="mt-1 rounded border-gray-300 text-[#002975] focus:ring-[#002975]">
                 <label for="terms" class="ml-2 text-sm text-gray-600">
                     Tôi đồng ý với
-                    <a href="/terms" class="text-[#002975] hover:underline">Điều khoản dịch vụ</a>
+                    <a href="#" class="text-[#002975] hover:underline">Điều khoản dịch vụ</a>
                     và
-                    <a href="/privacy" class="text-[#002975] hover:underline">Chính sách bảo mật</a>
+                    <a href="#" class="text-[#002975] hover:underline">Chính sách bảo mật</a>
                 </label>
             </div>
 
@@ -333,7 +333,7 @@
 
             // Validate password
             if (password.length < 6) {
-                showToast('Mật khẩu phải có ít nhất 6 ký tự', 'error');
+                showToast('Mật khẩu phải có ít nhất 8 ký tự', 'error');
                 return;
             }
 

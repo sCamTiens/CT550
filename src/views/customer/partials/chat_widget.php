@@ -94,7 +94,6 @@
         flex-direction: column;
         overflow: hidden;
         transition: all 0.3s ease;
-        user-select: none;
     }
 
     #chat-box.open {
@@ -336,6 +335,154 @@
         background: #001a54;
     }
 
+    /* Product List in Chat */
+    .product-item-link {
+        display: block;
+        padding: 10px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: white;
+        margin: 6px 0;
+        text-decoration: none;
+        color: inherit;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+
+    .product-item-link:hover {
+        background: #f8fafc;
+        border-color: #002975;
+        transform: translateX(3px);
+        box-shadow: 0 2px 8px rgba(0, 41, 117, 0.1);
+    }
+
+    .product-item-link .product-name {
+        font-weight: 600;
+        color: #002975;
+        margin-bottom: 4px;
+        font-size: 14px;
+    }
+
+    .product-item-link .product-price {
+        color: #ef4444;
+        font-weight: 600;
+        font-size: 13px;
+    }
+
+    .product-item-link .product-stock {
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 4px;
+    }
+
+    .product-item-link .product-stock.in-stock {
+        color: #10b981;
+    }
+
+    .product-item-link .product-stock.out-of-stock {
+        color: #ef4444;
+    }
+
+    /* Product Grid in Chat */
+    .product-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-top: 12px;
+    }
+
+    .product-card {
+        display: block;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        overflow: hidden;
+        background: white;
+        transition: all 0.3s;
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .product-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 12px rgba(0, 41, 117, 0.15);
+        border-color: #002975;
+    }
+
+    .product-card img {
+        width: 100%;
+        height: 120px;
+        object-fit: cover;
+        background: #f3f4f6;
+    }
+
+    .product-card .product-info {
+        padding: 10px;
+    }
+
+    .product-card .product-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 6px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        line-height: 1.4;
+    }
+
+    .product-card .product-price {
+        font-size: 14px;
+        font-weight: 700;
+        color: #ef4444;
+    }
+
+    /* Promotion Grid in Chat */
+    .promotion-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 12px;
+    }
+
+    .promotion-card {
+        padding: 16px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        cursor: pointer;
+        transition: all 0.3s;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .promotion-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+    }
+
+    .promotion-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+
+    .promotion-name {
+        font-size: 15px;
+        font-weight: 700;
+        margin-bottom: 6px;
+        line-height: 1.4;
+    }
+
+    .promotion-date {
+        font-size: 12px;
+        opacity: 0.9;
+    }
+
     /* Typing Indicator */
     .typing-indicator {
         display: none;
@@ -524,7 +671,7 @@
                     <i class="fa-solid fa-robot"></i>
                 </div>
                 <div class="message-content">
-                    <div class="message-bubble">
+                    <div class="message-bubble" id="welcome-message">
                         Xin chào! Tôi là trợ lý ảo của MiniGo. Tôi có thể giúp gì cho bạn?
                     </div>
                     <div class="message-time">Vừa xong</div>
@@ -743,7 +890,10 @@
 
         const bubble = document.createElement('div');
         bubble.className = 'message-bubble';
-        bubble.textContent = text;
+        bubble.style.userSelect = 'text'; // Allow text selection
+        bubble.style.cursor = 'text';
+        // Replace \n with <br> for line breaks
+        bubble.innerHTML = text.replace(/\n/g, '<br>');
 
         // Add metadata (order link, product link, etc.)
         if (metadata) {
@@ -802,6 +952,28 @@
                 });
 
                 bubble.appendChild(grid);
+            } else if (metadata.type === 'promotion_list' && metadata.promotions) {
+                const promoGrid = document.createElement('div');
+                promoGrid.className = 'promotion-grid';
+
+                metadata.promotions.forEach(promo => {
+                    const promoCard = document.createElement('div');
+                    promoCard.className = 'promotion-card';
+                    promoCard.onclick = () => {
+                        // Could add modal popup here
+                        showPromotionModal(promo);
+                    };
+
+                    promoCard.innerHTML = `
+                        <div class="promotion-badge">${promo.type_text}</div>
+                        <div class="promotion-name">${promo.name}</div>
+                        <div class="promotion-date">📅 ${promo.start_date} - ${promo.end_date}</div>
+                    `;
+
+                    promoGrid.appendChild(promoCard);
+                });
+
+                bubble.appendChild(promoGrid);
             } else if (metadata.order_id) {
                 // Legacy simple link
                 const link = document.createElement('a');
@@ -905,12 +1077,43 @@
                     console.log('👤 User data:', userData);
 
                     isAIMode = data.is_ai_mode;
+                    const isGuest = data.is_guest;
 
-                    // Update status
+                    // Update status and welcome message based on user type
                     const statusText = document.getElementById('support-status');
-                    statusText.textContent = isAIMode ?
-                        'Trợ lý AI' :
-                        'Nhân viên hỗ trợ';
+                    const welcomeMessage = document.getElementById('welcome-message');
+
+                    if (isGuest) {
+                        // Guest users always chat with AI
+                        statusText.textContent = 'Trợ lý AI';
+                        welcomeMessage.innerHTML = `Xin chào! Tôi là trợ lý ảo của MiniGo.<br><br>
+                            💬 <strong>Bạn có thể hỏi tôi về:</strong><br>
+                            • Tìm kiếm sản phẩm<br>
+                            • Khuyến mãi hiện tại<br>
+                            • Thông tin cửa hàng<br><br>
+                            📝 <em>Đăng nhập để được hỗ trợ trực tiếp từ nhân viên (6h-22h hàng ngày)</em>`;
+                    } else {
+                        // Logged-in users
+                        const userName = userData.name || 'bạn';
+
+                        if (isAIMode) {
+                            // Outside working hours - AI mode
+                            statusText.textContent = 'Trợ lý AI';
+                            welcomeMessage.innerHTML = `Xin chào ${userName}! Tôi là trợ lý ảo của MiniGo.<br><br>
+                                ⏰ <strong>Hiện tại ngoài giờ làm việc</strong><br>
+                                • <strong>Nhân viên:</strong> 6:00 - 22:00 hàng ngày<br>
+                                • <strong>Trợ lý AI:</strong> 22:00 - 6:00<br><br>
+                                💬 Tôi có thể giúp bạn về đơn hàng, sản phẩm và khuyến mãi!`;
+                        } else {
+                            // Working hours - Staff mode
+                            statusText.textContent = 'Nhân viên hỗ trợ';
+                            welcomeMessage.innerHTML = `Xin chào ${userName}!<br><br>
+                                👨‍💼 <strong>Bạn đang kết nối với nhân viên hỗ trợ</strong><br>
+                                • <strong>Giờ làm việc:</strong> 6:00 - 22:00 hàng ngày<br>
+                                • <strong>Trợ lý AI:</strong> 22:00 - 6:00<br><br>
+                                Nhân viên sẽ phản hồi trong giây lát! 😊`;
+                        }
+                    }
 
                     // Clear old messages (giữ lại welcome message)
                     const firstMessage = chatMessages.querySelector('.message');
@@ -984,5 +1187,210 @@
                 }
             })
             .catch(err => console.error('Check messages error:', err));
+    }
+    // REPLACE showPromotionModal function in chat_widget.php with this
+
+    async function showPromotionModal(promo) {
+        try {
+            // Fetch full promotion details
+            const response = await fetch(`/api/chat/promotions/${promo.id}`);
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error('Failed to load promotion details');
+            }
+
+            const promotion = data.promotion;
+            const products = data.products || [];
+
+            // Build products HTML based on type
+            let productsHTML = '';
+
+            if (promotion.promo_type === 'discount') {
+                const discountText = promotion.discount_type === 'percentage' ?
+                    `Giảm ${promotion.discount_value}%` :
+                    `Giảm ${formatPrice(promotion.discount_value)}₫`;
+
+                productsHTML = `
+                <div class="bg-red-50 rounded-lg p-4 mb-4">
+                    <div class="text-xl font-bold text-red-600">
+                        ${discountText}
+                    </div>
+                </div>
+                <h4 class="font-bold text-lg mb-4 text-[#002975]">Sản phẩm được giảm giá</h4>
+                <div class="grid grid-cols-2 gap-4 max-h-96 overflow-y-auto">
+                    ${products.map(p => `
+                        <div class="border rounded-lg p-3 hover:shadow-lg transition-all">
+                            <img src="${p.image_url}" alt="${p.name}" class="w-full h-32 object-contain mb-2">
+                            <h6 class="text-sm font-semibold mb-2 line-clamp-2">${p.name}</h6>
+                            <div class="text-sm text-gray-500 line-through">${formatPrice(p.sale_price)}₫</div>
+                            <div class="text-lg font-bold text-red-600">${formatPrice(
+                                promotion.discount_type === 'percentage' 
+                                    ? p.sale_price * (100 - promotion.discount_value) / 100
+                                    : p.sale_price - promotion.discount_value
+                            )}₫</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            } else if (promotion.promo_type === 'combo') {
+                const totalPrice = products.reduce((sum, p) => sum + (p.sale_price * p.required_qty), 0);
+                productsHTML = `
+                <h4 class="font-bold text-lg mb-4 text-[#002975]">
+                    <i class="fa-solid fa-box-open mr-2"></i>
+                    Sản phẩm trong combo
+                </h4>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    ${products.map(p => `
+                        <div class="border rounded-lg p-4 hover:shadow-lg transition-all">
+                            <img src="${p.image_url}" alt="${p.name}" class="w-full h-40 object-contain mb-3">
+                            <h5 class="font-semibold mb-2">${p.name}</h5>
+                            <div class="text-sm text-gray-600 mb-1">
+                                Số lượng: <span class="font-semibold">${p.required_qty}</span>
+                            </div>
+                            <div class="text-base font-semibold text-blue-600">
+                                ${formatPrice(p.sale_price)}₫/sp
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="bg-orange-50 rounded-lg p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="text-sm text-gray-600 mb-1">Tổng giá lẻ:</div>
+                            <div class="text-lg text-gray-500 line-through">${formatPrice(totalPrice)}₫</div>
+                        </div>
+                        <i class="fa-solid fa-arrow-right text-2xl text-orange-500"></i>
+                        <div class="text-right">
+                            <div class="text-sm text-gray-600 mb-1">Giá combo:</div>
+                            <div class="text-2xl font-bold text-orange-600">${formatPrice(promotion.combo_price)}₫</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            } else if (promotion.promo_type === 'bundle') {
+                productsHTML = `
+                <h4 class="font-bold text-lg mb-4 text-[#002975]">Chương trình mua kèm</h4>
+                ${products.map(p => `
+                    <div class="border rounded-lg p-4 mb-4 hover:shadow-lg transition-all">
+                        <div class="flex gap-4">
+                            <img src="${p.image_url}" alt="${p.name}" class="w-32 h-32 object-contain">
+                            <div class="flex-1">
+                                <h5 class="font-semibold mb-2">${p.name}</h5>
+                                <div class="text-sm text-gray-600 mb-2">
+                                    Mua <span class="font-bold text-orange-600">${p.required_qty}</span> sản phẩm
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-gray-500 line-through">${formatPrice(p.sale_price * p.required_qty)}₫</span>
+                                    <span class="text-xl font-bold text-red-600">${formatPrice(p.bundle_price)}₫</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+            } else if (promotion.promo_type === 'gift') {
+                productsHTML = `
+                <h4 class="font-bold text-lg mb-4 text-[#002975]">Mua hàng nhận quà</h4>
+                ${products.map(p => `
+                    <div class="border rounded-lg p-4 mb-4 bg-gradient-to-r from-green-50 to-blue-50">
+                        <div class="flex items-center gap-4">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <img src="${p.image_url}" alt="${p.name}" class="w-24 h-24 object-contain border rounded p-2 bg-white">
+                                    <div>
+                                        <h5 class="font-semibold">${p.name}</h5>
+                                        <div class="text-sm text-gray-600">
+                                            Mua <span class="font-bold text-blue-600">${p.required_qty}</span> sản phẩm
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-arrow-right text-3xl text-green-600"></i>
+                            <div class="flex-1">
+                                <div class="bg-yellow-100 border-2 border-yellow-400 rounded-lg p-3 relative">
+                                    <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-yellow-400 px-3 py-1 rounded-full text-xs font-bold">
+                                        TẶNG QUÀ
+                                    </div>
+                                    <div class="flex items-center gap-3 mt-2">
+                                        <img src="${p.gift_image_url}" alt="${p.gift_name}" class="w-24 h-24 object-contain">
+                                        <div>
+                                            <h5 class="font-semibold">${p.gift_name}</h5>
+                                            <div class="text-sm text-gray-600">
+                                                Số lượng: <span class="font-bold">${p.gift_qty}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+            }
+
+            // Show modal
+            Swal.fire({
+                html: `
+                <div class="text-left">
+                    <div class="bg-gradient-to-r from-orange-500 to-red-600 text-white p-4 rounded-t-lg flex items-center justify-between">
+                        <h3 class="text-xl font-bold flex-1">${promotion.name}</h3>
+                        <button onclick="Swal.close()" class="text-white hover:text-gray-200 transition-colors ml-4">
+                            <i class="fa-solid fa-times text-2xl"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="px-6 pb-4">
+                        <!-- Time -->
+                        <div class="bg-blue-50 border-l-4 border-blue-500 p-3 mb-4">
+                            <div class="flex items-center gap-4 text-sm">
+                                <div>
+                                    <i class="fa-solid fa-calendar-check text-blue-600 mr-2"></i>
+                                    <span class="text-gray-700">Bắt đầu:</span>
+                                    <span class="font-semibold">${promo.start_date}</span>
+                                </div>
+                                <div>
+                                    <i class="fa-solid fa-calendar-xmark text-blue-600 mr-2"></i>
+                                    <span class="text-gray-700">Kết thúc:</span>
+                                    <span class="font-semibold">${promo.end_date}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Products -->
+                        ${productsHTML}
+                    </div>
+                </div>
+            `,
+                showConfirmButton: true,
+                confirmButtonText: '<i class="fa-solid fa-home mr-2 mb-2"></i>Đến trang chủ',
+                confirmButtonColor: '#002975',
+                showCancelButton: false,
+                width: '800px',
+                padding: '0 0 20px 0',
+                customClass: {
+                    popup: 'rounded-xl !overflow-visible',
+                    htmlContainer: '!p-0 !m-0'
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = '/';
+                }
+            });
+
+        } catch (error) {
+            console.error('Error loading promotion:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Lỗi',
+                text: 'Không thể tải thông tin khuyến mãi. Vui lòng thử lại!',
+                confirmButtonColor: '#002975'
+            });
+        }
+    }
+
+    // Helper function
+    function formatPrice(price) {
+        return new Intl.NumberFormat('vi-VN').format(price);
     }
 </script>

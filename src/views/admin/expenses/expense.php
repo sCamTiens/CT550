@@ -91,9 +91,12 @@ $items = $items ?? [];
                                     title="Xem chi tiết">
                                     <i class="fa-solid fa-eye"></i>
                                 </button>
-                                <button @click="remove(e.id)" x-show="canDelete(e)"
-                                    class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
-                                    title="Xóa">
+                                <button
+                                    @click="canDelete(e) ? remove(e.id) : showToast(getDeleteErrorMessage(e))"
+                                    :disabled="!canDelete(e)"
+                                    :class="!canDelete(e) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'"
+                                    class="inline-flex items-center justify-center p-2 rounded text-[#002975]"
+                                    :title="canDelete(e) ? 'Xóa' : getDeleteErrorMessage(e)">
                                     <i class="fa-solid fa-trash"></i>
                                 </button>
                             </td>
@@ -753,6 +756,16 @@ $items = $items ?? [];
                     return false;
                 }
                 return true;
+            },
+
+            getDeleteErrorMessage(expense) {
+                if (expense.type === 'Lương nhân viên') {
+                    return 'Không thể xóa phiếu chi lương nhân viên';
+                }
+                if (expense.purchase_order_id && (expense.payment_status == '2' || expense.payment_status == 2)) {
+                    return 'Không thể xóa phiếu chi vì phiếu nhập kho đã thanh toán hết';
+                }
+                return 'Không thể xóa phiếu chi này';
             },
 
             toggleFilter(key) {

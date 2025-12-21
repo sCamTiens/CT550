@@ -128,7 +128,7 @@
                             item.product_name = '';
                             item.unit_price = 0;
                             this.search = '';
-                            this.filtered = products;
+                            this.filtered = products.filter(p => !orderItems.some(i => i.product_id == p.id && orderItems.indexOf(i) !== idx));
                             this.open = false;
                             calculateTotal();
                             checkPromotions();
@@ -136,13 +136,13 @@
                         reset() {
                             const selected = products.find(p => p.id == item.product_id);
                             this.search = selected ? (selected.name + ' - ' + selected.sku + ' - Tồn: ' + selected.stock) : '';
-                            this.filtered = products;
+                            this.filtered = products.filter(p => !orderItems.some(i => i.product_id == p.id && orderItems.indexOf(i) !== idx));
                             this.highlight = -1;
                         }
                     }" x-init="reset()" @click.away="open = false">
                         <div class="relative">
-                            <input type="text" x-model="search" @focus="open = true; filtered = products"
-                                @input="open = true; filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()))"
+                            <input type="text" x-model="search" @focus="open = true; filtered = products.filter(p => !orderItems.some(i => i.product_id == p.id && orderItems.indexOf(i) !== idx))"
+                                @input="open = true; filtered = products.filter(p => !orderItems.some(i => i.product_id == p.id && orderItems.indexOf(i) !== idx)).filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()))"
                                 :disabled="item.is_gift === true"
                                 class="w-full border rounded px-3 py-2 pr-8 bg-white text-sm cursor-pointer focus:ring-1 focus:ring-[#002975] focus:border-[#002975]"
                                 :class="item.is_gift === true ? 'bg-green-50 cursor-not-allowed' : (!item.product_id ? 'text-slate-400' : 'text-slate-900')"
@@ -250,15 +250,35 @@
                     <h4 class="font-semibold text-green-800 mb-2">Khuyến mãi đang áp dụng</h4>
                     <div class="space-y-2">
                         <template x-for="(promo, idx) in appliedPromotions" :key="idx">
-                            <div class="bg-white rounded-lg p-3 shadow-sm border border-green-200">
+                            <div class="bg-white rounded-lg p-3 shadow-sm border-l-4"
+                                :class="{
+                                     'border-blue-500': promo.type === 'discount',
+                                     'border-purple-500': promo.type === 'bundle',
+                                     'border-green-500': promo.type === 'gift',
+                                     'border-pink-500': promo.type === 'combo'
+                                 }">
                                 <div class="flex items-start justify-between">
                                     <div class="flex-1">
                                         <div class="flex items-center gap-2 mb-1">
-                                            <span
-                                                class="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded"
-                                                x-text="promo.type === 'discount' ? 'Giảm giá' : promo.type === 'bundle' ? 'Mua kèm' : promo.type === 'gift' ? 'Tặng quà' : 'Combo'"></span>
-                                            <span class="font-medium text-gray-800" x-text="promo.name"></span>
+                                            <!-- Icon -->
+                                            <i class="fa-solid text-sm"
+                                                :class="{
+                                                   'fa-percent text-blue-600': promo.type === 'discount',
+                                                   'fa-layer-group text-purple-600': promo.type === 'bundle',
+                                                   'fa-gift text-green-600': promo.type === 'gift',
+                                                   'fa-boxes-stacked text-pink-600': promo.type === 'combo'
+                                               }"></i>
+                                            <!-- Badge -->
+                                            <span class="px-2 py-1 text-xs font-semibold rounded-full"
+                                                :class="{
+                                                    'bg-blue-100 text-blue-700': promo.type === 'discount',
+                                                    'bg-purple-100 text-purple-700': promo.type === 'bundle',
+                                                    'bg-green-100 text-green-700': promo.type === 'gift',
+                                                    'bg-pink-100 text-pink-700': promo.type === 'combo'
+                                                }"
+                                                x-text="promo.type === 'discount' ? 'Giảm giá thường' : promo.type === 'bundle' ? 'Giảm giá theo số lượng' : promo.type === 'gift' ? 'Tặng quà' : 'Combo sản phẩm'"></span>
                                         </div>
+                                        <div class="font-semibold text-gray-800 mb-1" x-text="promo.name"></div>
                                         <p class="text-sm text-gray-600" x-text="promo.description"></p>
                                     </div>
                                     <div class="text-right ml-4">

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controllers\Admin;
 
 use App\Models\Repositories\PurchaseOrderRepository;
@@ -172,7 +173,7 @@ class PurchaseOrderController extends BaseAdminController
         }
 
         try {
-            // Kiểm tra trạng thái thanh toán
+            // Kiểm tra trạng thái nhập kho
             $po = $this->repo->findById($id);
             if (!$po) {
                 http_response_code(404);
@@ -180,7 +181,16 @@ class PurchaseOrderController extends BaseAdminController
                 exit;
             }
 
-            // Không cho xóa nếu đã thanh toán một phần hoặc hết
+            // KHÔNG CHO XÓA nếu đã completed (đã nhập kho)
+            if (isset($po['status']) && $po['status'] === 'completed') {
+                http_response_code(403);
+                echo json_encode([
+                    'error' => 'Không thể xóa phiếu nhập đã hoàn thành (đã nhập kho). Phiếu này đã cập nhật stock vào hệ thống.'
+                ]);
+                exit;
+            }
+
+            // KHÔNG CHO XÓA nếu đã thanh toán
             if ($po['payment_status'] == '0' || $po['payment_status'] == '2') {
                 http_response_code(403);
                 echo json_encode(['error' => 'Không thể xóa phiếu nhập đã thanh toán']);
@@ -245,9 +255,9 @@ class PurchaseOrderController extends BaseAdminController
         // Tự động tìm ngày nhỏ nhất và lớn nhất từ danh sách phiếu nhập
         $fromDate = '';
         $toDate = '';
-        
+
         if (!empty($items)) {
-            $dates = array_filter(array_map(function($item) {
+            $dates = array_filter(array_map(function ($item) {
                 $date = $item['received_at'] ?? '';
                 // Chỉ lấy phần ngày (loại bỏ giờ)
                 if ($date && strpos($date, ' ') !== false) {
@@ -255,7 +265,7 @@ class PurchaseOrderController extends BaseAdminController
                 }
                 return $date;
             }, $items));
-            
+
             if (!empty($dates)) {
                 sort($dates);
                 $fromDate = reset($dates); // Ngày nhỏ nhất
@@ -651,7 +661,7 @@ class PurchaseOrderController extends BaseAdminController
 
             // Group rows by purchase order (same supplier_id, created_at, due_date)
             $purchaseOrders = [];
-            
+
             foreach ($data as $index => $row) {
                 $rowNumber = $index + 2;
 
@@ -665,7 +675,7 @@ class PurchaseOrderController extends BaseAdminController
                 $dueDate = trim($row[3] ?? '');
                 $paidAmount = trim($row[4] ?? '0');
                 $note = trim($row[5] ?? '');
-                
+
                 $groupKey = $supplierId . '|' . $createdAt . '|' . $dueDate . '|' . $paidAmount . '|' . $note;
 
                 if (!isset($purchaseOrders[$groupKey])) {
@@ -746,7 +756,7 @@ class PurchaseOrderController extends BaseAdminController
                 foreach ($poData['lines'] as $line) {
                     $totalAmount += (float)$line['qty'] * (float)$line['unit_cost'];
                 }
-                
+
                 if ($poData['paid_amount'] > $totalAmount) {
                     $rowErrors[] = 'Số tiền đã trả (' . number_format($poData['paid_amount'], 0, ',', '.') . ' đ) không được lớn hơn tổng tiền (' . number_format($totalAmount, 0, ',', '.') . ' đ)';
                 }
@@ -878,7 +888,6 @@ class PurchaseOrderController extends BaseAdminController
                 'status' => $status,
                 'message' => $message
             ], JSON_UNESCAPED_UNICODE);
-
         } catch (\Exception $e) {
             http_response_code(500);
             echo json_encode(['error' => 'Lỗi khi đọc file: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);

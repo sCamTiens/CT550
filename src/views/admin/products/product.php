@@ -1357,10 +1357,13 @@ $items = $items ?? [];
               const r = await fetch(api.remove(id), {
                 method: 'DELETE'
               });
+
+              // Nếu lỗi, parse JSON để lấy thông báo lỗi cụ thể
               if (!r.ok) {
-                const txt = await r.text(); // đọc thô để debug
-                throw new Error(`Server error: ${txt}`);
+                const errorData = await r.json();
+                throw new Error(errorData.error || 'Không thể xóa sản phẩm');
               }
+
               const res = await r.json();
               this.items = this.items.filter(x => x.id != id);
               this.showToast('Xóa sản phẩm thành công!', 'success');

@@ -114,9 +114,9 @@ if (empty($allImages) && !empty($product['image_url'])) {
                     <div class="text-4xl font-bold text-red-600">
                         <?= number_format((float)($product['sale_price'] ?? $product['price'] ?? 0), 0, ',', '.') ?>₫
                     </div>
-                    <?php if (!empty($product['cost_price']) && $product['cost_price'] != $product['sale_price']): ?>
+                    <?php if (!empty($product['price']) && $product['price'] != $product['sale_price']): ?>
                         <div class="text-sm text-gray-500 line-through mt-1">
-                            <?= number_format((float)$product['cost_price'], 0, ',', '.') ?>₫
+                            <?= number_format((float)$product['price'], 0, ',', '.') ?>₫
                         </div>
                     <?php endif; ?>
                 </div>
@@ -309,8 +309,8 @@ if (empty($allImages) && !empty($product['image_url'])) {
             })
             .then(res => {
                 if (res.status === 401) {
-                    showToast('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại', 'error');
-                    setTimeout(() => window.location.href = '/login', 1000);
+                    showToast('Khách hàng chưa đăng nhập hoặc phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại', 'error');
+                    // setTimeout(() => window.location.href = '/login', 1000);
                     return null;
                 }
                 return res.json();
@@ -363,8 +363,8 @@ if (empty($allImages) && !empty($product['image_url'])) {
             })
             .then(res => {
                 if (res.status === 401) {
-                    showToast('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại', 'error');
-                    setTimeout(() => window.location.href = '/login', 1000);
+                    showToast('Khách hàng chưa đăng nhập hoặc phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại', 'error');
+                    // setTimeout(() => window.location.href = '/login', 1000);
                     return null;
                 }
                 return res.json();

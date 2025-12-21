@@ -81,6 +81,39 @@ class ProductController extends BaseAdminController
     {
         header('Content-Type: application/json; charset=utf-8');
         try {
+            // Kiểm tra ràng buộc trước khi xóa (theo thứ tự ưu tiên)
+
+            // 1. Kiểm tra tồn kho
+            $stockQty = $this->getProductStockQty($id);
+            if ($stockQty > 0) {
+                http_response_code(409);
+                echo json_encode([
+                    'error' => "Không thể xóa sản phẩm này vì còn $stockQty sản phẩm trong kho."
+                ]);
+                exit;
+            }
+
+            // 2. Kiểm tra đơn hàng
+            $orderCount = $this->getOrderCountByProduct($id);
+            if ($orderCount > 0) {
+                http_response_code(409);
+                echo json_encode([
+                    'error' => "Không thể xóa sản phẩm này vì đã có $orderCount đơn hàng sử dụng."
+                ]);
+                exit;
+            }
+
+            // 3. Kiểm tra phiếu nhập kho
+            $purchaseOrderCount = $this->getPurchaseOrderCountByProduct($id);
+            if ($purchaseOrderCount > 0) {
+                http_response_code(409);
+                echo json_encode([
+                    'error' => "Không thể xóa sản phẩm này vì đã có $purchaseOrderCount phiếu nhập kho."
+                ]);
+                exit;
+            }
+
+            // Nếu pass tất cả kiểm tra, cho phép xóa
             $this->productRepo->delete($id);
             echo json_encode(['ok' => true, 'id' => $id]);
         } catch (\Throwable $e) {
@@ -88,6 +121,33 @@ class ProductController extends BaseAdminController
             echo json_encode(['error' => $e->getMessage()]);
         }
         exit;
+    }
+
+    // Helper: Lấy tổng tồn kho của sản phẩm
+    private function getProductStockQty($productId)
+    {
+        $pdo = \App\Core\DB::pdo();
+        $stmt = $pdo->prepare("SELECT COALESCE(SUM(current_qty), 0) FROM product_batches WHERE product_id = ?");
+        $stmt->execute([$productId]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    // Helper: Đếm số đơn hàng có sản phẩm này
+    private function getOrderCountByProduct($productId)
+    {
+        $pdo = \App\Core\DB::pdo();
+        $stmt = $pdo->prepare("SELECT COUNT(DISTINCT order_id) FROM order_items WHERE product_id = ?");
+        $stmt->execute([$productId]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    // Helper: Đếm số phiếu nhập kho có sản phẩm này
+    private function getPurchaseOrderCountByProduct($productId)
+    {
+        $pdo = \App\Core\DB::pdo();
+        $stmt = $pdo->prepare("SELECT COUNT(DISTINCT purchase_order_id) FROM purchase_order_items WHERE product_id = ?");
+        $stmt->execute([$productId]);
+        return (int) $stmt->fetchColumn();
     }
 
     // findOne now in ProductRepository

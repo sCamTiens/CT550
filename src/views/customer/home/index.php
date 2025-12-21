@@ -372,7 +372,7 @@
                                                 </div>
                                             </div>
                                             <button @click="addComboToCart()"
-                                                class="w-full bg-[#002975] text-white py-3 rounded-lg font-bold hover:bg-[#001a54] transition-all">
+                                                class="w-full hover:bg-[#002975] border border-[#002975] text-[#002975] hover:text-white py-3 rounded-lg font-bold hover:bg-[#001a54] transition-all">
                                                 <i class="fa-solid fa-cart-plus mr-2"></i>
                                                 Thêm combo vào giỏ hàng
                                             </button>
@@ -438,7 +438,7 @@
                                                                     x-text="formatCurrency(item.bundle_price) + '₫'"></span>
                                                             </div>
                                                             <button @click="addBundleToCart(item)"
-                                                                class="mt-3 border border-[#002975] text-[#002975] px-6 py-2 rounded hover:bg-[#002975] hover-text-white transition-all">
+                                                                class="mt-3 border border-[#002975] text-[#002975] px-6 py-2 rounded hover:bg-[#002975] hover:text-white transition-all">
                                                                 <i class="fa-solid fa-cart-plus mr-2"></i>
                                                                 Thêm vào giỏ
                                                             </button>
@@ -808,26 +808,26 @@
                 <div>
                     <h4 class="font-semibold mb-4">Liên kết</h4>
                     <ul class="space-y-2 text-gray-400">
-                        <li><a href="/about" class="hover:text-white">Về chúng tôi</a></li>
-                        <li><a href="/contact" class="hover:text-white">Liên hệ</a></li>
-                        <li><a href="/terms" class="hover:text-white">Điều khoản</a></li>
-                        <li><a href="/privacy" class="hover:text-white">Bảo mật</a></li>
+                        <li><a href="#" class="hover:text-white">Về chúng tôi</a></li>
+                        <li><a href="#" class="hover:text-white">Liên hệ</a></li>
+                        <li><a href="#" class="hover:text-white">Điều khoản</a></li>
+                        <li><a href="#" class="hover:text-white">Bảo mật</a></li>
                     </ul>
                 </div>
                 <div>
                     <h4 class="font-semibold mb-4">Hỗ trợ</h4>
                     <ul class="space-y-2 text-gray-400">
-                        <li><a href="/faq" class="hover:text-white">FAQ</a></li>
-                        <li><a href="/shipping" class="hover:text-white">Vận chuyển</a></li>
-                        <li><a href="/returns" class="hover:text-white">Đổi trả</a></li>
+                        <li><a href="#" class="hover:text-white">FAQ</a></li>
+                        <li><a href="#" class="hover:text-white">Vận chuyển</a></li>
+                        <li><a href="#" class="hover:text-white">Đổi trả</a></li>
                     </ul>
                 </div>
                 <div>
                     <h4 class="font-semibold mb-4">Liên hệ</h4>
                     <ul class="space-y-2 text-gray-400">
-                        <li><i class="fa-solid fa-phone mr-2"></i> 0123 456 789</li>
+                        <li><i class="fa-solid fa-phone mr-2"></i> 0901 234 567</li>
                         <li><i class="fa-solid fa-envelope mr-2"></i> contact@minigo.vn</li>
-                        <li><i class="fa-solid fa-location-dot mr-2"></i> TP. Hồ Chí Minh</li>
+                        <li><i class="fa-solid fa-location-dot mr-2"></i> TP. Cần Thơ</li>
                     </ul>
                 </div>
             </div>
@@ -977,7 +977,7 @@
                         // Check if user is logged in (using session)
                         if (!window.isUserLoggedIn) {
                             showToast('Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng', 'error');
-                            window.location.href = '/login';
+                            // window.location.href = '/login';
                             return;
                         }
 
@@ -996,8 +996,8 @@
                         const data = await response.json();
 
                         if (response.status === 401) {
-                            showToast('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại', 'error');
-                            window.location.href = '/login';
+                            showToast('Khách hàng chưa đăng nhập hoặc phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại', 'error');
+                            // window.location.href = '/login';
                             return;
                         }
 
@@ -1022,7 +1022,7 @@
                         // Check if user is logged in (using session)
                         if (!window.isUserLoggedIn) {
                             showToast('Bạn cần đăng nhập để thêm combo vào giỏ hàng', 'error');
-                            window.location.href = '/login';
+                            // window.location.href = '/login';
                             return;
                         }
 
@@ -1045,8 +1045,8 @@
                         const data = await response.json();
 
                         if (response.status === 401) {
-                            showToast('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại', 'error');
-                            window.location.href = '/login';
+                            showToast('Khách hàng chưa đăng nhập hoặc phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại', 'error');
+                            // window.location.href = '/login';
                             return;
                         }
 
@@ -1072,7 +1072,7 @@
                         // Check if user is logged in (using session)
                         if (!window.isUserLoggedIn) {
                             showToast('Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng', 'error');
-                            window.location.href = '/login';
+                            // window.location.href = '/login';
                             return;
                         }
 
@@ -1092,8 +1092,8 @@
                         const data = await response.json();
 
                         if (response.status === 401) {
-                            showToast('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại', 'error');
-                            window.location.href = '/login';
+                            showToast('Khách hàng chưa đăng nhập hoặc phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại', 'error');
+                            // window.location.href = '/login';
                             return;
                         }
 
@@ -1115,7 +1115,7 @@
             }
         }
 
-        // Global functions for product cards in home page
+        // Thêm sản phẩm vào giỏ hàng
         async function addProductToCart(productId, quantity, stockQty) {
             // Validate quantity
             if (!quantity || quantity <= 0) {
@@ -1132,7 +1132,7 @@
             // Check if user is logged in (using session)
             if (!window.isUserLoggedIn) {
                 showToast('Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng', 'error');
-                window.location.href = '/login';
+                // window.location.href = '/login';
                 return;
             }
 
@@ -1149,8 +1149,8 @@
                 });
 
                 if (response.status === 401) {
-                    showToast('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại', 'error');
-                    window.location.href = '/login';
+                    showToast('Khách hàng chưa đăng nhập hoặc phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại', 'error');
+                    // window.location.href = '/login';
                     return;
                 }
 
@@ -1181,7 +1181,7 @@
             // Check if user is logged in (using session)
             if (!window.isUserLoggedIn) {
                 showToast('Bạn cần đăng nhập để mua hàng', 'error');
-                window.location.href = '/login';
+                // window.location.href = '/login';
                 return;
             }
 
@@ -1199,8 +1199,8 @@
                 });
 
                 if (response.status === 401) {
-                    showToast('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại', 'error');
-                    window.location.href = '/login';
+                    showToast('Khách hàng chưa đăng nhập hoặc phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại', 'error');
+                    // window.location.href = '/login';
                     return;
                 }
 

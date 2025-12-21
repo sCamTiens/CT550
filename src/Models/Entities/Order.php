@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models\Entities;
 
 class Order
@@ -14,6 +15,7 @@ class Order
     public $province_name;
     public $commune_code;
     public $commune_name;
+    public $order_type;
     public $status;
     public $payment_id;
     public $payment_method;

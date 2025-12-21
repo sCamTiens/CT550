@@ -20,13 +20,15 @@ class GoogleAuthController extends Controller
             session_start();
         }
 
-        header('Content-Type: application/json');
+        // DON'T set Content-Type header before setcookie!
+        // header('Content-Type: application/json');
 
         try {
             $input = json_decode(file_get_contents('php://input'), true);
             $credential = $input['credential'] ?? '';
 
             if (empty($credential)) {
+                header('Content-Type: application/json');
                 echo json_encode(['success' => false, 'message' => 'Thiếu credential']);
                 exit;
             }
@@ -36,6 +38,7 @@ class GoogleAuthController extends Controller
             $userData = $this->verifyGoogleToken($credential, $googleClientId);
 
             if (!$userData) {
+                header('Content-Type: application/json');
                 echo json_encode(['success' => false, 'message' => 'Token Google không hợp lệ']);
                 exit;
             }
@@ -56,6 +59,7 @@ class GoogleAuthController extends Controller
                 // User exists - check role
                 if ($user['role_name'] !== 'Khách hàng') {
                     // User is admin or other role - block login
+                    header('Content-Type: application/json');
                     echo json_encode([
                         'success' => false,
                         'message' => 'Email này thuộc tài khoản quản trị. Vui lòng dùng email khác.'
@@ -67,9 +71,17 @@ class GoogleAuthController extends Controller
                 $googleAvatarUrl = $userData['picture'] ?? null;
                 $avatarUrl = null;
 
-                // Use Google avatar URL directly (no download)
+                // Upload Google avatar to ImgBB
                 if ($googleAvatarUrl) {
-                    $avatarUrl = $this->getGoogleAvatarUrl($googleAvatarUrl);
+                    $uploadResult = \App\Services\ImageUploadService::uploadFromUrl($googleAvatarUrl);
+                    if ($uploadResult['success']) {
+                        $avatarUrl = $uploadResult['url'];
+                        error_log("Google avatar uploaded to ImgBB: " . $avatarUrl);
+                    } else {
+                        error_log("Failed to upload Google avatar: " . $uploadResult['message']);
+                        // Fallback to Google URL if ImgBB fails
+                        $avatarUrl = $this->getGoogleAvatarUrl($googleAvatarUrl);
+                    }
                 }
 
                 if (empty($user['google_id'])) {
@@ -110,12 +122,18 @@ class GoogleAuthController extends Controller
 
                 $userId = $pdo->lastInsertId();
 
-                // Get Google avatar URL (no download)
+                // Upload Google avatar to ImgBB
                 $googleAvatarUrl = $userData['picture'] ?? null;
                 if ($googleAvatarUrl) {
-                    $avatarUrl = $this->getGoogleAvatarUrl($googleAvatarUrl);
-                    $updateStmt = $pdo->prepare("UPDATE users SET avatar_url = ? WHERE id = ?");
-                    $updateStmt->execute([$avatarUrl, $userId]);
+                    $uploadResult = \App\Services\ImageUploadService::uploadFromUrl($googleAvatarUrl);
+                    if ($uploadResult['success']) {
+                        $avatarUrl = $uploadResult['url'];
+                        $updateStmt = $pdo->prepare("UPDATE users SET avatar_url = ? WHERE id = ?");
+                        $updateStmt->execute([$avatarUrl, $userId]);
+                        error_log("New user Google avatar uploaded to ImgBB: " . $avatarUrl);
+                    } else {
+                        error_log("Failed to upload new user avatar: " . $uploadResult['message']);
+                    }
                 }
 
                 // Fetch newly created user
@@ -127,10 +145,33 @@ class GoogleAuthController extends Controller
             }
 
             // Generate JWT tokens TRƯỚC KHI lưu vào session
-            $accessToken = $this->generateAccessToken($user);
-            $refreshToken = $this->generateRefreshToken($user);
+            $tokenPayload = [
+                'id' => $user['id'],
+                'username' => $user['username'],
+                'email' => $user['email'],
+                'role' => 'customer'
+            ];
 
-            // Lưu thông tin vào session (bao gồm tokens)
+            $accessToken = \App\Support\JWTHelper::generateToken($tokenPayload);
+            $refreshToken = \App\Support\JWTHelper::generateRefreshToken($tokenPayload);
+
+            // ✅ LƯU JWT VÀO COOKIES (HTTP-only, secure)
+            setcookie('jwt_token', $accessToken, [
+                'expires' => time() + (60 * 60), // 1 hour
+                'path' => '/',
+                'httponly' => true,
+                'secure' => false, // Set true nếu dùng HTTPS
+                'samesite' => 'Lax'
+            ]);
+            setcookie('refresh_token', $refreshToken, [
+                'expires' => time() + (60 * 60 * 24 * 30), // 30 days
+                'path' => '/',
+                'httponly' => true,
+                'secure' => false,
+                'samesite' => 'Lax'
+            ]);
+
+            // Lưu thông tin vào session (bao gồm cả tokens)
             $_SESSION['customer'] = [
                 'id' => $user['id'],
                 'username' => $user['username'],
@@ -139,6 +180,7 @@ class GoogleAuthController extends Controller
                 'phone' => $user['phone'] ?? null,
                 'avatar_url' => $user['avatar_url'] ?? null,
                 'google_id' => $user['google_id'] ?? null,
+                'loyalty_points' => $user['loyalty_points'] ?? 0,
                 'access_token' => $accessToken,
                 'refresh_token' => $refreshToken,
             ];
@@ -149,18 +191,24 @@ class GoogleAuthController extends Controller
 
             // Merge với giỏ hàng session (nếu có)
             if (!empty($_SESSION['cart'])) {
+                // Nếu có giỏ hàng trong session, merge với DB
                 foreach ($_SESSION['cart'] as $productId => $item) {
                     if (isset($cartFromDB[$productId])) {
+                        // Nếu sản phẩm đã có trong DB, cộng thêm số lượng
                         $cartFromDB[$productId]['qty'] += $item['qty'];
                     } else {
+                        // Sản phẩm mới, thêm vào
                         $cartFromDB[$productId] = $item;
                     }
                 }
+                // Lưu giỏ hàng đã merge vào database
                 $cartRepo->saveCartToDB($user['id'], $cartFromDB);
             }
 
             $_SESSION['cart'] = $cartFromDB;
 
+            // Return JSON response (giống AuthController::login)
+            header('Content-Type: application/json');
             echo json_encode([
                 'success' => true,
                 'message' => 'Đăng nhập Google thành công',
@@ -168,6 +216,7 @@ class GoogleAuthController extends Controller
             ]);
         } catch (\Exception $e) {
             error_log("Google login error: " . $e->getMessage());
+            header('Content-Type: application/json');
             echo json_encode([
                 'success' => false,
                 'message' => 'Có lỗi xảy ra: ' . $e->getMessage()
@@ -187,7 +236,8 @@ class GoogleAuthController extends Controller
             session_start();
         }
 
-        header('Content-Type: application/json');
+        // DON'T set Content-Type header before setcookie!
+        // header('Content-Type: application/json');
 
         try {
             $input = json_decode(file_get_contents('php://input'), true);
@@ -207,6 +257,7 @@ class GoogleAuthController extends Controller
             ]));
 
             if (empty($email) || empty($googleId)) {
+                header('Content-Type: application/json');
                 echo json_encode(['success' => false, 'message' => 'Thiếu thông tin từ Google']);
                 exit;
             }
@@ -223,6 +274,7 @@ class GoogleAuthController extends Controller
             if ($user) {
                 // User exists - check role
                 if ($user['role_name'] !== 'Khách hàng') {
+                    header('Content-Type: application/json');
                     echo json_encode([
                         'success' => false,
                         'message' => 'Email này thuộc tài khoản quản trị. Vui lòng dùng email khác.'
@@ -234,9 +286,17 @@ class GoogleAuthController extends Controller
                 $googleAvatarUrl = $input['picture'] ?? null;
                 $avatarUrl = null;
 
-                // Use Google avatar URL directly (no download)
+                // Upload Google avatar to ImgBB
                 if ($googleAvatarUrl) {
-                    $avatarUrl = $this->getGoogleAvatarUrl($googleAvatarUrl);
+                    $uploadResult = \App\Services\ImageUploadService::uploadFromUrl($googleAvatarUrl);
+                    if ($uploadResult['success']) {
+                        $avatarUrl = $uploadResult['url'];
+                        error_log("Google avatar uploaded to ImgBB: " . $avatarUrl);
+                    } else {
+                        error_log("Failed to upload Google avatar: " . $uploadResult['message']);
+                        // Fallback to Google URL if ImgBB fails
+                        $avatarUrl = $this->getGoogleAvatarUrl($googleAvatarUrl);
+                    }
                 }
 
                 if (empty($user['google_id'])) {
@@ -281,11 +341,17 @@ class GoogleAuthController extends Controller
 
                 $userId = $pdo->lastInsertId();
 
-                // Get Google avatar URL (no download)
+                // Upload Google avatar to ImgBB
                 if ($googleAvatarUrl) {
-                    $avatarUrl = $this->getGoogleAvatarUrl($googleAvatarUrl);
-                    $updateStmt = $pdo->prepare("UPDATE users SET avatar_url = ? WHERE id = ?");
-                    $updateStmt->execute([$avatarUrl, $userId]);
+                    $uploadResult = \App\Services\ImageUploadService::uploadFromUrl($googleAvatarUrl);
+                    if ($uploadResult['success']) {
+                        $avatarUrl = $uploadResult['url'];
+                        $updateStmt = $pdo->prepare("UPDATE users SET avatar_url = ? WHERE id = ?");
+                        $updateStmt->execute([$avatarUrl, $userId]);
+                        error_log("New OAuth user avatar uploaded to ImgBB: " . $avatarUrl);
+                    } else {
+                        error_log("Failed to upload OAuth user avatar: " . $uploadResult['message']);
+                    }
                 }
 
                 // Fetch newly created user
@@ -297,10 +363,33 @@ class GoogleAuthController extends Controller
             }
 
             // Generate JWT tokens TRƯỚC KHI lưu vào session
-            $accessToken = $this->generateAccessToken($user);
-            $refreshToken = $this->generateRefreshToken($user);
+            $tokenPayload = [
+                'id' => $user['id'],
+                'username' => $user['username'],
+                'email' => $user['email'],
+                'role' => 'customer'
+            ];
 
-            // Lưu thông tin vào session (bao gồm tokens)
+            $accessToken = \App\Support\JWTHelper::generateToken($tokenPayload);
+            $refreshToken = \App\Support\JWTHelper::generateRefreshToken($tokenPayload);
+
+            // ✅ LƯU JWT VÀO COOKIES (HTTP-only, secure)
+            setcookie('jwt_token', $accessToken, [
+                'expires' => time() + (60 * 60), // 1 hour
+                'path' => '/',
+                'httponly' => true,
+                'secure' => false, // Set true nếu dùng HTTPS
+                'samesite' => 'Lax'
+            ]);
+            setcookie('refresh_token', $refreshToken, [
+                'expires' => time() + (60 * 60 * 24 * 30), // 30 days
+                'path' => '/',
+                'httponly' => true,
+                'secure' => false,
+                'samesite' => 'Lax'
+            ]);
+
+            // Lưu thông tin vào session (bao gồm cả tokens)
             $_SESSION['customer'] = [
                 'id' => $user['id'],
                 'username' => $user['username'],
@@ -309,6 +398,7 @@ class GoogleAuthController extends Controller
                 'phone' => $user['phone'] ?? null,
                 'avatar_url' => $user['avatar_url'] ?? null,
                 'google_id' => $user['google_id'] ?? null,
+                'loyalty_points' => $user['loyalty_points'] ?? 0,
                 'access_token' => $accessToken,
                 'refresh_token' => $refreshToken,
             ];
@@ -319,18 +409,24 @@ class GoogleAuthController extends Controller
 
             // Merge với giỏ hàng session (nếu có)
             if (!empty($_SESSION['cart'])) {
+                // Nếu có giỏ hàng trong session, merge với DB
                 foreach ($_SESSION['cart'] as $productId => $item) {
                     if (isset($cartFromDB[$productId])) {
+                        // Nếu sản phẩm đã có trong DB, cộng thêm số lượng
                         $cartFromDB[$productId]['qty'] += $item['qty'];
                     } else {
+                        // Sản phẩm mới, thêm vào
                         $cartFromDB[$productId] = $item;
                     }
                 }
+                // Lưu giỏ hàng đã merge vào database
                 $cartRepo->saveCartToDB($user['id'], $cartFromDB);
             }
 
             $_SESSION['cart'] = $cartFromDB;
 
+            // Return JSON response (giống AuthController::login)
+            header('Content-Type: application/json');
             echo json_encode([
                 'success' => true,
                 'message' => 'Đăng nhập Google thành công',
@@ -338,6 +434,7 @@ class GoogleAuthController extends Controller
             ]);
         } catch (\Exception $e) {
             error_log("Google OAuth login error: " . $e->getMessage());
+            header('Content-Type: application/json');
             echo json_encode([
                 'success' => false,
                 'message' => 'Có lỗi xảy ra: ' . $e->getMessage()

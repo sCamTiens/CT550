@@ -317,18 +317,39 @@ $pageTitle = 'Lịch Sử Thao Tác';
                             <div>
                                 <h4 class="font-bold text-red-600 mb-2">🔴 Trước Khi Thay Đổi</h4>
                                 <div class="bg-red-50 p-4 rounded-lg border border-red-200 max-h-96 overflow-y-auto">
-                                    <pre class="text-xs whitespace-pre-wrap"
-                                        x-text="selectedLog.before_data ? JSON.stringify(selectedLog.before_data, null, 2) : '(Không có dữ liệu)'"></pre>
+                                    <template x-if="selectedLog.before_data && typeof selectedLog.before_data === 'object'">
+                                        <div class="space-y-2">
+                                            <template x-for="[key, value] in Object.entries(selectedLog.before_data)" :key="key">
+                                                <div class="flex border-b border-red-200 py-1">
+                                                    <div class="w-1/3 font-semibold text-gray-700" x-text="formatFieldName(key)"></div>
+                                                    <div class="w-2/3 text-gray-900" x-html="formatFieldValue(key, value)"></div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <template x-if="!selectedLog.before_data">
+                                        <p class="text-gray-500 text-sm">(Không có dữ liệu)</p>
+                                    </template>
                                 </div>
                             </div>
 
                             <!-- After -->
                             <div>
                                 <h4 class="font-bold text-green-600 mb-2">🟢 Sau Khi Thay Đổi</h4>
-                                <div
-                                    class="bg-green-50 p-4 rounded-lg border border-green-200 max-h-96 overflow-y-auto">
-                                    <pre class="text-xs whitespace-pre-wrap"
-                                        x-text="selectedLog.after_data ? JSON.stringify(selectedLog.after_data, null, 2) : '(Không có dữ liệu)'"></pre>
+                                <div class="bg-green-50 p-4 rounded-lg border border-green-200 max-h-96 overflow-y-auto">
+                                    <template x-if="selectedLog.after_data && typeof selectedLog.after_data === 'object'">
+                                        <div class="space-y-2">
+                                            <template x-for="[key, value] in Object.entries(selectedLog.after_data)" :key="key">
+                                                <div class="flex border-b border-green-200 py-1">
+                                                    <div class="w-1/3 font-semibold text-gray-700" x-text="formatFieldName(key)"></div>
+                                                    <div class="w-2/3 text-gray-900" x-html="formatFieldValue(key, value)"></div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <template x-if="!selectedLog.after_data">
+                                        <p class="text-gray-500 text-sm">(Không có dữ liệu)</p>
+                                    </template>
                                 </div>
                             </div>
                         </div>
@@ -676,6 +697,135 @@ $pageTitle = 'Lịch Sử Thao Tác';
                     'product_batches': 'Lô hàng',
                 };
                 return map[type] || type;
+            },
+
+            formatFieldName(key) {
+                // Map field names to Vietnamese
+                const fieldMap = {
+                    // Common fields
+                    'id': 'ID',
+                    'name': 'Tên',
+                    'code': 'Mã',
+                    'description': 'Mô tả',
+                    'created_at': 'Ngày tạo',
+                    'updated_at': 'Ngày cập nhật',
+                    'status': 'Trạng thái',
+
+                    // Product fields
+                    'product_id': 'Mã sản phẩm',
+                    'product_name': 'Tên sản phẩm',
+                    'sku': 'Mã SKU',
+                    'category_id': 'Danh mục',
+                    'brand_id': 'Thương hiệu',
+                    'unit_id': 'Đơn vị tính',
+                    'supplier_id': 'Nhà cung cấp',
+                    'sale_price': 'Giá bán',
+                    'cost_price': 'Giá vốn',
+                    'stock_qty': 'Số lượng tồn',
+                    'min_stock': 'Tồn tối thiểu',
+                    'max_stock': 'Tồn tối đa',
+
+                    // Batch fields
+                    'batch_code': 'Mã lô',
+                    'exp_date': 'Hạn sử dụng',
+                    'mfg_date': 'Ngày sản xuất',
+                    'initial_qty': 'Số lượng ban đầu',
+                    'current_qty': 'Số lượng hiện tại',
+                    'sold_qty': 'Đã bán',
+
+                    // Order fields
+                    'order_id': 'Mã đơn hàng',
+                    'customer_id': 'Khách hàng',
+                    'total_amount': 'Tổng tiền',
+                    'subtotal': 'Tạm tính',
+                    'discount_amount': 'Giảm giá',
+                    'promotion_discount': 'Giảm KM',
+                    'shipping_fee': 'Phí ship',
+                    'payment_method': 'Phương thức TT',
+                    'payment_status': 'TT thanh toán',
+                    'order_type': 'Loại đơn',
+                    'shipping_address': 'Địa chỉ giao',
+
+                    // User/Staff fields
+                    'username': 'Tên đăng nhập',
+                    'full_name': 'Họ tên',
+                    'email': 'Email',
+                    'phone': 'Số điện thoại',
+                    'role': 'Vai trò',
+                    'position': 'Chức vụ',
+                    'salary': 'Lương',
+                    'hire_date': 'Ngày vào làm',
+
+                    // Other
+                    'is_active': 'Kích hoạt',
+                    'note': 'Ghi chú',
+                    'image_url': 'Hình ảnh',
+                };
+
+                return fieldMap[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            },
+
+            formatFieldValue(key, value) {
+                // Handle null/undefined
+                if (value === null || value === undefined) {
+                    return '<span class="text-gray-400 italic">Trống</span>';
+                }
+
+                // Handle boolean
+                if (typeof value === 'boolean') {
+                    return value ?
+                        '<span class="text-green-600 font-semibold">✓ Có</span>' :
+                        '<span class="text-red-600 font-semibold">✗ Không</span>';
+                }
+
+                // Handle dates
+                if (key.includes('date') || key.includes('_at')) {
+                    try {
+                        const d = new Date(value);
+                        if (!isNaN(d.getTime())) {
+                            return d.toLocaleString('vi-VN');
+                        }
+                    } catch (e) {}
+                }
+
+                // Handle price/money fields
+                if (key.includes('price') || key.includes('amount') || key.includes('salary') || key.includes('fee')) {
+                    const num = parseFloat(value);
+                    if (!isNaN(num)) {
+                        return '<span class="font-mono">' + num.toLocaleString('vi-VN') + ' ₫</span>';
+                    }
+                }
+
+                // Handle quantity fields
+                if (key.includes('qty') || key.includes('stock') || key.includes('quantity')) {
+                    const num = parseFloat(value);
+                    if (!isNaN(num)) {
+                        return '<span class="font-mono font-semibold">' + num.toLocaleString('vi-VN') + '</span>';
+                    }
+                }
+
+                // Handle arrays
+                if (Array.isArray(value)) {
+                    return value.length > 0 ?
+                        '<span class="text-sm">' + value.join(', ') + '</span>' :
+                        '<span class="text-gray-400 italic">Trống</span>';
+                }
+
+                // Handle objects (nested)
+                if (typeof value === 'object') {
+                    return '<pre class="text-xs bg-gray-100 p-2 rounded">' + JSON.stringify(value, null, 2) + '</pre>';
+                }
+
+                // Default: escape HTML and return as string
+                const strValue = String(value);
+                const escaped = strValue
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+
+                return '<span class="break-words">' + escaped + '</span>';
             },
         };
     }

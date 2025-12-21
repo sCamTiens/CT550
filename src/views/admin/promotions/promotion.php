@@ -24,9 +24,9 @@ $items = $items ?? [];
                 Xuất Excel
             </button>
             <?php if (($_SESSION['user']['staff_role'] ?? '') === 'Admin'): ?>
-            <button
-                class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
-                @click="openCreate()">+ Thêm khuyến mãi</button>
+                <button
+                    class="px-3 py-2 rounded-lg text-[#002975] hover:bg-[#002975] hover:text-white font-semibold border border-[#002975]"
+                    @click="openCreate()">+ Thêm khuyến mãi</button>
             <?php endif; ?>
         </div>
     </div>
@@ -74,14 +74,14 @@ $items = $items ?? [];
                         <tr class="border-t hover:bg-blue-50 transition-colors duration-150">
                             <td class="py-2 px-4 space-x-2 text-center">
                                 <?php if (($_SESSION['user']['staff_role'] ?? '') === 'Admin'): ?>
-                                <button @click="openEditModal(p)" class="p-2 rounded hover:bg-gray-100 text-[#002975]"
-                                    title="Sửa">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
-                                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                    </svg>
-                                </button>
+                                    <button @click="openEditModal(p)" class="p-2 rounded hover:bg-gray-100 text-[#002975]"
+                                        title="Sửa">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
+                                            viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                        </svg>
+                                    </button>
                                 <?php endif; ?>
                                 <button @click="openDetailModal(p)" class="p-2 rounded hover:bg-gray-100 text-[#002975]"
                                     title="Xem chi tiết">
@@ -94,14 +94,14 @@ $items = $items ?? [];
                                     </svg>
                                 </button>
                                 <?php if (($_SESSION['user']['staff_role'] ?? '') === 'Admin'): ?>
-                                <button @click="remove(p.id)" class="p-2 rounded hover:bg-gray-100 text-[#002975]"
-                                    title="Xóa">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
-                                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                </button>
+                                    <button @click="remove(p.id)" class="p-2 rounded hover:bg-gray-100 text-[#002975]"
+                                        title="Xóa">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none"
+                                            viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
                                 <?php endif; ?>
                             </td>
                             <td class="py-2 px-4 break-words whitespace-pre-line" x-text="p.name"></td>
@@ -556,41 +556,79 @@ $items = $items ?? [];
             },
 
             errors: {
-                name: '', discount_value: '', starts_at: '', ends_at: ''
+                name: '',
+                discount_value: '',
+                starts_at: '',
+                ends_at: ''
             },
 
             touched: {
-                name: false, discount_value: false, starts_at: false, ends_at: false
+                name: false,
+                discount_value: false,
+                starts_at: false,
+                ends_at: false
             },
 
             // ===== FILTERS =====
             openFilter: {
-                name: false, description: false, discount_type: false, discount_value: false,
-                apply_to: false, priority: false, starts_at: false, ends_at: false,
-                status: false, created_at: false, created_by: false,
-                updated_at: false, updated_by: false,
+                name: false,
+                description: false,
+                discount_type: false,
+                discount_value: false,
+                apply_to: false,
+                priority: false,
+                starts_at: false,
+                ends_at: false,
+                status: false,
+                created_at: false,
+                created_by: false,
+                updated_at: false,
+                updated_by: false,
             },
 
             filters: {
                 name: '',
                 description: '',
                 discount_type: '',
-                discount_value_type: '', discount_value_value: '', discount_value_from: '', discount_value_to: '',
+                discount_value_type: '',
+                discount_value_value: '',
+                discount_value_from: '',
+                discount_value_to: '',
                 apply_to: '',
-                priority_type: '', priority_value: '', priority_from: '', priority_to: '',
-                starts_at_type: '', starts_at_value: '', starts_at_from: '', starts_at_to: '',
-                ends_at_type: '', ends_at_value: '', ends_at_from: '', ends_at_to: '',
+                priority_type: '',
+                priority_value: '',
+                priority_from: '',
+                priority_to: '',
+                starts_at_type: '',
+                starts_at_value: '',
+                starts_at_from: '',
+                starts_at_to: '',
+                ends_at_type: '',
+                ends_at_value: '',
+                ends_at_from: '',
+                ends_at_to: '',
                 status: '',
-                created_at_type: '', created_at_value: '', created_at_from: '', created_at_to: '',
+                created_at_type: '',
+                created_at_value: '',
+                created_at_from: '',
+                created_at_to: '',
                 created_by: '',
-                updated_at_type: '', updated_at_value: '', updated_at_from: '', updated_at_to: '',
+                updated_at_type: '',
+                updated_at_value: '',
+                updated_at_from: '',
+                updated_at_to: '',
                 updated_by: '',
             },
 
             // ------------------------------------------------------------------
             // Hàm lọc tổng quát — hỗ trợ TEXT, NUMBER, DATE
             // ------------------------------------------------------------------
-            applyFilter(val, type, { value, from, to, dataType }) {
+            applyFilter(val, type, {
+                value,
+                from,
+                to,
+                dataType
+            }) {
                 if (val == null) return false;
 
                 // ---------------- TEXT ----------------
@@ -609,14 +647,14 @@ $items = $items ?? [];
 
                     if (!query) return true;
 
-                    if (type === 'eq') return hasAccent(query)
-                        ? raw === query
-                        : str === queryNoAccent;
+                    if (type === 'eq') return hasAccent(query) ?
+                        raw === query :
+                        str === queryNoAccent;
 
                     if (type === 'contains' || type === 'like') {
-                        return hasAccent(query)
-                            ? raw.includes(query)
-                            : str.includes(queryNoAccent);
+                        return hasAccent(query) ?
+                            raw.includes(query) :
+                            str.includes(queryNoAccent);
                     }
 
                     return true;
@@ -753,7 +791,9 @@ $items = $items ?? [];
                 for (const k in this.openFilter) this.openFilter[k] = false;
                 this.openFilter[key] = true;
             },
-            closeFilter(key) { this.openFilter[key] = false; },
+            closeFilter(key) {
+                this.openFilter[key] = false;
+            },
             resetFilter(key) {
                 if (['starts_at', 'ends_at', 'created_at', 'updated_at'].includes(key)) {
                     this.filters[`${key}_type`] = '';
@@ -777,11 +817,13 @@ $items = $items ?? [];
                 if (data.length === 0) {
                     this.showToast('Không có dữ liệu để xuất', 'error');
                     return;
-                }   
+                }
 
                 const now = new Date();
                 const dateStr = now.toLocaleDateString('vi-VN').replace(/\//g, '-');
-                const timeStr = now.toLocaleTimeString('vi-VN', { hour12: false }).replace(/:/g, '-');
+                const timeStr = now.toLocaleTimeString('vi-VN', {
+                    hour12: false
+                }).replace(/:/g, '-');
                 const filename = `Chuong_trinh_khuyen_mai_${dateStr}_${timeStr}.xlsx`;
 
                 const exportData = {
@@ -805,10 +847,12 @@ $items = $items ?? [];
                 };
 
                 fetch('/admin/api/promotions/export', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(exportData)
-                })
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(exportData)
+                    })
                     .then(response => {
                         if (!response.ok) throw new Error('Export failed');
                         return response.blob();
@@ -972,11 +1016,11 @@ $items = $items ?? [];
                     this.submitting = true;
 
                     // Convert discount_value về số (xóa dấu phẩy) - chỉ khi promo_type là discount
-                    const discountValue = this.form.promo_type === 'discount'
-                        ? (typeof this.form.discount_value === 'string'
-                            ? parseFloat(this.form.discount_value.replace(/,/g, ''))
-                            : this.form.discount_value)
-                        : 0;
+                    const discountValue = this.form.promo_type === 'discount' ?
+                        (typeof this.form.discount_value === 'string' ?
+                            parseFloat(this.form.discount_value.replace(/,/g, '')) :
+                            this.form.discount_value) :
+                        0;
 
                     // Helper function để convert giá trị có dấu phẩy thành số
                     const parseFormattedNumber = (val) => {
@@ -1012,7 +1056,9 @@ $items = $items ?? [];
 
                     const res = await fetch(api.create, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
                         body: JSON.stringify(formData)
                     });
 
@@ -1043,11 +1089,11 @@ $items = $items ?? [];
                     this.submitting = true;
 
                     // Convert discount_value về số (xóa dấu phẩy) - chỉ khi promo_type là discount
-                    const discountValue = this.form.promo_type === 'discount'
-                        ? (typeof this.form.discount_value === 'string'
-                            ? parseFloat(this.form.discount_value.replace(/,/g, ''))
-                            : this.form.discount_value)
-                        : 0;
+                    const discountValue = this.form.promo_type === 'discount' ?
+                        (typeof this.form.discount_value === 'string' ?
+                            parseFloat(this.form.discount_value.replace(/,/g, '')) :
+                            this.form.discount_value) :
+                        0;
 
                     // Helper function để convert giá trị có dấu phẩy thành số
                     const parseFormattedNumber = (val) => {
@@ -1083,7 +1129,9 @@ $items = $items ?? [];
 
                     const res = await fetch(api.update(this.form.id), {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
                         body: JSON.stringify(formData)
                     });
 
@@ -1116,8 +1164,15 @@ $items = $items ?? [];
                     `Bạn có chắc chắn muốn xóa khuyến mãi "${name}"?`,
                     async () => {
                         try {
-                            const res = await fetch(api.remove(id), { method: 'DELETE' });
-                            if (!res.ok) throw new Error('Không thể xóa');
+                            const res = await fetch(api.remove(id), {
+                                method: 'DELETE'
+                            });
+
+                            // Parse JSON để lấy error message cụ thể
+                            if (!res.ok) {
+                                const errorData = await res.json();
+                                throw new Error(errorData.error || 'Không thể xóa');
+                            }
 
                             this.showToast('Xóa thành công!', 'success');
                             await this.fetchAll();
@@ -1139,9 +1194,9 @@ $items = $items ?? [];
 
                 if (field === 'discount_value') {
                     // Chuyển string có dấu phấy thành số
-                    const numVal = typeof val === 'string'
-                        ? parseFloat(val.replace(/,/g, ''))
-                        : parseFloat(val);
+                    const numVal = typeof val === 'string' ?
+                        parseFloat(val.replace(/,/g, '')) :
+                        parseFloat(val);
 
                     if (!numVal || numVal <= 0) {
                         this.errors[field] = 'Giá trị giảm phải lớn hơn 0';
@@ -1164,7 +1219,12 @@ $items = $items ?? [];
             },
 
             validateForm() {
-                this.touched = { name: true, discount_value: true, starts_at: true, ends_at: true };
+                this.touched = {
+                    name: true,
+                    discount_value: true,
+                    starts_at: true,
+                    ends_at: true
+                };
                 this.validateField('name');
 
                 // Chỉ validate discount_value khi promo_type là 'discount'
@@ -1249,8 +1309,18 @@ $items = $items ?? [];
                     combo_price: 0,
                     combo_items: []
                 };
-                this.errors = { name: '', discount_value: '', starts_at: '', ends_at: '' };
-                this.touched = { name: false, discount_value: false, starts_at: false, ends_at: false };
+                this.errors = {
+                    name: '',
+                    discount_value: '',
+                    starts_at: '',
+                    ends_at: ''
+                };
+                this.touched = {
+                    name: false,
+                    discount_value: false,
+                    starts_at: false,
+                    ends_at: false
+                };
             },
 
             // Pagination

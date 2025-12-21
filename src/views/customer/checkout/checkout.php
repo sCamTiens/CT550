@@ -334,18 +334,21 @@
                         <div class="space-y-2">
                             <label class="flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50">
                                 <input type="radio" name="payment_method" value="cod" checked
+                                    onchange="updateShippingFee()"
                                     class="w-5 h-5 text-[#002975]">
                                 <i class="fa-solid fa-money-bill-wave text-green-600"></i>
                                 <span class="font-semibold">Thanh toán khi nhận hàng (COD)</span>
                             </label>
                             <label class="flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50">
                                 <input type="radio" name="payment_method" value="zalopay"
+                                    onchange="updateShippingFee()"
                                     class="w-5 h-5 text-[#002975]">
                                 <i class="fa-solid fa-wallet text-blue-600"></i>
                                 <span class="font-semibold">ZaloPay</span>
                             </label>
                             <label class="flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50">
                                 <input type="radio" name="payment_method" value="vnpay"
+                                    onchange="updateShippingFee()"
                                     class="w-5 h-5 text-[#002975]">
                                 <i class="fa-solid fa-credit-card text-red-600"></i>
                                 <span class="font-semibold">VNPay</span>
@@ -379,7 +382,10 @@
                             <?php endif; ?>
                             <div class="flex justify-between text-gray-600">
                                 <span>Phí vận chuyển:</span>
-                                <span id="shipping-fee">Miễn phí</span>
+                                <span id="shipping-fee">
+                                    <span id="original-shipping" class="line-through text-gray-400" style="display: none;">30.000₫</span>
+                                    <span id="final-shipping">30.000₫</span>
+                                </span>
                             </div>
                             <div class="flex justify-between" id="discount-row" style="display: none;">
                                 <span>Giảm giá:</span>
@@ -491,6 +497,37 @@
 
         let currentSubtotal = <?= $subtotal ?>;
         let currentDiscount = 0;
+        let currentShippingFee = 30000; // COD mặc định
+
+        // Cập nhật phí ship khi thay đổi payment method
+        function updateShippingFee() {
+            const paymentMethod = document.querySelector('input[name="payment_method"]:checked')?.value;
+            const originalShipping = document.getElementById('original-shipping');
+            const finalShipping = document.getElementById('final-shipping');
+
+            if (paymentMethod === 'cod') {
+                currentShippingFee = 30000;
+                // COD: Không hiển thị gạch bỏ
+                originalShipping.style.display = 'none';
+                finalShipping.textContent = new Intl.NumberFormat('vi-VN').format(currentShippingFee) + '₫';
+                finalShipping.classList.remove('text-green-600', 'font-semibold');
+                finalShipping.classList.add('text-gray-600');
+            } else if (paymentMethod === 'zalopay' || paymentMethod === 'vnpay') {
+                currentShippingFee = 20000; // Giảm 10k cho online payment
+                // Online payment: Hiển thị ~~30,000₫~~ 20,000₫
+                originalShipping.style.display = 'inline';
+                finalShipping.textContent = ' ' + new Intl.NumberFormat('vi-VN').format(currentShippingFee) + '₫';
+                finalShipping.classList.add('text-green-600', 'font-semibold');
+                finalShipping.classList.remove('text-gray-600');
+            }
+
+            updateTotal();
+        }
+
+        // Gọi khi load trang để set giá trị mặc định
+        window.addEventListener('DOMContentLoaded', () => {
+            updateShippingFee();
+        });
 
         function openAddressSelector() {
             document.getElementById('address-selector-modal').classList.remove('hidden');
@@ -543,7 +580,7 @@
         }
 
         function updateTotal() {
-            const total = currentSubtotal - currentDiscount;
+            const total = currentSubtotal - currentDiscount + currentShippingFee;
             document.getElementById('total-price').textContent = new Intl.NumberFormat('vi-VN').format(total) + '₫';
         }
 
@@ -573,9 +610,14 @@
             }
 
             // XỬ LÝ COD và VNPAY như cũ
+            const grandTotal = currentSubtotal + currentShippingFee;
+
             const data = {
                 address_id: addressId,
                 payment_method: paymentMethod,
+                amount: grandTotal, // Tổng tiền bao gồm phí ship
+                subtotal: currentSubtotal, // Tạm tính
+                shipping_fee: currentShippingFee, // Phí ship
                 voucher_code: voucherCode || null
             };
 
@@ -648,8 +690,13 @@
                     return;
                 }
 
+                // Tính tổng tiền = subtotal + phí ship
+                const grandTotal = cartItemsData.subtotal + currentShippingFee;
+
                 const payload = {
-                    amount: cartItemsData.subtotal, // Chỉ tính items được chọn
+                    amount: grandTotal, // Tổng tiền bao gồm phí ship
+                    subtotal: cartItemsData.subtotal, // Tạm tính (chưa có ship)
+                    shipping_fee: currentShippingFee, // Phí vận chuyển
                     address_id: addressId,
                     cart_items: cartItemsData.items,
                     selected_item_ids: cartItemsData.item_ids,

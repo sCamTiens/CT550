@@ -244,6 +244,10 @@ $items = $items ?? [];
                             '' => '-- Tất cả --',
                             'Tiền mặt' => 'Tiền mặt',
                             'Chuyển khoản' => 'Chuyển khoản',
+                            'Quẹt thẻ' => 'Quẹt thẻ',
+                            'Thanh toán khi nhận hàng (COD)' => 'COD',
+                            'ZaloPay' => 'ZaloPay',
+                            'VNPay' => 'VNPay',
                         ]) ?>
                         <?= textFilterPopover('shipping_address', 'Địa chỉ giao') ?>
                         <?= textFilterPopover('note', 'Ghi chú') ?>
@@ -298,11 +302,14 @@ $items = $items ?? [];
                                     <i class="fa-solid fa-map-marker-alt"></i>
                                 </button>
 
-                                <!-- Nút Xóa (ẩn nếu trạng thái Hoàn tất) -->
-                                <button x-show="o.status !== 'Đã giao'" @click="remove(o.id)"
-                                    class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
-                                    title="Xóa">
-                                    <i class="fa-solid fa-trash"></i>
+
+                                <!-- Nút Hủy đơn (chỉ hiện khi Chờ xử lý hoặc Đang xử lý) -->
+                                <button
+                                    x-show="o.status === 'Chờ xử lý' || o.status === 'Đang xử lý'"
+                                    @click="manualCancel(o.id)"
+                                    class="inline-flex items-center justify-center p-2 rounded hover:bg-red-100 text-red-600"
+                                    title="Hủy đơn">
+                                    <i class="fa-solid fa-ban"></i>
                                 </button>
                             </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line"
@@ -318,7 +325,7 @@ $items = $items ?? [];
                                     <span class="px-2 py-[3px]rounded text-xs font-medium" :class="{
                                         'bg-blue-100 text-blue-800': o.order_type === 'Online',
                                         'bg-green-100 text-green-800': o.order_type === 'Offline',
-                                    }" x-text="o.order_type || 'Online'"></span>
+                                    }" x-text="getOrderTypeText(o.order_type)"></span>
                                 </div>
                             </td>
 
@@ -385,10 +392,16 @@ $items = $items ?? [];
                                 x-text="o.payment_method || '—'"></td> -->
                             <td class="px-3 py-2 text-center align-middle">
                                 <div class="flex justify-center items-center h-full">
-                                    <span class="px-2 py-[3px] rounded text-xs font-medium" :class="{
-                                        'bg-green-100 text-green-800': o.payment_method === 'Tiền mặt',
-                                        'bg-red-100 text-orange-800': o.payment_method === 'Chuyển khoản',
-                                    }" x-text="getPaymentMethodText(o.payment_method)"></span>
+                                    <span class="px-2 py-[3px] rounded text-xs font-medium"
+                                        :class="{
+                                            'bg-green-100 text-green-800': o.payment_method === 'Tiền mặt',
+                                            'bg-red-100 text-orange-800': o.payment_method === 'Chuyển khoản',
+                                            'bg-teal-100 text-teal-800': o.payment_method === 'Quẹt thẻ',
+                                            'bg-purple-100 text-purple-800': o.payment_method === 'Thanh toán khi nhận hàng (COD)',
+                                            'bg-blue-100 text-blue-800': o.payment_method === 'ZaloPay',
+                                            'bg-yellow-100 text-yellow-800': o.payment_method === 'VNPay'
+                                        }"
+                                        x-text="getPaymentMethodText(o.payment_method) || '—'"></span>
                                 </div>
                             </td>
                             <td class="px-3 py-2 break-words whitespace-pre-line" x-text="o.shipping_address || '—'">
@@ -591,7 +604,7 @@ $items = $items ?? [];
         const api = {
             list: '/admin/api/orders',
             create: '/admin/orders',
-            remove: (id) => `/admin/orders/${id}`,
+            // remove: (id) => `/admin/orders/${id}`, // KHÔNG SỬ DỤNG - Đơn hàng chỉ được HỦY, không được XÓA
             nextCode: '/admin/api/orders/next-code',
             customers: '/admin/api/customers',
             products: '/admin/api/products',
@@ -1178,30 +1191,44 @@ $items = $items ?? [];
                         this.appliedPromotions = [];
                         this.promotionDiscount = data.total_discount || 0;
 
+                        // Dùng Map để tránh trùng lặp CTKM (key = promo_name)
+                        const promotionMap = new Map();
+
                         // Xử lý DISCOUNT promotions
                         data.item_details.forEach((detail) => {
                             if (detail.applied_promotion) {
                                 const promo = detail.applied_promotion;
+                                const key = promo.promo_name;
 
-                                this.appliedPromotions.push({
-                                    name: promo.promo_name,
-                                    type: promo.promo_type,
-                                    description: `${this.getPromoTypeLabel(promo.promo_type)}: -${detail.discount_amount.toLocaleString('en-US')}đ`,
-                                    discount_amount: detail.discount_amount || 0
-                                });
+                                // Nếu chưa có CTKM này, thêm vào
+                                if (!promotionMap.has(key)) {
+                                    promotionMap.set(key, {
+                                        name: promo.promo_name,
+                                        type: promo.promo_type,
+                                        description: promo.description || this.getPromoTypeLabel(promo.promo_type),
+                                        discount_amount: 0
+                                    });
+                                }
+
+                                // Cộng dồn discount amount
+                                promotionMap.get(key).discount_amount += (detail.discount_amount || 0);
                             }
                         });
 
                         // Xử lý GIFT promotions
                         if (data.gift_items && data.gift_items.length > 0) {
                             data.gift_items.forEach(gift => {
-                                // Thêm promotion vào danh sách
-                                this.appliedPromotions.push({
-                                    name: gift.promo_name,
-                                    type: 'gift',
-                                    description: '🎁 Tặng quà',
-                                    discount_amount: 0
-                                });
+                                const key = gift.promo_name;
+
+                                // Thêm gift promotion (không trùng)
+                                if (!promotionMap.has(key)) {
+                                    promotionMap.set(key, {
+                                        name: gift.promo_name,
+                                        type: 'gift',
+                                        description: '🎁 Tặng quà',
+                                        discount_amount: 0
+                                    });
+                                }
 
                                 // Thêm quà tặng vào orderItems
                                 const giftProduct = this.products.find(p => p.id == gift.product_id);
@@ -1218,6 +1245,9 @@ $items = $items ?? [];
                                 }
                             });
                         }
+
+                        // Chuyển Map thành Array
+                        this.appliedPromotions = Array.from(promotionMap.values());
 
                         // Cập nhật tổng tiền
                         this.form.subtotal = data.subtotal;
@@ -1352,10 +1382,22 @@ $items = $items ?? [];
                 return map[status] || status;
             },
 
+            getOrderTypeText(order_type) {
+                const map = {
+                    'Online': 'Online',
+                    'Offline': 'Offline',
+                };
+                return map[order_type] || order_type;
+            },
+
             getPaymentMethodText(payment_method) {
                 const map = {
                     'Tiền mặt': 'Tiền mặt',
                     'Chuyển khoản': 'Chuyển khoản',
+                    'Quẹt thẻ': 'Quẹt thẻ',
+                    'Thanh toán khi nhận hàng (COD)': 'COD',
+                    'ZaloPay': 'ZaloPay',
+                    'VNPay': 'VNPay',
                 };
                 return map[payment_method] || payment_method;
             },
@@ -1459,38 +1501,6 @@ $items = $items ?? [];
                 this.touched = {};
                 this.customers = [];
                 this.orderItems = [];
-            },
-
-
-
-            async fetchProducts() {
-                try {
-                    const res = await fetch(api.products);
-                    const data = await res.json();
-                    this.products = (data.items || []).map(p => ({
-                        id: p.id,
-                        sku: p.sku,
-                        name: p.name,
-                        sale_price: p.sale_price,
-                        stock: p.stock_qty || 0 // Map từ stock_qty sang stock
-                    }));
-                } catch (e) {
-                    this.showToast('Không thể tải danh sách sản phẩm');
-                }
-            },
-
-            async fetchCustomers() {
-                try {
-                    const res = await fetch(api.customers);
-                    const data = await res.json();
-                    this.customers = (data.items || []).map(c => ({
-                        id: c.id,
-                        name: c.full_name,
-                        phone: c.phone
-                    }));
-                } catch (e) {
-                    this.showToast('Không thể tải danh sách khách hàng');
-                }
             },
 
             // ===== CRUD =====
@@ -1711,30 +1721,7 @@ $items = $items ?? [];
                 }
             },
 
-            async remove(id) {
-                const order = this.items.find(o => o.id === id);
-                const code = order ? order.code : 'đơn hàng này';
 
-                this.showConfirm(
-                    'Xác nhận xóa',
-                    `Bạn có chắc chắn muốn xóa đơn hàng "${code}"?`,
-                    async () => {
-                        try {
-                            const res = await fetch(api.remove(id), {
-                                method: 'DELETE'
-                            });
-                            if (res.ok) {
-                                this.items = this.items.filter(r => r.id !== id);
-                                this.showToast('Xóa đơn hàng thành công!', 'success');
-                            } else {
-                                this.showToast('Không thể xóa đơn hàng');
-                            }
-                        } catch (e) {
-                            this.showToast('Không thể xóa đơn hàng');
-                        }
-                    }
-                );
-            },
 
             showConfirm(title, message, onConfirm, onCancel = () => {}) {
                 this.confirmDialog = {

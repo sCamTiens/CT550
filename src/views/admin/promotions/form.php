@@ -25,9 +25,9 @@
         </label>
         <select x-model="form.promo_type" class="w-full border rounded px-3 py-2">
             <option value="discount">Giảm giá thường</option>
-            <option value="bundle">Mua kèm (Bundle)</option>
+            <option value="bundle">Giảm giá theo số lượng</option>
             <option value="gift">Tặng quà</option>
-            <option value="combo">Combo</option>
+            <option value="combo">Combo sản phẩm khác loại</option>
         </select>
     </div>
 
@@ -175,6 +175,8 @@
                                         <span x-show="product.sku && product.stock !== undefined"> - </span>
                                         <span
                                             x-text="product.stock !== undefined ? 'Tồn kho: ' + product.stock : ''"></span>
+                                        <span x-show="(product.sku || product.stock !== undefined) && product.sale_price"> - </span>
+                                        <span x-text="product.sale_price ? formatCurrency(product.sale_price) : ''"></span>
                                     </div>
                                 </div>
                             </template>
@@ -196,7 +198,7 @@
     <!-- ============ BUNDLE ============ -->
     <div x-show="form.promo_type === 'bundle'" class="space-y-3">
         <div class="border-l-4 border-blue-500 bg-blue-50 p-3 text-sm">
-            <strong>Quy tắc Mua kèm:</strong> Mua N sản phẩm cùng loại → Tổng giá = Bundle Price<br>
+            <strong>Quy tắc Giảm giá theo số lượng:</strong> Mua N sản phẩm cùng loại → Tổng giá = Giá ưu đãi<br>
             <span class="text-gray-600">VD: Mua 2 nước giặt = 165k (thay vì 2×130k)</span>
         </div>
 
@@ -212,13 +214,19 @@
                     <div class="col-span-6">
                         <label class="text-xs">Sản phẩm <span class="text-red-500">*</span></label>
                         <template x-if="rule.product_id">
-                            <div class="flex items-center justify-between bg-white p-2 rounded border">
-                                <span class="text-sm truncate"
-                                    x-text="products.find(p => p.id == rule.product_id)?.name || 'Không xác định'"></span>
-                                <button type="button" @click="rule.product_id = ''"
-                                    class="text-red-600 hover:text-red-800 text-sm ml-2">
-                                    <i class="fa-solid fa-times"></i>
-                                </button>
+                            <div class="bg-white p-2 rounded border">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm font-medium truncate">
+                                        <span x-text="products.find(p => p.id == rule.product_id)?.name || 'Không xác định'"></span>
+                                        <span class="font-medium ml-2"
+                                            x-text="'- Giá: ' + formatCurrency(products.find(p => p.id == rule.product_id)?.sale_price || 0)">
+                                        </span>
+                                    </span>
+                                    <button type="button" @click="rule.product_id = ''"
+                                        class="text-red-600 hover:text-red-800 text-sm ml-2">
+                                        <i class="fa-solid fa-times"></i>
+                                    </button>
+                                </div>
                             </div>
                         </template>
 
@@ -266,6 +274,7 @@
                                                     'px-2 py-2 cursor-pointer text-xs'
                                                 ]">
                                                 <div x-text="product.name"></div>
+                                                <div class="opacity-75 text-[10px]" x-text="product.sale_price ? 'Giá: ' + formatCurrency(product.sale_price) : ''"></div>
                                             </div>
                                         </template>
                                         <div x-show="filtered.length === 0" class="px-2 py-3 text-center text-xs text-gray-400">
@@ -314,7 +323,7 @@
                     <button type="button" @click="form.gift_rules.splice(idx, 1)"
                         class="text-red-600 hover:text-red-800 text-sm">Xóa</button>
                 </div>
-                
+
                 <!-- Điều kiện mua -->
                 <div class="mb-2">
                     <div class="text-xs font-semibold mb-1 text-gray-600">Điều kiện mua:</div>
@@ -323,13 +332,19 @@
                         <div class="col-span-9">
                             <label class="text-xs">Sản phẩm <span class="text-red-500">*</span></label>
                             <template x-if="rule.trigger_product_id">
-                                <div class="flex items-center justify-between bg-white p-2 rounded border">
-                                    <span class="text-sm truncate"
-                                        x-text="products.find(p => p.id == rule.trigger_product_id)?.name || 'Không xác định'"></span>
-                                    <button type="button" @click="rule.trigger_product_id = ''"
-                                        class="text-red-600 hover:text-red-800 text-sm ml-2">
-                                        <i class="fa-solid fa-times"></i>
-                                    </button>
+                                <div class="bg-white p-2 rounded border">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm font-medium truncate">
+                                            <span x-text="products.find(p => p.id == rule.trigger_product_id)?.name || 'Không xác định'"></span>
+                                            <span class="font-medium ml-2"
+                                                x-text="'- Giá: ' + formatCurrency(products.find(p => p.id == rule.trigger_product_id)?.sale_price || 0)">
+                                            </span>
+                                        </span>
+                                        <button type="button" @click="rule.trigger_product_id = ''"
+                                            class="text-red-600 hover:text-red-800 text-sm ml-2">
+                                            <i class="fa-solid fa-times"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </template>
 
@@ -366,8 +381,10 @@
                                         <div class="max-h-48 overflow-auto">
                                             <template x-for="product in filtered" :key="product.id">
                                                 <div @click="choose(product)"
-                                                    class="px-2 py-2 hover:bg-[#002975] hover:text-white cursor-pointer text-xs"
-                                                    x-text="product.name"></div>
+                                                    class="px-2 py-2 hover:bg-[#002975] hover:text-white cursor-pointer text-xs">
+                                                    <div x-text="product.name"></div>
+                                                    <div class="opacity-75 text-[10px]" x-text="product.sale_price ? 'Giá: ' + formatCurrency(product.sale_price) : ''"></div>
+                                                </div>
                                             </template>
                                             <div x-show="filtered.length === 0" class="px-2 py-3 text-center text-xs text-gray-400">
                                                 Không tìm thấy
@@ -395,13 +412,19 @@
                         <div class="col-span-9">
                             <label class="text-xs">Sản phẩm <span class="text-red-500">*</span></label>
                             <template x-if="rule.gift_product_id">
-                                <div class="flex items-center justify-between bg-white p-2 rounded border">
-                                    <span class="text-sm truncate"
-                                        x-text="giftProducts.find(p => p.id == rule.gift_product_id)?.name || 'Không xác định'"></span>
-                                    <button type="button" @click="rule.gift_product_id = ''"
-                                        class="text-red-600 hover:text-red-800 text-sm ml-2">
-                                        <i class="fa-solid fa-times"></i>
-                                    </button>
+                                <div class="bg-white p-2 rounded border">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm font-medium truncate">
+                                            <span x-text="giftProducts.find(p => p.id == rule.gift_product_id)?.name || 'Không xác định'"></span>
+                                            <span class="font-medium ml-2"
+                                                x-text="'- Giá: ' + formatCurrency(giftProducts.find(p => p.id == rule.gift_product_id)?.sale_price || 0)">
+                                            </span>
+                                        </span>
+                                        <button type="button" @click="rule.gift_product_id = ''"
+                                            class="text-red-600 hover:text-red-800 text-sm ml-2">
+                                            <i class="fa-solid fa-times"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </template>
 
@@ -438,8 +461,10 @@
                                         <div class="max-h-48 overflow-auto">
                                             <template x-for="product in filtered" :key="product.id">
                                                 <div @click="choose(product)"
-                                                    class="px-2 py-2 hover:bg-[#002975] hover:text-white cursor-pointer text-xs"
-                                                    x-text="product.name"></div>
+                                                    class="px-2 py-2 hover:bg-[#002975] hover:text-white cursor-pointer text-xs">
+                                                    <div x-text="product.name"></div>
+                                                    <div class="opacity-75 text-[10px]" x-text="product.sale_price ? 'Giá: ' + formatCurrency(product.sale_price) : ''"></div>
+                                                </div>
                                             </template>
                                             <div x-show="filtered.length === 0" class="px-2 py-3 text-center text-xs text-gray-400">
                                                 Không tìm thấy
@@ -471,7 +496,7 @@
     <!-- ============ COMBO ============ -->
     <div x-show="form.promo_type === 'combo'" class="space-y-3">
         <div class="border-l-4 border-purple-500 bg-purple-50 p-3 text-sm">
-            <strong>Quy tắc Combo:</strong> Mua nhiều sản phẩm khác nhau → Giá combo<br>
+            <strong>Quy tắc Combo sản phẩm (khác loại) :</strong> Mua nhiều sản phẩm khác nhau → Giá combo<br>
             <span class="text-gray-600">VD: Ổi + Muối = 25k (thay vì 20k + 8k)</span>
         </div>
 
@@ -495,13 +520,19 @@
                     <div class="col-span-2">
                         <label class="text-xs">Sản phẩm <span class="text-red-500">*</span></label>
                         <template x-if="item.product_id">
-                            <div class="flex items-center justify-between bg-white p-2 rounded border">
-                                <span class="text-sm"
-                                    x-text="products.find(p => p.id == item.product_id)?.name || 'Không xác định'"></span>
-                                <button type="button" @click="item.product_id = ''"
-                                    class="text-red-600 hover:text-red-800 text-sm">
-                                    <i class="fa-solid fa-times"></i>
-                                </button>
+                            <div class="bg-white p-2 rounded border">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm font-medium">
+                                        <span x-text="products.find(p => p.id == item.product_id)?.name || 'Không xác định'"></span>
+                                        <span class="font-medium ml-2"
+                                            x-text="'- Giá: ' + formatCurrency(products.find(p => p.id == item.product_id)?.sale_price || 0)">
+                                        </span>
+                                    </span>
+                                    <button type="button" @click="item.product_id = ''"
+                                        class="text-red-600 hover:text-red-800 text-sm ml-2">
+                                        <i class="fa-solid fa-times"></i>
+                                    </button>
+                                </div>
                             </div>
                         </template>
 
@@ -575,6 +606,8 @@
                                                     <span x-show="product.sku && product.stock !== undefined"> - </span>
                                                     <span
                                                         x-text="product.stock !== undefined ? 'Tồn kho: ' + product.stock : ''"></span>
+                                                    <span x-show="(product.sku || product.stock !== undefined) && product.sale_price"> - </span>
+                                                    <span x-text="product.sale_price ? formatCurrency(product.sale_price) : ''"></span>
                                                 </div>
                                             </div>
                                         </template>
@@ -615,7 +648,7 @@
 
         <!-- Trạng thái -->
         <div class="flex items-center gap-3 pt-6">
-            <input id="isActive" type="checkbox" 
+            <input id="isActive" type="checkbox"
                 :checked="form.is_active == 1 || form.is_active === true"
                 @change="form.is_active = $event.target.checked ? 1 : 0"
                 class="h-4 w-4">
@@ -648,16 +681,18 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function() {
         if (window.flatpickr) {
 
             flatpickr(".promotion-start-date", {
                 dateFormat: "d/m/Y",
                 locale: "vn",
                 allowInput: true,
-                onClose: function (selectedDates, dateStr, instance) {
+                onClose: function(selectedDates, dateStr, instance) {
                     instance.element.value = dateStr;
-                    instance.element.dispatchEvent(new Event('input', { bubbles: true }));
+                    instance.element.dispatchEvent(new Event('input', {
+                        bubbles: true
+                    }));
                 }
             });
 
@@ -665,9 +700,11 @@
                 dateFormat: "d/m/Y",
                 locale: "vn",
                 allowInput: true,
-                onClose: function (selectedDates, dateStr, instance) {
+                onClose: function(selectedDates, dateStr, instance) {
                     instance.element.value = dateStr;
-                    instance.element.dispatchEvent(new Event('input', { bubbles: true }));
+                    instance.element.dispatchEvent(new Event('input', {
+                        bubbles: true
+                    }));
                 }
             });
 

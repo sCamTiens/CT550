@@ -46,10 +46,10 @@
                             </span>
                         </div>
 
-                        <div class="flex justify-between">
+                        <!-- <div class="flex justify-between">
                             <span class="text-gray-600">Mã giao dịch ZaloPay:</span>
                             <span class="font-semibold text-gray-800"><?= htmlspecialchars($transaction_no ?? 'N/A') ?></span>
-                        </div>
+                        </div> -->
 
                         <div class="flex justify-between">
                             <span class="text-gray-600">Mã tham chiếu:</span>
@@ -62,6 +62,14 @@
                         </div>
                     </div>
                 </div>
+
+                <?php if (isset($error_details)): ?>
+                    <!-- DEBUG: Error Details -->
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 text-left">
+                        <h4 class="font-bold text-red-800 mb-2">⚠️ Debug Error:</h4>
+                        <p class="text-red-700 text-sm font-mono"><?= htmlspecialchars($error_details) ?></p>
+                    </div>
+                <?php endif; ?>
 
                 <!-- Actions -->
                 <div class="flex gap-4 justify-center">

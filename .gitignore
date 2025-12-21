@@ -65,3 +65,35 @@ __pycache__/
 pytest_cache/
 .pytest_cache/
 story_graph.dot
+
+# Large files & artifacts
+*.log
+*.sql.gz
+*.zip
+*.tar
+*.rar
+*.7z
+*.webp
+*.mp4
+*.avi
+*.mov
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+*.cache
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Node (if using)
+node_modules/
+package-lock.json
+
+# Artifacts directory
+artifacts/
+.gemini/

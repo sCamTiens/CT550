@@ -241,13 +241,13 @@ $items = $items ?? [];
                             <td class="py-2 px-4 text-center space-x-2">
                                 <div class="inline-flex space-x-2">
                                     <!-- Nút Sửa - chỉ hiện khi Chưa đối soát -->
-                                    <template x-if="statusLabel(po) === 'Chưa đối soát'">
+                                    <!-- <template x-if="statusLabel(po) === 'Chưa đối soát'">
                                         <button @click="openEditModal(po)"
                                             class="inline-flex items-center justify-center p-2 rounded hover:bg-gray-100 text-[#002975]"
                                             title="Sửa">
                                             <i class="fa-solid fa-pen"></i>
                                         </button>
-                                    </template>
+                                    </template> -->
 
                                     <!-- Nút Xem chi tiết - luôn hiển thị -->
                                     <button @click="openViewModal(po)"
@@ -1252,8 +1252,8 @@ $items = $items ?? [];
                             note: data.note || ''
                         };
 
-                        // Fill lines với dữ liệu từ API
-                        this.lines = data.lines.map(line => ({
+                        // Fill lines với dữ liệu từ API (backend trả về 'items')
+                        this.lines = (data.items || []).map(line => ({
                             product_id: line.product_id,
                             qty: line.quantity, // Backend trả về 'quantity', không phải 'qty'
                             unit_cost: line.unit_cost,

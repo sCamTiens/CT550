@@ -52,7 +52,7 @@
                         document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
                     });
 
-                    window.location.replace(loginUrl);
+                    // window.location.replace(loginUrl);
                 }, 2000);
             });
     }

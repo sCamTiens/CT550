@@ -480,6 +480,44 @@ $pageTitle = $pageTitle ?? 'Chat Support';
     }
 </style>
 
+<!-- Confirm Modal -->
+<div id="confirm-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <!-- Backdrop -->
+    <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onclick="closeConfirmModal()"></div>
+
+    <!-- Modal Content -->
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all scale-95 opacity-0" id="confirm-modal-content">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4 rounded-t-2xl">
+                <div class="flex items-center gap-3">
+                    <div class="bg-white/20 p-2 rounded-full">
+                        <i class="fa-solid fa-exclamation-triangle text-white text-xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white">Xác nhận</h3>
+                </div>
+            </div>
+
+            <!-- Body -->
+            <div class="p-6">
+                <p class="text-gray-700 text-base leading-relaxed" id="confirm-message"></p>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-6 py-4 bg-gray-50 rounded-b-2xl flex gap-3 justify-end">
+                <button onclick="closeConfirmModal()"
+                    class="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold">
+                    <i class="fa-solid fa-times mr-2"></i>Hủy
+                </button>
+                <button id="confirm-ok-btn"
+                    class="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold">
+                    <i class="fa-solid fa-check mr-2"></i>Đồng ý
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="content-wrapper">
     <div class="page-header">
         <h1><i class="fa-solid fa-headset mr-2"></i> Hỗ Trợ Trực Tuyến</h1>
@@ -565,6 +603,61 @@ $pageTitle = $pageTitle ?? 'Chat Support';
     let sessions = [];
     let pollingInterval = null;
     let currentPollingSpeed = 5000; // Default 5s
+
+    // Modal confirmation functions
+    let confirmResolve = null;
+
+    function showConfirmModal(message) {
+        return new Promise((resolve) => {
+            confirmResolve = resolve;
+            const modal = document.getElementById('confirm-modal');
+            const modalContent = document.getElementById('confirm-modal-content');
+            const messageEl = document.getElementById('confirm-message');
+
+            messageEl.textContent = message;
+            modal.classList.remove('hidden');
+
+            // Trigger animation
+            setTimeout(() => {
+                modalContent.classList.remove('scale-95', 'opacity-0');
+                modalContent.classList.add('scale-100', 'opacity-100');
+            }, 10);
+
+            // Handle OK button
+            const okBtn = document.getElementById('confirm-ok-btn');
+            okBtn.onclick = () => {
+                closeConfirmModal();
+                resolve(true);
+            };
+
+            // Handle ESC key
+            const escHandler = (e) => {
+                if (e.key === 'Escape') {
+                    closeConfirmModal();
+                    resolve(false);
+                    document.removeEventListener('keydown', escHandler);
+                }
+            };
+            document.addEventListener('keydown', escHandler);
+        });
+    }
+
+    function closeConfirmModal() {
+        const modal = document.getElementById('confirm-modal');
+        const modalContent = document.getElementById('confirm-modal-content');
+
+        // Animate out
+        modalContent.classList.remove('scale-100', 'opacity-100');
+        modalContent.classList.add('scale-95', 'opacity-0');
+
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            if (confirmResolve) {
+                confirmResolve(false);
+                confirmResolve = null;
+            }
+        }, 200);
+    }
 
     // Load sessions on page load
     document.addEventListener('DOMContentLoaded', () => {
@@ -800,7 +893,10 @@ $pageTitle = $pageTitle ?? 'Chat Support';
     }
 
     async function closeSession() {
-        if (!currentSessionId || !confirm('Đóng cuộc trò chuyện này?')) return;
+        if (!currentSessionId) return;
+
+        const confirmed = await showConfirmModal('Đóng cuộc trò chuyện này?');
+        if (!confirmed) return;
 
         try {
             const res = await fetch('/admin/api/chat-support/close', {

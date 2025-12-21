@@ -113,12 +113,17 @@
                     <span id="cart-badge"
                         class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                         <?php
+                        // Get authenticated user from JWT
+                        use App\Middlewares\AuthMiddleware;
+
+                        $authenticatedUser = AuthMiddleware::getAuthenticatedUser();
+
                         $cartCount = 0;
-                        if (!empty($_SESSION['customer']['id'])) {
+                        if ($authenticatedUser) {
                             // Load cart from database
                             try {
                                 $cartRepo = new \App\Models\Customer\Repositories\CartRepository();
-                                $cart = $cartRepo->loadCartFromDB($_SESSION['customer']['id']);
+                                $cart = $cartRepo->loadCartFromDB($authenticatedUser['id']);
                                 $cartCount = $cartRepo->countItems($cart);
                             } catch (\Exception $e) {
                                 $cartCount = 0;
@@ -130,7 +135,7 @@
                 </a>
 
                 <!-- Notification Bell -->
-                <?php if (!empty($_SESSION['customer'])): ?>
+                <?php if ($authenticatedUser): ?>
                     <div class="relative" x-data="customerNotifications">
                         <button @click="toggle()" class="relative text-gray-700 hover:text-[#002975] transition-colors p-2" title="Thông báo">
                             <i class="fa-solid fa-bell text-xl"></i>
@@ -179,22 +184,21 @@
                 <?php endif; ?>
 
                 <!-- User dropdown -->
-                <?php if (!empty($_SESSION['customer'])): ?>
+                <?php if ($authenticatedUser): ?>
                     <?php
-                    $customer = $_SESSION['customer'];
-                    // Kiểm tra nếu avatar là URL đầy đủ (từ Google) hoặc local file
-                    if (!empty($customer['avatar_url'])) {
-                        if (filter_var($customer['avatar_url'], FILTER_VALIDATE_URL)) {
-                            // Google avatar (full URL)
-                            $avatar = $customer['avatar_url'];
+                    // Kiểm tra nếu avatar là URL đầy đủ (từ ImgBB/Google) hoặc local file
+                    if (!empty($authenticatedUser['avatar_url'])) {
+                        if (filter_var($authenticatedUser['avatar_url'], FILTER_VALIDATE_URL)) {
+                            // External URL (ImgBB, Google, etc.)
+                            $avatar = $authenticatedUser['avatar_url'];
                         } else {
                             // Local avatar file
-                            $avatar = '/assets/images/avatar/' . $customer['avatar_url'];
+                            $avatar = '/assets/images/avatar/' . $authenticatedUser['avatar_url'];
                         }
                     } else {
                         $avatar = '/assets/images/avatar/default.png';
                     }
-                    $fullName = htmlspecialchars($customer['full_name'] ?? 'Khách hàng');
+                    $fullName = htmlspecialchars($authenticatedUser['full_name'] ?? 'Khách hàng');
                     ?>
                     <div class="relative" x-data="{ open: false }">
                         <button @click="open = !open"
@@ -226,6 +230,11 @@
                                 class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-[#002975] hover:text-white">
                                 <i class="fa-solid fa-gift"></i>
                                 <span>Điểm tích lũy</span>
+                            </a>
+                            <a href="/addresses"
+                                class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors hover:bg-[#002975] hover:text-white">
+                                <i class="fa-solid fa-pen-to-square mr-1"></i>
+                                Quản lý địa chỉ
                             </a>
                             <div class="border-t my-2"></div>
                             <button onclick="handleLogout()"
@@ -303,6 +312,9 @@
 
     // Handle logout
     function handleLogout() {
+        // Clear chat session before logout
+        localStorage.removeItem('chat_session_id');
+        localStorage.removeItem('jwt_token');
         window.location.href = '/logout';
     }
 

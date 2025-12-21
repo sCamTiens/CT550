@@ -210,7 +210,7 @@
                 $totalQty += $qty;
                 // Chỉ hiển thị border-b nếu không phải dòng cuối
                 $borderClass = ($currentIndex < $totalItems) ? 'border-b' : '';
-                ?>
+            ?>
                 <tr class="<?= $borderClass ?>">
                     <td><?= htmlspecialchars($item['product_name'] ?? '') ?></td>
                     <td style="text-align:center;"><?= htmlspecialchars($item['unit'] ?? '—') ?></td>
@@ -231,9 +231,15 @@
             <span class="summary-label">Tổng tiền hàng:</span>
             <span class="summary-value"><?= number_format($order['subtotal'] ?? 0, 0, ',', '.') ?></span>
         </div>
+        <?php
+        // Tính discount_amount động: subtotal - total_amount
+        $subtotal = $order['subtotal'] ?? 0;
+        $totalAmount = $order['total_amount'] ?? 0;
+        $discountAmount = $subtotal - $totalAmount;
+        ?>
         <div class="summary-row">
             <span class="summary-label">Số tiền đã giảm:</span>
-            <span class="summary-value"><?= number_format($order['discount_amount'] ?? 0, 0, ',', '.') ?></span>
+            <span class="summary-value"><?= number_format($discountAmount, 0, ',', '.') ?></span>
         </div>
         <div class="summary-row total-row">
             <span>Tổng tiền thanh toán:</span>

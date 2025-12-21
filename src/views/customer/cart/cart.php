@@ -13,6 +13,7 @@
 
         input[type=number] {
             -moz-appearance: textfield;
+            appearance: textfield;
         }
     </style>
 </head>
@@ -22,6 +23,44 @@
 
     <!-- Toast Container -->
     <div id="toast-container"></div>
+
+    <!-- Confirm Modal -->
+    <div id="confirm-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onclick="closeConfirmModal()"></div>
+
+        <!-- Modal Content -->
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all scale-95 opacity-0" id="confirm-modal-content">
+                <!-- Header -->
+                <div class="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4 rounded-t-2xl">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-white/20 p-2 rounded-full">
+                            <i class="fa-solid fa-exclamation-triangle text-white text-xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white">Xác nhận</h3>
+                    </div>
+                </div>
+
+                <!-- Body -->
+                <div class="p-6">
+                    <p class="text-gray-700 text-base leading-relaxed" id="confirm-message"></p>
+                </div>
+
+                <!-- Footer -->
+                <div class="px-6 py-4 bg-gray-50 rounded-b-2xl flex gap-3 justify-end">
+                    <button onclick="closeConfirmModal()"
+                        class="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold">
+                        <i class="fa-solid fa-times mr-2"></i>Hủy
+                    </button>
+                    <button id="confirm-ok-btn"
+                        class="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold">
+                        <i class="fa-solid fa-check mr-2"></i>Đồng ý
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <main class="container mx-auto px-4 py-8">
         <div class="flex justify-center">
@@ -167,6 +206,7 @@
                                             class="item-checkbox w-5 h-5 text-[#002975] rounded border-gray-300 focus:ring-2 focus:ring-[#002975]"
                                             data-product-id="<?= $comboProduct['id'] ?>"
                                             data-price="<?= $combo['combo_price'] / count($combo['products']) ?>"
+                                            data-original-price="<?= $comboProduct['price'] ?>"
                                             data-quantity="<?= $comboProduct['quantity'] ?>" onchange="updateSelectedTotal()" checked>
                                     </div>
 
@@ -270,6 +310,7 @@
                                     <input type="checkbox"
                                         class="item-checkbox w-5 h-5 text-[#002975] rounded border-gray-300 focus:ring-2 focus:ring-[#002975]"
                                         data-product-id="<?= $item['id'] ?>" data-price="<?= $currentPrice ?>"
+                                        data-original-price="<?= $originalPrice ?>"
                                         data-quantity="<?= $item['quantity'] ?>" onchange="updateSelectedTotal()" checked>
                                 </div>
 
@@ -390,11 +431,11 @@
                             <?php if ($totalDiscount > 0): ?>
                                 <div class="flex justify-between text-gray-600">
                                     <span>Tạm tính (giá gốc):</span>
-                                    <span class="line-through"><?= number_format($originalTotal, 0, ',', '.') ?>₫</span>
+                                    <span class="line-through" id="original-total"><?= number_format($originalTotal, 0, ',', '.') ?>₫</span>
                                 </div>
                                 <div class="flex justify-between text-green-600 font-semibold">
                                     <span>Giảm giá:</span>
-                                    <span>-<?= number_format($totalDiscount, 0, ',', '.') ?>₫</span>
+                                    <span id="discount-amount">-<?= number_format($totalDiscount, 0, ',', '.') ?>₫</span>
                                 </div>
                                 <div class="flex justify-between text-gray-900 font-semibold">
                                     <span>Tạm tính (sau giảm):</span>
@@ -408,7 +449,7 @@
                             <?php endif; ?>
                             <div class="flex justify-between text-gray-600">
                                 <span>Phí vận chuyển:</span>
-                                <span>Miễn phí</span>
+                                <span id="shipping-fee">30.000₫</span>
                             </div>
                         </div>
 
@@ -418,11 +459,11 @@
                                 <div class="text-right">
                                     <?php if ($totalDiscount > 0): ?>
                                         <div class="text-sm text-gray-400 line-through">
-                                            <?= number_format($originalTotal, 0, ',', '.') ?>₫
+                                            <?= number_format($originalTotal + 30000, 0, ',', '.') ?>₫
                                         </div>
                                     <?php endif; ?>
                                     <span class="text-2xl font-bold text-red-600" id="total-price">
-                                        <?= number_format($total, 0, ',', '.') ?>₫
+                                        <?= number_format($total + 30000, 0, ',', '.') ?>₫
                                     </span>
                                 </div>
                             </div>
@@ -440,6 +481,12 @@
                             Tiếp tục mua sắm
                         </a>
 
+                        <button onclick="removeSelected()"
+                            class="block w-full bg-orange-50 text-orange-600 text-center px-6 py-3 rounded-lg hover:bg-orange-100 transition-colors font-semibold mt-3">
+                            <i class="fa-solid fa-trash-can mr-2"></i>
+                            Xóa đã chọn
+                        </button>
+
                         <button onclick="clearCart()"
                             class="block w-full bg-red-50 text-red-600 text-center px-6 py-3 rounded-lg hover:bg-red-100 transition-colors font-semibold mt-3">
                             <i class="fa-solid fa-trash mr-2"></i>
@@ -452,6 +499,61 @@
     </main>
 
     <script>
+        // Modal confirmation functions
+        let confirmResolve = null;
+
+        function showConfirmModal(message) {
+            return new Promise((resolve) => {
+                confirmResolve = resolve;
+                const modal = document.getElementById('confirm-modal');
+                const modalContent = document.getElementById('confirm-modal-content');
+                const messageEl = document.getElementById('confirm-message');
+
+                messageEl.textContent = message;
+                modal.classList.remove('hidden');
+
+                // Trigger animation
+                setTimeout(() => {
+                    modalContent.classList.remove('scale-95', 'opacity-0');
+                    modalContent.classList.add('scale-100', 'opacity-100');
+                }, 10);
+
+                // Handle OK button
+                const okBtn = document.getElementById('confirm-ok-btn');
+                okBtn.onclick = () => {
+                    closeConfirmModal();
+                    resolve(true);
+                };
+
+                // Handle ESC key
+                const escHandler = (e) => {
+                    if (e.key === 'Escape') {
+                        closeConfirmModal();
+                        resolve(false);
+                        document.removeEventListener('keydown', escHandler);
+                    }
+                };
+                document.addEventListener('keydown', escHandler);
+            });
+        }
+
+        function closeConfirmModal() {
+            const modal = document.getElementById('confirm-modal');
+            const modalContent = document.getElementById('confirm-modal-content');
+
+            // Animate out
+            modalContent.classList.remove('scale-100', 'opacity-100');
+            modalContent.classList.add('scale-95', 'opacity-0');
+
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                if (confirmResolve) {
+                    confirmResolve(false);
+                    confirmResolve = null;
+                }
+            }, 200);
+        }
+
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             updateSelectedTotal();
@@ -480,16 +582,35 @@
             const selectedCount = checkboxes.length;
 
             let total = 0;
+            let originalTotal = 0;
             checkboxes.forEach(cb => {
                 const price = parseFloat(cb.dataset.price);
+                const originalPrice = parseFloat(cb.dataset.originalPrice || cb.dataset.price);
                 const quantity = parseInt(cb.dataset.quantity);
                 total += price * quantity;
+                originalTotal += originalPrice * quantity;
             });
+
+            const discount = originalTotal - total;
+            const shippingFee = 30000; // Phí vận chuyển cố định
+            const finalTotal = total + shippingFee;
 
             // Update UI
             document.getElementById('selected-count').textContent = selectedCount;
             document.getElementById('temp-total').textContent = new Intl.NumberFormat('vi-VN').format(total) + '₫';
-            document.getElementById('total-price').textContent = new Intl.NumberFormat('vi-VN').format(total) + '₫';
+            document.getElementById('total-price').textContent = new Intl.NumberFormat('vi-VN').format(finalTotal) + '₫';
+
+            // Update original total and discount if elements exist
+            const originalTotalEl = document.getElementById('original-total');
+            const discountAmountEl = document.getElementById('discount-amount');
+
+            if (originalTotalEl) {
+                originalTotalEl.textContent = new Intl.NumberFormat('vi-VN').format(originalTotal) + '₫';
+            }
+
+            if (discountAmountEl) {
+                discountAmountEl.textContent = '-' + new Intl.NumberFormat('vi-VN').format(discount) + '₫';
+            }
 
             // Enable/disable checkout button
             const checkoutBtn = document.getElementById('checkout-btn');
@@ -634,8 +755,9 @@
                 });
         }
 
-        function removeItem(productId) {
-            if (!confirm('Bạn có chắc muốn xóa sản phẩm này?')) return;
+        async function removeItem(productId) {
+            const confirmed = await showConfirmModal('Bạn có chắc muốn xóa sản phẩm này?');
+            if (!confirmed) return;
 
             fetch('/cart/remove', {
                     method: 'POST',
@@ -669,8 +791,59 @@
                 });
         }
 
-        function clearCart() {
-            if (!confirm('Bạn có chắc muốn xóa toàn bộ giỏ hàng?')) return;
+        async function removeSelected() {
+            const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+
+            if (checkboxes.length === 0) {
+                showToast('Vui lòng chọn ít nhất 1 sản phẩm để xóa', 'error');
+                return;
+            }
+
+            const confirmed = await showConfirmModal(`Bạn có chắc muốn xóa ${checkboxes.length} sản phẩm đã chọn?`);
+            if (!confirmed) return;
+
+            const productIds = Array.from(checkboxes).map(cb => cb.dataset.productId);
+
+            // Delete each product
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const productId of productIds) {
+                try {
+                    const res = await fetch('/cart/remove', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            product_id: productId
+                        })
+                    });
+
+                    const data = await res.json();
+                    if (data && data.success) {
+                        successCount++;
+                    } else {
+                        errorCount++;
+                    }
+                } catch (err) {
+                    console.error(err);
+                    errorCount++;
+                }
+            }
+
+            if (successCount > 0) {
+                showToast(`Đã xóa ${successCount} sản phẩm`, 'success');
+                setTimeout(() => location.reload(), 500);
+            } else {
+                showToast('Không thể xóa sản phẩm', 'error');
+            }
+        }
+
+        async function clearCart() {
+            const confirmed = await showConfirmModal('Bạn có chắc muốn xóa toàn bộ giỏ hàng?');
+            if (!confirmed) return;
 
             fetch('/cart/clear', {
                     method: 'POST',

@@ -433,7 +433,7 @@ CREATE TABLE orders (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   code VARCHAR(32) NOT NULL UNIQUE,
   user_id BIGINT NULL,
-  order_type ENUM('Online','Offline') NOT NULL DEFAULT 'Online',
+  order_type ENUM('Online','Offline') NOT NULL,
   status ENUM(
       'Chờ xử lý',        -- Customer đặt hàng (mặc định)
       'Đang xử lý',       -- Admin đang đóng gói
@@ -1511,3 +1511,18 @@ COMMENT = 'Lịch sử tìm kiếm của người dùng để cải thiện gợ
 -- Create index for better performance on recommendation queries
 CREATE INDEX idx_sh_recommendation 
 ON search_history (user_id, results_count, created_at);
+
+
+-- Create password_resets table for OTP storage
+CREATE TABLE IF NOT EXISTS `password_resets` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `email` VARCHAR(255) NOT NULL,
+    `otp_code` VARCHAR(10) NOT NULL,
+    `expires_at` DATETIME NOT NULL,
+    `is_used` TINYINT(1) DEFAULT 0,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    INDEX `idx_email` (`email`),
+    INDEX `idx_otp_code` (`otp_code`),
+    INDEX `idx_expires_at` (`expires_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

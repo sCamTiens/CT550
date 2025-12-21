@@ -32,3 +32,35 @@ rules:
     steps:
       - intent: help
       - action: action_help
+
+  # =====================================================================
+  # RULE 5: ĐỊA CHỈ CỬA HÀNG
+  # =====================================================================
+  - rule: Tell store location
+    steps:
+      - intent: ask_location
+      - action: utter_location
+
+  # =====================================================================
+  # RULE 6: GIAO HÀNG
+  # =====================================================================
+  - rule: Tell delivery info
+    steps:
+      - intent: ask_delivery
+      - action: utter_delivery
+
+  # =====================================================================
+  # RULE 7: GIỜ MỞ CỬA
+  # =====================================================================
+  - rule: Tell opening hours
+    steps:
+      - intent: ask_opening_hours
+      - action: utter_opening_hours
+
+  # =====================================================================
+  # RULE 8: NÓI CHUYỆN PHIẾM
+  # =====================================================================
+  - rule: Respond to chitchat
+    steps:
+      - intent: chitchat
+      - action: utter_chitchat

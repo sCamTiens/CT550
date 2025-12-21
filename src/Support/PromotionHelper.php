@@ -29,7 +29,7 @@ class PromotionHelper
 
         // 1. DISCOUNT PROMOTIONS
         $discountSql = "
-            SELECT p.id, p.name, p.promo_type, p.discount_type, p.discount_value,
+            SELECT p.id, p.name, p.promo_type, p.discount_type, p.discount_value, p.priority, p.description,
                    pp.product_id
             FROM promotions p
             INNER JOIN promotion_products pp ON p.id = pp.promotion_id
@@ -65,7 +65,7 @@ class PromotionHelper
 
         // 3. BUNDLE PROMOTIONS
         $bundleSql = "
-            SELECT p.id, p.name,
+            SELECT p.id, p.name, p.priority, p.description,
                    pbr.product_id, pbr.required_qty, pbr.bundle_price
             FROM promotions p
             INNER JOIN promotion_bundle_rules pbr ON p.id = pbr.promotion_id
@@ -74,6 +74,7 @@ class PromotionHelper
             AND p.promo_type = 'bundle'
             AND p.starts_at <= NOW()
             AND p.ends_at >= NOW()
+            ORDER BY p.priority DESC
         ";
 
         $stmt = $pdo->prepare($bundleSql);
@@ -82,7 +83,7 @@ class PromotionHelper
 
         // 4. COMBO PROMOTIONS
         $comboSql = "
-            SELECT p.id, p.name, p.combo_price,
+            SELECT p.id, p.name, p.combo_price, p.priority, p.description,
                    GROUP_CONCAT(pci.product_id) as combo_products,
                    GROUP_CONCAT(pci.required_qty) as required_qtys
             FROM promotions p
@@ -93,6 +94,7 @@ class PromotionHelper
             AND p.ends_at >= NOW()
             GROUP BY p.id
             HAVING FIND_IN_SET(?, combo_products) > 0
+            ORDER BY p.priority DESC
         ";
 
         // Check combo cho từng sản phẩm trong cart
@@ -181,7 +183,10 @@ class PromotionHelper
 
             // Nếu không trong combo, áp dụng BUNDLE hoặc DISCOUNT
             if (!$inCombo) {
-                // Ưu tiên BUNDLE
+                // Thu thập TẤT CẢ promotions có thể áp dụng
+                $candidatePromos = [];
+
+                // Check BUNDLE
                 if (isset($bundlesByProduct[$productId])) {
                     foreach ($bundlesByProduct[$productId] as $bundle) {
                         if ($qty >= $bundle['required_qty']) {
@@ -189,20 +194,22 @@ class PromotionHelper
                             $bundlePrice = $bundle['bundle_price'];
                             $discount = $normalPrice - $bundlePrice;
 
-                            if ($discount > $itemDiscount) {
-                                $itemDiscount = $discount;
-                                $appliedPromo = [
+                            $candidatePromos[] = [
+                                'priority' => $bundle['priority'] ?? 0,
+                                'discount' => $discount,
+                                'data' => [
                                     'promo_name' => $bundle['name'],
                                     'promo_type' => 'bundle',
-                                    'bundle_price' => $bundle['bundle_price']
-                                ];
-                            }
+                                    'bundle_price' => $bundle['bundle_price'],
+                                    'description' => $bundle['description'] ?? ''
+                                ]
+                            ];
                         }
                     }
                 }
 
-                // Nếu không dùng bundle, thử DISCOUNT
-                if (!$appliedPromo && isset($discountsByProduct[$productId])) {
+                // Check DISCOUNT
+                if (isset($discountsByProduct[$productId])) {
                     foreach ($discountsByProduct[$productId] as $promo) {
                         $discount = 0;
 
@@ -212,16 +219,34 @@ class PromotionHelper
                             $discount = min($promo['discount_value'] * $qty, $itemSubtotal);
                         }
 
-                        if ($discount > $itemDiscount) {
-                            $itemDiscount = $discount;
-                            $appliedPromo = [
+                        $candidatePromos[] = [
+                            'priority' => $promo['priority'] ?? 0,
+                            'discount' => $discount,
+                            'data' => [
                                 'promo_name' => $promo['name'],
                                 'promo_type' => 'discount',
                                 'discount_type' => $promo['discount_type'],
-                                'discount_value' => $promo['discount_value']
-                            ];
-                        }
+                                'discount_value' => $promo['discount_value'],
+                                'description' => $promo['description'] ?? ''
+                            ]
+                        ];
                     }
+                }
+
+                // Chọn promotion TỐT NHẤT theo: priority DESC, discount DESC
+                if (!empty($candidatePromos)) {
+                    usort($candidatePromos, function ($a, $b) {
+                        // So sánh priority trước
+                        if ($a['priority'] != $b['priority']) {
+                            return $b['priority'] - $a['priority']; // DESC
+                        }
+                        // Nếu priority bằng nhau, so sánh discount
+                        return $b['discount'] - $a['discount']; // DESC
+                    });
+
+                    $best = $candidatePromos[0];
+                    $itemDiscount = $best['discount'];
+                    $appliedPromo = $best['data'];
                 }
             }
 

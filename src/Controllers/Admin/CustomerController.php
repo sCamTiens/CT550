@@ -118,6 +118,15 @@ class CustomerController extends BaseAdminController
     public function destroy($id): void
     {
         try {
+            // Kiểm tra ràng buộc: khách hàng có đơn hàng chưa?
+            $orderCount = $this->getOrderCountByCustomer($id);
+            if ($orderCount > 0) {
+                $this->json([
+                    'error' => "Không thể xóa khách hàng này vì đã có $orderCount đơn hàng."
+                ], 409);
+                return;
+            }
+
             $deleted = $this->repo->delete($id);
             if (!$deleted) {
                 $this->json(['error' => 'Không thể xoá khách hàng'], 404);
@@ -129,6 +138,15 @@ class CustomerController extends BaseAdminController
                 'detail' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    // Helper: Đếm số lượng đơn hàng của khách hàng
+    private function getOrderCountByCustomer($customerId)
+    {
+        $pdo = \App\Core\DB::pdo();
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM orders WHERE user_id = ?");
+        $stmt->execute([$customerId]);
+        return (int) $stmt->fetchColumn();
     }
 
     private function validateInput(array $data, bool $isCreate): array

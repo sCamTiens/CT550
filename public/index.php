@@ -192,9 +192,11 @@ $router->post('/api/payment/zalopay/callback', [\App\Controllers\Customer\ZaloPa
 $router->get('/payment/zalopay/return', [\App\Controllers\Customer\ZaloPayController::class, 'returnUrl']);
 
 // Chat API routes (Chat support system with Rasa integration)
-$router->post('/api/chat/init', [ApiChat::class, 'init'])->middleware('jwt');
-$router->post('/api/chat/send', [ApiChat::class, 'send'])->middleware('jwt');
-$router->get('/api/chat/messages/{sessionId}', [ApiChat::class, 'getMessages'])->middleware('jwt');
+// Guest users allowed - auth handled in controller
+$router->post('/api/chat/init', [ApiChat::class, 'init']);
+$router->post('/api/chat/send', [ApiChat::class, 'send']);
+$router->get('/api/chat/messages/{sessionId}', [ApiChat::class, 'getMessages']);
+$router->get('/api/chat/promotions/{id}', [ApiChat::class, 'getPromotionDetails']);
 
 /* routes admin */
 $router->group('/admin', function (Router $r): void {

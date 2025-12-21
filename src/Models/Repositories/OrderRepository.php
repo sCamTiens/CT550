@@ -31,13 +31,25 @@ class OrderRepository
                 o.created_by, cu.full_name AS created_by_name,
                 o.updated_by, uu.full_name AS updated_by_name,
                 u.full_name AS customer_name, u.phone AS customer_phone, u.email AS customer_email,
-                p.id AS payment_id, p.method AS payment_method, 
-                o.payment_status
+                p.id AS payment_id, 
+                o.payment_method,
+                o.payment_status,
+                o.ghn_order_code,
+                COALESCE(
+                    o.delivery_address,
+                    CONCAT_WS(', ', 
+                        ua.line1, 
+                        ua.ward_name, 
+                        ua.district_name, 
+                        ua.province_name
+                    )
+                ) AS shipping_address
             FROM orders o
             LEFT JOIN users u ON u.id = o.user_id
             LEFT JOIN users cu ON cu.id = o.created_by
             LEFT JOIN users uu ON uu.id = o.updated_by
             LEFT JOIN payments p ON p.id = o.payment_id
+            LEFT JOIN user_addresses ua ON ua.id = o.shipping_address_id
             ORDER BY o.id DESC
             LIMIT 500
         ";
@@ -68,6 +80,15 @@ class OrderRepository
                 u.full_name AS customer_name, u.phone AS customer_phone, u.email AS customer_email,
                 p.id AS payment_id, p.method AS payment_method, 
                 o.payment_status,
+                COALESCE(
+                    o.delivery_address,
+                    CONCAT_WS(', ', 
+                        ua.line1, 
+                        ua.ward_name, 
+                        ua.district_name, 
+                        ua.province_name
+                    )
+                ) AS shipping_address,
                 CASE 
                     WHEN TIME(o.created_at) >= '06:00:00' AND TIME(o.created_at) < '14:00:00' THEN 'Ca sáng'
                     WHEN TIME(o.created_at) >= '14:00:00' AND TIME(o.created_at) < '22:00:00' THEN 'Ca chiều'
@@ -78,6 +99,7 @@ class OrderRepository
             LEFT JOIN users cu ON cu.id = o.created_by
             LEFT JOIN users uu ON uu.id = o.updated_by
             LEFT JOIN payments p ON p.id = o.payment_id
+            LEFT JOIN user_addresses ua ON ua.id = o.shipping_address_id
             WHERE o.id = ?
         ";
         $st = $pdo->prepare($sql);
@@ -890,10 +912,14 @@ class OrderRepository
                 oi.qty as quantity,
                 oi.unit_price,
                 oi.line_total as total,
+                oi.promotion_id,
                 p.name as product_name, 
                 p.sku as product_sku,
                 u.name as unit,
                 us.full_name as created_by_name,
+                pr.name as promotion_name,
+                pr.promo_type as promotion_type,
+                pr.description as promotion_description,
                 GROUP_CONCAT(pi.image_url ORDER BY pi.is_primary DESC, pi.sort_order ASC SEPARATOR '|||') AS product_images_concat
             FROM order_items oi
             LEFT JOIN products p ON p.id = oi.product_id
@@ -901,8 +927,9 @@ class OrderRepository
             LEFT JOIN orders o ON o.id = oi.order_id
             LEFT JOIN users us ON us.id = o.created_by
             LEFT JOIN product_images pi ON pi.product_id = p.id
+            LEFT JOIN promotions pr ON pr.id = oi.promotion_id
             WHERE oi.order_id = ?
-            GROUP BY oi.id, oi.order_id, oi.product_id, oi.qty, oi.unit_price, oi.line_total, p.name, p.sku, u.name, us.full_name
+            GROUP BY oi.id, oi.order_id, oi.product_id, oi.qty, oi.unit_price, oi.line_total, oi.promotion_id, p.name, p.sku, u.name, us.full_name, pr.name, pr.promo_type, pr.description
             ORDER BY oi.id
         ";
         $stmt = $pdo->prepare($sql);

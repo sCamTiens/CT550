@@ -37,7 +37,7 @@
                         <div class="flex justify-between">
                             <span class="text-gray-600">Mã đơn hàng:</span>
                             <span
-                                class="font-semibold text-gray-800">#<?= htmlspecialchars($order_id ?? 'N/A') ?></span>
+                                class="font-semibold text-gray-800">#<?= htmlspecialchars($order_code ?? 'N/A') ?></span>
                         </div>
 
                         <div class="flex justify-between">

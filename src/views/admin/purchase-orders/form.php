@@ -27,7 +27,7 @@
                     this.highlight = -1;
                 }
             }" x-effect="reset()" @click.away="open = false">
-            <label class="block text-sm text-black font-semibold mb-1">
+            <label class="block text-sm text-black font-bold mb-1">
                 Nhà cung cấp <span class="text-red-500">*</span>
             </label>
 
@@ -74,7 +74,7 @@
 
         <!-- Ngày nhập -->
         <div>
-            <label class="block text-sm text-black font-semibold mb-1">Ngày nhập <span
+            <label class="block text-sm text-black font-bold mb-1">Ngày nhập <span
                     class="text-red-500">*</span></label>
 
             <div class="relative">
@@ -94,7 +94,7 @@
 
         <!-- Trạng thái thanh toán -->
         <div>
-            <label class="block text-sm text-black font-semibold mb-1">Trạng thái thanh toán <span
+            <label class="block text-sm text-black font-bold mb-1">Trạng thái thanh toán <span
                     class="text-red-500">*</span></label>
             <select x-model="form.payment_status" @change="
                     if (form.payment_status === 'Đã thanh toán hết') {
@@ -115,14 +115,14 @@
 
         <!-- Tổng tiền -->
         <div>
-            <label class="block text-sm text-black font-semibold mb-1">Tổng tiền</label>
+            <label class="block text-sm text-black font-bold mb-1">Tổng tiền</label>
             <input readonly :value="calculateTotal().toLocaleString('vn-VN') + ' đ'"
-                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-gray-50 font-semibold text-[#002975]">
+                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-gray-50 font-bold text-[#002975]">
         </div>
 
         <!-- Số tiền thanh toán (chỉ hiện khi thanh toán một phần hoặc hết) -->
         <div x-show="form.payment_status === 'Đã thanh toán một phần' || form.payment_status === 'Đã thanh toán hết'">
-            <label class="block text-sm text-black font-semibold mb-1">
+            <label class="block text-sm text-black font-bold mb-1">
                 Số tiền thanh toán <span class="text-red-500">*</span>
             </label>
             <input
@@ -145,14 +145,14 @@
 
         <!-- Công nợ (Tổng tiền - Số tiền thanh toán) -->
         <div x-show="form.payment_status === 'Đã thanh toán một phần' || form.payment_status === 'Chưa đối soát'">
-            <label class="block text-sm text-black font-semibold mb-1">Công nợ</label>
+            <label class="block text-sm text-black font-bold mb-1">Công nợ</label>
             <input readonly :value="(calculateTotal() - (form.paid_amount || 0)).toLocaleString('vn-VN') + ' đ'"
-                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-gray-50 font-semibold text-red-600">
+                class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-gray-50 font-bold text-red-600">
         </div>
 
         <!-- Ngày hẹn thanh toán (chỉ hiện khi chưa đối soát hoặc thanh toán một phần) -->
         <div x-show="form.payment_status === 'Chưa đối soát' || form.payment_status === 'Đã thanh toán một phần'">
-            <label class="block text-sm text-black font-semibold mb-1">
+            <label class="block text-sm text-black font-bold mb-1">
                 Ngày hẹn thanh toán <span class="text-red-500">*</span>
             </label>
 
@@ -176,7 +176,7 @@
 
         <!-- Danh sách mặt hàng -->
         <div class="mt-4 col-span-2">
-            <label class="block text-sm text-black font-semibold mb-1">Mặt hàng
+            <label class="block text-sm text-black font-bold mb-1">Mặt hàng
                 <span class="text-red-500">*</span></label>
 
             <template x-if="lines.length === 0">
@@ -314,9 +314,9 @@
                                     touchedLines[idx]=true; 
                                     validateField('unit_cost', idx);
                                 "
-                                @focus="$event.target.select()" 
-                                required 
-                                placeholder="Đơn giá" 
+                                @focus="$event.target.select()"
+                                required
+                                placeholder="Đơn giá"
                                 inputmode="numeric"
                                 class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
                             <template x-if="touchedLines[idx]">
@@ -380,7 +380,7 @@
 
         <!-- Ghi chú -->
         <div class="mt-4 col-span-2">
-            <label class="block text-sm text-black font-semibold mb-1">Ghi chú</label>
+            <label class="block text-sm text-black font-bold mb-1">Ghi chú</label>
             <input x-model="form.note" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
                 placeholder="Nhập ghi chú">
         </div>
@@ -388,8 +388,8 @@
         <!-- Nút hành động -->
         <div class="flex justify-end gap-3 mt-6 col-span-2">
             <button type="button" class="px-4 py-2 rounded-md text-red-600 border border-red-600 
-                  hover:bg-red-600 hover:text-white transition-colors" 
-                  @click="openAdd=false; openEdit=false">Hủy</button>
+                  hover:bg-red-600 hover:text-white transition-colors"
+                @click="openAdd=false; openEdit=false">Hủy</button>
             <button
                 class="px-4 py-2 rounded-md text-[#002975] hover:bg-[#002975] hover:text-white border border-[#002975]"
                 :disabled="submitting" x-text="submitting?'Đang lưu...':'Lưu'"></button>
@@ -399,11 +399,11 @@
 
 <script>
     // HÀM khởi tạo flatpickr cho từng dòng mới
-    window.initLineFlatpickr = function (idx) {
+    window.initLineFlatpickr = function(idx) {
         setTimeout(() => {
             // Ngày sản xuất
             const mfgInputs = document.querySelectorAll(`.line-mfg-date-${idx}`);
-            mfgInputs.forEach(function (input) {
+            mfgInputs.forEach(function(input) {
                 if (!input._flatpickr) {
                     flatpickr(input, {
                         dateFormat: 'd/m/Y',
@@ -417,7 +417,7 @@
 
             // Hạn sử dụng
             const expInputs = document.querySelectorAll(`.line-exp-date-${idx}`);
-            expInputs.forEach(function (input) {
+            expInputs.forEach(function(input) {
                 if (!input._flatpickr) {
                     flatpickr(input, {
                         dateFormat: 'd/m/Y',
@@ -432,7 +432,7 @@
     };
 
     // HÀM khởi tạo tất cả flatpickr khi modal mở
-    window.initAllDatePickers = function () {
+    window.initAllDatePickers = function() {
         if (typeof flatpickr === 'undefined') {
             console.warn('flatpickr chưa được load');
             return;
@@ -440,11 +440,11 @@
 
         setTimeout(() => {
             console.log('🔧 Initializing all date pickers...');
-            
+
             // Ngày nhập
             const dateInputs = document.querySelectorAll('.purchase-date-picker');
             console.log('📅 Purchase date inputs:', dateInputs.length);
-            dateInputs.forEach(function (input) {
+            dateInputs.forEach(function(input) {
                 if (!input._flatpickr) {
                     flatpickr(input, {
                         dateFormat: 'd/m/Y',
@@ -459,7 +459,7 @@
             // Ngày hẹn thanh toán
             const dueDateInputs = document.querySelectorAll('.due-date-picker');
             console.log('📅 Due date inputs:', dueDateInputs.length);
-            dueDateInputs.forEach(function (input) {
+            dueDateInputs.forEach(function(input) {
                 if (!input._flatpickr) {
                     flatpickr(input, {
                         dateFormat: 'd/m/Y',

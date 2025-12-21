@@ -28,11 +28,19 @@ class EmailService
             $this->mailer->Port = $_ENV['MAIL_PORT'] ?? 587;
             $this->mailer->CharSet = 'UTF-8';
 
+            // Enable SMTP debug output (2 = detailed)
+            $this->mailer->SMTPDebug = 2; // Set to 2 for debugging
+            $this->mailer->Debugoutput = function ($str, $level) {
+                error_log("[SMTP Debug L$level] $str");
+            };
+
             // Default sender
-            $this->mailer->setFrom(
-                $_ENV['MAIL_FROM'] ?? $_ENV['MAIL_USERNAME'],
-                $_ENV['MAIL_FROM_NAME'] ?? 'MINIGO MARKET'
-            );
+            $fromEmail = $_ENV['MAIL_FROM'] ?? $_ENV['MAIL_USERNAME'] ?? '';
+            $fromName = $_ENV['MAIL_FROM_NAME'] ?? 'MINIGO MARKET';
+
+            error_log("[EmailService] Config - From: $fromEmail, Name: $fromName, Host: " . $this->mailer->Host);
+
+            $this->mailer->setFrom($fromEmail, $fromName);
         } catch (Exception $e) {
             error_log("Email configuration error: " . $e->getMessage());
         }
@@ -1170,12 +1178,15 @@ Email này được gửi tự động từ hệ thống quản lý nhân sự.
     public function sendOTPEmail($email, $otpCode, $fullName = '')
     {
         try {
+            error_log("[sendOTPEmail] Starting - To: $email, OTP: $otpCode");
+
             // Reset recipients
             $this->mailer->clearAddresses();
             $this->mailer->clearAttachments();
 
             // Recipient
             $this->mailer->addAddress($email, $fullName);
+            error_log("[sendOTPEmail] Recipient added");
 
             // Subject
             $this->mailer->Subject = '[MINIGO] Mã xác nhận đặt lại mật khẩu';
@@ -1185,10 +1196,15 @@ Email này được gửi tự động từ hệ thống quản lý nhân sự.
             $this->mailer->Body = $this->getOTPEmailBody($otpCode, $fullName);
             $this->mailer->AltBody = $this->getOTPEmailPlainText($otpCode, $fullName);
 
+            error_log("[sendOTPEmail] About to send...");
             $this->mailer->send();
+            error_log("[sendOTPEmail] ✓ Email sent successfully");
+
             return ['success' => true, 'message' => 'OTP đã được gửi đến email'];
         } catch (Exception $e) {
-            error_log("OTP email send error: " . $e->getMessage());
+            error_log("[sendOTPEmail] ✗ Error: " . $e->getMessage());
+            error_log("[sendOTPEmail] Error Code: " . $e->getCode());
+            error_log("[sendOTPEmail] Stack trace: " . $e->getTraceAsString());
             return ['success' => false, 'message' => 'Không thể gửi email: ' . $e->getMessage()];
         }
     }

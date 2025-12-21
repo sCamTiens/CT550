@@ -814,7 +814,8 @@ $items = $items ?? [];
                             const r = await fetch(api.remove(id), {
                                 method: 'DELETE'
                             });
-                            if (!r.ok) throw new Error('Xóa thất bại');
+                            const res = await r.json();
+                            if (!r.ok) throw new Error(res.error || 'Xóa thất bại');
                             await this.fetchAll();
                             this.showToast('Xóa thành công!', 'success');
                         } catch (e) {

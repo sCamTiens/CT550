@@ -29,7 +29,7 @@ def get_db_connection():
         )
         return conn
     except Exception as e:
-        print(f"❌ Database error: {str(e)}")
+        print(f"Database error: {str(e)}")
         return None
 
 def format_currency(amount):
@@ -46,13 +46,13 @@ def format_date(date_obj):
 
 def get_order_status_text(status):
     status_map = {
-        'pending': '⏳ Chờ xác nhận',
-        'confirmed': '✅ Đã xác nhận',
-        'processing': '📦 Đang chuẩn bị',
-        'shipping': '🚚 Đang giao hàng',
-        'delivered': '✅ Đã giao hàng',
-        'cancelled': '❌ Đã hủy',
-        'completed': '✅ Hoàn thành'
+        'pending': 'Chờ xác nhận',
+        'confirmed': 'Đã xác nhận',
+        'processing': 'Đang chuẩn bị',
+        'shipping': 'Đang giao hàng',
+        'delivered': 'Đã giao hàng',
+        'cancelled': 'Đã hủy',
+        'completed': 'Hoàn thành'
     }
     return status_map.get(status, status)
 
@@ -143,26 +143,26 @@ class ActionCheckOrder(Action):
             
             if not order:
                 if user_id:
-                    message = f"❌ Không tìm thấy đơn hàng **{order_code}** của bạn.\n\n"
-                    message += "💡 Vui lòng kiểm tra lại mã đơn hàng hoặc liên hệ hỗ trợ!"
+                    message = f"Không tìm thấy đơn hàng **{order_code}** của bạn.\n\n"
+                    message += "Vui lòng kiểm tra lại mã đơn hàng hoặc liên hệ hỗ trợ!"
                 else:
-                    message = f"❌ Không tìm thấy đơn hàng **{order_code}**.\n\n"
-                    message += "💡 Vui lòng đăng nhập để xem đơn hàng của bạn!"
+                    message = f"Không tìm thấy đơn hàng **{order_code}**.\n\n"
+                    message += "Vui lòng đăng nhập để xem đơn hàng của bạn!"
                 dispatcher.utter_message(text=message)
                 return []
             
             base_url = os.getenv("APP_URL", "http://localhost")
             order_url = f"{base_url}/profile?view=orders&id={order['id']}"
             
-            message = f"📦 **Thông tin đơn hàng #{order['code']}**\n\n"
-            message += f"👤 Khách hàng: {order['full_name']}\n"
-            message += f"📞 SĐT: {order['phone']}\n"
-            message += f"📊 Trạng thái: {get_order_status_text(order['status'])}\n"
-            message += f"💰 Tổng tiền: {format_currency(order['grand_total'])}\n"
-            message += f"💳 Thanh toán: {order['payment_status']}\n"
-            message += f"📅 Ngày đặt: {format_date(order['created_at'])}\n"
-            message += f"📦 Số mặt hàng: {order['total_items']} ({order['total_quantity']} sản phẩm)\n\n"
-            message += f"🔗 [Xem chi tiết đơn hàng]({order_url})\n\n"
+            message = f"**Thông tin đơn hàng #{order['code']}**\n\n"
+            message += f"Khách hàng: {order['full_name']}\n"
+            message += f"SĐT: {order['phone']}\n"
+            message += f"Trạng thái: {get_order_status_text(order['status'])}\n"
+            message += f"Tổng tiền: {format_currency(order['grand_total'])}\n"
+            message += f"Thanh toán: {order['payment_status']}\n"
+            message += f"Ngày đặt: {format_date(order['created_at'])}\n"
+            message += f"Số mặt hàng: {order['total_items']} ({order['total_quantity']} sản phẩm)\n\n"
+            message += f"[Xem chi tiết đơn hàng]({order_url})\n\n"
             
             metadata = {
                 'order_id': order['id'],
@@ -174,7 +174,7 @@ class ActionCheckOrder(Action):
             dispatcher.utter_message(text=message, metadata=metadata)
             
         except Exception as e:
-            print(f"❌ Error checking order: {str(e)}")
+            print(f"Error checking order: {str(e)}")
             dispatcher.utter_message(text="Có lỗi khi kiểm tra đơn hàng. Vui lòng thử lại!")
         finally:
             if conn.is_connected():
@@ -239,14 +239,14 @@ class ActionSearchProduct(Action):
             products = cursor.fetchall()
             
             if not products:
-                message = f"❌ Không tìm thấy sản phẩm nào với từ khóa \"{product_name}\".\n\n"
-                message += "💡 Thử tìm kiếm với từ khóa khác hoặc liên hệ hỗ trợ!"
+                message = f"Không tìm thấy sản phẩm nào với từ khóa \"{product_name}\".\n\n"
+                message += "Thử tìm kiếm với từ khóa khác hoặc liên hệ hỗ trợ!"
                 dispatcher.utter_message(text=message)
                 return [SlotSet("product_name", product_name)]
             
             base_url = os.getenv("APP_URL", "http://localhost")
             
-            message = f"🔍 Tìm thấy **{len(products)} sản phẩm** liên quan đến \"{product_name}\":\n\n"
+            message = f"Tìm thấy **{len(products)} sản phẩm** liên quan đến \"{product_name}\":\n\n"
             
             products_metadata = []
             
@@ -254,14 +254,14 @@ class ActionSearchProduct(Action):
                 product_url = f"{base_url}/products/{p['slug']}"
                 image_url = f"{base_url}/storage/products/{p['image_url']}" if p['image_url'] else None
                 
-                stock_status = "✅ Còn hàng" if p['stock_qty'] > 0 else "❌ Hết hàng"
+                stock_status = "Còn hàng" if p['stock_qty'] > 0 else "Hết hàng"
                 
                 message += f"**{idx}. {p['name']}**\n"
-                message += f"   💰 Giá: {format_currency(p['sale_price'])}\n"
-                message += f"   📦 {stock_status} ({p['stock_qty']} sản phẩm)\n"
+                message += f"   Giá: {format_currency(p['sale_price'])}\n"
+                message += f"   {stock_status} ({p['stock_qty']} sản phẩm)\n"
                 if p['brand_name']:
-                    message += f"   🏷️ Thương hiệu: {p['brand_name']}\n"
-                message += f"   🔗 [Xem chi tiết]({product_url})\n\n"
+                    message += f"   Thương hiệu: {p['brand_name']}\n"
+                message += f"   [Xem chi tiết]({product_url})\n\n"
                 
                 products_metadata.append({
                     'id': p['id'],
@@ -283,7 +283,7 @@ class ActionSearchProduct(Action):
             dispatcher.utter_message(text=message, metadata=metadata)
             
         except Exception as e:
-            print(f"❌ Error searching products: {str(e)}")
+            print(f"Error searching products: {str(e)}")
             dispatcher.utter_message(text="Có lỗi khi tìm kiếm. Vui lòng thử lại!")
         finally:
             if conn.is_connected():

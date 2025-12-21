@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controllers\Admin;
 
 use App\Models\Repositories\ExpenseVoucherRepository;
@@ -88,7 +89,12 @@ class ExpenseVoucherController extends BaseAdminController
             $this->repo->delete($id);
             echo json_encode(['ok' => true, 'id' => $id]);
         } catch (\Throwable $e) {
-            http_response_code(500);
+            // Kiểm tra nếu là lỗi ràng buộc xóa
+            if (strpos($e->getMessage(), 'phiếu nhập kho đã thanh toán') !== false) {
+                http_response_code(409); // Conflict
+            } else {
+                http_response_code(500);
+            }
             echo json_encode(['error' => $e->getMessage()]);
         }
         exit;

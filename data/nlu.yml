@@ -22,10 +22,8 @@ nlu:
       - bye
       - goodbye
       - hẹn gặp lại
-      - cảm ơn nhé
       - đủ rồi
       - thôi đủ rồi
-      - ok cảm ơn
 
   # =====================================================================
   # KHẲNG ĐỊNH & PHỦ ĐỊNH
@@ -52,7 +50,7 @@ nlu:
       - thôi
 
   # =====================================================================
-  # KIỂM TRA ĐƠN HÀNG
+  # KIỂM TRA ĐƠN HÀNG - EXPANDED với nhiều cách nói
   # =====================================================================
   - intent: check_order
     examples: |
@@ -66,13 +64,36 @@ nlu:
       - xem thông tin đơn [DH008](order_code)
       - đơn hàng mã số [DH009](order_code)
       - tôi muốn xem đơn [DH010](order_code)
-      - kiểm tra đơn
+      - mã đơn [ORD001](order_code)
+      - [ORD202512140836274](order_code)
+      - cho biết đơn [DH011](order_code)
+      - đơn [DH012](order_code) thế nào rồi
+      - [DH013](order_code) của tôi đâu
+      - xem lại đơn [DH014](order_code)
+      - thông tin đơn [DH015](order_code)
+      - check đơn [DH016](order_code)
+      - tra đơn [DH017](order_code)
+      - kiểm tra
       - xem đơn hàng
       - đơn hàng của tôi thế nào
       - cho tôi biết tình trạng đơn hàng
+      - đơn tôi thế nào rồi
+      - xem đơn của tôi
+      - kiểm tra đơn của tôi
+      - tình trạng đơn hàng
+      - đơn hàng
+      - xem đơn
+      - đơn của tôi
+      - cho tôi xem đơn
+      - muốn xem đơn hàng
+      - xin xem đơn
+      - cho xem đơn
+      - order của tôi
+      - my order
+      - check order
 
   # =====================================================================
-  # TÌM SẢN PHẨM
+  # TÌM SẢN PHẨM - EXPANDED với từ đơn giản
   # =====================================================================
   - intent: search_product
     examples: |
@@ -89,9 +110,38 @@ nlu:
       - [kem đánh răng](product_name) còn không
       - tôi cần mua [nước rửa chén](product_name)
       - cho tôi xem [bánh quy](product_name)
+      - [cá](product_name)
+      - [thịt](product_name)
+      - [gạo](product_name)
+      - [trứng](product_name)
+      - [sữa](product_name)
+      - [bánh](product_name)
+      - [nước](product_name)
+      - [rau](product_name)
+      - [bia](product_name)
+      - có [cá thu](product_name) không
+      - có [thịt heo](product_name) không
+      - shop có [gạo nếp](product_name) không
+      - bán [trứng gà](product_name) không
+      - [sữa tươi](product_name) giá bao nhiêu
+      - [bánh mì](product_name) còn không
+      - [nước suối](product_name) có không
+      - [rau muống](product_name) tươi không
+      - [bia heineken](product_name)
+      - cho tìm [dầu ăn](product_name)
+      - tìm [đường](product_name)
+      - có [muối](product_name) không
+      - [tương ớt](product_name)
+      - [xì dầu](product_name)
       - tìm sản phẩm
       - có sản phẩm gì
       - xem sản phẩm
+      - sản phẩm
+      - xem hàng
+      - có gì
+      - bán gì
+      - có hàng gì
+      - list sản phẩm
 
   # =====================================================================
   # LỊCH SỬ MUA HÀNG
@@ -158,3 +208,154 @@ nlu:
       - tôi đang nói chuyện với ai
       - bạn là robot à
       - ai đang trả lời tôi
+
+  # =====================================================================
+  # KHUYẾN MÃI / GIẢM GIÁ
+  # =====================================================================
+  - intent: ask_promotion
+    examples: |
+      - có khuyến mãi gì không
+      - khuyến mãi
+      - giảm giá
+      - ưu đãi
+      - chương trình khuyến mãi
+      - có giảm giá không
+      - có ưu đãi gì không
+      - sale gì
+      - deal gì
+      - có deal không
+      - có sale không
+      - giảm giá gì
+      - khuyến mãi gì
+      - ưu đãi nào
+      - chương trình nào
+      - promotion
+      - discount
+      - có giảm không
+      - giảm bao nhiêu
+      - deal hôm nay
+      - sale hôm nay
+      - ưu đãi hôm nay
+      - khuyến mãi tháng này
+
+  # =====================================================================
+  # HỎI GIÁ SẢN PHẨM
+  # =====================================================================
+  - intent: ask_price
+    examples: |
+      - [cá](product_name) giá bao nhiêu
+      - giá [thịt heo](product_name)
+      - [sữa](product_name) bao nhiêu tiền
+      - [trứng gà](product_name) giá
+      - bao nhiêu tiền [bánh mì](product_name)
+      - [gạo](product_name) giá mấy
+      - giá của [nước suối](product_name)
+      - giá [rau](product_name)
+      - [bia](product_name) bao nhiêu
+      - giá bán [dầu ăn](product_name)
+      - giá cả
+      - hỏi giá
+      - price
+      - giá
+      - bao nhiêu
+      - giá sản phẩm
+
+  # =====================================================================
+  # ĐỊA CHỈ CỬA HÀNG
+  # =====================================================================
+  - intent: ask_location
+    examples: |
+      - shop ở đâu
+      - cửa hàng ở đâu
+      - địa chỉ
+      - địa chỉ shop
+      - địa chỉ cửa hàng
+      - tiệm ở đâu
+      - ở đâu vậy
+      - tọa độ
+      - ở địa chỉ nào
+      - có thể đến shop được không
+      - làm sao đến shop
+      - cách đến cửa hàng
+      - shop nằm ở đâu
+      - vị trí cửa hàng
+      - tìm đường đến shop
+      - where is your shop
+      - location
+      - address
+
+  # =====================================================================
+  # GIAO HÀNG / PHẠM VI GIAO HÀNG
+  # =====================================================================
+  - intent: ask_delivery
+    examples: |
+      - có giao hàng không
+      - giao hàng tới đâu
+      - ship tới đâu
+      - phạm vi giao hàng
+      - giao được không
+      - có ship không
+      - giao hàng khu vực nào
+      - có giao đến [Ninh Kiều](location) không
+      - ship đến [Cái Răng](location) được không
+      - giao đến [Ô Môn](location) không
+      - có giao [An Giang](location) không
+      - phí ship bao nhiêu
+      - giao hàng miễn phí không
+      - ship free không
+      - có giao tận nơi không
+      - có delivery không
+      - ship toàn quốc không
+      - giao được tới [tôi](location) không
+      - có ship tới chỗ tôi không
+      - khoảng cách giao hàng
+      - giao xa được không
+      - giao gần thôi à
+
+  # =====================================================================
+  # THỜI GIAN MỞ CỬA
+  # =====================================================================
+  - intent: ask_opening_hours
+    examples: |
+      - mở cửa mấy giờ
+      - đóng cửa lúc nào
+      - giờ mở cửa
+      - giờ làm việc
+      - mở cửa khi nào
+      - shop mở cửa khi nào
+      - bao giờ mở
+      - làm việc mấy giờ
+      - working hours
+      - opening hours
+      - mở suốt không
+      - có mở cả ngày không
+      - chủ nhật có mở không
+      - nghỉ ngày nào
+
+  # =====================================================================
+  # NÓI CHUYỆN PHIẾM (CHITCHAT)
+  # =====================================================================
+  - intent: chitchat
+    examples: |
+      - hôm nay thế nào
+      - bạn khỏe không
+      - bạn ở đâu
+      - thời tiết hôm nay
+      - hôm nay đẹp trời không
+      - bạn làm gì
+      - bạn thích gì
+      - bạn ăn gì
+      - có vui không
+      - cảm ơn
+      - cảm ơn nhé
+      - thanks
+      - thank you
+      - ok cảm ơn
+      - được rồi
+      - hay quá
+      - tuyệt vời
+      - good
+      - nice
+      - tốt
+      - oke
+      - ok luôn

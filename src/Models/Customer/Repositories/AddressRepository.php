@@ -103,6 +103,9 @@ class AddressRepository
      */
     public function createAddress(int $customerId, array $data): int
     {
+        // === GIỚI HẠN KHU VỰC GIAO HÀNG: CHỈ CẦN THƠ ===
+        $this->validateCanThoAddress($data);
+
         // If this is the first address or set as default, unset other defaults
         if ($data['is_default'] ?? false) {
             $this->unsetAllDefaults($customerId);
@@ -142,6 +145,9 @@ class AddressRepository
      */
     public function updateAddress(int $addressId, int $customerId, array $data): bool
     {
+        // === GIỚI HẠN KHU VỰC GIAO HÀNG: CHỈ CẦN THƠ ===
+        $this->validateCanThoAddress($data);
+
         // If setting as default, unset other defaults
         if ($data['is_default'] ?? false) {
             $this->unsetAllDefaults($customerId);
@@ -242,5 +248,28 @@ class AddressRepository
         ");
         $stmt->execute(['user_id' => $customerId]);
         return (int) $stmt->fetchColumn();
+    }
+
+    /**
+     * Validate address is within delivery area (distance-based)
+     */
+    private function validateCanThoAddress(array $data): void
+    {
+        $deliveryService = new \App\Services\DeliveryDistanceService();
+
+        // Chuẩn bị dữ liệu địa chỉ để kiểm tra
+        $addressData = [
+            'address_line' => $data['address_line'] ?? $data['line1'] ?? '',
+            'ward' => $data['ward_name'] ?? '',
+            'district' => $data['district_name'] ?? '',
+            'province' => $data['province_name'] ?? '',
+            'province_code' => $data['province_code'] ?? '',
+        ];
+
+        $deliveryCheck = $deliveryService->checkDeliveryArea($addressData);
+
+        if (!$deliveryCheck['success']) {
+            throw new \Exception($deliveryCheck['message']);
+        }
     }
 }

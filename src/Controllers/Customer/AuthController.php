@@ -93,6 +93,22 @@ class AuthController extends Controller
         $accessToken = JWTHelper::generateToken($tokenPayload);
         $refreshToken = JWTHelper::generateRefreshToken($tokenPayload);
 
+        // LƯU JWT VÀO COOKIES (HTTP-only, secure)
+        setcookie('jwt_token', $accessToken, [
+            'expires' => time() + (60 * 60), // 1 hour
+            'path' => '/',
+            'httponly' => true,
+            'secure' => false, // Set true nếu dùng HTTPS
+            'samesite' => 'Lax'
+        ]);
+        setcookie('refresh_token', $refreshToken, [
+            'expires' => time() + (60 * 60 * 24 * 30), // 30 days
+            'path' => '/',
+            'httponly' => true,
+            'secure' => false,
+            'samesite' => 'Lax'
+        ]);
+
         // Lưu thông tin vào session (bao gồm cả tokens)
         $_SESSION['customer'] = [
             'id' => $customer['id'],
@@ -254,6 +270,22 @@ class AuthController extends Controller
                 $accessToken = JWTHelper::generateToken($tokenPayload);
                 $refreshToken = JWTHelper::generateRefreshToken($tokenPayload);
 
+                // ✅ LƯU JWT VÀO COOKIES (HTTP-only, secure)
+                setcookie('jwt_token', $accessToken, [
+                    'expires' => time() + (60 * 60), // 1 hour
+                    'path' => '/',
+                    'httponly' => true,
+                    'secure' => false, // Set true nếu dùng HTTPS
+                    'samesite' => 'Lax'
+                ]);
+                setcookie('refresh_token', $refreshToken, [
+                    'expires' => time() + (60 * 60 * 24 * 30), // 30 days
+                    'path' => '/',
+                    'httponly' => true,
+                    'secure' => false,
+                    'samesite' => 'Lax'
+                ]);
+
                 // Tự động đăng nhập sau khi đăng ký (bao gồm tokens)
                 $_SESSION['customer'] = [
                     'id' => $result['id'],
@@ -287,6 +319,10 @@ class AuthController extends Controller
      */
     public function logout()
     {
+        // Clear JWT cookies
+        setcookie('jwt_token', '', time() - 3600, '/', '', false, true);
+        setcookie('refresh_token', '', time() - 3600, '/', '', false, true);
+
         unset($_SESSION['customer']);
         session_destroy();
 
@@ -301,7 +337,7 @@ class AuthController extends Controller
         }
 
         // Redirect for GET requests
-        $this->redirect('/login');
+        $this->redirect('/');
     }
 
     /**
@@ -309,8 +345,13 @@ class AuthController extends Controller
      */
     public function refreshToken()
     {
-        // Try to get refresh token from session first
-        $refreshToken = $_SESSION['customer']['refresh_token'] ?? null;
+        // Try to get refresh token from cookies first (preferred)
+        $refreshToken = $_COOKIE['refresh_token'] ?? null;
+
+        // Fall back to session
+        if (!$refreshToken) {
+            $refreshToken = $_SESSION['customer']['refresh_token'] ?? null;
+        }
 
         // Fall back to request body (for API clients)
         if (!$refreshToken) {
@@ -327,8 +368,10 @@ class AuthController extends Controller
         $decoded = JWTHelper::validateToken($refreshToken);
 
         if (!$decoded || ($decoded->type ?? '') !== 'refresh') {
-            // Clear invalid session
+            // Clear invalid session and cookies
             unset($_SESSION['customer']);
+            setcookie('jwt_token', '', time() - 3600, '/', '', false, true);
+            setcookie('refresh_token', '', time() - 3600, '/', '', false, true);
             $this->json(['success' => false, 'message' => 'Invalid refresh token'], 401);
             return;
         }
@@ -336,6 +379,15 @@ class AuthController extends Controller
         // Generate new access token
         $userData = (array)$decoded->data;
         $newAccessToken = JWTHelper::generateToken($userData);
+
+        // ✅ Update cookie with new access token
+        setcookie('jwt_token', $newAccessToken, [
+            'expires' => time() + (60 * 60), // 1 hour
+            'path' => '/',
+            'httponly' => true,
+            'secure' => false, // Set true if using HTTPS
+            'samesite' => 'Lax'
+        ]);
 
         // Update session with new access token
         if (!empty($_SESSION['customer'])) {
@@ -380,18 +432,28 @@ class AuthController extends Controller
         // Tạo mã OTP
         $otpCode = $this->passwordResetRepo->createOTP($email);
 
-        // Gửi email
+        // DEV MODE: Skip email and return OTP directly
+        $DEV_MODE = false; // Email is now configured!
+
+        if ($DEV_MODE) {
+            error_log("[ForgotPassword DEV] OTP for $email: $otpCode");
+            $this->json([
+                'success' => true,
+                'message' => '[ĐÃ GỬI] Mã OTP của bạn là: ' . $otpCode,
+                'otp_code' => $otpCode, // Only in dev!
+                'expires_in_seconds' => 600
+            ]);
+            return;
+        }
+
+        // PRODUCTION: Send email
         $result = $this->emailService->sendOTPEmail($email, $otpCode, $customer['full_name'] ?? '');
 
         if ($result['success']) {
-            // Tính thời gian hết hạn (10 phút từ bây giờ)
-            $expiresAt = date('Y-m-d H:i:s', strtotime('+10 minutes'));
-
             $this->json([
                 'success' => true,
-                'message' => 'Mã xác nhận đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư.',
-                'expires_at' => $expiresAt,
-                'expires_in_seconds' => 600 // 10 minutes = 600 seconds
+                'message' => 'Mã xác nhận đã được gửi đến email của bạn.',
+                'expires_in_seconds' => 600
             ]);
         } else {
             $this->json([

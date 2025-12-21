@@ -295,7 +295,7 @@
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Đang gửi...';
 
         try {
-            const response = await fetch('/api/customer/forgot-password', {
+            const response = await fetch('/api-customer-forgot-password.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -352,7 +352,7 @@
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Đang gửi...';
 
         try {
-            const response = await fetch('/api/customer/forgot-password', {
+            const response = await fetch('/api-customer-forgot-password.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -405,7 +405,7 @@
 
             console.log('[Verify OTP] Request Body:', JSON.stringify(requestBody));
 
-            const response = await fetch('/api/customer/verify-otp', {
+            const response = await fetch('/api-customer-verify-otp.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -466,7 +466,7 @@
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Đang xử lý...';
 
         try {
-            const response = await fetch('/api/customer/reset-password', {
+            const response = await fetch('/api-customer-reset-password.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

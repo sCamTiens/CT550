@@ -158,20 +158,30 @@ class CategoryController extends BaseAdminController
         }
 
         header('Content-Type: application/json; charset=utf-8');
-        $canDelete = $this->categoryRepo->canDelete($id);
-        if ($canDelete === 'parent') {
+
+        // Kiểm tra ràng buộc 1: Loại sản phẩm có đang là cha không?
+        $childCount = $this->getChildCategoryCount($id);
+        if ($childCount > 0) {
             http_response_code(409);
-            echo json_encode(['error' => 'Không thể xoá: đang là loại cha của mục khác']);
+            echo json_encode([
+                'error' => "Không thể xóa loại sản phẩm này vì đang là loại cha của $childCount loại khác."
+            ], JSON_UNESCAPED_UNICODE);
             exit;
         }
-        if ($canDelete === 'product') {
+
+        // Kiểm tra ràng buộc 2: Loại sản phẩm có sản phẩm sử dụng không?
+        $productCount = $this->getProductCountByCategory($id);
+        if ($productCount > 0) {
             http_response_code(409);
-            echo json_encode(['error' => 'Không thể xoá: loại sản phẩm đang ràng buộc với sản phẩm']);
+            echo json_encode([
+                'error' => "Không thể xóa loại sản phẩm này vì đang có $productCount sản phẩm sử dụng."
+            ], JSON_UNESCAPED_UNICODE);
             exit;
         }
+
         try {
             $this->categoryRepo->delete($id);
-            echo json_encode(['ok' => true]);
+            echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
         } catch (\PDOException $e) {
             http_response_code(500);
             echo json_encode([
@@ -181,6 +191,24 @@ class CategoryController extends BaseAdminController
             ], JSON_UNESCAPED_UNICODE);
         }
         exit;
+    }
+
+    // Helper: Đếm số lượng loại con
+    private function getChildCategoryCount($id)
+    {
+        $pdo = \App\Core\DB::pdo();
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM categories WHERE parent_id = ?");
+        $stmt->execute([$id]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    // Helper: Đếm số lượng sản phẩm đang sử dụng loại này
+    private function getProductCountByCategory($id)
+    {
+        $pdo = \App\Core\DB::pdo();
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM products WHERE category_id = ?");
+        $stmt->execute([$id]);
+        return (int) $stmt->fetchColumn();
     }
 
     /** Helper: lấy 1 bản ghi */

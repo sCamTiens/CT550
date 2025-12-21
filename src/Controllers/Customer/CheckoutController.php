@@ -16,6 +16,7 @@ class CheckoutController extends Controller
     private AddressRepository $addressRepo;
     private PromotionRepository $promotionRepo;
     private ProductRepository $productRepo;
+    private \App\Services\DeliveryDistanceService $deliveryService;
 
     public function __construct()
     {
@@ -23,6 +24,7 @@ class CheckoutController extends Controller
         $this->addressRepo = new AddressRepository();
         $this->promotionRepo = new PromotionRepository();
         $this->productRepo = new ProductRepository();
+        $this->deliveryService = new \App\Services\DeliveryDistanceService();
     }
 
     /**
@@ -530,11 +532,16 @@ class CheckoutController extends Controller
                 $pdo = \App\Core\DB::pdo();
 
                 // Lưu pending order vào bảng tạm
+                $shippingFee = $data['shipping_fee'] ?? 0;
+                $grandTotal = $data['amount'] ?? ($subtotal + $shippingFee);
+
                 $pendingData = json_encode([
                     'customer_id' => $customerId,
                     'address_id' => $data['address_id'],
                     'cart_items' => $cartItems,
-                    'subtotal' => $subtotal,
+                    'subtotal' => $data['subtotal'] ?? $subtotal,
+                    'shipping_fee' => $shippingFee,
+                    'grand_total' => $grandTotal,
                     'selected_item_ids' => $selectedItemIds
                 ]);
 
@@ -567,7 +574,7 @@ class CheckoutController extends Controller
                 $vnp_TxnRef = $customerId . '_' . time(); // Không dùng orderId vì chưa tạo
                 $vnp_OrderInfo = 'Thanh toán đơn hàng MiniGo - ' . $customerId;
                 $vnp_OrderType = 'billpayment';
-                $vnp_Amount = (int)($subtotal * 100); // VNPay requires amount in VND * 100
+                $vnp_Amount = (int)($grandTotal * 100); // VNPay requires amount in VND * 100 (includes shipping)
                 $vnp_Locale = 'vn';
                 $vnp_IpAddr = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
 
@@ -619,11 +626,16 @@ class CheckoutController extends Controller
                 $pdo = \App\Core\DB::pdo();
 
                 // Lưu pending order vào bảng tạm
+                $shippingFee = $data['shipping_fee'] ?? 0;
+                $grandTotal = $data['amount'] ?? ($subtotal + $shippingFee);
+
                 $pendingData = json_encode([
                     'customer_id' => $customerId,
                     'address_id' => $data['address_id'],
                     'cart_items' => $cartItems,
-                    'subtotal' => $subtotal,
+                    'subtotal' => $data['subtotal'] ?? $subtotal,
+                    'shipping_fee' => $shippingFee,
+                    'grand_total' => $grandTotal,
                     'selected_item_ids' => $selectedItemIds
                 ]);
 
@@ -720,6 +732,23 @@ class CheckoutController extends Controller
                 if (!$address) {
                     throw new \Exception('Địa chỉ giao hàng không hợp lệ');
                 }
+
+                // === KIỂM TRA KHU VỰC GIAO HÀNG: TÍNH KHOẢNG CÁCH ===
+                $deliveryCheck = $this->deliveryService->checkDeliveryArea($address);
+
+                if (!$deliveryCheck['success']) {
+                    throw new \Exception($deliveryCheck['message']);
+                }
+
+                // Log distance for debugging
+                if (isset($deliveryCheck['distance'])) {
+                    error_log(sprintf(
+                        '[Checkout] Delivery distance check passed: %.2f km (max: %.0f km)',
+                        $deliveryCheck['distance'],
+                        $this->deliveryService->getMaxDeliveryRadius()
+                    ));
+                }
+
 
                 // Get district ID from address (saved when user selected district)
                 $districtId = $address['district_id'] ?? null;

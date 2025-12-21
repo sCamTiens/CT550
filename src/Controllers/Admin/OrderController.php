@@ -686,41 +686,83 @@ class OrderController extends BaseAdminController
             $stmt->execute([$userId, $id]);
 
             // 3. Create Receipt Voucher (Phiếu thu)
-            // Generate Code: RC + Date + Random
-            $receiptCode = 'RC' . date('ymd') . rand(1000, 9999);
+            // CHỈ tạo phiếu thu cho COD, Tiền mặt, Chuyển khoản, Quẹt thẻ
+            // KHÔNG tạo cho ZaloPay, VNPay (đã thanh toán online)
+            $receiptCreated = false;
+            if (!in_array($order['payment_method'], ['ZaloPay', 'VNPay'])) {
+                // Generate Code: RC + Date + Random
+                $receiptCode = 'RC' . date('ymd') . rand(1000, 9999);
 
-            $stmt = $pdo->prepare("
-                INSERT INTO receipt_vouchers (
-                    code, order_id, payment_id, payer_user_id, payer_name, 
-                    method, amount, received_by, received_at, note, created_by
-                ) VALUES (
-                    ?, ?, ?, ?, ?, 
-                    ?, ?, ?, NOW(), ?, ?
-                )
-            ");
+                $stmt = $pdo->prepare("
+                    INSERT INTO receipt_vouchers (
+                        code, order_id, payment_id, payer_user_id, payer_name, 
+                        method, amount, received_by, received_at, note, created_by
+                    ) VALUES (
+                        ?, ?, ?, ?, ?, 
+                        ?, ?, ?, NOW(), ?, ?
+                    )
+                ");
 
-            // Get payer name
-            $payerName = $order['delivery_name'] ?? 'Khách lẻ';
+                // Get payer name
+                $payerName = $order['delivery_name'] ?? 'Khách lẻ';
 
-            $stmt->execute([
-                $receiptCode,
-                $id,
-                $order['payment_id'],
-                $order['user_id'],
-                $payerName,
-                $order['payment_method'], // Ensure method matches enum or fallback
-                $order['grand_total'],
-                $userId,
-                'Hoàn tất thủ công bởi ' . $_SESSION['user']['username'],
-                $userId
-            ]);
+                $stmt->execute([
+                    $receiptCode,
+                    $id,
+                    $order['payment_id'],
+                    $order['user_id'],
+                    $payerName,
+                    $order['payment_method'], // Ensure method matches enum or fallback
+                    $order['grand_total'],
+                    $userId,
+                    'Hoàn tất thủ công bởi ' . $_SESSION['user']['username'],
+                    $userId
+                ]);
+
+                $receiptCreated = true;
+            }
 
             $pdo->commit();
+
+            // ==== TÍCH ĐIỂM CHO KHÁCH HÀNG (SAU KHI COMMIT) ====
+            // Quy tắc: 1,000đ = 1 điểm
+            if ($order['user_id'] && $order['grand_total'] > 0) {
+                try {
+                    $totalAmount = (float)$order['grand_total'];
+                    $pointsEarned = floor($totalAmount / 1000);
+
+                    if ($pointsEarned > 0) {
+                        error_log("Earning loyalty points: $pointsEarned points for customer {$order['user_id']}");
+
+                        $customerRepo = new \App\Models\Repositories\CustomerRepository();
+                        $result = $customerRepo->addLoyaltyPoints(
+                            $order['user_id'],
+                            $pointsEarned,
+                            $id,
+                            "Tích điểm từ đơn hàng {$order['code']} (Tổng tiền: " . number_format($totalAmount, 0, ',', '.') . "đ)"
+                        );
+
+                        if ($result) {
+                            // Cập nhật loyalty_points_earned trong orders (transaction riêng)
+                            $stmt = $pdo->prepare("UPDATE orders SET loyalty_points_earned = ? WHERE id = ?");
+                            $stmt->execute([$pointsEarned, $id]);
+                            error_log("Successfully earned $pointsEarned loyalty points");
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // Log lỗi nhưng không fail toàn bộ request
+                    error_log("Error earning loyalty points: " . $e->getMessage());
+                }
+            }
 
             // Gửi thông báo
             $this->sendOrderStatusNotification($id, 'Đã giao hàng (Hoàn tất)');
 
-            echo json_encode(['success' => true, 'message' => 'Đã hoàn tất đơn hàng và tạo phiếu thu']);
+            $message = $receiptCreated
+                ? 'Đã hoàn tất đơn hàng và tạo phiếu thu'
+                : 'Đã hoàn tất đơn hàng';
+
+            echo json_encode(['success' => true, 'message' => $message]);
         } catch (\Exception $e) {
             if (isset($pdo) && $pdo->inTransaction()) {
                 $pdo->rollBack();
@@ -753,6 +795,11 @@ class OrderController extends BaseAdminController
 
             if ($order['status'] === 'Hoàn thành' || $order['status'] === 'Đã hủy') {
                 throw new \Exception('Không thể hủy đơn hàng đã kết thúc');
+            }
+
+            // Ngăn chặn hủy đơn đã thanh toán
+            if ($order['payment_status'] === 'Đã thanh toán') {
+                throw new \Exception('Không thể hủy đơn hàng đã thanh toán. Vui lòng liên hệ khách hàng để xử lý hoàn tiền.');
             }
 
             $pdo->beginTransaction();

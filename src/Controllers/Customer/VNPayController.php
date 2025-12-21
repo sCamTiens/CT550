@@ -197,23 +197,28 @@ class VNPayController extends Controller
                 // Get district ID (may be null for old addresses)
                 $districtId = $address['district_id'] ?? null;
 
+                // Calculate amounts
+                $shippingFee = $pendingOrder['shipping_fee'] ?? 0;
+                $grandTotal = $pendingOrder['grand_total'] ?? $pendingOrder['subtotal'];
+
                 // Insert order with shipping address data for GHN
                 $stmt = $pdo->prepare("
                     INSERT INTO orders (
-                        code, user_id, order_type, status, subtotal, grand_total, 
+                        code, user_id, order_type, status, subtotal, shipping_fee, grand_total, 
                         payment_method, payment_status, shipping_address_id,
                         delivery_name, delivery_phone, delivery_address,
                         shipping_province, shipping_ward,
                         shipping_province_id, shipping_district_id, shipping_ward_code,
                         created_at, updated_at
                     )
-                    VALUES (?, ?, 'Online', 'Chờ xử lý', ?, ?, 'VNPay', 'Đã thanh toán', ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+                    VALUES (?, ?, 'Online', 'Chờ xử lý', ?, ?, ?, 'VNPay', 'Đã thanh toán', ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
                 ");
                 $stmt->execute([
                     $orderCode,
                     $customerId,
                     $pendingOrder['subtotal'],
-                    $pendingOrder['subtotal'],
+                    $shippingFee,
+                    $grandTotal,
                     $pendingOrder['address_id'],
                     $address['recipient_name'] ?? $address['receiver_name'] ?? '',
                     $address['phone_number'] ?? $address['receiver_phone'] ?? '',
@@ -270,7 +275,7 @@ class VNPayController extends Controller
                     VALUES (?, 'VNPay', ?, NOW(), ?, NOW())
                 ");
                 $stmtPayment->execute([
-                    $pendingOrder['subtotal'],
+                    $grandTotal, // Payment amount = grand_total (includes shipping)
                     $vnp_TxnRef,
                     $paymentMeta
                 ]);
@@ -282,6 +287,87 @@ class VNPayController extends Controller
                     UPDATE orders SET payment_id = ? WHERE id = ?
                 ");
                 $stmtUpdateOrder->execute([$paymentId, $orderId]);
+
+                // === TẠO PHIẾU THU (Receipt Voucher) ===
+                $receiptCode = 'PT' . date('YmdHis') . rand(100, 999);
+                $stmtReceipt = $pdo->prepare("
+                    INSERT INTO receipt_vouchers (
+                        code, payment_id, order_id, payer_user_id, amount, 
+                        method, received_by, received_at, created_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, 'VNPay', ?, NOW(), NOW())
+                ");
+                $stmtReceipt->execute([
+                    $receiptCode,
+                    $paymentId,
+                    $orderId,
+                    $customerId,
+                    $grandTotal, // Receipt amount = grand_total (includes shipping)
+                    $customerId
+                ]);
+
+                // === TẠO PHIẾU XUẤT KHO (Stock Out) ===
+                $stockOutCode = 'PX' . date('YmdHis') . rand(100, 999);
+                $stmtStockOut = $pdo->prepare("
+                    INSERT INTO stock_outs (code, order_id, created_by, created_at)
+                    VALUES (?, ?, ?, NOW())
+                ");
+                $stmtStockOut->execute([$stockOutCode, $orderId, $customerId]);
+                $stockOutId = $pdo->lastInsertId();
+
+                // === XUẤT KHO FIFO & GHI MOVEMENT ===
+                $stmtStockOutItem = $pdo->prepare("
+                    INSERT INTO stock_out_items (stock_out_id, product_id, batch_id, qty, unit_price, total_price)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ");
+                $stmtMovement = $pdo->prepare("
+                    INSERT INTO stock_movements (
+                        product_id, type, qty, ref_type, ref_id, note, created_at
+                    )
+                    VALUES (?, 'Xuất kho', ?, 'Đơn hàng', ?, ?, NOW())
+                ");
+
+                foreach ($pendingOrder['cart_items'] as $item) {
+                    // Lấy batch FIFO (cũ nhất)
+                    $stmtBatch = $pdo->prepare("
+                        SELECT id, current_qty, unit_cost
+                        FROM product_batches
+                        WHERE product_id = ? AND current_qty > 0
+                        ORDER BY exp_date ASC, id ASC
+                        LIMIT 1
+                    ");
+                    $stmtBatch->execute([$item['id']]);
+                    $batch = $stmtBatch->fetch(\PDO::FETCH_ASSOC);
+
+                    if ($batch) {
+                        // Trừ batch
+                        $stmtUpdateBatch = $pdo->prepare("
+                            UPDATE product_batches
+                            SET current_qty = current_qty - ?
+                            WHERE id = ?
+                        ");
+                        $stmtUpdateBatch->execute([$item['quantity'], $batch['id']]);
+
+                        $totalPrice = $item['quantity'] * $item['price'];
+                        // Tạo stock_out_item
+                        $stmtStockOutItem->execute([
+                            $stockOutId,
+                            $item['id'],
+                            $batch['id'],
+                            $item['quantity'],
+                            $item['price'],
+                            $totalPrice
+                        ]);
+
+                        // Ghi stock movement
+                        $stmtMovement->execute([
+                            $item['id'],
+                            $item['quantity'],
+                            $orderId,
+                            "Xuất kho cho đơn hàng $orderCode (VNPay)"
+                        ]);
+                    }
+                }
 
                 // Xóa items khỏi giỏ hàng
                 $cartRepo = new \App\Models\Customer\Repositories\CartRepository();

@@ -11,6 +11,44 @@
     <!-- Toast Container -->
     <div id="toast-container"></div>
 
+    <!-- Confirm Modal -->
+    <div id="confirm-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onclick="closeConfirmModal()"></div>
+
+        <!-- Modal Content -->
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all scale-95 opacity-0" id="confirm-modal-content">
+                <!-- Header -->
+                <div class="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4 rounded-t-2xl">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-white/20 p-2 rounded-full">
+                            <i class="fa-solid fa-exclamation-triangle text-white text-xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white">Xác nhận</h3>
+                    </div>
+                </div>
+
+                <!-- Body -->
+                <div class="p-6">
+                    <p class="text-gray-700 text-base leading-relaxed" id="confirm-message"></p>
+                </div>
+
+                <!-- Footer -->
+                <div class="px-6 py-4 bg-gray-50 rounded-b-2xl flex gap-3 justify-end">
+                    <button onclick="closeConfirmModal()"
+                        class="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold">
+                        <i class="fa-solid fa-times mr-2"></i>Hủy
+                    </button>
+                    <button id="confirm-ok-btn"
+                        class="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold">
+                        <i class="fa-solid fa-check mr-2"></i>Đồng ý
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <main class="container mx-auto px-4 py-8">
         <div class="max-w-4xl mx-auto">
             <div class="flex items-center justify-between mb-6">
@@ -396,6 +434,61 @@
         let districts = [];
         let wards = [];
 
+        // Modal confirmation functions
+        let confirmResolve = null;
+
+        function showConfirmModal(message) {
+            return new Promise((resolve) => {
+                confirmResolve = resolve;
+                const modal = document.getElementById('confirm-modal');
+                const modalContent = document.getElementById('confirm-modal-content');
+                const messageEl = document.getElementById('confirm-message');
+
+                messageEl.textContent = message;
+                modal.classList.remove('hidden');
+
+                // Trigger animation
+                setTimeout(() => {
+                    modalContent.classList.remove('scale-95', 'opacity-0');
+                    modalContent.classList.add('scale-100', 'opacity-100');
+                }, 10);
+
+                // Handle OK button
+                const okBtn = document.getElementById('confirm-ok-btn');
+                okBtn.onclick = () => {
+                    closeConfirmModal();
+                    resolve(true);
+                };
+
+                // Handle ESC key
+                const escHandler = (e) => {
+                    if (e.key === 'Escape') {
+                        closeConfirmModal();
+                        resolve(false);
+                        document.removeEventListener('keydown', escHandler);
+                    }
+                };
+                document.addEventListener('keydown', escHandler);
+            });
+        }
+
+        function closeConfirmModal() {
+            const modal = document.getElementById('confirm-modal');
+            const modalContent = document.getElementById('confirm-modal-content');
+
+            // Animate out
+            modalContent.classList.remove('scale-100', 'opacity-100');
+            modalContent.classList.add('scale-95', 'opacity-0');
+
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                if (confirmResolve) {
+                    confirmResolve(false);
+                    confirmResolve = null;
+                }
+            }, 200);
+        }
+
         // Load provinces on page load
         document.addEventListener('DOMContentLoaded', async function() {
             await loadProvinces();
@@ -459,22 +552,25 @@
             box.innerHTML = '';
 
             const toast = document.createElement('div');
-            toast.className = `fixed top-5 right-5 z-[60] flex items-center w-[500px] p-6 mb-4 text-base font-semibold
+            toast.className = `fixed top-5 right-5 z-[60] flex items-start w-[500px] p-6 mb-4 text-base font-semibold
                 ${type === 'success' ? 'text-green-700 border-green-400' : 'text-red-700 border-red-400'}
                 bg-white rounded-xl shadow-lg border-2`;
 
+            // Convert \n to <br> for displaying multi-line messages
+            const formattedMsg = msg.replace(/\n/g, '<br>');
+
             toast.innerHTML = `
-                <svg class="flex-shrink-0 w-6 h-6 ${type === 'success' ? 'text-green-600' : 'text-red-600'} mr-3" 
+                <svg class="flex-shrink-0 w-6 h-6 ${type === 'success' ? 'text-green-600' : 'text-red-600'} mr-3 mt-0.5" 
                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     ${type === 'success'
                     ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />`
                     : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />`}
                 </svg>
-                <div class="flex-1">${msg}</div>
+                <div class="flex-1 whitespace-pre-line">${formattedMsg}</div>
             `;
 
             box.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
+            setTimeout(() => toast.remove(), 5000); // Increased to 5s for longer messages
         }
 
         async function openAddressModal(addressData = null) {
@@ -732,7 +828,7 @@
                 });
         }
 
-        function deleteAddress(id) {
+        async function deleteAddress(id) {
             // Check if this is the default address
             const addressCard = document.querySelector(`[data-address-id="${id}"]`);
             const isDefault = addressCard?.classList.contains('border-2');
@@ -742,7 +838,8 @@
                 return;
             }
 
-            if (!confirm('Bạn có chắc muốn xóa địa chỉ này?')) return;
+            const confirmed = await showConfirmModal('Bạn có chắc muốn xóa địa chỉ này?');
+            if (!confirmed) return;
 
             fetch(`/addresses/${id}`, {
                     method: 'DELETE',

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models\Repositories;
 
 use App\Core\DB;
@@ -27,7 +28,7 @@ class PayrollRepository
                 LEFT JOIN users ab ON p.approved_by = ab.id
                 WHERE p.month = ? AND p.year = ?
                 ORDER BY p.total_salary DESC";
-        
+
         $stmt = DB::pdo()->prepare($sql);
         $stmt->execute([$month, $year]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -45,7 +46,7 @@ class PayrollRepository
                 FROM {$this->table} p
                 INNER JOIN users u ON p.user_id = u.id
                 WHERE p.user_id = ? AND p.month = ? AND p.year = ?";
-        
+
         $stmt = DB::pdo()->prepare($sql);
         $stmt->execute([$userId, $month, $year]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
@@ -79,12 +80,12 @@ class PayrollRepository
     public function calculatePayroll(int $userId, int $month, int $year, int $createdBy): array
     {
         DB::pdo()->beginTransaction();
-        
+
         try {
             // Lấy thông tin nhân viên
             $staffRepo = new StaffRepository();
             $staff = $staffRepo->find($userId);
-            
+
             if (!$staff) {
                 throw new \Exception('Không tìm thấy nhân viên');
             }
@@ -95,11 +96,11 @@ class PayrollRepository
             $stmt = DB::pdo()->prepare($sql);
             $stmt->execute([$userId]);
             $salaryInfo = $stmt->fetch(PDO::FETCH_ASSOC);
-            
+
             $baseSalary = $salaryInfo['base_salary'] ?? 0;
             $salaryType = $salaryInfo['salary_type'] ?? 'Theo ca';
             $requiredShifts = $salaryInfo['required_shifts_per_month'] ?? 28;
-            
+
             // Tự động tính wage_per_shift nếu là "Theo ca"
             if ($salaryType === 'Theo ca') {
                 $wagePerShift = $requiredShifts > 0 ? ($baseSalary / $requiredShifts) : 0;
@@ -113,26 +114,45 @@ class PayrollRepository
 
             // Tính lương thực tế ban đầu
             $actualSalary = 0;
-            
+
             if ($salaryType === 'Theo tháng') {
                 // Lương theo tháng: tính theo tỷ lệ số ca làm / số ca yêu cầu
                 if ($totalShiftsWorked >= $requiredShifts) {
                     $actualSalary = $baseSalary;
+
+                    // Tính lương tăng ca (overtime) gấp đôi
+                    if ($totalShiftsWorked > $requiredShifts) {
+                        $overtimeShifts = $totalShiftsWorked - $requiredShifts;
+                        $wagePerShiftForMonth = $baseSalary / $requiredShifts;
+                        $overtimePay = $overtimeShifts * $wagePerShiftForMonth; // 100% lương 1 ca
+                        $actualSalary += $overtimePay; // Cộng thêm 100% (tổng = 200%)
+                    }
                 } else {
                     $actualSalary = ($baseSalary / $requiredShifts) * $totalShiftsWorked;
                 }
             } else {
                 // Lương theo ca: lấy wage_per_shift của nhân viên × số ca làm
-                $actualSalary = $wagePerShift * $totalShiftsWorked;
+                if ($totalShiftsWorked > $requiredShifts) {
+                    // Có tăng ca: 28 ca bình thường + tăng ca x2
+                    $normalShifts = $requiredShifts;
+                    $overtimeShifts = $totalShiftsWorked - $requiredShifts;
+
+                    $actualSalary = ($wagePerShift * $normalShifts) + ($wagePerShift * 2 * $overtimeShifts);
+                } else {
+                    // Không có tăng ca hoặc làm thiếu
+                    $actualSalary = $wagePerShift * $totalShiftsWorked;
+                }
             }
 
             // ==================== TÍNH PHẠT ĐI TRỄ/VỀ SỚM ====================
+            // Tính phạt đi muộn/về sớm (sẽ được trừ riêng trong công thức total_salary)
             $lateDeduction = $this->calculateLateDeduction($userId, $month, $year, $wagePerShift, $baseSalary, $salaryType);
-            $actualSalary -= $lateDeduction; // Trừ lương do đi trễ/về sớm
+            // KHÔNG trừ vào actualSalary ở đây để tránh trừ 2 lần
+            // SQL sẽ tự động tính: total_salary = actual_salary + bonus - deduction - late_deduction
 
             // Kiểm tra xem đã có bảng lương chưa
             $existing = $this->getByUserAndMonth($userId, $month, $year);
-            
+
             if ($existing) {
                 // Chỉ cập nhật nếu đang ở trạng thái "Nháp"
                 // Không được thay đổi nếu đã "Đã duyệt" hoặc "Đã trả"
@@ -140,7 +160,7 @@ class PayrollRepository
                     // Bỏ qua, giữ nguyên bảng lương hiện tại
                     return $existing;
                 }
-                
+
                 // Cập nhật (chỉ khi status = Nháp, giữ nguyên trạng thái Nháp để có thể sửa)
                 $sql = "UPDATE {$this->table} SET
                         total_shifts_worked = ?,
@@ -164,12 +184,13 @@ class PayrollRepository
                     $month,
                     $year
                 ]);
-                
+
                 $payroll = $this->getByUserAndMonth($userId, $month, $year);
             } else {
                 // Tạo mới với trạng thái "Nháp"
-                $totalSalary = $actualSalary;
-                
+                // Tính tổng lương: actual_salary - late_deduction (bonus và deduction mặc định = 0 khi mới tạo)
+                $totalSalary = $actualSalary - $lateDeduction;
+
                 $sql = "INSERT INTO {$this->table} 
                         (user_id, month, year, total_shifts_worked, required_shifts, 
                          base_salary, actual_salary, late_deduction, total_salary, created_by, status)
@@ -187,13 +208,12 @@ class PayrollRepository
                     $totalSalary,
                     $createdBy
                 ]);
-                
+
                 $payroll = $this->getByUserAndMonth($userId, $month, $year);
             }
 
             DB::pdo()->commit();
             return $payroll;
-            
         } catch (\Exception $e) {
             DB::pdo()->rollBack();
             throw $e;
@@ -212,7 +232,7 @@ class PayrollRepository
     private function calculateLateDeduction(int $userId, int $month, int $year, float $wagePerShift, float $baseSalary, string $salaryType): float
     {
         $totalDeduction = 0;
-        
+
         // Lấy lương 1 giờ dựa vào loại lương
         $hourlyWage = 0;
         if ($salaryType === 'Theo ca') {
@@ -221,7 +241,7 @@ class PayrollRepository
             // Theo tháng: giả sử 1 tháng = 28 ca × 8h = 224h
             $hourlyWage = $baseSalary / 224;
         }
-        
+
         // Lương 1 ngày (1 ca)
         $dailyWage = $hourlyWage * 8;
 
@@ -237,7 +257,7 @@ class PayrollRepository
                 AND YEAR(a.attendance_date) = ?
                 AND a.check_in_time IS NOT NULL
                 ORDER BY a.attendance_date";
-        
+
         $stmt = DB::pdo()->prepare($sql);
         $stmt->execute([$userId, $month, $year]);
         $attendances = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -248,32 +268,32 @@ class PayrollRepository
         foreach ($attendances as $att) {
             $checkInTime = new \DateTime($att['check_in_time']);
             $checkOutTime = $att['check_out_time'] ? new \DateTime($att['check_out_time']) : null;
-            
+
             // Giờ bắt đầu và kết thúc ca theo quy định
             $shiftStart = new \DateTime($att['attendance_date'] . ' ' . $att['start_time']);
             $shiftEnd = new \DateTime($att['attendance_date'] . ' ' . $att['end_time']);
-            
+
             // Tính số phút trễ khi check-in
             $lateMinutes = 0;
             if ($checkInTime > $shiftStart) {
                 $lateMinutes = ($checkInTime->getTimestamp() - $shiftStart->getTimestamp()) / 60;
             }
-            
+
             // Tính số phút về sớm khi check-out
             $earlyMinutes = 0;
             if ($checkOutTime && $checkOutTime < $shiftEnd) {
                 $earlyMinutes = ($shiftEnd->getTimestamp() - $checkOutTime->getTimestamp()) / 60;
             }
-            
+
             // Tổng số phút vi phạm
             $totalViolationMinutes = $lateMinutes + $earlyMinutes;
-            
+
             // Tính tổng giờ làm việc thực tế
             $actualWorkHours = 0;
             if ($checkOutTime) {
                 $actualWorkHours = ($checkOutTime->getTimestamp() - $checkInTime->getTimestamp()) / 3600;
             }
-            
+
             $dayDeduction = 0;
             $isLateToday = false;
 
@@ -292,26 +312,26 @@ class PayrollRepository
                 $dayDeduction = 0;
                 $isLateToday = true;
             }
-            
+
             $totalDeduction += $dayDeduction;
 
             // Kiểm tra ngày trễ liên tục
             if ($isLateToday) {
                 $currentDate = new \DateTime($att['attendance_date']);
-                
+
                 // Nếu là ngày liên tiếp (hoặc ngày đầu tiên)
                 if ($lastDate === null || $currentDate->diff($lastDate)->days == 1) {
                     $consecutiveLate++;
                 } else {
                     $consecutiveLate = 1; // Reset về 1
                 }
-                
+
                 // Quy tắc 4: Liên tục 3 ngày trễ → cảnh cáo và trừ thêm 10% lương ngày
                 if ($consecutiveLate == 3) {
                     $totalDeduction += $dailyWage * 0.1;
                     // Log cảnh cáo (có thể thêm vào bảng notifications hoặc logs)
                 }
-                
+
                 $lastDate = $currentDate;
             } else {
                 $consecutiveLate = 0;
@@ -388,7 +408,7 @@ class PayrollRepository
                 INNER JOIN users u ON sh.user_id = u.id
                 WHERE sh.user_id = ?
                 ORDER BY sh.from_date DESC";
-        
+
         $stmt = DB::pdo()->prepare($sql);
         $stmt->execute([$userId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -408,7 +428,7 @@ class PayrollRepository
                 INNER JOIN users u ON p.user_id = u.id
                 LEFT JOIN staff_profiles sp ON p.user_id = sp.user_id
                 ORDER BY p.year DESC, p.month DESC, p.total_salary DESC";
-        
+
         return DB::pdo()->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     }
 }

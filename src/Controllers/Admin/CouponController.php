@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controllers\Admin;
 
 use App\Models\Repositories\CouponRepository;
@@ -35,7 +36,7 @@ class CouponController extends BaseAdminController
     {
         // Chỉ Admin mới được tạo mới
         $this->requireAdmin();
-        
+
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
         $currentUser = $this->currentUserId();
 
@@ -48,11 +49,11 @@ class CouponController extends BaseAdminController
         } catch (\Exception $e) {
             http_response_code(500);
             header('Content-Type: application/json; charset=utf-8');
-            
+
             // Log chi tiết để debug
             error_log("Coupon create error: " . $e->getMessage());
             error_log("Stack trace: " . $e->getTraceAsString());
-            
+
             echo json_encode([
                 'error' => 'Lỗi máy chủ khi tạo mã giảm giá: ' . $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -66,7 +67,7 @@ class CouponController extends BaseAdminController
     {
         // Chỉ Admin mới được cập nhật
         $this->requireAdmin();
-        
+
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
         $currentUser = $this->currentUserId();
 
@@ -98,31 +99,53 @@ class CouponController extends BaseAdminController
     {
         // Chỉ Admin mới được xóa
         $this->requireAdmin();
-        
+
         header('Content-Type: application/json; charset=utf-8');
         try {
-            // Kiểm tra xem mã đã được sử dụng chưa
-            $existingCoupon = $this->couponRepo->findOne($id);
-            if ($existingCoupon && $existingCoupon->used_count > 0) {
-                http_response_code(400);
-                echo json_encode(['error' => 'Không thể xóa mã giảm giá đã được sử dụng'], JSON_UNESCAPED_UNICODE);
+            // Kiểm tra xem mã đã được sử dụng trong đơn hàng chưa
+            $orderCount = $this->getOrderCountByCoupon($id);
+            if ($orderCount > 0) {
+                http_response_code(409);
+                echo json_encode([
+                    'error' => "Không thể xóa mã giảm giá này vì đã có $orderCount đơn hàng sử dụng."
+                ], JSON_UNESCAPED_UNICODE);
                 exit;
             }
 
             $this->couponRepo->delete($id);
-            echo json_encode(['ok' => true, 'id' => $id]);
+            echo json_encode(['ok' => true, 'id' => $id], JSON_UNESCAPED_UNICODE);
         } catch (\Throwable $e) {
             http_response_code(500);
-            echo json_encode(['error' => $e->getMessage()]);
+            echo json_encode(['error' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
         }
         exit;
+    }
+
+    // Helper: Đếm số lượng đơn hàng đã sử dụng coupon
+    private function getOrderCountByCoupon($couponId)
+    {
+        $pdo = \App\Core\DB::pdo();
+
+        // Lấy coupon code từ ID
+        $stmt = $pdo->prepare("SELECT code FROM coupons WHERE id = ?");
+        $stmt->execute([$couponId]);
+        $coupon = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        if (!$coupon) {
+            return 0;
+        }
+
+        // Đếm số đơn hàng sử dụng coupon code này
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM orders WHERE coupon_code = ?");
+        $stmt->execute([$coupon['code']]);
+        return (int) $stmt->fetchColumn();
     }
 
     /** POST /admin/api/coupons/validate */
     public function validate()
     {
         header('Content-Type: application/json; charset=utf-8');
-        
+
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
         $code = $data['code'] ?? '';
         $orderAmount = floatval($data['order_amount'] ?? 0);
@@ -155,16 +178,16 @@ class CouponController extends BaseAdminController
         // Tự động tìm ngày nhỏ nhất và lớn nhất từ starts_at/ends_at
         $fromDate = '';
         $toDate = '';
-        
+
         if (!empty($items)) {
-            $dates = array_filter(array_map(function($item) {
+            $dates = array_filter(array_map(function ($item) {
                 $date = $item['starts_at'] ?? '';
                 if ($date && strpos($date, ' ') !== false) {
                     $date = explode(' ', $date)[0];
                 }
                 return $date;
             }, $items));
-            
+
             if (!empty($dates)) {
                 sort($dates);
                 $fromDate = reset($dates);
@@ -466,7 +489,7 @@ class CouponController extends BaseAdminController
                 $rowNumber = $index + 2;
 
                 $code = trim($row[1] ?? '');
-                
+
                 // Skip dòng trống
                 if ($code === '') continue;
 
@@ -642,7 +665,6 @@ class CouponController extends BaseAdminController
                 'status' => $status,
                 'message' => $message
             ], JSON_UNESCAPED_UNICODE);
-
         } catch (\Exception $e) {
             http_response_code(500);
             echo json_encode(['error' => 'Lỗi khi đọc file: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
@@ -654,12 +676,12 @@ class CouponController extends BaseAdminController
     private function convertDateTimeFormat($dateTimeStr)
     {
         if (!$dateTimeStr) return null;
-        
+
         // dd/mm/yyyy HH:MM:SS -> yyyy-mm-dd HH:MM:SS
         if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})$/', $dateTimeStr, $matches)) {
             return $matches[3] . '-' . $matches[2] . '-' . $matches[1] . ' ' . $matches[4] . ':' . $matches[5] . ':' . $matches[6];
         }
-        
+
         return null;
     }
 

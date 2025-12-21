@@ -11,12 +11,19 @@ intents:
   - track_order
   - help
   - bot_challenge
+  - ask_promotion
+  - ask_price
+  - ask_location
+  - ask_delivery
+  - ask_opening_hours
+  - chitchat
 
 entities:
   - order_code
   - product_name
   - email
   - phone
+  - location
 
 slots:
   order_code:
@@ -48,9 +55,15 @@ slots:
       - type: from_entity
         entity: phone
 
+  location:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: location
+
 responses:
   utter_greet:
-    - text: "Xin chào! Tôi là trợ lý ảo của Mini Market. Tôi có thể giúp gì cho bạn? 😊"
+    - text: "Xin chào! Tôi là trợ lý ảo của MiniGo. Tôi có thể giúp gì cho bạn? 😊"
     - text: "Chào bạn! Bạn cần hỗ trợ gì về đơn hàng hoặc sản phẩm không? 🛒"
 
   utter_goodbye:
@@ -58,7 +71,21 @@ responses:
     - text: "Hẹn gặp lại bạn! Cảm ơn đã liên hệ! 😊"
 
   utter_iamabot:
-    - text: "Tôi là chatbot hỗ trợ khách hàng của Mini Market, được phát triển bằng Rasa AI! 🤖"
+    - text: "Tôi là chatbot hỗ trợ khách hàng của MiniGo, được phát triển bằng Rasa AI! 🤖"
+
+  utter_location:
+    - text: "📍 Cửa hàng MiniGo tại Khu II, Trường Đại học Cần Thơ, Đường 3/2, Phường Xuân Khánh, Quận Ninh Kiều, TP. Cần Thơ. Tọa độ: 10.03289, 105.769082"
+
+  utter_delivery:
+    - text: "🚚 Chúng tôi giao hàng trong bán kính 10km từ cửa hàng (Quận Ninh Kiều, Cái Răng, Bình Thủy, Ô Môn). Phí ship: 20,000đ - 30,000đ tùy khoảng cách."
+
+  utter_opening_hours:
+    - text: "🕒 Giờ làm việc: Thứ 2 - Chủ nhật, 6:00 - 22:00. Chúng tôi luôn sẵn sàng phục vụ bạn!"
+
+  utter_chitchat:
+    - text: "Cảm ơn bạn! Tôi luôn sẵn sàng hỗ trợ nếu bạn cần! 😊"
+    - text: "Rất vui được giúp đỡ bạn! Có gì cứ hỏi nhé! 💬"
+    - text: "Cảm ơn! Chúc bạn một ngày tuyệt vời! ✨"
 
   utter_default:
     - text: "Xin lỗi, tôi không hiểu ý bạn. Bạn có thể nói rõ hơn được không? 🤔"

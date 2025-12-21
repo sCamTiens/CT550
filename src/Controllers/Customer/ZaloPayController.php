@@ -93,7 +93,9 @@ class ZaloPayController extends Controller
                     'customer_id' => $customerId,
                     'address_id' => $data['address_id'],
                     'cart_items' => $data['cart_items'],
-                    'subtotal' => $data['amount'],
+                    'subtotal' => $data['subtotal'] ?? $data['amount'],
+                    'shipping_fee' => $data['shipping_fee'] ?? 0,
+                    'grand_total' => $data['amount'], // Amount = subtotal + shipping_fee
                     'selected_item_ids' => $data['selected_item_ids'] ?? []
                 ]);
 
@@ -208,22 +210,26 @@ class ZaloPayController extends Controller
                     // Get district ID (may be null for old addresses)
                     $districtId = $address['district_id'] ?? null;
 
+                    $shippingFee = $orderData['shipping_fee'] ?? 0;
+                    $grandTotal = $orderData['grand_total'] ?? $orderData['subtotal'];
+
                     $stmt = $pdo->prepare("
                         INSERT INTO orders (
-                            code, user_id, order_type, status, subtotal, grand_total,
+                            code, user_id, order_type, status, subtotal, shipping_fee, grand_total,
                             payment_method, payment_status, shipping_address_id,
                             delivery_name, delivery_phone, delivery_address,
                             shipping_province, shipping_ward,
                             shipping_province_id, shipping_district_id, shipping_ward_code,
                             created_at, updated_at
                         )
-                        VALUES (?, ?, 'Online', 'Chờ xử lý', ?, ?, 'ZaloPay', 'Đã thanh toán', ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+                        VALUES (?, ?, 'Online', 'Chờ xử lý', ?, ?, ?, 'ZaloPay', 'Đã thanh toán', ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
                     ");
                     $stmt->execute([
                         $orderCode,
                         $customerId,
                         $orderData['subtotal'],
-                        $orderData['subtotal'],
+                        $shippingFee,
+                        $grandTotal,
                         $orderData['address_id'],
                         $address['recipient_name'] ?? '',
                         $address['phone_number'] ?? '',
@@ -277,7 +283,7 @@ class ZaloPayController extends Controller
                         VALUES (?, 'ZaloPay', ?, NOW(), ?, NOW())
                     ");
                     $stmtPayment->execute([
-                        $orderData['subtotal'],
+                        $grandTotal, // Payment amount = grand_total (includes shipping)
                         $appTransID,
                         $paymentMeta
                     ]);
@@ -289,6 +295,87 @@ class ZaloPayController extends Controller
                         UPDATE orders SET payment_id = ? WHERE id = ?
                     ");
                     $stmtUpdateOrder->execute([$paymentId, $orderId]);
+
+                    // === TẠO PHIẾU THU (Receipt Voucher) ===
+                    $receiptCode = 'PT' . date('YmdHis') . rand(100, 999);
+                    $stmtReceipt = $pdo->prepare("
+                        INSERT INTO receipt_vouchers (
+                            code, payment_id, order_id, payer_user_id, amount, 
+                            method, received_by, received_at, created_at
+                        )
+                        VALUES (?, ?, ?, ?, ?, 'ZaloPay', ?, NOW(), NOW())
+                    ");
+                    $stmtReceipt->execute([
+                        $receiptCode,
+                        $paymentId,
+                        $orderId,
+                        $customerId,
+                        $grandTotal, // Receipt amount = grand_total (includes shipping)
+                        $customerId
+                    ]);
+
+                    // === TẠO PHIẾU XUẤT KHO (Stock Out) ===
+                    $stockOutCode = 'PX' . date('YmdHis') . rand(100, 999);
+                    $stmtStockOut = $pdo->prepare("
+                        INSERT INTO stock_outs (code, order_id, created_by, created_at)
+                        VALUES (?, ?, ?, NOW())
+                    ");
+                    $stmtStockOut->execute([$stockOutCode, $orderId, $customerId]);
+                    $stockOutId = $pdo->lastInsertId();
+
+                    // === XUẤT KHO FIFO & GHI MOVEMENT ===
+                    $stmtStockOutItem = $pdo->prepare("
+                        INSERT INTO stock_out_items (stock_out_id, product_id, batch_id, qty, unit_price, total_price)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    ");
+                    $stmtMovement = $pdo->prepare("
+                        INSERT INTO stock_movements (
+                            product_id, type, qty, ref_type, ref_id, note, created_at
+                        )
+                        VALUES (?, 'Xuất kho', ?, 'Đơn hàng', ?, ?, NOW())
+                    ");
+
+                    foreach ($orderData['cart_items'] as $item) {
+                        // Lấy batch FIFO (cũ nhất)
+                        $stmtBatch = $pdo->prepare("
+                            SELECT id, current_qty, unit_cost
+                            FROM product_batches
+                            WHERE product_id = ? AND current_qty > 0
+                            ORDER BY exp_date ASC, id ASC
+                            LIMIT 1
+                        ");
+                        $stmtBatch->execute([$item['id']]);
+                        $batch = $stmtBatch->fetch(\PDO::FETCH_ASSOC);
+
+                        if ($batch) {
+                            // Trừ batch
+                            $stmtUpdateBatch = $pdo->prepare("
+                                UPDATE product_batches
+                                SET current_qty = current_qty - ?
+                                WHERE id = ?
+                            ");
+                            $stmtUpdateBatch->execute([$item['quantity'], $batch['id']]);
+
+                            $totalPrice = $item['quantity'] * $item['price'];
+                            // Tạo stock_out_item
+                            $stmtStockOutItem->execute([
+                                $stockOutId,
+                                $item['id'],
+                                $batch['id'],
+                                $item['quantity'],
+                                $item['price'],
+                                $totalPrice
+                            ]);
+
+                            // Ghi stock movement
+                            $stmtMovement->execute([
+                                $item['id'],
+                                $item['quantity'],
+                                $orderId,
+                                "Xuất kho cho đơn hàng $orderCode (ZaloPay)"
+                            ]);
+                        }
+                    }
 
                     // Clear cart
                     $cartRepo = new \App\Models\Customer\Repositories\CartRepository();
@@ -445,23 +532,28 @@ class ZaloPayController extends Controller
 
                         $districtId = $address['district_id'] ?? null;
 
+                        // Calculate amounts
+                        $shippingFee = $orderData['shipping_fee'] ?? 0;
+                        $grandTotal = $orderData['grand_total'] ?? $orderData['subtotal'];
+
                         // Insert order
                         $stmt = $pdo->prepare("
                             INSERT INTO orders (
-                                code, user_id, order_type, status, subtotal, grand_total,
+                                code, user_id, order_type, status, subtotal, shipping_fee, grand_total,
                                 payment_method, payment_status, shipping_address_id,
                                 delivery_name, delivery_phone, delivery_address,
                                 shipping_province, shipping_ward,
                                 shipping_province_id, shipping_district_id, shipping_ward_code,
                                 created_at, updated_at
                             )
-                            VALUES (?, ?, 'Online', 'Chờ xử lý', ?, ?, 'ZaloPay', 'Đã thanh toán', ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+                            VALUES (?, ?, 'Online', 'Chờ xử lý', ?, ?, ?, 'ZaloPay', 'Đã thanh toán', ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
                         ");
                         $stmt->execute([
                             $orderCode,
                             $customerId,
                             $orderData['subtotal'],
-                            $orderData['subtotal'],
+                            $shippingFee,
+                            $grandTotal,
                             $orderData['address_id'],
                             $address['recipient_name'] ?? '',
                             $address['phone_number'] ?? '',
@@ -511,7 +603,7 @@ class ZaloPayController extends Controller
                             VALUES (?, 'ZaloPay', ?, NOW(), ?, NOW())
                         ");
                         $stmtPayment->execute([
-                            $orderData['subtotal'],
+                            $grandTotal, // Payment amount = grand_total
                             $appTransId,
                             $paymentMeta
                         ]);
@@ -523,6 +615,87 @@ class ZaloPayController extends Controller
                             UPDATE orders SET payment_id = ? WHERE id = ?
                         ");
                         $stmtUpdateOrder->execute([$paymentId, $orderId]);
+
+                        // === TẠO PHIẾU THU (Receipt Voucher) ===
+                        $receiptCode = 'PT' . date('YmdHis') . rand(100, 999);
+                        $stmtReceipt = $pdo->prepare("
+                            INSERT INTO receipt_vouchers (
+                                code, payment_id, order_id, payer_user_id, amount, 
+                                method, received_by, received_at, created_at
+                            )
+                            VALUES (?, ?, ?, ?, ?, 'ZaloPay', ?, NOW(), NOW())
+                        ");
+                        $stmtReceipt->execute([
+                            $receiptCode,
+                            $paymentId,
+                            $orderId,
+                            $customerId,
+                            $grandTotal, // Receipt amount = grand_total
+                            $customerId
+                        ]);
+
+                        // === TẠO PHIẾU XUẤT KHO (Stock Out) ===
+                        $stockOutCode = 'PX' . date('YmdHis') . rand(100, 999);
+                        $stmtStockOut = $pdo->prepare("
+                            INSERT INTO stock_outs (code, order_id, created_by, created_at)
+                            VALUES (?, ?, ?, NOW())
+                        ");
+                        $stmtStockOut->execute([$stockOutCode, $orderId, $customerId]);
+                        $stockOutId = $pdo->lastInsertId();
+
+                        // === XUẤT KHO FIFO & GHI MOVEMENT ===
+                        $stmtStockOutItem = $pdo->prepare("
+                            INSERT INTO stock_out_items (stock_out_id, product_id, batch_id, qty, unit_price, total_price)
+                            VALUES (?, ?, ?, ?, ?, ?)
+                        ");
+                        $stmtMovement = $pdo->prepare("
+                            INSERT INTO stock_movements (
+                                product_id, type, qty, ref_type, ref_id, note, created_at
+                            )
+                            VALUES (?, 'Xuất kho', ?, 'Đơn hàng', ?, ?, NOW())
+                        ");
+
+                        foreach ($orderData['cart_items'] as $item) {
+                            // Lấy batch FIFO (cũ nhất)
+                            $stmtBatch = $pdo->prepare("
+                                SELECT id, current_qty, unit_cost
+                                FROM product_batches
+                                WHERE product_id = ? AND current_qty > 0
+                                ORDER BY exp_date ASC, id ASC
+                                LIMIT 1
+                            ");
+                            $stmtBatch->execute([$item['id']]);
+                            $batch = $stmtBatch->fetch(\PDO::FETCH_ASSOC);
+
+                            if ($batch) {
+                                // Trừ batch
+                                $stmtUpdateBatch = $pdo->prepare("
+                                    UPDATE product_batches
+                                    SET current_qty = current_qty - ?
+                                    WHERE id = ?
+                                ");
+                                $stmtUpdateBatch->execute([$item['quantity'], $batch['id']]);
+
+                                $totalPrice = $item['quantity'] * $item['price'];
+                                // Tạo stock_out_item
+                                $stmtStockOutItem->execute([
+                                    $stockOutId,
+                                    $item['id'],
+                                    $batch['id'],
+                                    $item['quantity'],
+                                    $item['price'],
+                                    $totalPrice
+                                ]);
+
+                                // Ghi stock movement
+                                $stmtMovement->execute([
+                                    $item['id'],
+                                    $item['quantity'],
+                                    $orderId,
+                                    "Xuất kho cho đơn hàng $orderCode (ZaloPay Fallback)"
+                                ]);
+                            }
+                        }
 
                         // Clear cart
                         $cartRepo = new \App\Models\Customer\Repositories\CartRepository();
@@ -583,14 +756,18 @@ class ZaloPayController extends Controller
                         return $this->view('customer/payment/zalopay_success', [
                             'order_id' => $orderId,
                             'order_code' => $orderCode,
-                            'amount' => $orderData['subtotal'],
+                            'amount' => $grandTotal, // Show grand total
                             'transaction_no' => $appTransId,
                             'app_trans_id' => $appTransId,
                             'fallback_message' => 'Đơn hàng đã được tạo thành công!'
                         ]);
                     } catch (\Exception $e) {
                         $pdo->rollBack();
-                        error_log('ZaloPay fallback order creation failed: ' . $e->getMessage());
+                        error_log('=== ZALOPAY FALLBACK ORDER CREATION FAILED ===');
+                        error_log('Error message: ' . $e->getMessage());
+                        error_log('Error file: ' . $e->getFile());
+                        error_log('Error line: ' . $e->getLine());
+                        error_log('Stack trace: ' . $e->getTraceAsString());
 
                         // Vẫn hiển thị pending message nếu tạo order thất bại
                         return $this->view('customer/payment/zalopay_success', [
@@ -600,6 +777,7 @@ class ZaloPayController extends Controller
                             'transaction_no' => $appTransId,
                             'app_trans_id' => $appTransId,
                             'is_pending' => true,
+                            'error_details' => $e->getMessage(), // DEBUG: Show error
                             'pending_message' => 'Thanh toán thành công! Đơn hàng đang được xử lý. Vui lòng kiểm tra email để nhận mã đơn hàng.'
                         ]);
                     }

@@ -148,10 +148,10 @@ try {
                     'Xin chào ' . ($userInfo['full_name'] ?? 'bạn') . '! Tôi là trợ lý ảo của MiniGo. Tôi có thể giúp gì cho bạn? 😊'
                 ]);
 
-                error_log("✅ [Init] Created new session: $sessionId for user: $userId");
+                error_log("[Init] Created new session: $sessionId for user: $userId");
             } else {
                 $sessionId = (int)$session['id'];
-                error_log("✅ [Init] Using existing session: $sessionId for user: $userId");
+                error_log("[Init] Using existing session: $sessionId for user: $userId");
             }
 
             // Load messages
@@ -191,7 +191,7 @@ try {
             }
 
             if (!$sessionId) {
-                error_log("❌ [Send] No sessionId!");
+                error_log("[Send] No sessionId!");
                 echo json_encode(['success' => false, 'error' => 'Session not initialized']);
                 exit;
             }
@@ -202,7 +202,7 @@ try {
             $sessionOwner = $stmt->fetchColumn();
 
             if ($sessionOwner != $userId) {
-                error_log("❌ [Send] Session $sessionId does not belong to user $userId");
+                error_log("[Send] Session $sessionId does not belong to user $userId");
                 echo json_encode(['success' => false, 'error' => 'Invalid session']);
                 exit;
             }
@@ -214,9 +214,9 @@ try {
                     VALUES (?, 'customer', ?, NOW())
                 ");
                 $result = $stmt->execute([$sessionId, $message]);
-                error_log("✅ [Send] Customer message saved: " . ($result ? 'yes' : 'no') . " (ID: " . $pdo->lastInsertId() . ")");
+                error_log("[Send] Customer message saved: " . ($result ? 'yes' : 'no') . " (ID: " . $pdo->lastInsertId() . ")");
             } catch (PDOException $e) {
-                error_log("❌ [Send] DB Error: " . $e->getMessage());
+                error_log("[Send] DB Error: " . $e->getMessage());
                 echo json_encode(['success' => false, 'error' => 'Database error']);
                 exit;
             }
@@ -234,9 +234,9 @@ try {
                     VALUES (?, 'ai', ?, ?, NOW())
                 ");
                 $result = $stmt->execute([$sessionId, $aiMessage, $metadata]);
-                error_log("✅ [Send] AI message saved: " . ($result ? 'yes' : 'no') . " (ID: " . $pdo->lastInsertId() . ")");
+                error_log("[Send] AI message saved: " . ($result ? 'yes' : 'no') . " (ID: " . $pdo->lastInsertId() . ")");
             } catch (PDOException $e) {
-                error_log("❌ [Send] DB Error (AI): " . $e->getMessage());
+                error_log("[Send] DB Error (AI): " . $e->getMessage());
             }
 
             echo json_encode([
@@ -259,7 +259,7 @@ try {
             echo json_encode(['success' => false, 'error' => 'Invalid action']);
     }
 } catch (Exception $e) {
-    error_log("❌ [Chat API] Error: " . $e->getMessage());
+    error_log("[Chat API] Error: " . $e->getMessage());
     echo json_encode([
         'success' => false,
         'error' => $e->getMessage()
